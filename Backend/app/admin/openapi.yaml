@@ -1,0 +1,319 @@
+openapi: 3.0.3
+info:
+  title: School Management System API
+  version: 1.0.0
+  description: API documentation for the School Management System
+
+servers:
+  - url: http://localhost:5001
+    description: Local development server
+
+paths:
+  /api/admin/users:
+    post:
+      summary: Create a new user
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "201":
+          description: User successfully created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/admin/users/count-by-role:
+    get:
+      summary: Get count of users by role
+      tags:
+        - Admin
+      responses:
+        "200":
+          description: Count of users by role fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/admin/users/growth-stats:
+    get:
+      summary: Get growth stats of users
+      tags:
+        - Admin
+      responses:
+        "200":
+          description: Growth stats of users fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/admin/users/detail/{user_id}:
+    get:
+      summary: Get user detail
+      tags:
+        - Admin
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "abc123"
+      responses:
+        "200":
+          description: User detail fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/admin/users/search-user:
+    post:
+      summary: Search users
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSearch"
+      responses:
+        "200":
+          description: Users searched successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/admin/users/edit-user-detail/{user_id}:
+    patch:
+      summary: Edit user detail
+      tags:
+        - Admin
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "abc123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: User detail updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/admin/users/find-one-user:
+    post:
+      summary: Find one user
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSearch"
+      responses:
+        "200":
+          description: User found successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/admin/users/delete-user/{user_id}:
+    delete:
+      summary: Delete a user
+      tags:
+        - Admin
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "abc123"
+      responses:
+        "200":
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    UserSearch:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
+          example: "admin123"
+
+    UserUpdate:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
+          example: "admin123"
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: "admin@example.com"
+        role:
+          type: string
+          enum:
+            - admin
+            - teacher
+            - student
+
+    UserCreate:
+      type: object
+      required:
+        - username
+        - role
+        - password
+      properties:
+        username:
+          type: string
+          example: "admin123"
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: "admin@example.com"
+        role:
+          type: string
+          enum:
+            - admin
+            - teacher
+            - student
+          default: "student"
+        password:
+          type: string
+          format: password
+          example: "securepassword123"
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "User created successfully"
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "abc123"
+            username:
+              type: string
+              example: "admin123"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        status:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "User not found"
+        data:
+          type: object
+          nullable: true
+
+    UserDetail:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: objectId
+          example: "666666666666666666666666"
+        

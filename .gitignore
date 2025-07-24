@@ -1,0 +1,32 @@
+# =========================
+# ✅ Environment Files
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# ✅ Deployment & Docker
+# =========================
+render.yaml
+docker-compose.yaml
+docker-compose.yml
+
+# =========================
+# ✅ Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# ✅ System & Editor Files
+# =========================
+.DS_Store
+.fleet/
+.idea/
+.vscode/
+
+# =========================
+# ✅ Node Modules (Global Safety)
+# =========================
+node_modules/

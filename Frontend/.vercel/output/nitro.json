@@ -1,0 +1,15 @@
+{
+  "date": "2025-07-05T08:35:03.206Z",
+  "preset": "vercel-static",
+  "framework": {
+    "name": "nuxt",
+    "version": "3.17.6"
+  },
+  "versions": {
+    "nitro": "2.11.13"
+  },
+  "commands": {
+    "preview": "npx serve ./static"
+  },
+  "config": {}
+}

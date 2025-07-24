@@ -1,0 +1,35 @@
+# =========================
+# ✅ Nuxt Dev/Build Outputs
+# =========================
+.output/
+.data/
+.nuxt/
+.nitro/
+.cache/
+dist/
+
+# =========================
+# ✅ Node Dependencies
+# =========================
+node_modules/
+
+# =========================
+# ✅ Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# ✅ System & Editor Files
+# =========================
+.DS_Store
+.fleet/
+.idea/
+.vscode/
+
+# =========================
+# ✅ Environment Files
+# =========================
+.env
+.env.*
+!.env.example.vercel/

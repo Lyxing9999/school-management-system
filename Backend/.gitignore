@@ -1,0 +1,61 @@
+# =========================
+# ✅ Python Bytecode & Cache
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# =========================
+# ✅ Virtual Environments
+# =========================
+venv/
+env/
+.venv/
+instance/
+
+# =========================
+# ✅ Python Packaging/Build
+# =========================
+*.egg-info/
+build/
+dist/
+
+# =========================
+# ✅ Flask Logs (Optional)
+# =========================
+*.log
+
+# =========================
+# ✅ Env Files / Secrets
+# =========================
+.env
+.env.*
+
+# =========================
+# ✅ IDE/Editor Configs
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# ✅ Test / Coverage Caches
+# =========================
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# =========================
+# ✅ MongoDB Dumps (Optional)
+# =========================
+dump/
+
+# =========================
+# ✅ macOS System Files
+# =========================
+.DS_Store
