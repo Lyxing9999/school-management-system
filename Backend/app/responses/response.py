@@ -31,6 +31,22 @@ class Response:
         return resp
 
     @staticmethod
+    def generate_hint_from_field_errors(field_errors: Dict[str, Any]) -> str:
+        if not field_errors:
+            return ""
+        return " | ".join(
+            f"Check field '{field}': {msg}" for field, msg in field_errors.items()
+        )
+    @staticmethod
+    def generate_hint(error_type: str, details: dict) -> str:
+        if error_type == "VALIDATION_ERROR" and 'field_errors' in details:
+            return Response.generate_hint_from_field_errors(details['field_errors'])
+        elif error_type == "DUPLICATE_KEY_ERROR":
+            return "Duplicate entry found. Ensure unique fields are not duplicated."
+        elif error_type == "AUTHENTICATION_ERROR":
+            return "Ensure you have provided correct credentials or valid token."
+        return ""
+    @staticmethod
     def error_response(
         message: str = "An error occurred",
         data: Optional[Any] = None,
@@ -41,6 +57,7 @@ class Response:
         category: ErrorCategory = ErrorCategory.SYSTEM,
         severity: ErrorSeverity = ErrorSeverity.MEDIUM,
         status_code: int = 400,
+        hint: Optional[str] = None,
     ) -> FlaskResponse:
         response = {
             "success": False,
@@ -52,6 +69,7 @@ class Response:
             "error": errors,
             "category": category.value if isinstance(category, Enum) else category,
             "severity": severity.value if isinstance(severity, Enum) else severity,
+            "hint": hint,
         }
         resp = jsonify(response)
         resp.status_code = status_code
@@ -74,26 +92,19 @@ class Response:
         serialize_data: bool = True,
         serialize_meta: bool = True,
         extract_errors_from_error: bool = False,
+        hint: Optional[str] = None,
     ) -> FlaskResponse:
-        if error:
-            message = getattr(error, "message", message) or message
-            if hasattr(error, "to_dict"):
-                data = error.to_dict()
-                if 'details' in data and 'data' in data['details']:
-                    data = data['details']['data']
-            elif isinstance(error, dict):
-                data = error
-            elif isinstance(error, str):
-                data = {"error": error}
-            else:
-                data = data or str(error)
-            status_code = getattr(error, "status_code", status_code)
-            if extract_errors_from_error:
-                errors = getattr(error, "errors", errors)
-        else:
-            if data and serialize_data and hasattr(data, "model_dump"):
-                data = data.model_dump()
-
+        if hasattr(error, "to_dict"):
+            # Get dict representation
+            error_dict = error.to_dict()
+            data = None  # Don't put full error object into 'data'
+            details = error_dict.get('details', {})
+            error_code = error_dict.get('error', error_code)
+            category = error_dict.get('category', category)
+            severity = error_dict.get('severity', severity)
+            status_code = error_dict.get('status_code', status_code)
+            hint = error_dict.get('hint', hint)
+            errors = errors or error_dict.get('error')
         if serialize_data:
             data = serialize_for_json(data)
         if serialize_details:
@@ -101,7 +112,18 @@ class Response:
         meta = meta or {}
         if serialize_meta:
             meta = serialize_for_json(meta)
-
+        if not details and data and isinstance(data, dict) and 'details' in data:
+            details = data['details']
+        if not hint:
+            hint = Response.generate_hint(error_code, details or {})
+        if error:
+            message = getattr(error, "message", None) or message or "An error occurred"
+        if category:
+            category = category.value if isinstance(category, Enum) else category
+        if severity: 
+            severity = severity.value if isinstance(severity, Enum) else severity
+        if hint:
+            hint = hint.value if isinstance(hint, Enum) else hint
         return Response.error_response(
             message=message or "An error occurred",
             data=data,
@@ -109,282 +131,19 @@ class Response:
             errors=errors,
             code=error_code,
             status_code=status_code,
-            category=category,
-            severity=severity,
+            category=category.value if isinstance(category, Enum) else category,
+            severity=severity.value if isinstance(severity, Enum) else severity,
             meta=meta,
+            hint=hint,
         )
 
     @staticmethod
-    def validation_error_response(
-        error: Optional[Union[PydanticBaseValidationError, Exception, Dict[str, Any], str]] = None,
-        errors: Optional[Union[str, Dict[str, Any]]] = None,
-        message: Optional[str] = None,
-        status_code: int = 422,
-        error_code: str = "VALIDATION_ERROR",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        category: ErrorCategory = ErrorCategory.VALIDATION,
-        severity: ErrorSeverity = ErrorSeverity.LOW,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            errors=errors,
-            message=message or "Validation failed",
-            status_code=status_code,
-            error_code=error_code,
-            data=data,
-            details=details,
-            extract_errors_from_error=True,
-            category=category,
-            severity=severity,
+    def http_error_response(error: HTTPException) -> FlaskResponse:
+        return Response.error_response(
+            message=error.description or "HTTP error occurred",
+            status_code=error.code or 500,
+            hint=error.description or "An HTTP error happened",
+            code=error.name.replace(" ", "_").upper() if hasattr(error, "name") else "HTTP_ERROR",
+            category="http",
+            severity="medium",
         )
-
-    @staticmethod
-    def not_found_response(
-        error: Optional[Union[NotFoundError, Exception]] = None,
-        message: str = "Resource not found",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "NOT_FOUND",
-        status_code: int = 404,
-        category: ErrorCategory = ErrorCategory.BUSINESS_LOGIC,
-        severity: ErrorSeverity = ErrorSeverity.MEDIUM,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            category=category,
-            severity=severity,
-        )
-
-    @staticmethod
-    def unauthorized_response(
-        error: Optional[Union[UnauthorizedError, Exception]] = None,
-        message: str = "Unauthorized",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "UNAUTHORIZED",
-        status_code: int = 401,
-        category: ErrorCategory = ErrorCategory.AUTHENTICATION,
-        severity: ErrorSeverity = ErrorSeverity.HIGH,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            category=category,
-            severity=severity,
-        )
-
-    @staticmethod
-    def forbidden_response(
-        error: Optional[Union[ForbiddenError, Exception]] = None,
-        message: str = "Forbidden",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "FORBIDDEN",
-        status_code: int = 403,
-        category: ErrorCategory = ErrorCategory.AUTHORIZATION,
-        severity: ErrorSeverity = ErrorSeverity.MEDIUM,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            category=category,
-            severity=severity,
-        )
-
-    @staticmethod
-    def internal_server_error_response(
-        error: Optional[Union[InternalServerError, Exception]] = None,
-        message: str = "Internal server error",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "INTERNAL_SERVER_ERROR",
-        status_code: int = 500,
-        category: ErrorCategory = ErrorCategory.SYSTEM,
-        severity: ErrorSeverity = ErrorSeverity.HIGH,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            category=category,
-            severity=severity,
-        )
-
-    @staticmethod
-    def bad_request_response(
-        error: Optional[Union[BadRequestError, Exception]] = None,
-        message: str = "Bad request",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "BAD_REQUEST",
-        status_code: int = 400,
-        category: ErrorCategory = ErrorCategory.VALIDATION,
-        severity: ErrorSeverity = ErrorSeverity.LOW,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            category=category,
-            severity=severity,
-        )
-
-    @staticmethod
-    def network_error_response(
-        error: Optional[Union[NetworkError, Exception]] = None,
-        message: str = "Network error",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "NETWORK_ERROR",
-        status_code: int = 500,
-        meta: Optional[Dict[str, Any]] = None,
-        category: ErrorCategory = ErrorCategory.NETWORK,
-        severity: ErrorSeverity = ErrorSeverity.HIGH,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            meta=meta,
-            category=category,
-            severity=severity,
-        )
-
-    @staticmethod
-    def database_error_response(
-        error: Optional[Union[DatabaseError, Exception]] = None,
-        message: str = "Database error",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "DATABASE_ERROR",
-        status_code: int = 500,
-        meta: Optional[Dict[str, Any]] = None,
-        category: ErrorCategory = ErrorCategory.DATABASE,
-        severity: ErrorSeverity = ErrorSeverity.HIGH,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            meta=meta,
-            category=category,
-            severity=severity,
-        )
-    @staticmethod
-    def http_error_response(
-        error: Optional[Union[HTTPException, Exception]] = None,
-        message: str = "HTTP error",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "HTTP_ERROR",
-        status_code: int = 500,
-        meta: Optional[Dict[str, Any]] = None,
-        category: ErrorCategory = ErrorCategory.SYSTEM,
-        severity: ErrorSeverity = ErrorSeverity.HIGH,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            meta=meta,
-            category=category,
-            severity=severity,
-        )
-
-    @staticmethod
-    def authentication_error_response(
-        error: Optional[Union[AuthenticationError, Exception]] = None,
-        message: str = "Authentication error",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "AUTHENTICATION_ERROR",
-        status_code: int = 401,
-        meta: Optional[Dict[str, Any]] = None,
-        category: ErrorCategory = ErrorCategory.AUTHENTICATION,
-        severity: ErrorSeverity = ErrorSeverity.HIGH,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            meta=meta,
-            category=category,
-            severity=severity,
-        )
-
-    @staticmethod
-    def app_type_error_response(
-        error: Optional[Union[AppTypeError, Exception]] = None,
-        message: str = "Type error",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "TYPE_ERROR",
-        status_code: int = 400,
-        meta: Optional[Dict[str, Any]] = None,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,
-            status_code=status_code,
-            error_code=error_code,
-            meta=meta,
-        )
-
-    @staticmethod
-    def duplicate_key_error_response(
-        error: Optional[Union[AppDuplicateKeyError, Exception]] = None,
-        message: str = "Duplicate key error",
-        data: Optional[Any] = None,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: str = "DUPLICATE_KEY_ERROR",
-        status_code: int = 400,
-        meta: Optional[Dict[str, Any]] = None,
-        category: ErrorCategory = ErrorCategory.DATABASE,
-        severity: ErrorSeverity = ErrorSeverity.LOW,
-    ) -> FlaskResponse:
-        return Response._prepare_error_response(
-            error=error,
-            message=message,
-            data=data,
-            details=details,    
-            status_code=status_code,
-            error_code=error_code,
-            meta=meta,
-            category=category,
-            severity=severity,
-        )
-    

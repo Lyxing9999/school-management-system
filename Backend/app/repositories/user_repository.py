@@ -1,29 +1,28 @@
-from app.models.user import UserModel, Role
-from app.models.student import StudentModel
-from app.models.teacher import TeacherModel
-from app.services.base.base_utils_service import BaseServiceUtils
+
 from app.utils.objectid import ObjectId # type: ignore
 from typing import  Optional, List, Dict, Union, Tuple, Type,TypedDict, Any
 from pydantic import BaseModel
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 import logging
-from app.utils.model_utils import default_model_utils
-from app.error.exceptions import NotFoundError, PydanticValidationError, BadRequestError, InternalServerError, ErrorSeverity, ErrorCategory, AppBaseException
+from app.shared.model_utils import default_model_utils
+from app.error.exceptions import NotFoundError, PydanticValidationError, BadRequestError, InternalServerError, ErrorSeverity, ErrorCategory, AppBaseException, DatabaseError
 from app.database.pipelines.user_pipeline import users_growth_by_role_pipeline, build_user_detail_pipeline, build_user_growth_stats_pipeline, build_search_user_pipeline, build_role_counts_pipeline
 from pymongo.database import Database # type: ignore
 from app.utils.convert import convert_objectid_to_str
-
-
-
+from app.dtos.users.user_response_dto import UserResponseDTO , UserListResponseDTO
+from app.dtos.teacher.teacher_response_dto import TeacherResponseDTO
+from app.enum.enums import Role
+from werkzeug.security import generate_password_hash
+from app.repositories.base_repo import get_base_repository
+from app.dtos.users.user_db_dto import UserDBDTO
+from app.utils.convert import convert_objectid_to_str
 class UserRepositoryConfig:
     def __init__(self, db: Database):
         self.db = db
-        self.collection_name = UserModel._collection_name
+        self.collection_name = "users"
 
-class UserDetailResponse(TypedDict):
-    role: str
-    data: Union[TeacherModel, StudentModel, Dict[str, Any]]
+
 
 class UserGrowthStatsResponse(TypedDict):
     date: str
@@ -38,17 +37,17 @@ class UserGrowthStateWithComparisonResponse(TypedDict):
 
 logger = logging.getLogger(__name__)
 
-class UserRepository(ABC):
+class UserRepository(ABC):  
     @abstractmethod
-    def find_user_by_username(self, username: str) -> Optional[UserModel]:
+    def find_user_by_username(self, username: str) -> Optional[UserResponseDTO]:
         pass
     
     @abstractmethod
-    def find_all_users(self) -> List[UserModel]:
+    def find_all_users(self) -> UserListResponseDTO:
         pass
     
     @abstractmethod
-    def find_user_detail(self, _id: Union[str, ObjectId]) -> UserDetailResponse:
+    def find_user_detail(self, _id: Union[str, ObjectId]) -> UserResponseDTO:
         pass
     
     
@@ -57,17 +56,17 @@ class UserRepositoryImpl(UserRepository):
         self.config = config
         self.db = self.config.db
         self.collection = self.db[self.config.collection_name]
-        self.utils = BaseServiceUtils(self.db, UserModel)  
+        self.utils = default_model_utils
         self._student_service = None
         self._teacher_service = None
-    
+        self._user_repo = get_base_repository(self.config)
  
 
     def role_model_map(self) -> Dict[str, Tuple[Type[BaseModel], str]]:
         return {
-            Role.TEACHER.value: (TeacherModel, TeacherModel._collection_name),
-            Role.STUDENT.value: (StudentModel, StudentModel._collection_name),
-            Role.ADMIN.value: (UserModel, UserModel._collection_name)
+            Role.TEACHER.value: (TeacherResponseDTO, "teachers"),
+            Role.STUDENT.value: (StudentResponseDTO, "students"),
+            Role.ADMIN.value: (UserResponseDTO, "users")
         }
     @staticmethod
     def _parse_date_range( start: str, end: str) -> Tuple[datetime, datetime]:
@@ -78,26 +77,47 @@ class UserRepositoryImpl(UserRepository):
     def _convert_objectid_to_str(self, data: Dict[str, Any]) -> Dict[str, Any]:
         return convert_objectid_to_str(data)
 
-    def find_user_by_username(self, username: str) -> Optional[UserModel]:
-        try:
-            logger.info(f"Finding user by username: {username}")
-            user_data = self.collection.find_one({"username": username})
-            if user_data is None:
-                raise NotFoundError(
-                    message="User not found",
-                    details={"received_value": username},
-                    severity=ErrorSeverity.LOW,
-                    category=ErrorCategory.SYSTEM,
-                    status_code=404,
-                )
-            return self.utils.to_response_model(user_data)
-        except AppBaseException as e:
-            raise e
+
+    def find_user_by_username(self, username: str) -> UserDBDTO:
+        user_data = self._user_repo.find_by_query({"username": username})
+        if user_data is None:
+            raise NotFoundError(
+                message="User not found",
+                details={"received_value": username},
+                severity=ErrorSeverity.LOW,
+                category=ErrorCategory.SYSTEM,
+                status_code=404,
+            )
+        user_data = convert_objectid_to_str(user_data)
+        return UserDBDTO.model_validate(user_data)
+
+    def _handle_update_result(self, result, query, update_data) -> int:
+        if result.modified_count > 0:
+            return result.modified_count
+        raise BadRequestError(
+            message="No changes detected",
+            details={"query": query, "update_data": update_data},
+            user_message="Nothing was updated because the data is the same.",
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.DATABASE,
+            status_code=400
+        )
 
 
-        
+    def find_user_by_id(self, _id: Union[str, ObjectId]) -> Optional[UserResponseDTO]:
+        user_data = self._user_repo.find_by_query({"_id": _id})
+        if user_data is None:
+            raise NotFoundError(message="User not found", details={"_id": _id}, user_message="The user with the given id was not found.", hint="The user with the given id was not found. Please try again later.", status_code=404, severity=ErrorSeverity.HIGH, category=ErrorCategory.DATABASE)
+        return user_data
 
-    def find_user_by_id(self, id_str: str) -> Optional[UserModel]:
+
+    def update_user(self, query: Dict[str, Any], update_data: Dict[str, Any], hash_password: bool = False) -> int:
+        if hash_password and "password" in update_data:
+            update_data["password"] = generate_password_hash(update_data["password"])
+        result = self.collection.update_one(query, {"$set": update_data})
+        return self._handle_update_result(result, query, update_data)
+
+    def find_user_by_id(self, id_str: str) -> Optional[UserResponseDTO]:
         if not id_str:
             raise BadRequestError(
                 message="Invalid ObjectId",
@@ -106,7 +126,7 @@ class UserRepositoryImpl(UserRepository):
                 severity=ErrorSeverity.MEDIUM,
                 category=ErrorCategory.SYSTEM,
             )
-        obj_id = self.utils._validate_objectid(id_str)
+        obj_id = self.utils.validate_object_id(id_str)
         try:
             user_data = self.collection.find_one({"_id": obj_id})
             if not user_data:
@@ -117,10 +137,9 @@ class UserRepositoryImpl(UserRepository):
                     severity=ErrorSeverity.LOW,
                     category=ErrorCategory.DATABASE,
                 )
-
-            return self.utils.to_response_model(user_data)
-        except AppBaseException:
-            raise 
+            user_data.pop("password", None)
+            user_data["_id"] = str(user_data["_id"])
+            return UserResponseDTO.model_validate(user_data)
         except Exception as e:
             raise InternalServerError(
                 message="Error fetching user by ID",
@@ -131,8 +150,9 @@ class UserRepositoryImpl(UserRepository):
                 category=ErrorCategory.DATABASE,
             )
 
+
             
-    def find_all_users(self) -> List[UserModel]:
+    def find_all_users(self) -> UserListResponseDTO:
         """Find all users
         @return: List[UserModel]
         @throws: InternalServerError
@@ -140,13 +160,13 @@ class UserRepositoryImpl(UserRepository):
         try:
             users_cursor = self.collection.find()
             users_list = list(users_cursor)
-            return self.utils.to_response_model_list(users_list)
+            return UserListResponseDTO(users=users_list)
         except Exception as e:
             logger.error(f"Failed to fetch all users: {e}")
             raise InternalServerError(f"Failed to fetch all users: {e}")
         
         
-    def search_user(self, query: str, page: int, page_size: int) -> List[UserModel]:
+    def search_user(self, query: str, page: int, page_size: int) ->  UserListResponseDTO:
         """Search for users by username or email
         @param query: str
         @param page: int
@@ -158,7 +178,7 @@ class UserRepositoryImpl(UserRepository):
             pipeline = build_search_user_pipeline(query, page, page_size)
             users_cursor = self.collection.aggregate(pipeline)
             users_list = list(users_cursor)
-            return self.utils.to_response_model_list(users_list)
+            return UserListResponseDTO(users=users_list)
         except PydanticValidationError as e:
             raise e
         except Exception as e:
@@ -166,7 +186,7 @@ class UserRepositoryImpl(UserRepository):
         
         
         
-    def find_user_by_email(self, email: str) -> Optional[UserModel]:
+    def find_user_by_email(self, email: str) -> Optional[UserResponseDTO]:
         """Find a user by their email
         @param email: str
         @return: UserModel
@@ -185,7 +205,7 @@ class UserRepositoryImpl(UserRepository):
     
         
 
-    def find_user_by_role(self, role: str) -> List[UserModel]:
+    def find_user_by_role(self, role: str) -> UserListResponseDTO:
         """Find users by their role
         @param role: str
         @return: List[UserModel]
@@ -194,7 +214,7 @@ class UserRepositoryImpl(UserRepository):
         try:
             users_cursor = self.collection.find({"role": role})
             raw_users = list(users_cursor)
-            return self.utils.to_response_model_list(raw_users)
+            return UserListResponseDTO(users=raw_users)
         except Exception as e:
             logger.error(f"Failed to find users by role {role}: {e}")
             raise InternalServerError(f"Failed to find users by role {role}: {e}")
@@ -202,9 +222,9 @@ class UserRepositoryImpl(UserRepository):
         
         
         
-    def find_user_detail(self, _id: Union[str, ObjectId]) -> UserDetailResponse:
+    def find_user_detail(self, _id: Union[str, ObjectId]) -> UserResponseDTO:
         """Find user's role-specific detail and include role in response"""
-        obj_id = self.utils._validate_objectid(_id)
+        obj_id = self.utils.validate_objectid(_id)
         pipeline = build_user_detail_pipeline(obj_id)
         
         try:
@@ -219,7 +239,7 @@ class UserRepositoryImpl(UserRepository):
                 )
 
             user_doc = data[0]
-            user = UserModel.model_validate(user_doc)
+            user = UserResponseDTO.model_validate(user_doc)
 
             role_map = self.role_model_map()
             if user.role not in role_map:
@@ -247,7 +267,7 @@ class UserRepositoryImpl(UserRepository):
             role_dump = role_model.model_dump(by_alias=True, exclude_none=True, mode="json")
             cleaned_data = self._convert_objectid_to_str(role_dump)
 
-            return UserDetailResponse(role=user.role, data=cleaned_data)
+            return UserResponseDTO(role=user.role, data=cleaned_data)
 
         except AppBaseException:
             raise

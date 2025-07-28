@@ -1,25 +1,20 @@
 
+from app.schemas.users.user_update_schema import UserUpdateSchema
 from flask import request
 from . import admin_bp
 from app.auth.jwt_utils import role_required
 from app.services.user_service import get_user_service
-from app.enums.roles import Role
+from app.enum.enums import Role
 from app.error.exceptions import BadRequestError, NotFoundError , PydanticValidationError  # type: ignore
 from app.responses.response import Response 
-from app.schemas.user_schema import UserCreateSchema, UserResponseSchema, UserPatchSchema, UserPatchUserDetailSchema, UserDetailResponseSchema
+from app.schemas.users.user_create_schema import UserCreateSchema
 from app.database.db import  get_db
+from app.shared.model_utils import default_model_utils
 import logging
-from flask import send_from_directory , g # type: ignore
-from  functools import wraps
+from flask import send_from_directory # type: ignore
 import os
 logger = logging.getLogger(__name__)
 
-def with_user_service(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        g.user_service = get_user_service(get_db())
-        return func(*args, **kwargs)
-    return wrapper
 
 def parse_json_body() -> dict:
     data = request.get_json()
@@ -32,13 +27,10 @@ def parse_json_body() -> dict:
     return data
 
 @admin_bp.route('/', methods=['GET'])
-@with_user_service
 @role_required([Role.ADMIN.value])
-def get_all_users():
-    """
-    Fetch all users (Admin only).
-    """
-    users = g.user_service.user_repo.find_all_users()
+def find_all_user():
+    user_service = get_user_service(get_db())
+    users = user_service.user_repo.find_all_users()
     if not users:
         return Response.success_response(data=[], message="No users found")
     user_data = [
@@ -49,87 +41,68 @@ def get_all_users():
 
 
 
-@admin_bp.route('/users', methods=['POST'])
-@with_user_service
+@admin_bp.route('/create/user', methods=['POST'])
 def create_user():
-    """
-    Create a new user (Admin only).
-    """
     data = parse_json_body()
-    user = g.user_service.create_user(data)
-    user_response = UserResponseSchema.model_validate(user)
+    user_service = get_user_service(get_db())
+    user_schema = default_model_utils.to_model(data, UserCreateSchema)
+    user = user_service.create_user(user_schema)
     return Response.success_response(
-        user_response.model_dump(by_alias=True),
+        user.model_dump(by_alias=True),
         message="Successfully created user",
         status_code=201
     )
+    
+@admin_bp.route('/update/user/<_id>', methods=['PUT'])
 
-@admin_bp.route('/users/<_id>', methods=['PATCH'])
-@with_user_service
-@role_required([Role.ADMIN.value])
-def patch_user(_id):
+def update_user(_id):
     """
     Edit an existing user (Admin only).
     """
     data = parse_json_body()
-
-
-    updated_user = g.user_service.patch_user(_id, data)
-
-    if not updated_user:
-        raise NotFoundError(
-            message="User not found or update failed",
-            resource_type="User",
-            resource_id=_id
-        )
-
-    user_model = UserResponseSchema.model_validate(updated_user)
-    user_data = user_model.model_dump(by_alias=True, exclude_none=True)
-
+    user_model = UserUpdateSchema.model_validate(data)
+    user_service = get_user_service(get_db())
+    updated_user = user_service.updated_user(_id, user_model)
+    user_data = updated_user.data.model_dump(by_alias=True)
     return Response.success_response(
-        user_data,
-        message="User updated successfully"
+        data=user_data,
+        message=updated_user.message,
+        status_code=200
     )
 
 
 
 
-@admin_bp.route('/users/<_id>', methods=['DELETE'])
-@role_required([Role.ADMIN.value])
-@with_user_service
+@admin_bp.route('/delete/user/<_id>', methods=['DELETE'])
 def delete_user(_id):
-    """
-    Delete a user by ID (Admin only).
-    """
-    result = g.user_service.delete_user(_id)
-
+    user_service = get_user_service(get_db())
+    result = user_service.delete_user(_id)
     if not result:
         raise NotFoundError(
             message="User not found or delete failed",
             resource_type="User",
             resource_id=_id
         )
-
     return Response.success_response(message="User deleted successfully")
 
 
-@admin_bp.route('/users/find-one-user', methods=['POST'])
+@admin_bp.route('/find-one-user', methods=['POST'])
 @role_required([Role.ADMIN.value])
-@with_user_service
 def find_one_user():
     """
     Find a user by ID, username, or email (Admin only).
     """
     data = parse_json_body()
+    user_service = get_user_service(get_db())
     user = None
     _id = data.get("id") or data.get("_id")
 
     if _id:
-        user = g.user_service.user_repo.find_user_by_id(str(_id))
+        user = user_service.user_repo.find_user_by_id(str(_id))
     elif "username" in data:
-        user = g.user_service.user_repo.find_user_by_username(data["username"])
+        user = user_service.user_repo.find_user_by_username(data["username"])
     elif "email" in data:
-        user = g.user_service.user_repo.find_user_by_email(data["email"])
+        user = user_service.user_repo.find_user_by_email(data["email"])
     else:
         raise BadRequestError(
             message="No valid identifier provided",
@@ -150,19 +123,18 @@ def find_one_user():
     return Response.success_response(user_data, message="User fetched successfully")
 
 
-@admin_bp.route('/users/count-by-role', methods=['GET'])
+@admin_bp.route('/count-by-role', methods=['GET'])
 @role_required([Role.ADMIN.value])
-@with_user_service
 def count_users_by_role():
     """
     Count users by role (Admin only).
     """
-    counts = g.user_service.user_repo.count_users_by_role()
+    user_service = get_user_service(get_db())
+    counts = user_service.user_repo.count_users_by_role()
     return Response.success_response(counts, message="User counts by role fetched successfully")
 
-@admin_bp.route('/users/growth-stats', methods=['GET'])
+@admin_bp.route('/growth-stats', methods=['GET'])
 @role_required([Role.ADMIN.value])
-@with_user_service
 def get_user_growth_stats():
     """
     Get user growth statistics (Admin only).
@@ -175,13 +147,13 @@ def get_user_growth_stats():
             user_message="Please provide both 'start_date' and 'end_date' as query parameters.",
             details={"missing": [k for k in ['start_date', 'end_date'] if not request.args.get(k)]}
         )
-    stats = g.user_service.user_repo.find_user_growth_stats(start_date=start_date, end_date=end_date)
+    user_service = get_user_service(get_db())
+    stats = user_service.user_repo.find_user_growth_stats(start_date=start_date, end_date=end_date)
     return Response.success_response(stats, message="User growth statistics fetched successfully")
 
 
 @admin_bp.route('/users/growth-stats-by-role', methods=['GET'])
 @role_required([Role.ADMIN.value])
-@with_user_service
 def get_user_growth_stats_by_role():
     """
     Get user growth statistics by role (Admin only).
@@ -207,7 +179,8 @@ def get_user_growth_stats_by_role():
             details={"missing": missing_previous}
         )
 
-    stats = g.user_service.user_repo.find_users_growth_stats_by_role_with_comparison(
+    user_service = get_user_service(get_db())
+    stats = user_service.user_repo.find_users_growth_stats_by_role_with_comparison(
         current_start_date=current_start_date,
         current_end_date=current_end_date,
         previous_start_date=previous_start_date,
@@ -219,12 +192,12 @@ def get_user_growth_stats_by_role():
 
 @admin_bp.route('/users/detail/<_id>', methods=['GET'])
 @role_required([Role.ADMIN.value])
-@with_user_service
 def get_user_detail(_id):
     """Get detailed information about a user by ID (Admin only)."""
     if not _id:
         raise BadRequestError(message="User ID is required", user_message="User ID is required.")
-    user = g.user_service.user_repo.find_user_detail(_id)
+    user_service = get_user_service(get_db())
+    user = user_service.user_repo.find_user_detail(_id)
     if not user:
         raise NotFoundError(message=f"User not found with ID {_id}", user_message="User not found.")
     
@@ -233,7 +206,6 @@ def get_user_detail(_id):
 
 @admin_bp.route('/users/edit-user-detail/<_id>', methods=['PATCH'])
 @role_required([Role.ADMIN.value])
-@with_user_service
 def patch_user_detail(_id):
     """
     Edit user detail (Admin only).
@@ -251,13 +223,13 @@ def patch_user_detail(_id):
     #     raise ValidationError(message=f"Validation error: {ve}", user_message="Invalid input data.")
     user_update = data  # If you do validation above, use user_update.model_dump()
 
-    updated_user = g.user_service.patch_user_detail(_id, user_update)
+    user_service = get_user_service(get_db())
+    updated_user = user_service.patch_user_detail(_id, user_update)
     return Response.success_response(updated_user, message="User detail updated successfully")
 
 
 @admin_bp.route('/users/search-user', methods=['POST'])
 @role_required([Role.ADMIN.value])
-@with_user_service
 def search_user():
     """Search for users by username or email (Admin only)."""
     
@@ -273,7 +245,8 @@ def search_user():
     if not (isinstance(page_size, int) and 0 < page_size <= 100):
         raise PydanticValidationError(message="Page size must be between 1 and 100.", user_message="Invalid page size.")
 
-    users = g.user_service.user_repo.search_user(query, page, page_size)
+    user_service = get_user_service(get_db())
+    users = user_service.user_repo.search_user(query, page, page_size)
     users_serialized = [
         user.model_dump(mode="json", by_alias=True, exclude_none=True) for user in users
     ]

@@ -6,8 +6,6 @@ from app.models.user import UserModel # type: ignore
 from abc import ABC, abstractmethod
 from app.error.exceptions import ExceptionFactory, AppBaseException, InternalServerError    
 from app.utils.model_utils import default_model_utils
-from app.utils.convert import convert_objectid_to_str
-from app.services.base.base_utils_service import BaseServiceUtils
 
 
 class StudentServiceConfig:
@@ -23,7 +21,7 @@ class MongoStudentService(StudentService):
     def __init__(self, config: StudentServiceConfig):
         self.db = self.config.db
         self.collection = self.db[self.config.collection_name]
-        self.utils = BaseServiceUtils(self.db, StudentModel)
+        self.utils = default_model_utils
         self._user_service = None
         self._classes_service = None
 

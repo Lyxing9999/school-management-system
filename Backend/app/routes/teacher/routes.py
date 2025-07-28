@@ -1,7 +1,7 @@
 from flask import Blueprint, request , jsonify, g  # type: ignore
 from app.services.teacher_service import get_teacher_service
 from app.auth.jwt_utils import role_required
-from app.enums.roles import Role
+from app.enum.enums import Role
 from app.responses.response import Response 
 from app.database.db import get_db # type: ignore
 from app.error.exceptions import BadRequestError, ErrorSeverity, ErrorCategory
@@ -24,7 +24,6 @@ def get_teacher_profile():
 @teacher_bp.route('/profile', methods=['PATCH'])
 @role_required([Role.TEACHER.value])
 def patch_teacher_profile():
-    """Update teacher profile (Teacher only)."""
     user_id = get_current_user_id()
 
     teacher_service = get_teacher_service(get_db())
@@ -40,7 +39,6 @@ def patch_teacher_profile():
 @teacher_bp.route('/create/classes', methods=['POST'])
 @role_required([Role.TEACHER.value])
 def create_teacher_class():
-    """Create teacher class (Teacher only)."""
     user_id = get_current_user_id()
     teacher_service = get_teacher_service(get_db())
     result = teacher_service.teacher_create_classes(user_id, request.get_json())
@@ -55,8 +53,6 @@ def create_teacher_class():
 @teacher_bp.route('/classes/<_id>', methods=['PUT'])
 @role_required([Role.TEACHER.value])
 def update_teacher_class(_id):
-    """Update teacher class (Teacher only)."""
-    user_id = get_current_user_id()
     teacher_service = get_teacher_service(get_db())
     result = teacher_service.teacher_update_class(_id, request.get_json())
     return Response.success_response(
@@ -70,8 +66,6 @@ def update_teacher_class(_id):
 @teacher_bp.route('/classes', methods=['GET'])
 @role_required([Role.TEACHER.value])
 def get_all_class():
-    """Get teacher classes (Teacher only)."""
-    user_id = get_current_user_id()
     teacher_service = get_teacher_service(get_db())
     result = teacher_service.find_all_classes()
     return Response.success_response(
@@ -86,7 +80,6 @@ def get_all_class():
     
 @teacher_bp.route('/classes/<_id>', methods=['GET'])
 def get_class_by_id(_id):
-    """Get teacher classes (Teacher only)."""
     if not _id:
         raise BadRequestError(message="Class ID is required", status_code=400, severity=ErrorSeverity.LOW, category=ErrorCategory.VALIDATION)
     teacher_service = get_teacher_service(get_db())
@@ -101,8 +94,6 @@ def get_class_by_id(_id):
 @teacher_bp.route('/classes/<class_id>', methods=['PUT'])
 @role_required([Role.TEACHER.value])
 def update_class(class_id):
-    """Update class (Teacher only)."""
-    user_id = get_current_user_id()
     teacher_service = get_teacher_service(get_db())
     result = teacher_service.teacher_update_class(class_id, request.get_json())
     return Response.success_response(
@@ -115,8 +106,6 @@ def update_class(class_id):
 @teacher_bp.route('/feedback', methods=['GET'])
 @role_required([Role.TEACHER.value])
 def get_feedback():
-    """Get feedback (Teacher only)."""
-    get_current_user_id()
     teacher_service = get_teacher_service(get_db())
     result = teacher_service.teacher_find_all_feedback()
     result_serialized = [item.model_dump(mode="json", by_alias=True, exclude_none=True) for item in result]
@@ -129,8 +118,7 @@ def get_feedback():
 @teacher_bp.route('/create/feedback', methods=['POST'])
 @role_required([Role.TEACHER.value])
 def create_feedback():
-    """Create attendance (Teacher only)."""
-    get_current_user_id()
+
     teacher_service = get_teacher_service(get_db())
     result = teacher_service.teacher_create_feedback(request.get_json())
     return Response.success_response(

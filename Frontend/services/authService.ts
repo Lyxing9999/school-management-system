@@ -1,10 +1,8 @@
 import { useNuxtApp, useRuntimeConfig, useRouter } from "nuxt/app";
 import { ElMessage } from "element-plus";
 import type { AuthUser, LoginResponse } from "~/types/auth";
-import { UserModel } from "~/models/userModel";
 import { useAuthStore } from "~/stores/authStore";
 import type { AxiosInstance } from "axios";
-import type { User } from "~/types/models/User";
 import { jwtDecode } from "jwt-decode";
 
 export enum UserRole {

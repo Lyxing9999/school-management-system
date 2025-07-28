@@ -1,34 +1,22 @@
-from typing import Optional
+
+from app.dtos.users.user_register_dto import UserRegisterDataDTO
+from app.services import user_service
 from flask import request, url_for  # type: ignore
-from pydantic.type_adapter import R
-from werkzeug.security import check_password_hash  # type: ignore
 from datetime import timedelta
-from app.enums.roles import Role
-from app.models.user import UserModel 
+from app.enum.enums import Role
 from . import auth_bp
 from app import oauth
 from app.services.user_service import get_user_service
-from app.auth.jwt_utils import create_access_token
-from app.repositories.user_repository import UserRepositoryImpl
 from app.responses.response import Response 
 from app.database.db import get_db
 import logging
 from app.error.exceptions import BadRequestError, AppTypeError
-
+from app.schemas.users.user_create_schema import UserCreateSchema
+from app.schemas.users.user_login_schema import UserLoginSchema
+from app.dtos.users.user_response_dto import UserResponseDTO
 logger = logging.getLogger(__name__)
+from app.shared.model_utils import default_model_utils
 
-def build_jwt_payload(user: Optional[UserModel]) -> dict:
-    if not isinstance(user, UserModel):
-        raise AppTypeError(
-            message=f"Expected UserModel, got {type(user).__name__}",
-            status_code=400
-        )
-    return {
-        "id": str(user.id),
-        "role": user.role,
-        "username": user.username,
-        "email": user.email,
-    }
 
 
 @auth_bp.route('/google/login')
@@ -80,44 +68,28 @@ def google_login_callback():
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """Register a new user and return JWT."""
-    data = request.get_json()
-    if not data:
-        return Response.error_response("Invalid JSON body", status_code=400)
-
+    utils = default_model_utils
     user_service = get_user_service(get_db())
-    result = user_service.create_user(data)
-    user = result.get("user")
-    access_token = create_access_token(
-        data=build_jwt_payload(user),
-        expire_delta=timedelta(hours=1)
+    user_schema = utils.to_model(request.get_json(), UserCreateSchema)
+    user_dto = user_service.register_user(user_schema)  
+    return Response.success_response(
+        data=user_dto.data.model_dump(), 
+        message=user_dto.message,
+        status_code=201
     )
-    return Response.success_response({"access_token": access_token}, message="User registered successfully", status_code=201)
-
 
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json() or {}
-    username = data.get('username')
-    if not username:
-        raise BadRequestError(message="Username is required")
-    password = data.get('password')
-    if  not password:
-        raise BadRequestError(message="Password is required")
-
+    utils = default_model_utils
     user_service = get_user_service(get_db())
-    print("user_service", user_service)
-    user = user_service.user_repo.find_user_by_username(username)
-    access_token = create_access_token(
-        data=build_jwt_payload(user),
-        expire_delta=timedelta(hours=1)
+    user_schema = utils.to_model(request.get_json(), UserLoginSchema)
+    user = user_service.login_user(user_schema)
+    return Response.success_response(
+        data=user.data.model_dump(), 
+        message=user.message,
+        status_code=200
     )
-
-    return Response.success_response({
-        "access_token": access_token,
-        "user": build_jwt_payload(user)
-    }, message="Login successful")
 
 
 

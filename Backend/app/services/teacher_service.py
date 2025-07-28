@@ -2,19 +2,20 @@ import logging
 from typing import Optional, List, Dict, Any, Union
 from pymongo.database import Database 
 from app.utils.objectid import ObjectId 
-from app.models.course import CourseModel
-from app.models.teacher import TeacherModel 
-from app.models.classes import ClassesModel 
-from app.models.report import ReportModel
-from app.models.user import UserModel
 from abc import ABC, abstractmethod
 from app.error.exceptions import AppBaseException,ExceptionFactory, PydanticValidationError, InternalServerError, NotFoundError, DatabaseError, ErrorCategory, ErrorSeverity
 logger = logging.getLogger(__name__)
 from pymongo import ReturnDocument 
-from app.enums.roles import Role
-from app.models.feedback import FeedbackModel
-from app.services.base.base_utils_service import BaseServiceUtils
-from app.models.attendance import AttendanceModel
+from app.enum.enums import Role
+from app.shared.model_utils import default_model_utils
+from app.dtos.classes_response_dto import ClassResponseDTO
+from app.dtos.feedback_response_dto import FeedbackResponseDTO
+from app.dtos.course_response_dto import CourseResponseDTO
+from app.dtos.report_response_dto import ReportResponseDTO
+from app.dtos.attendance_response_dto import AttendanceResponseDTO
+from app.dtos.student_response_dto import StudentResponseDTO
+from app.dtos.users.user_response_dto import UserResponseDTO
+from app.dtos.teacher.teacher_response_dto import TeacherResponseDTO
 
 class TeacherServiceConfig:
     def __init__(self, db: Database):
@@ -32,7 +33,7 @@ class MongoTeacherService(TeacherService):
         self.config = config
         self.db = self.config.db 
         self.collection = self.db[self.config.collection_name]
-        self.utils = BaseServiceUtils(self.db, TeacherModel)
+        self.utils = default_model_utils
         self._classes_service = None
         self._user_service = None
         self._feedback_service = None
@@ -101,14 +102,6 @@ class MongoTeacherService(TeacherService):
 
 
 
-    def _is_non_empty_dict(self, data: Dict[str, Any]) -> bool:
-        return isinstance(data, dict) and bool(data)
-
-    def _to_classes(self, data: Dict[str, Any]) -> Optional[ClassesModel]:
-        return self.classes_service._to_classes(data)
-    
-    def _to_classes_list(self, data_list: List[Dict[str, Any]]) -> List[ClassesModel]:
-        return self.classes_service._to_classes_list(data_list)
 
     def _check_dict(self, data: Dict[str, Any]) -> None:
         if not isinstance(data, dict) or not data:
@@ -118,13 +111,13 @@ class MongoTeacherService(TeacherService):
                 user_message="Invalid input data"
             )
 
-    def create_teacher(self, data: dict) -> Optional[UserModel]:
+    def create_teacher(self, data: dict) -> Optional[UserResponseDTO]:
         self._check_dict(data)
         data["role"] = Role.TEACHER.value
         user_model = self.user_service.create_user(data)
         return user_model
 
-    def get_teacher_by_id(self, _id: Union[str, ObjectId]) -> TeacherModel:
+    def get_teacher_by_id(self, _id: Union[str, ObjectId]) -> TeacherResponseDTO:
         validated_id = self.utils._validate_objectid(_id)
         try:
             result = self.collection.find_one({"_id": validated_id})
@@ -140,7 +133,7 @@ class MongoTeacherService(TeacherService):
         )
 
 
-    def patch_teacher(self, _id: ObjectId, update_data: Dict[str, Any]) -> Optional[TeacherModel]:
+    def patch_teacher(self, _id: ObjectId, update_data: Dict[str, Any]) -> Optional[TeacherResponseDTO]:
 
         validated_id = self.utils._validate_objectid(_id)
         safe_update = self.utils._prepare_safe_update(update_data)
@@ -182,21 +175,21 @@ class MongoTeacherService(TeacherService):
                 cause=e
             )
 
-    def find_classes_by_id(self, _id: Union[ObjectId, str]) -> ClassesModel:
+    def find_classes_by_id(self, _id: Union[ObjectId, str]) -> ClassResponseDTO:
         return self.classes_service.find_classes_by_id(_id)
     
 
 
     # classes CRUD service
-    def find_classes_by_teacher_id(self, _id: Union[ObjectId, str]) -> List[ClassesModel]:
+    def find_classes_by_teacher_id(self, _id: Union[ObjectId, str]) -> List[ClassResponseDTO]:
         logger.info('receive from find_classes_by_teacher_id', id=str(_id))
         return self.classes_service.find_classes_by_teacher_id(_id)
-    def teacher_find_all_classes(self) -> List[ClassesModel]:
+    def teacher_find_all_classes(self) -> List[ClassResponseDTO]:
         logger.info('receive from teacher_find_all_classes')
         return self.classes_service.find_all_classes()
-    def teacher_create_classes(self, _id: Union[ObjectId, str], class_data: Dict[str, Any]) ->  Optional[ClassesModel]:
+    def teacher_create_classes(self, _id: Union[ObjectId, str], class_data: Dict[str, Any]) ->  Optional[ClassResponseDTO]:
         return self.classes_service.create_classes(_id, class_data)
-    def teacher_update_class(self, _id: Union[ObjectId, str], class_data: Dict[str, Any]) ->  ClassesModel:
+    def teacher_update_class(self, _id: Union[ObjectId, str], class_data: Dict[str, Any]) ->  ClassResponseDTO:
         logger.info('receive from teacher_update_class', _id=str(_id))
         return self.classes_service.update_classes(_id, class_data)
 
@@ -204,25 +197,25 @@ class MongoTeacherService(TeacherService):
 
 
     # feedback CRUD service
-    def teacher_find_all_feedback(self) -> List[FeedbackModel]:
+    def teacher_find_all_feedback(self) -> List[FeedbackResponseDTO]:
         return self.feedback_service.find_all_feedback()
-    def teacher_create_feedback(self,feedback_data: Dict[str, Any]) -> Optional[FeedbackModel]:
+    def teacher_create_feedback(self,feedback_data: Dict[str, Any]) -> Optional[FeedbackResponseDTO]:
         logger.info('receive from teacher_create_feedback')
         return self.feedback_service.create_feedback(feedback_data)
-    def teacher_update_feedback(self, _id: Union[ObjectId, str], feedback_data: Dict[str, Any]) -> Optional[FeedbackModel]:
+    def teacher_update_feedback(self, _id: Union[ObjectId, str], feedback_data: Dict[str, Any]) -> Optional[FeedbackResponseDTO]:
         return self.feedback_service.update_feedback(_id, feedback_data)  
     def teacher_delete_feedback(self, _id: Union[ObjectId, str]) -> bool:
         return self.feedback_service.delete_feedback(_id)
 
 
     # course CRUD service
-    def teacher_find_all_courses(self) -> List[CourseModel]:
+    def teacher_find_all_courses(self) -> List[CourseResponseDTO]:
         logger.info('receive from teacher_find_all_courses')
         return self.course_service.find_all_courses()
-    def teacher_create_course(self, course_data: Dict[str, Any]) -> Optional[CourseModel]:
+    def teacher_create_course(self, course_data: Dict[str, Any]) -> Optional[CourseResponseDTO]:
         logger.info('receive from teacher_create_course')
         return self.course_service.create_course(course_data)
-    def teacher_update_course(self, _id: Union[ObjectId, str], course_data: Dict[str, Any]) -> Optional[CourseModel]:
+    def teacher_update_course(self, _id: Union[ObjectId, str], course_data: Dict[str, Any]) -> Optional[CourseResponseDTO]:
         logger.info('receive from teacher_update_course', _id=str(_id))
         return self.course_service.update_course(_id, course_data)
     def teacher_delete_course(self, _id: Union[ObjectId, str]) -> bool:
@@ -230,29 +223,16 @@ class MongoTeacherService(TeacherService):
         return self.course_service.delete_course(_id)
     
 
-    # report CRUD service
-    def teacher_find_all_reports(self) -> List[ReportModel]:
-        logger.info('receive from teacher_find_all_reports')
-        return self.report_service.find_all_reports()
-    def teacher_create_report(self, report_data: Dict[str, Any]) -> Optional[ReportModel]:
-        logger.info('receive from teacher_create_report')
-        return self.report_service.create_report(report_data)
-    def teacher_update_report(self, _id: Union[ObjectId, str], report_data: Dict[str, Any]) -> Optional[ReportModel]:
-        logger.info('receive from teacher_update_report', _id=str(_id))
-        return self.report_service.update_report(_id, report_data)
-    def teacher_delete_report(self, _id: Union[ObjectId, str]) -> bool:
-        logger.info('receive from teacher_delete_report', id=str(_id))
-        return self.report_service.delete_report(_id)
 
 
     # attendance CRUD service
-    def teacher_find_all_attendances(self) -> List[AttendanceModel]:
+    def teacher_find_all_attendances(self) -> List[AttendanceResponseDTO]:
         logger.info('receive from teacher_find_all_attendances')
         return self.attendance_service.find_all_attendances()
-    def teacher_create_attendance(self, attendance_data: Dict[str, Any]) -> Optional[AttendanceModel]:
+    def teacher_create_attendance(self, attendance_data: Dict[str, Any]) -> Optional[AttendanceResponseDTO]:
         logger.info('receive from teacher_create_attendance', attendance_data)
         return self.attendance_service.create_attendance(attendance_data)
-    def teacher_update_attendance(self, _id: Union[ObjectId, str], attendance_data: Dict[str, Any]) -> Optional[AttendanceModel]:
+    def teacher_update_attendance(self, _id: Union[ObjectId, str], attendance_data: Dict[str, Any]) -> Optional[AttendanceResponseDTO]:
         logger.info('receive from teacher_update_attendance', _id=str(_id))
         return self.attendance_service.update_attendance(_id, attendance_data)
     def teacher_delete_attendance(self, _id: Union[ObjectId, str]) -> bool:
