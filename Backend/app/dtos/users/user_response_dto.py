@@ -1,24 +1,27 @@
-
-from bson import ObjectId
-from pydantic import BaseModel , Field
-from typing import List
-class UserResponseDTO(BaseModel):
-    id: str = Field(alias="_id")
-    username: str | None
-    role: str
-    email: str | None
-    model_config = {
-        "orm_mode": True,
-        "from_attributes": True,
-        "json_encoders": {
-            ObjectId: str,  
-        }
-    }
+from app.dtos.users.user_auth_dto import UserRegisterDataDTO
+from app.dtos.users.user_base_dto import UserResponseDataDTO, UserResponseDataDTOList
+from app.dtos.common.base_response_dto import BaseResponseDTO
+from app.dtos.users.user_action_dto import UserUpdateData
 
 
-class UserListResponseDTO(BaseModel):
-    users: List[UserResponseDTO]
+class UserRegisterResponseDTO(BaseResponseDTO[UserRegisterDataDTO]):
+    pass
 
-    model_config = {
-        "from_attributes": True,
-    }
+class UserLoginResponseDTO(UserRegisterResponseDTO):
+    pass
+
+
+class UserUpdateResponseDTO(BaseResponseDTO[UserUpdateData]):
+    pass
+
+
+class UserResponseDTO(BaseResponseDTO[UserResponseDataDTO]):
+    pass
+
+class UserResponseDTOList(BaseResponseDTO[UserResponseDataDTOList]):
+    pass
+
+
+
+
+
