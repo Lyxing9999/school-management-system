@@ -4,7 +4,7 @@ from app.schemas.classes.class_update_schema import ClassUpdateSchema
 from app.utils.pyobjectid import PyObjectId 
 
 class AdminClassCreateSchema(ClassCreateSchema):
-    created_by: PyObjectId = Field(..., description="The admin who created the class")
+    created_by: PyObjectId = Field(..., description="The admin who created the class", alias="created_by_admin_id")
 
     model_config = {
         **ClassCreateSchema.model_config,
@@ -15,7 +15,7 @@ class AdminClassCreateSchema(ClassCreateSchema):
 
 
 class AdminClassUpdateSchema(ClassUpdateSchema):
-    updated_by: PyObjectId = Field(..., description="The admin who updated the class")
+    updated_by: PyObjectId = Field(..., description="The admin who updated the class", alias="updated_by_admin_id")
 
     model_config = {
         **ClassUpdateSchema.model_config,

@@ -6,7 +6,7 @@ import googleIcon from "~/assets/icons/svg/google.svg";
 import { AuthService } from "~/services/authService";
 import { useNuxtApp } from "nuxt/app";
 import type { UserLoginForm } from "~/types";
-import { AuthApi } from "~/api/AuthApi";
+import { AuthApi } from "~/api/auth.api";
 import type { AxiosInstance } from "axios";
 
 const hover = ref(false);

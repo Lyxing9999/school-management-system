@@ -1,18 +1,23 @@
 import tailwindcss from "@tailwindcss/vite";
 import { visualizer } from "rollup-plugin-visualizer";
-
 import { defineNuxtConfig } from "nuxt/config";
 
 export default defineNuxtConfig({
+  srcDir: "src/",
+
   compatibilityDate: "2025-05-29",
+
   modules: ["@element-plus/nuxt", "@pinia/nuxt"],
+
   devtools: true,
-  css: ["@/styles/main.css", "element-plus/dist/index.css"],
+
+  css: ["~/styles/main.css", "element-plus/dist/index.css"],
+
   vite: {
     css: {
       preprocessorOptions: {
         scss: {
-          additionalData: '@use "@/styles/scss/main.scss" as *;',
+          additionalData: '@use "~/styles/scss/main.scss" as *;',
         },
       },
     },
@@ -21,23 +26,26 @@ export default defineNuxtConfig({
       __DEV__: true,
     },
     server: {
-      watch: {
-        usePolling: true,
-      },
+      watch: { usePolling: true },
       host: "0.0.0.0",
     },
   },
+
   ssr: false,
+
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE,
       calendarificApiKey: process.env.NUXT_PUBLIC_CALENDARIFIC_API_KEY,
     },
   },
+
   router: {
     middleware: ["auth"],
   },
+
   darkMode: "class",
+
   optimizeDeps: {
     include: [
       "lodash-es",
@@ -46,6 +54,7 @@ export default defineNuxtConfig({
       "@fullcalendar/interaction",
     ],
   },
+
   app: {
     baseURL: "/",
     head: {
@@ -62,15 +71,17 @@ export default defineNuxtConfig({
       ],
     },
   },
+
   test: {
     globals: true,
     environment: "jsdom",
     vite: true,
-    setupFiles: "./test/setup.ts",
+    setupFiles: "./src/test/setup.ts",
     deps: {
       inline: ["element-plus"],
     },
   },
+
   nitro: {
     preset: "vercel",
   },

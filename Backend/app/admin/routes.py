@@ -1,18 +1,22 @@
-
-from app.schemas.users.user_update_schema import UserUpdateSchema
+from app.responses import response
+from app.responses.response import Response
 from flask import request
 from . import admin_bp
 from app.auth.jwt_utils import role_required
-from app.services.user_service import get_user_service
+from app.services.admin_service import get_admin_service
 from app.enum.enums import Role
 from app.error.exceptions import BadRequestError, NotFoundError , PydanticValidationError  # type: ignore
-from app.responses.response import Response 
-from app.schemas.users.user_create_schema import UserCreateSchema
+from app.schemas.classes import ClassCreateSchema
+from app.schemas.users import AdminCreateUserSchema, AdminUpdateUserSchema
+from app.dtos.users import AdminCreateUserResponseDTO , AdminUpdateUserResponseDTO , AdminFindUserResponseDTOList
+
 from app.database.db import  get_db
 from app.shared.model_utils import default_model_utils
 import logging
 from flask import send_from_directory # type: ignore
 import os
+from app.utils.auth_utils import get_current_user_id
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,44 +30,54 @@ def parse_json_body() -> dict:
         )
     return data
 
-@admin_bp.route('/', methods=['GET'])
+def get_default_model_utils():
+    return default_model_utils
+
+
+@admin_bp.route('/users', methods=['GET'])
 @role_required([Role.ADMIN.value])
 def find_all_user():
-    user_service = get_user_service(get_db())
-    users = user_service.user_repo.find_all_users()
-    if not users:
-        return Response.success_response(data=[], message="No users found")
-    user_data = [
-        user.model_dump(exclude={"password"}, by_alias=True)
-        for user in users
-    ]
-    return Response.success_response(data=user_data, message="Users fetched successfully")
+    admin_service = get_admin_service(get_db())
+    response: AdminFindUserResponseDTOList = admin_service.find_all_users()
+    return Response.success_response(response.data.model_dump( exclude={'password'}, exclude_none=True) , message=response.message , status_code=200)
 
 
 
-@admin_bp.route('/create/user', methods=['POST'])
-def create_user():
+@admin_bp.route('/users', methods=['POST'])
+@role_required([Role.ADMIN.value])
+def admin_create_user():
+    admin_id = get_current_user_id()
+    utils = get_default_model_utils()
     data = parse_json_body()
-    user_service = get_user_service(get_db())
-    user_schema = default_model_utils.to_model(data, UserCreateSchema)
-    user = user_service.create_user(user_schema)
+    validated_admin_id = utils.validate_object_id(admin_id)
+    data["created_by_admin_id"] = validated_admin_id  
+    data = utils.to_model(data, AdminCreateUserSchema)
+    admin_service = get_admin_service(get_db())
+    response: AdminCreateUserResponseDTO = admin_service.admin_create_user(data)
     return Response.success_response(
-        user.model_dump(by_alias=True),
-        message="Successfully created user",
+        data=response.data.model_dump(exclude={'password'}, exclude_none=True),
+        message=response.message,
         status_code=201
     )
     
-@admin_bp.route('/update/user/<_id>', methods=['PUT'])
 
-def update_user(_id):
+
+@admin_bp.route('/users/<_id>', methods=['PUT'])
+@role_required([Role.ADMIN.value])
+def admin_update_user(_id):
     """
     Edit an existing user (Admin only).
     """
+    admin_id = get_current_user_id()
+    utils = get_default_model_utils()
     data = parse_json_body()
-    user_model = UserUpdateSchema.model_validate(data)
-    user_service = get_user_service(get_db())
-    updated_user = user_service.updated_user(_id, user_model)
-    user_data = updated_user.data.model_dump(by_alias=True)
+    validated_admin_id = utils.validate_object_id(admin_id)
+    data['updated_by_admin_id'] = validated_admin_id
+    user_id = utils.validate_object_id(_id)
+    data = utils.to_model(data, AdminUpdateUserSchema)
+    admin_service = get_admin_service(get_db())
+    updated_user: AdminUpdateUserResponseDTO = admin_service.admin_update_user(user_id, data)
+    user_data = updated_user.data.model_dump(exclude={'password'}, exclude_none=True)
     return Response.success_response(
         data=user_data,
         message=updated_user.message,
@@ -73,17 +87,47 @@ def update_user(_id):
 
 
 
-@admin_bp.route('/delete/user/<_id>', methods=['DELETE'])
-def delete_user(_id):
-    user_service = get_user_service(get_db())
-    result = user_service.delete_user(_id)
-    if not result:
-        raise NotFoundError(
-            message="User not found or delete failed",
-            resource_type="User",
-            resource_id=_id
-        )
+@admin_bp.route('/users/<_id>', methods=['DELETE'])
+@role_required([Role.ADMIN.value])
+def admin_delete_user(_id):
+    admin_service = get_admin_service(get_db())
+    admin_service.admin_delete_user(_id)
     return Response.success_response(message="User deleted successfully")
+
+
+@admin_bp.route('/classes', methods=['GET'])
+@role_required([Role.ADMIN.value])
+def find_all_classes():
+    admin_service = get_admin_service(get_db())
+    response: AdminFindClassResponseDTOList = admin_service.find_all_classes()
+    return Response.success_response(response.data.model_dump(exclude_none=True) , message=response.message , status_code=200)
+
+
+
+@admin_bp.route('/classes', methods=['POST'])
+@role_required([Role.ADMIN.value])
+def create_class():
+    utils = get_default_model_utils()
+    admin_service = get_admin_service(get_db())
+    data = parse_json_body()
+    validated_admin_id = utils.validate_object_id(get_current_user_id())
+    data = utils.to_model(data, ClassCreateSchema)
+    response: AdminCreateClassResponseDTO = admin_service.admin_create_class(data, validated_admin_id )
+    return Response.success_response(
+        data=response.data.model_dump(exclude_none=True),
+        message=response.message,
+        status_code=201
+    )
+
+
+
+
+
+
+
+
+
+
 
 
 @admin_bp.route('/find-one-user', methods=['POST'])
@@ -93,16 +137,16 @@ def find_one_user():
     Find a user by ID, username, or email (Admin only).
     """
     data = parse_json_body()
-    user_service = get_user_service(get_db())
+    admin_service = get_admin_service(get_db())
     user = None
     _id = data.get("id") or data.get("_id")
 
     if _id:
-        user = user_service.user_repo.find_user_by_id(str(_id))
+        user = admin_service.user_repo.find_user_by_id(str(_id))
     elif "username" in data:
-        user = user_service.user_repo.find_user_by_username(data["username"])
+        user = admin_service.user_repo.find_user_by_username(data["username"])
     elif "email" in data:
-        user = user_service.user_repo.find_user_by_email(data["email"])
+        user = admin_service.user_repo.find_user_by_email(data["email"])
     else:
         raise BadRequestError(
             message="No valid identifier provided",
@@ -129,8 +173,8 @@ def count_users_by_role():
     """
     Count users by role (Admin only).
     """
-    user_service = get_user_service(get_db())
-    counts = user_service.user_repo.count_users_by_role()
+    admin_service = get_admin_service(get_db())
+    counts = admin_service.user_repo.count_users_by_role()
     return Response.success_response(counts, message="User counts by role fetched successfully")
 
 @admin_bp.route('/growth-stats', methods=['GET'])
@@ -147,8 +191,8 @@ def get_user_growth_stats():
             user_message="Please provide both 'start_date' and 'end_date' as query parameters.",
             details={"missing": [k for k in ['start_date', 'end_date'] if not request.args.get(k)]}
         )
-    user_service = get_user_service(get_db())
-    stats = user_service.user_repo.find_user_growth_stats(start_date=start_date, end_date=end_date)
+    admin_service = get_admin_service(get_db())
+    stats = admin_service.user_repo.find_user_growth_stats(start_date=start_date, end_date=end_date)
     return Response.success_response(stats, message="User growth statistics fetched successfully")
 
 
@@ -179,8 +223,8 @@ def get_user_growth_stats_by_role():
             details={"missing": missing_previous}
         )
 
-    user_service = get_user_service(get_db())
-    stats = user_service.user_repo.find_users_growth_stats_by_role_with_comparison(
+    admin_service = get_admin_service(get_db())
+    stats = admin_service.user_repo.find_users_growth_stats_by_role_with_comparison(
         current_start_date=current_start_date,
         current_end_date=current_end_date,
         previous_start_date=previous_start_date,
@@ -196,8 +240,8 @@ def get_user_detail(_id):
     """Get detailed information about a user by ID (Admin only)."""
     if not _id:
         raise BadRequestError(message="User ID is required", user_message="User ID is required.")
-    user_service = get_user_service(get_db())
-    user = user_service.user_repo.find_user_detail(_id)
+    admin_service = get_admin_service(get_db())
+    user = admin_service.user_repo.find_user_detail(_id)
     if not user:
         raise NotFoundError(message=f"User not found with ID {_id}", user_message="User not found.")
     
@@ -212,9 +256,7 @@ def patch_user_detail(_id):
     """
     if not _id:
         raise BadRequestError(message="User ID is required", user_message="User ID is required.")
-    
     data = parse_json_body()
-
     # Optional: validate data schema here if you have UserPatchUserDetailSchema
     # For example:
     # try:
@@ -223,8 +265,8 @@ def patch_user_detail(_id):
     #     raise ValidationError(message=f"Validation error: {ve}", user_message="Invalid input data.")
     user_update = data  # If you do validation above, use user_update.model_dump()
 
-    user_service = get_user_service(get_db())
-    updated_user = user_service.patch_user_detail(_id, user_update)
+    admin_service = get_admin_service(get_db())
+    updated_user = admin_service.patch_user_detail(_id, user_update)
     return Response.success_response(updated_user, message="User detail updated successfully")
 
 
@@ -245,8 +287,8 @@ def search_user():
     if not (isinstance(page_size, int) and 0 < page_size <= 100):
         raise PydanticValidationError(message="Page size must be between 1 and 100.", user_message="Invalid page size.")
 
-    user_service = get_user_service(get_db())
-    users = user_service.user_repo.search_user(query, page, page_size)
+    admin_service = get_admin_service(get_db())
+    users = admin_service.user_repo.search_user(query, page, page_size)
     users_serialized = [
         user.model_dump(mode="json", by_alias=True, exclude_none=True) for user in users
     ]

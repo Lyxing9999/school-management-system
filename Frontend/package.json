@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "@nuxt/kit": "^3.17.6",
+    "@nuxt/types": "^2.18.1",
     "@nuxt/ui": "^3.2.0",
     "@types/lodash-es": "^4.17.12",
     "@vitejs/plugin-vue": "^6.0.0",
@@ -54,6 +55,6 @@
     "typescript": "^5.8.3",
     "vite-plugin-bundle-analyzer": "^0.0.1",
     "vitest": "^3.2.4",
-    "vue": "^3.5.17"
+    "vue": "^3.5.18"
   }
 }

@@ -1,22 +1,16 @@
-import type { UserBaseDTO } from "./user_base_dto";
+import type { Role } from "~/types";
 
-export namespace AdminUserDTO {
-  export interface Create extends UserBaseDTO {
-    created_by: string;
-  }
+export interface UserResponseDataDTO {
+  id: string;
+  username: string;
+  role: Role;
+  email: string | null;
+}
 
-  export interface Update extends UserBaseDTO {
-    updated_by: string;
-  }
+export type UserResponseDataDTOList = UserResponseDataDTO[];
 
-  export interface Delete extends UserBaseDTO {
-    deleted_by: string;
-  }
-
-
-  export interface GetResponse extends UserBaseDTO {
-    created_by: string;
-    updated_by: string;
-    deleted_by: string;
-  }
+export interface UserUpdateDataDTO {
+  username: string | null;
+  role: Role | null;
+  email: string | null;
 }

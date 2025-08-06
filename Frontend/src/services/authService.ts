@@ -2,14 +2,12 @@ import { ElMessage } from "element-plus";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "nuxt/app";
 import { useAuthStore } from "~/stores/authStore";
-import { AuthApi } from "~/api/AuthApi";
+import { AuthApi } from "~/api/auth.api";
 import { useApiUtils } from "~/utils/useApiUtils";
 import { Role } from "~/types";
 import type {
   UserRegisterForm,
   UserLoginForm,
-  UserRegisterResponseDTO,
-  UserLoginResponseDTO,
   User,
   UserRegisterDataDTO,
   UserLoginDataDTO,

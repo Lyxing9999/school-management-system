@@ -2,7 +2,7 @@ import logging
 from typing import Optional, List, Dict, Any, Union
 from pymongo.database import Database 
 from app.utils.objectid import ObjectId 
-from abc import ABC, abstractmethod
+from abc import ABC
 from app.error.exceptions import AppBaseException,ExceptionFactory, PydanticValidationError, InternalServerError, NotFoundError, DatabaseError, ErrorCategory, ErrorSeverity
 logger = logging.getLogger(__name__)
 from pymongo import ReturnDocument 
@@ -14,9 +14,8 @@ from app.dtos.course_response_dto import CourseResponseDTO
 from app.dtos.report_response_dto import ReportResponseDTO
 from app.dtos.attendance_response_dto import AttendanceResponseDTO
 from app.dtos.student_response_dto import StudentResponseDTO
-from app.dtos.users.user_response_dto import UserResponseDTO
 from app.dtos.teacher.teacher_response_dto import TeacherResponseDTO
-
+from app.dtos.users import UserResponseDTO
 class TeacherServiceConfig:
     def __init__(self, db: Database):
         self.db = db

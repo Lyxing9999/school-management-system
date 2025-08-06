@@ -3,7 +3,7 @@ import { reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import student from "~/assets/icons/svg/student.svg";
 import { useNuxtApp } from "nuxt/app";
-import { AuthApi } from "~/api/AuthApi";
+import { AuthApi } from "~/api/auth.api";
 import type { AxiosInstance } from "axios";
 import type { UserRegisterForm } from "~/types";
 import { AuthService } from "~/services/authService";

@@ -2,7 +2,7 @@ from app.utils.objectid import ObjectId  # type: ignore
 from pydantic import GetCoreSchemaHandler  # type: ignore
 from pydantic_core import core_schema  # type: ignore
 from typing import Any
-
+from app.error.exceptions import BadRequestError, ErrorSeverity, ErrorCategory
 
 class PyObjectId(ObjectId):
     @classmethod
@@ -27,4 +27,14 @@ class PyObjectId(ObjectId):
             return cls(str(v))
         if isinstance(v, str) and ObjectId.is_valid(v):
             return cls(v)
-        raise ValueError("Invalid ObjectId")
+        raise BadRequestError(
+            message=f"Invalid ObjectId: {v}",
+            status_code=400,
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.VALIDATION,
+            hint="Ensure the value is a valid MongoDB ObjectId string",
+            received_value=v,
+            recoverable=False
+        )
+
+ 

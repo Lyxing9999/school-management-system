@@ -3,13 +3,14 @@ from config import Config
 from app.extensions import init_extensions, mongo_client
 from authlib.integrations.flask_client import OAuth # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint # type: ignore
-
+from flask_cors import CORS # type: ignore
 oauth = OAuth()
 
 def create_app():
     
     app = Flask(__name__)
     app.config.from_object(Config)
+    CORS(app, resources={r"/*": {"origins": "*"}}) 
     init_extensions(app)
     oauth.init_app(app)
     oauth.register(

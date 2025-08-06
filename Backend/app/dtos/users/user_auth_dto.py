@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from app.dtos.users.user_base_dto import UserResponseDataDTO  
+from app.dtos.users.user_action_dto import UserResponseDataDTO  
 
 class UserRegisterDataDTO(BaseModel):
     access_token: str

@@ -1,6 +1,12 @@
 {
   "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "strict": true,
+    "jsx": "preserve",
+    "allowJs": true,
     "baseUrl": ".",
     "types": [
       "vue",
@@ -8,37 +14,39 @@
       "node",
       "nuxt",
       "element-plus/global",
-      "element-plus/es/components/icon",
       "@element-plus/icons-vue"
     ],
     "paths": {
-      "#app": [".nuxt/types/app"],
-      "#imports": [".nuxt/types/imports"],
+      "~/*": ["./src/*"],
+      "@/*": ["./src/*"],
+      "~views/*": ["src/views/*"],
+      "#app": [".nuxt/app"],
+      "#build/*": [".nuxt/build/*"],
+      "#components": [".nuxt/components"],
       "#components/*": [".nuxt/components/*"],
-      "~/*": ["./*"],
-      "@/*": ["./*"],
-      "~test/*": ["./test/*"],
-      "~components/*": ["./components/*"],
-      "~composables/*": ["./composables/*"],
-      "~services/*": ["./services/*"],
-      "~stores/*": ["./stores/*"],
-      "~types/*": ["./types/*"],
-      "~utils/*": ["./utils/*"],
-      "~views/*": ["./views/*"]
-    }
+      "#imports": [".nuxt/imports"],
+      "#imports/*": [".nuxt/imports/*"],
+      "#internal/*": [".nuxt/internal/*"],
+      "#layouts": [".nuxt/layouts"],
+      "#layouts/*": [".nuxt/layouts/*"],
+      "#pages": [".nuxt/pages"],
+      "#pages/*": [".nuxt/pages/*"],
+      "#plugins": [".nuxt/plugins"],
+      "#plugins/*": [".nuxt/plugins/*"],
+      "#types": [".nuxt/types"],
+      "#types/*": [".nuxt/types/*"]
+    },
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true
   },
   "include": [
     "nuxt.config.ts",
-    "composables/**/*.ts",
-    "composables/**/*.vue",
-    "pages/**/*.vue",
-    "plugins/**/*.ts",
-    "types/**/*.d.ts",
-    ".nuxt/types/**/*.d.ts",
-    ".nuxt/types/imports/**/*.d.ts",
-    ".nuxt/types/app/**/*.d.ts",
-    "**/*.ts",
-    "**/*.vue"
+    "src/**/*.ts",
+    "src/**/*.vue",
+    "src/types/**/*.d.ts",
+    ".nuxt/**/*.d.ts"
   ],
   "exclude": ["node_modules"]
 }

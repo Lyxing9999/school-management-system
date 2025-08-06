@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any, Union
 from enum import Enum
 import logging
 import json
-
+import re
 from pymongo.errors import DuplicateKeyError
 logger = logging.getLogger(__name__)
 
@@ -25,12 +25,6 @@ class ErrorCategory(Enum):
     SYSTEM = "system"
 
 class AppBaseException(Exception):
-    """
-    Base exception for custom app-level errors.
-    
-    Provides rich error context, logging, and standardized error handling.
-    """
-    
     def __init__(
         self,
         message: str,
@@ -43,7 +37,8 @@ class AppBaseException(Exception):
         user_message: Optional[str] = None,
         recoverable: bool = True,
         hint: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        received_value: Optional[Any] = None,
     ):
         super().__init__(message)
         self.message = message
@@ -57,6 +52,7 @@ class AppBaseException(Exception):
         self.context = context or {}
         self.user_message = user_message or self._generate_user_message()
         self.hint = hint
+        self.received_value = received_value
         # Log the exception based on severity
         self._log_exception()
     
@@ -87,12 +83,14 @@ class AppBaseException(Exception):
             'error': self.error_code,
             'status_code': self.status_code,
             'message': self.message,
+            'user_message': self.user_message,
             'details': self.details,
             'severity': self.severity.value if hasattr(self.severity, 'value') else self.severity,
             'category': self.category.value if hasattr(self.category, 'value') else self.category,
             'recoverable': self.recoverable,
-            'context': getattr(self.context, 'name', self.context.__class__.__name__ if self.context else 'unknown'),
+            'context': self.context,
             'hint': self.hint,
+            'received_value': self.received_value,
         }
 
     def add_context(self, key: str, value: Any) -> 'AppBaseException':
@@ -140,6 +138,7 @@ class NotFoundError(AppBaseException):
         context: Optional[Dict[str, Any]] = None,
         resource_id: Optional[Union[str, int]] = None,
         user_message: Optional[str] = None,
+        recoverable: bool = False,
         **kwargs
     ):
         details = kwargs.pop('details', {})
@@ -153,6 +152,7 @@ class NotFoundError(AppBaseException):
             cause=cause,
             context=context,
             user_message=user_message,
+            recoverable=recoverable,
             **kwargs
         )
 
@@ -170,6 +170,7 @@ class PydanticBaseValidationError(AppBaseException):
         details: Optional[Dict[str, Any]] = None,
         user_message: Optional[str] = None,
         hint: Optional[str] = None,
+        recoverable: bool = True,
         **kwargs
     ):
     
@@ -188,6 +189,7 @@ class PydanticBaseValidationError(AppBaseException):
             context=context,
             user_message=user_message,
             hint=hint,
+            recoverable=recoverable,
             **kwargs
         )
 
@@ -200,12 +202,15 @@ class DatabaseError(AppBaseException):
         severity: ErrorSeverity = ErrorSeverity.HIGH,
         category: ErrorCategory = ErrorCategory.DATABASE,
         cause: Optional[Exception] = None,
+        details: Optional[Dict[str, Any]] = None,
+        hint: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         message: str = "Database operation failed",
         operation: Optional[str] = None,
         table: Optional[str] = None,
         status_code: Optional[int] = None,
         user_message: Optional[str] = None,
+        recoverable: bool = False,
         **kwargs
     ):
         details = details or {}
@@ -224,9 +229,10 @@ class DatabaseError(AppBaseException):
             category=category,
             cause=cause,
             context=context,
-            recoverable=False,
+            recoverable=recoverable,
             status_code=status_code or 500,
             user_message=user_message,
+            hint=hint,
             **kwargs
         )
 
@@ -241,10 +247,12 @@ class AuthenticationError(AppBaseException):
         category: ErrorCategory = ErrorCategory.AUTHENTICATION,
         auth_method: Optional[str] = None,
         status_code: Optional[int] = None,
+        details: Optional[Dict[str, Any]] = None,
         cause: Optional[Exception] = None,
         context: Optional[Dict[str, Any]] = None,
         recoverable: bool = False,
         user_message: Optional[str] = None,
+        hint: Optional[str] = None,
         **kwargs
     ):
         details = details or {}
@@ -263,6 +271,7 @@ class AuthenticationError(AppBaseException):
             context=context,
             recoverable=recoverable,
             user_message=user_message,
+            hint=hint,
             **kwargs
         )
 
@@ -278,6 +287,7 @@ class BadRequestError(AppBaseException):
         status_code: Optional[int] = None,
         user_message: Optional[str] = None,
         hint: Optional[str] = None,
+        recoverable: bool = True,
         **kwargs
     ):
         details = kwargs.pop('details', {})
@@ -289,6 +299,7 @@ class BadRequestError(AppBaseException):
             details=details,
             user_message=user_message,
             hint=hint,
+            recoverable=recoverable,
             **kwargs
         )
 
@@ -305,6 +316,7 @@ class InternalServerError(AppBaseException):
         context: Optional[Dict[str, Any]] = None,
         status_code: Optional[int] = None,
         user_message: Optional[str] = None,
+        recoverable: bool = False,
         **kwargs
     ):
         details = kwargs.pop('details', {})
@@ -313,7 +325,7 @@ class InternalServerError(AppBaseException):
             severity=severity,
             category=category,
             status_code=status_code or 500,
-            recoverable=False,
+            recoverable=recoverable,
             cause=cause,
             context=context,
             details=details,
@@ -322,8 +334,6 @@ class InternalServerError(AppBaseException):
 
 
 class UnauthorizedError(AppBaseException):
-    """Raised when user lacks valid authentication."""
-    
     def __init__(
         self,
         message: str = "Unauthorized access",
@@ -332,6 +342,7 @@ class UnauthorizedError(AppBaseException):
         status_code: Optional[int] = None,
         details: Optional[Dict[str, Any]] = None,
         user_message: Optional[str] = None,
+        recoverable: bool = False,
         **kwargs
     ):
         details = details or {}
@@ -341,13 +352,12 @@ class UnauthorizedError(AppBaseException):
             category=category,
             status_code=status_code or 401,
             user_message=user_message,
+            recoverable=recoverable,
             **kwargs
         )
 
 
 class ForbiddenError(AppBaseException):
-    """Raised when user lacks necessary permissions."""
-    
     def __init__(
         self,
         message: str = "Access forbidden",
@@ -359,6 +369,7 @@ class ForbiddenError(AppBaseException):
         cause: Optional[Exception] = None,
         context: Optional[Dict[str, Any]] = None,
         user_message: Optional[str] = None,
+        recoverable: bool = False,
         **kwargs
     ):
         details = kwargs.pop('details', {})
@@ -374,13 +385,12 @@ class ForbiddenError(AppBaseException):
             cause=cause,
             context=context,
             user_message=user_message,
+            recoverable=recoverable,
             **kwargs
         )
 
 
 class NetworkError(AppBaseException):
-    """Raised when network operations fail."""
-    
     def __init__(
         self,
         message: str = "Network error",
@@ -392,6 +402,7 @@ class NetworkError(AppBaseException):
         cause: Optional[Exception] = None,
         context: Optional[Dict[str, Any]] = None,
         user_message: Optional[str] = None,
+        recoverable: bool = False,
         **kwargs
     ):
         details = kwargs.pop('details', {})
@@ -409,6 +420,7 @@ class NetworkError(AppBaseException):
             cause=cause,
             context=context,
             user_message=user_message,
+            recoverable=recoverable,
             **kwargs
         )
 
@@ -417,6 +429,7 @@ class AppTypeError(AppBaseException):
         self,
         message: str = "Type error",
         type_name: Optional[str] = None,
+        received_value: Optional[Any] = None,
         severity: ErrorSeverity = ErrorSeverity.LOW,
         category: ErrorCategory = ErrorCategory.VALIDATION,
         status_code: Optional[int] = None,
@@ -424,11 +437,14 @@ class AppTypeError(AppBaseException):
         context: Optional[Dict[str, Any]] = None,
         details: Optional[Dict[str, Any]] = None,
         user_message: Optional[str] = None,
+        recoverable: bool = True,
         **kwargs
     ):
         details = kwargs.pop('details', {})
         if type_name and not details.get('type_name'):
             details['type_name'] = type_name
+        if received_value and not details.get('received_value'):
+            details['received_value'] = received_value
         super().__init__(
             message=message,
             details=details,
@@ -438,12 +454,11 @@ class AppTypeError(AppBaseException):
             user_message=user_message,
             cause=cause,
             context=context,
+            recoverable=recoverable,
             **kwargs
         )
 
 class ConfigurationError(AppBaseException):
-    """Raised when configuration is invalid or missing."""
-    
     def __init__(
         self,
         message: str = "Configuration error",
@@ -455,6 +470,7 @@ class ConfigurationError(AppBaseException):
         user_message: Optional[str] = None,
         cause: Optional[Exception] = None,
         context: Optional[Dict[str, Any]] = None,
+        recoverable: bool = False,
         **kwargs
     ):
         details = kwargs.pop('details', {})
@@ -466,7 +482,7 @@ class ConfigurationError(AppBaseException):
             details=details,
             severity=severity,
             category=category,
-            recoverable=False,
+            recoverable=recoverable,
             status_code=status_code or 500,
             user_message=user_message,
             cause=cause,
@@ -476,8 +492,6 @@ class ConfigurationError(AppBaseException):
 
 
 class BusinessLogicError(AppBaseException):
-    """Raised when business rules are violated."""
-    
     def __init__(
         self,
         message: str = "Business rule violation",
@@ -489,6 +503,7 @@ class BusinessLogicError(AppBaseException):
         user_message: Optional[str] = None,
         cause: Optional[Exception] = None,
         context: Optional[Dict[str, Any]] = None,
+        recoverable: bool = False,
         **kwargs
     ):
         details = kwargs.pop('details', {})
@@ -500,7 +515,11 @@ class BusinessLogicError(AppBaseException):
             details=details,
             severity=severity,
             category=category,
+            recoverable=recoverable,
             status_code=status_code or 400,
+            user_message=user_message,
+            cause=cause,
+            context=context,
             **kwargs
         )
 
@@ -514,6 +533,7 @@ class AppDuplicateKeyError(AppBaseException):
      severity: ErrorSeverity = ErrorSeverity.LOW,
      category: ErrorCategory = ErrorCategory.DATABASE,
      user_message: Optional[str] = None,
+     recoverable: bool = False,
      **kwargs):
         details = kwargs.pop('details', {})
         if key and not details.get('key'):
@@ -526,12 +546,11 @@ class AppDuplicateKeyError(AppBaseException):
             category=category,
             context=context,
             user_message=user_message,
+            recoverable=recoverable,
             **kwargs)
 
 
 class RateLimitError(AppBaseException):
-    """Raised when rate limits are exceeded."""
-    
     def __init__(
         self,
         message: str = "Rate limit exceeded",
@@ -542,6 +561,7 @@ class RateLimitError(AppBaseException):
         status_code: Optional[int] = None,
         details: Optional[Dict[str, Any]] = None,
         user_message: Optional[str] = None,
+        recoverable: bool = False,
         **kwargs
     ):
         details = kwargs.pop('details', {})
@@ -557,13 +577,11 @@ class RateLimitError(AppBaseException):
             category=category,
             status_code=status_code or 400,
             user_message=user_message,
+            recoverable=recoverable,
             **kwargs
         )
 
-
 class ExceptionFactory:
-    """Factory to create common app exceptions."""
-
     @staticmethod
     def not_found(resource_type: str, resource_id: Union[str, int]) -> NotFoundError:
         return NotFoundError(
@@ -594,6 +612,15 @@ class ExceptionFactory:
             cause=None,
             context=context,
         )
+    
+
+
+    @staticmethod
+    def parse_duplicate_key_error_message(message: str) -> Optional[str]:
+        match = re.search(r'duplicate key error (?:index|collection): .*?\.(.*?)\s', message)
+        if match:
+            return match.group(1).split('_')[0]  # Extract field name from index name
+        return None
 
     @staticmethod
     def app_type_error(
@@ -601,6 +628,7 @@ class ExceptionFactory:
         received_value: Any,
         context: Optional[Dict[str, Any]] = None,
         user_message: Optional[str] = None,
+        recoverable: bool = True,
         **kwargs
     ) -> AppTypeError:
         return AppTypeError(
@@ -610,29 +638,43 @@ class ExceptionFactory:
             context=context,
             status_code=400,
             cause=None,
+            recoverable=recoverable,
             **kwargs
         )
-
     @staticmethod
-    def validation_failed(field: str, value: Any, reason: str, context: Optional[Dict[str, Any]] = None, user_message: Optional[str] = None, **kwargs) -> PydanticBaseValidationError:
+    def validation_failed(field: str, value: Any, reason: str, context: Optional[Dict[str, Any]] = None, user_message: Optional[str] = None, recoverable: bool = True, **kwargs) -> PydanticBaseValidationError:
         return PydanticBaseValidationError(
             message=f"Validation failed for '{field}': {reason}",
             field_errors={field: reason},
             status_code=400,
             cause=None,
-            value=value,
             context=context,
             user_message=user_message,
+            recoverable=recoverable,
             **kwargs
         )
-
-
+     
 def handle_exception(
     exc: Exception,
     context: Optional[Dict[str, Any]] = None,
-    user_message: Optional[str] = None
+    user_message: Optional[str] = None,
+    recoverable: bool = True
 ) -> AppBaseException:
     context = context or {}
+
+    # Special handling for DuplicateKeyError to parse key field
+    if isinstance(exc, DuplicateKeyError):
+        key_field = ExceptionFactory.parse_duplicate_key_error_message(str(exc))
+        return AppDuplicateKeyError(
+            message="Duplicate key error",
+            key=key_field or "unknown",
+            cause=exc,
+            context=context,
+            user_message=user_message,
+            recoverable=False,
+        )
+
+    # Already domain-specific AppBaseException
     if isinstance(exc, AppBaseException):
         if context:
             for key, value in context.items():
@@ -640,11 +682,12 @@ def handle_exception(
         if user_message:
             exc.user_message = user_message
         return exc
+
+    # Mapping other built-in errors to custom exceptions
     exception_mapping = {
-        PydanticBaseValidationError: PydanticBaseValidationError,
+        PydanticValidationError: PydanticBaseValidationError,
         NotFoundError: NotFoundError,
         AppTypeError: AppTypeError,
-        DuplicateKeyError: AppDuplicateKeyError,
         BadRequestError: BadRequestError,
         UnauthorizedError: UnauthorizedError,
         ForbiddenError: ForbiddenError,
@@ -662,12 +705,13 @@ def handle_exception(
                 message=str(exc),
                 cause=exc,
                 context=context,
-                user_message=user_message
+                user_message=user_message,
+                recoverable=recoverable
             )
-
     return InternalServerError(
         message=f"Unexpected error: {str(exc)}",
         cause=exc,
         context=context,
-        user_message=user_message or "An unexpected error occurred."
+        user_message=user_message or "An unexpected error occurred.",
+        recoverable=recoverable
     )

@@ -1,19 +1,15 @@
 
-from app.dtos.users.user_register_dto import UserRegisterDataDTO
-from app.services import user_service
 from flask import request, url_for  # type: ignore
 from datetime import timedelta
 from app.enum.enums import Role
 from . import auth_bp
 from app import oauth
 from app.services.user_service import get_user_service
-from app.responses.response import Response 
 from app.database.db import get_db
 import logging
-from app.error.exceptions import BadRequestError, AppTypeError
-from app.schemas.users.user_create_schema import UserCreateSchema
+from app.responses.response import Response
+from app.schemas.users.user_register_schema import UserRegisterSchema
 from app.schemas.users.user_login_schema import UserLoginSchema
-from app.dtos.users.user_response_dto import UserResponseDTO
 logger = logging.getLogger(__name__)
 from app.shared.model_utils import default_model_utils
 
@@ -70,13 +66,20 @@ def google_login_callback():
 def register():
     utils = default_model_utils
     user_service = get_user_service(get_db())
-    user_schema = utils.to_model(request.get_json(), UserCreateSchema)
+
+    print(request.get_json())
+    user_schema = utils.to_model(request.get_json(), UserRegisterSchema)
     user_dto = user_service.register_user(user_schema)  
     return Response.success_response(
         data=user_dto.data.model_dump(), 
         message=user_dto.message,
         status_code=201
     )
+
+
+
+
+
 
 
 @auth_bp.route('/login', methods=['POST'])

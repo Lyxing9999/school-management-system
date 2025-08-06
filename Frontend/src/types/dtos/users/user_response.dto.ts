@@ -1,21 +1,13 @@
 import type { ApiResponse } from "~/types/common/api-response.type";
-import type { UserLoginDataDTO } from "./user_login.dto";
-import type { UserRegisterDataDTO } from "./user_register.dto";
-import type { AdminUserDTO } from "./user_action_dto";
+import type { UserLoginDataDTO, UserRegisterDataDTO } from "./user_auth_dto";
+import type { UserResponseDataDTO } from "./user_action_dto";
 
-export interface UserRegisterResponseDTO
-  extends ApiResponse<UserRegisterDataDTO> {}
+export type UserRegisterResponseDTO = ApiResponse<UserRegisterDataDTO>;
 
-export interface UserLoginResponseDTO extends ApiResponse<UserLoginDataDTO> {}
+export type UserLoginResponseDTO = ApiResponse<UserLoginDataDTO>;
 
-export interface AdminCreateUserResponseDTO
-  extends ApiResponse<AdminUserDTO.Create> {}
+export type UserUpdateResponseDTO = ApiResponse<UserResponseDataDTO>;
 
-export interface AdminUpdateUserResponseDTO
-  extends ApiResponse<AdminUserDTO.Update> {}
+export type UserResponseDTO = ApiResponse<UserResponseDataDTO>;
 
-export interface AdminDeleteUserResponseDTO
-  extends ApiResponse<AdminUserDTO.Delete> {}
-
-export interface AdminGetUserResponseDTO
-  extends ApiResponse<AdminUserDTO.GetResponse[]> {}
+export type UserResponseDTOList = ApiResponse<UserResponseDataDTO[]>;

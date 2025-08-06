@@ -10,13 +10,13 @@ from app.error.exceptions import NotFoundError, PydanticValidationError, BadRequ
 from app.database.pipelines.user_pipeline import users_growth_by_role_pipeline, build_user_detail_pipeline, build_user_growth_stats_pipeline, build_search_user_pipeline, build_role_counts_pipeline
 from pymongo.database import Database # type: ignore
 from app.utils.convert import convert_objectid_to_str
-from app.dtos.users.user_response_dto import UserResponseDTO , UserListResponseDTO
 from app.dtos.teacher.teacher_response_dto import TeacherResponseDTO
 from app.enum.enums import Role
 from werkzeug.security import generate_password_hash
 from app.repositories.base_repo import get_base_repository
-from app.dtos.users.user_db_dto import UserDBDTO
 from app.utils.convert import convert_objectid_to_str
+from app.dtos.users import UserDBDTO, UserResponseDTO, UserResponseDTOList
+from app.repositories.base_repo import BaseRepositoryConfig
 class UserRepositoryConfig:
     def __init__(self, db: Database):
         self.db = db
@@ -43,7 +43,7 @@ class UserRepository(ABC):
         pass
     
     @abstractmethod
-    def find_all_users(self) -> UserListResponseDTO:
+    def find_all_users(self) -> UserResponseDTOList:
         pass
     
     @abstractmethod
@@ -54,12 +54,14 @@ class UserRepository(ABC):
 class UserRepositoryImpl(UserRepository):
     def __init__(self, config: UserRepositoryConfig):
         self.config = config
-        self.db = self.config.db
-        self.collection = self.db[self.config.collection_name]
         self.utils = default_model_utils
         self._student_service = None
         self._teacher_service = None
-        self._user_repo = get_base_repository(self.config)
+        base_config = BaseRepositoryConfig(
+            db=self.config.db,
+            collection_name=self.config.collection_name
+        )
+        self._user_repo = get_base_repository(base_config)
  
 
     def role_model_map(self) -> Dict[str, Tuple[Type[BaseModel], str]]:
@@ -87,10 +89,11 @@ class UserRepositoryImpl(UserRepository):
                 severity=ErrorSeverity.LOW,
                 category=ErrorCategory.SYSTEM,
                 status_code=404,
+                user_message=f"No user named '{username}'.",
+                hint="Ensure the username is correct and exists in the system.",
             )
         user_data = convert_objectid_to_str(user_data)
         return UserDBDTO.model_validate(user_data)
-
     def _handle_update_result(self, result, query, update_data) -> int:
         if result.modified_count > 0:
             return result.modified_count
@@ -152,7 +155,7 @@ class UserRepositoryImpl(UserRepository):
 
 
             
-    def find_all_users(self) -> UserListResponseDTO:
+    def find_all_users(self) -> UserResponseDTOList:
         """Find all users
         @return: List[UserModel]
         @throws: InternalServerError
@@ -160,13 +163,13 @@ class UserRepositoryImpl(UserRepository):
         try:
             users_cursor = self.collection.find()
             users_list = list(users_cursor)
-            return UserListResponseDTO(users=users_list)
+            return UserResponseDTOList(users=users_list)
         except Exception as e:
             logger.error(f"Failed to fetch all users: {e}")
             raise InternalServerError(f"Failed to fetch all users: {e}")
         
         
-    def search_user(self, query: str, page: int, page_size: int) ->  UserListResponseDTO:
+    def search_user(self, query: str, page: int, page_size: int) ->  UserResponseDTOList:
         """Search for users by username or email
         @param query: str
         @param page: int
@@ -178,7 +181,7 @@ class UserRepositoryImpl(UserRepository):
             pipeline = build_search_user_pipeline(query, page, page_size)
             users_cursor = self.collection.aggregate(pipeline)
             users_list = list(users_cursor)
-            return UserListResponseDTO(users=users_list)
+            return UserResponseDTOList(users=users_list)
         except PydanticValidationError as e:
             raise e
         except Exception as e:
@@ -205,7 +208,7 @@ class UserRepositoryImpl(UserRepository):
     
         
 
-    def find_user_by_role(self, role: str) -> UserListResponseDTO:
+    def find_user_by_role(self, role: str) -> UserResponseDTOList:
         """Find users by their role
         @param role: str
         @return: List[UserModel]
@@ -214,7 +217,7 @@ class UserRepositoryImpl(UserRepository):
         try:
             users_cursor = self.collection.find({"role": role})
             raw_users = list(users_cursor)
-            return UserListResponseDTO(users=raw_users)
+            return UserResponseDTOList(users=raw_users)
         except Exception as e:
             logger.error(f"Failed to find users by role {role}: {e}")
             raise InternalServerError(f"Failed to find users by role {role}: {e}")
@@ -224,7 +227,7 @@ class UserRepositoryImpl(UserRepository):
         
     def find_user_detail(self, _id: Union[str, ObjectId]) -> UserResponseDTO:
         """Find user's role-specific detail and include role in response"""
-        obj_id = self.utils.validate_objectid(_id)
+        obj_id = self.utils.validate_object_id(_id)
         pipeline = build_user_detail_pipeline(obj_id)
         
         try:
