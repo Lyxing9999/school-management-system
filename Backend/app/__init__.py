@@ -1,42 +1,54 @@
-from flask import Flask # type: ignore
-from config import Config
-from app.extensions import init_extensions, mongo_client
-from authlib.integrations.flask_client import OAuth # type: ignore
-from flask_swagger_ui import get_swaggerui_blueprint # type: ignore
-from flask_cors import CORS # type: ignore
+from flask import Flask
+from app.contexts.core.config.setting import settings
+from app.contexts.infra.database.extensions import init_extensions
+from authlib.integrations.flask_client import OAuth
+from flask_swagger_ui import get_swaggerui_blueprint
+from flask_cors import CORS
+
 oauth = OAuth()
 
-def create_app():
-    
+def create_app() -> Flask:
     app = Flask(__name__)
-    app.config.from_object(Config)
-    CORS(app, resources={r"/*": {"origins": "*"}}) 
+    app.config.from_object(settings)
+
+    # CORS
+    CORS(app, resources={r"/*": {"origins": "*"}})  # replace * with frontend URLs in prod
+
+    # Extensions
     init_extensions(app)
+
+    # OAuth
     oauth.init_app(app)
     oauth.register(
-    name='google',
-    client_id=Config.GOOGLE_CLIENT_ID,
-    client_secret=Config.GOOGLE_CLIENT_SECRET,
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'},
+        name='google',
+        client_id=settings.GOOGLE_CLIENT_ID,
+        client_secret=settings.GOOGLE_CLIENT_SECRET,
+        server_metadata_url=settings.GOOGLE_DISCOVERY_URL,
+        client_kwargs={'scope': 'openid email profile'},
     )
-    oauth.init_app(app)
-    from .auth.routes import auth_bp
-    from .admin.routes import admin_bp
-    from .routes.teacher.routes import teacher_bp
-    # from .routes.student.routes import student_bp
-    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+
+    # Blueprints
+    from .contexts.iam.routes import iam_bp
+    from .contexts.academic.routes import academic_bp
+    from .contexts.admin.routes import admin_bp
+    from .contexts.hr.routes import hr_bp
+    app.register_blueprint(iam_bp, url_prefix='/api/iam')
+    app.register_blueprint(academic_bp, url_prefix='/api/academic')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
-    app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
-    # app.register_blueprint(student_bp, url_prefix='/api/student')
+    app.register_blueprint(hr_bp, url_prefix='/api/hr')
+
+    # Swagger UI
     app.register_blueprint(
         get_swaggerui_blueprint(
             '/api/docs',
-            '/api/admin/openapi.yaml',
+            '/api/docs/openapi.yaml',  # centralized docs
             config={'app_name': 'School Management System'}
         ),
         url_prefix='/api/docs'
     )
-    for rule in app.url_map.iter_rules():
-        print(f"{rule} -> methods: {rule.methods}")
+    # Debug routes
+    if settings.DEBUG:
+        for rule in app.url_map.iter_rules():
+            print(f"{rule} -> methods: {rule.methods}")
+
     return app

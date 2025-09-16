@@ -1,0 +1,13 @@
+{
+  "staff_roles": {
+    "admin": ["manage_users", "view_reports", "configure_system"],
+    "hr": ["manage_staff", "view_staff_reports", "manage_payroll"],
+    "teacher": ["manage_classes", "grade_students", "view_reports"],
+    "academic": ["manage_courses", "manage_assignments", "view_reports"],
+    "finance": ["manage_financial_reports", "view_financial_reports"]
+  },
+  "student_roles": {
+    "student": ["view_courses", "submit_assignments"],
+    "parent": ["view_child_reports", "communicate_teachers"]
+  }
+}
