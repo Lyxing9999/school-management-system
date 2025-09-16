@@ -1,38 +1,41 @@
-import { ElMessage } from "element-plus";
 import { jwtDecode } from "jwt-decode";
+import { useMessage } from "~/composables/common/useMessage";
 import { useRouter } from "nuxt/app";
 import { useAuthStore } from "~/stores/authStore";
-import { AuthApi } from "~/api/auth.api";
+import { AuthApi } from "~/api/auth/auth.api";
 import { useApiUtils } from "~/utils/useApiUtils";
-import { Role } from "~/types";
+import { Role } from "~/api/types/enums/role.enum";
 import type {
   UserRegisterForm,
   UserLoginForm,
-  User,
-  UserRegisterDataDTO,
-  UserLoginDataDTO,
-} from "~/types";
+  AuthDataDTO,
+} from "~/api/auth/auth.dto";
+import type { UserBaseDataDTO } from "~/api/types/userBase";
 
 export class AuthService {
   private router = useRouter();
   private authStore = useAuthStore();
   private safeApiCall = useApiUtils().safeApiCall;
-
+  private message = useMessage();
   constructor(private authApi: AuthApi) {}
 
   private validateCredentials(form: UserRegisterForm | UserLoginForm): boolean {
-    if (!form.username || !form.password) {
-      ElMessage.warning("Please fill in all fields");
+    if (!form.email || !form.password) {
+      this.message.showWarning("Please fill in all fields");
       return false;
     }
     return true;
   }
 
-  async register(form: UserRegisterForm): Promise<UserRegisterDataDTO | null> {
+  async register(form: UserRegisterForm): Promise<AuthDataDTO | null> {
     if (!this.validateCredentials(form)) return null;
 
-    const res = await this.safeApiCall<UserRegisterDataDTO>(
-      this.authApi.registerUser(form)
+    const res = await this.safeApiCall<AuthDataDTO>(
+      this.authApi.registerUser(form),
+      {
+        showSuccessNotification: true,
+        showErrorNotification: true,
+      }
     );
     if (!res) return null;
     await this.router.push("/auth/login");
@@ -42,19 +45,21 @@ export class AuthService {
   async login(form: UserLoginForm): Promise<void | null> {
     if (!this.validateCredentials(form)) return null;
 
-    const response = await this.safeApiCall<UserLoginDataDTO>(
-      this.authApi.login(form)
+    const response = await this.safeApiCall<AuthDataDTO>(
+      this.authApi.login(form),
+      {
+        showErrorNotification: true,
+        showSuccessNotification: true,
+      }
     );
     if (!response) return;
-
     const token = response.access_token;
     if (!token) {
-      ElMessage.error("Invalid response from server: no token");
+      this.message.showError("Invalid response from server: no token");
       return;
     }
-    const decodedUser = jwtDecode(token) as User;
+    const decodedUser = jwtDecode(token) as UserBaseDataDTO;
     this.authStore.login(token, decodedUser);
-
     await this.redirectByRole(decodedUser.role);
   }
 
@@ -65,7 +70,7 @@ export class AuthService {
   logout() {
     this.authStore.logout();
     this.router.push("/auth/login");
-    ElMessage.success("Logged out successfully");
+    this.message.showSuccess("Logged out successfully");
   }
 
   private async redirectByRole(role: Role) {
@@ -73,11 +78,26 @@ export class AuthService {
       case Role.ADMIN:
         await this.router.push("/admin/dashboard");
         break;
+      case Role.FRONT_OFFICE:
+        await this.router.push("/front-office/dashboard");
+        break;
+      case Role.ACADEMIC:
+        await this.router.push("/academic/dashboard");
+        break;
+      case Role.FINANCE:
+        await this.router.push("/finance/dashboard");
+        break;
+      case Role.PARENT:
+        await this.router.push("/parent/dashboard");
+        break;
       case Role.TEACHER:
         await this.router.push("/teacher/dashboard");
         break;
       case Role.STUDENT:
         await this.router.push("/student/dashboard");
+        break;
+      case Role.HR:
+        await this.router.push("/hr/dashboard");
         break;
       default:
         await this.router.push("/auth/login");

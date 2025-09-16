@@ -14,13 +14,6 @@ export default defineNuxtConfig({
   css: ["~/styles/main.css", "element-plus/dist/index.css"],
 
   vite: {
-    css: {
-      preprocessorOptions: {
-        scss: {
-          additionalData: '@use "~/styles/scss/main.scss" as *;',
-        },
-      },
-    },
     plugins: [tailwindcss(), visualizer({ open: false })],
     define: {
       __DEV__: true,

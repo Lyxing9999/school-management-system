@@ -3,18 +3,19 @@ import { UserStoreError } from "~/errors/UserStoreError";
 import { unflatten } from "~/utils/unflatten";
 import { convertDatesToISOString } from "~/utils/convertDatesToISOString";
 import type { AxiosInstance } from "axios";
-import type { UserResponseDTO } from "../types";
+import type { UserBaseDataDTO } from "~/api/types/userBase";
+
 export const useUserStore = defineStore("user", () => {
   const $api = useNuxtApp().$api as AxiosInstance;
   const userService = new UserService($api);
   const loadingUserDetails = reactive<Record<string, boolean>>({});
-  const users = ref<UserResponseDTO[]>([]);
-  const userDetailsCache = reactive<Record<string, UserResponseDTO>>({});
+  const users = ref<UserBaseDataDTO[]>([]);
+  const userDetailsCache = reactive<Record<string, UserBaseDataDTO>>({});
   const loadingStates = reactive<{ fetchUsers: boolean }>({
     fetchUsers: false,
   });
 
-  const fetchUsers = async (): Promise<UserResponseDTO[]> => {
+  const fetchUsers = async (): Promise<UserBaseDataDTO[]> => {
     if (loadingStates.fetchUsers) {
       return users.value;
     }
@@ -43,7 +44,7 @@ export const useUserStore = defineStore("user", () => {
 
   const getUserDetails = async (
     id: string
-  ): Promise<UserResponseDTO | null> => {
+  ): Promise<UserBaseDataDTO | null> => {
     if (userDetailsCache[id]) return userDetailsCache[id];
     if (loadingUserDetails[id]) {
       throw new UserStoreError(
@@ -93,14 +94,14 @@ export const useUserStore = defineStore("user", () => {
 
   const updateUserPatch = async (
     userId: string,
-    flatData: Partial<UserDetail>
+    flatData: Partial<UserBaseDataDTO>
   ) => {
     try {
       const nestedData = unflatten(flatData);
       const finalData = convertDatesToISOString(nestedData);
       const res = await userService.editUserDetail(
         userId,
-        finalData as unknown as UserDetail
+        finalData as unknown as UserBaseDataDTO
       );
       if (!res.status) {
         console.error(

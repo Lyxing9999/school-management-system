@@ -1,10 +1,10 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import type { User } from "~/types";
+import type { UserBaseDataDTO } from "~/api/types/userBase";
 
 export const useAuthStore = defineStore("auth", () => {
   const token = ref<string | null>(null);
-  const user = ref<User | null>(null);
+  const user = ref<UserBaseDataDTO | null>(null);
   function initAuth() {
     if (process.client) {
       const storedUser = localStorage.getItem("user");
@@ -17,7 +17,7 @@ export const useAuthStore = defineStore("auth", () => {
       }
     }
   }
-  const login = (newToken: string, userInfo: User) => {
+  const login = (newToken: string, userInfo: UserBaseDataDTO) => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 

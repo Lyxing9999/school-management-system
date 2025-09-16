@@ -1,0 +1,79 @@
+import type { AxiosInstance } from "axios";
+import type {
+  AdminGetPageUserResponse,
+  AdminCreateUser,
+  AdminCreateClass,
+  AdminGetUserResponse,
+  AdminUpdateUser,
+  AdminGetClassResponse,
+  AdminGetTeacherSelectResponse,
+} from "./admin.dto";
+import { Role } from "~/api/types/enums/role.enum";
+export class AdminApi {
+  constructor(private $api: AxiosInstance, private baseURL = "/api/admin") {}
+
+  async getUsers(
+    roles: Role | Role[],
+    page: number,
+    pageSize: number
+  ): Promise<AdminGetPageUserResponse> {
+    const params = { page, page_size: pageSize } as Record<string, any>;
+
+    if (Array.isArray(roles)) {
+      params["role[]"] = roles; // send multiple roles
+    } else {
+      params.role = roles; // send single role
+    }
+
+    const res = await this.$api.get<AdminGetPageUserResponse>(
+      `${this.baseURL}/users`,
+      { params }
+    );
+
+    return res.data;
+  }
+
+  async createUser(userData: AdminCreateUser): Promise<AdminGetUserResponse> {
+    const res = await this.$api.post<AdminGetUserResponse>(
+      `${this.baseURL}/users`,
+      userData
+    );
+    return res.data;
+  }
+
+  async updateUser(
+    id: string,
+    userData: AdminUpdateUser
+  ): Promise<AdminGetUserResponse> {
+    const res = await this.$api.patch<AdminGetUserResponse>(
+      `${this.baseURL}/users/${id}`,
+      userData
+    );
+    return res.data;
+  }
+
+  async deleteUser(id: string): Promise<AdminGetUserResponse> {
+    const res = await this.$api.delete<AdminGetUserResponse>(
+      `${this.baseURL}/users/${id}`
+    );
+    return res.data;
+  }
+
+  async createClass(
+    classData: AdminCreateClass
+  ): Promise<AdminGetClassResponse> {
+    const res = await this.$api.post<AdminGetClassResponse>(
+      `${this.baseURL}/classes`,
+      classData
+    );
+
+    return res.data;
+  }
+
+  async getTeacherSelect(): Promise<AdminGetTeacherSelectResponse> {
+    const res = await this.$api.get<AdminGetTeacherSelectResponse>(
+      `${this.baseURL}/staff/academic-select`
+    );
+    return res.data;
+  }
+}

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, reactive } from "vue";
 import { ElMessage } from "element-plus";
-import schoolLogo from "~/assets/image/school_logo.png";
+import schoolLogo from "~/assets/image/school-logo.jpg";
 import googleIcon from "~/assets/icons/svg/google.svg";
 import { AuthService } from "~/services/authService";
 import { useNuxtApp } from "nuxt/app";
-import type { UserLoginForm } from "~/types";
-import { AuthApi } from "~/api/auth.api";
+import type { UserLoginForm } from "~/api/auth/auth.dto";
+import { AuthApi } from "~/api/auth/auth.api";
 import type { AxiosInstance } from "axios";
 
 const hover = ref(false);
@@ -17,20 +17,20 @@ const authService = new AuthService(authApi);
 const loading = ref(false);
 
 const form: UserLoginForm = reactive({
-  username: "",
+  email: "",
   password: "",
 });
 
-const usernameRules = [
-  { required: true, message: "Please enter username", trigger: "blur" },
+const emailRules = [
+  { required: true, message: "Please enter email", trigger: "blur" },
 ];
 const passwordRules = [
   { required: true, message: "Please enter password", trigger: "blur" },
 ];
 
 const submit = async () => {
-  if (!form.username || !form.password) {
-    ElMessage.warning("Please enter username and password");
+  if (!form.email || !form.password) {
+    ElMessage.warning("Please enter email and password");
     return;
   }
   loading.value = true;
@@ -49,16 +49,15 @@ const submit = async () => {
 <template>
   <Transition name="fade-slide" appear>
     <div
-      class="max-w-md mx-auto mt-16 p-8 rounded-lg shadow-lg bg-white text-center font-sans"
+      class="w-1/2 max-w-md mx-auto mt-16 p-8 rounded-lg text-center shadow-lg font-sans bg-white"
+      style="box-shadow: 0 4px 12px var(--card-shadow)"
     >
       <!-- School Logo -->
-      <img
-        :src="schoolLogo"
-        alt="School Logo"
-        class="w-40 sm:w-72 mx-auto mb-8 select-none"
-      />
-
+      <div class="mb-4">
+        <img :src="schoolLogo" alt="Logo" class="w-2/3 h-2/3 mx-auto" />
+      </div>
       <!-- Login Form -->
+
       <el-form
         :model="form"
         label-position="top"
@@ -66,16 +65,15 @@ const submit = async () => {
         class="text-left"
       >
         <el-form-item
-          label="Username"
-          :rules="usernameRules"
-          prop="username"
+          label="Email"
+          :rules="emailRules"
+          prop="email"
           class="mb-6"
         >
           <el-input
-            v-model="form.username"
-            placeholder="Username"
-            class="rounded-md text-[var(--color-dark)] placeholder:[var(--color-primary-light)]"
-            autocomplete="username"
+            v-model="form.email"
+            placeholder="Email"
+            autocomplete="email"
           />
         </el-form-item>
 
@@ -91,7 +89,6 @@ const submit = async () => {
             placeholder="Password"
             autocomplete="current-password"
             show-password
-            class="rounded-md text-[var(--color-dark)] placeholder:[var(--color-primary-light)]"
           />
         </el-form-item>
 
@@ -106,11 +103,11 @@ const submit = async () => {
               background-color: var(--color-primary);
               color: var(--color-light);
             "
+            :style="
+              hover ? 'background-color: var(--color-primary-light); ' : ''
+            "
             @mouseover="hover = true"
             @mouseleave="hover = false"
-            :style="
-              hover ? 'background-color: var(--color-primary-light);' : ''
-            "
           >
             Login
           </el-button>

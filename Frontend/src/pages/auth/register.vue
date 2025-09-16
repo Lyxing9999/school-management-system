@@ -3,11 +3,11 @@ import { reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import student from "~/assets/icons/svg/student.svg";
 import { useNuxtApp } from "nuxt/app";
-import { AuthApi } from "~/api/auth.api";
+import { AuthApi } from "~/api/auth/auth.api";
 import type { AxiosInstance } from "axios";
-import type { UserRegisterForm } from "~/types";
+import type { UserRegisterForm } from "~/api/auth/auth.dto";
 import { AuthService } from "~/services/authService";
-
+import { UserRole } from "~/api/types/enums/role.enum";
 const $api = useNuxtApp().$api;
 const authApi = new AuthApi($api as AxiosInstance);
 const authService = new AuthService(authApi);
@@ -18,14 +18,14 @@ const registerFormRef = ref();
 const fieldErrors = ref<Record<string, string>>({});
 
 const form = reactive({
-  username: "",
+  email: "",
   password: "",
   confirmPassword: "",
-  role: "student",
+  role: UserRole.STUDENT,
   agree: false,
 });
 const roles = [
-  { label: "Student", value: "student", icon: student },
+  { label: "Student", value: UserRole.STUDENT, icon: student },
   // { label: "Admin", value: "admin", icon: admin },
   // { label: "Teacher", value: "teacher", icon: teacher },
 ];
@@ -64,8 +64,9 @@ const userRegister = async () => {
     }
     loading.value = true;
     const formData: UserRegisterForm = {
-      username: form.username,
+      email: form.email,
       password: form.password,
+      role: form.role,
     };
     await authService.register(formData);
     loading.value = false;
@@ -73,9 +74,7 @@ const userRegister = async () => {
 };
 
 const rules = {
-  username: [
-    { required: true, message: "Please input username", trigger: "blur" },
-  ],
+  email: [{ required: true, message: "Please input email", trigger: "blur" }],
   password: [
     { validator: validatePasswordLength, trigger: ["blur", "change"] },
   ],
@@ -123,14 +122,14 @@ const rules = {
         <!-- Username -->
         <el-form-item
           class="mb-6"
-          label="Username"
-          prop="username"
-          :error="fieldErrors.username"
+          label="Email"
+          prop="email"
+          :error="fieldErrors.email"
         >
           <el-input
-            v-model="form.username"
-            placeholder="Enter your username"
-            @input="clearFieldError('username')"
+            v-model="form.email"
+            placeholder="Enter your email"
+            @input="clearFieldError('email')"
             class="text-[var(--color-dark)] placeholder:[var(--color-primary-light)] rounded-md"
           />
         </el-form-item>

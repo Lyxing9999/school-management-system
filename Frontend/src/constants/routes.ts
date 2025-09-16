@@ -1,0 +1,61 @@
+export const ROUTES = {
+  ADMIN: {
+    DASHBOARD: "/admin/dashboard",
+    MANAGE_USERS: "/admin/manage-user",
+    MANAGE_CLASSES: "/admin/manage-class",
+    NOTIFICATIONS: "/admin/notifications",
+    SYSTEM_EVENTS: "/admin/events",
+    SETTINGS: "/admin/settings",
+  },
+  TEACHER: {
+    DASHBOARD: "/teacher/dashboard",
+    MANAGE_STUDENTS: "/teacher/students",
+    MY_CLASSES: "/teacher/classes",
+    ATTENDANCE: "/teacher/attendance",
+    NOTIFICATIONS: "/teacher/notifications",
+    SETTINGS: "/teacher/settings",
+  },
+  STUDENT: {
+    DASHBOARD: "/student/dashboard",
+    ENROLLMENTS: "/student/enrollments",
+    MY_CLASSES: "/student/classes",
+    ATTENDANCE: "/student/attendance",
+    NOTIFICATIONS: "/student/notifications",
+    SETTINGS: "/student/settings",
+  },
+  ACADEMIC: {
+    DASHBOARD: "/academic/dashboard",
+    STUDENTS: "/academic/students",
+    MY_CLASSES: "/academic/classes",
+    ATTENDANCE: "/academic/attendance",
+    NOTIFICATIONS: "/academic/notifications",
+    SETTINGS: "/academic/settings",
+  },
+  FRONT_OFFICE: {
+    DASHBOARD: "/front-office/dashboard",
+    MANAGE_VISITS: "/front-office/visits",
+    NOTIFICATIONS: "/front-office/notifications",
+    SETTINGS: "/front-office/settings",
+  },
+  FINANCE: {
+    DASHBOARD: "/finance/dashboard",
+    PAYMENTS: "/finance/payments",
+    REPORTS: "/finance/reports",
+    SETTINGS: "/finance/settings",
+  },
+  PARENT: {
+    DASHBOARD: "/parent/dashboard",
+    CHILDREN: "/parent/children",
+    ATTENDANCE: "/parent/attendance",
+    NOTIFICATIONS: "/parent/notifications",
+    SETTINGS: "/parent/settings",
+  },
+  HR: {
+    DASHBOARD: "/hr/dashboard",
+    EMPLOYEES: "/hr/employees",
+    NOTIFICATIONS: "/hr/notifications",
+    SETTINGS: "/hr/settings",
+  },
+} as const;
+
+export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES][keyof unknown];

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Dashboard from "~/views/admin/Dashboard/index.vue";
+import CambodiaCalendar from "~/components/Calendar/CambodiaCalendar.vue";
 definePageMeta({
   layout: "admin",
 });
@@ -7,6 +7,6 @@ definePageMeta({
 
 <template>
   <el-card class="w-full h-full">
-    <Dashboard />
+    <CambodiaCalendar />
   </el-card>
 </template>

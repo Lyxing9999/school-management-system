@@ -1,36 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import TeacherHeader from "~/views/teacher/layouts/HeaderView.vue";
-import TeacherFooter from "~/views/teacher/layouts/FooterView.vue";
-import TeacherSidebar from "~/views/teacher/layouts/SidebarView.vue";
+import BaseHeader from "~/components/layout/BaseHeader.vue";
+import BaseFooter from "~/components/layout/BaseFooter.vue";
+import BaseSideBar from "~/components/layout/BaseSideBar.vue";
+import schoolLogo from "~/assets/image/school-logo.png";
 
 const route = useRoute();
-
-const isMobile = ref(false);
-const checkScreen = () => {
-  isMobile.value = window.innerWidth < 800;
-};
-onMounted(() => {
-  checkScreen();
-  window.addEventListener("resize", checkScreen);
-});
-onUnmounted(() => {
-  window.removeEventListener("resize", checkScreen);
-});
-
-const sidebarWidth = computed(() => (isMobile.value ? "65px" : "250px"));
 </script>
 
 <template>
   <el-container>
-    <el-aside :width="sidebarWidth">
-      <TeacherSidebar :title="route.meta.title" />
+    <el-aside width="250px">
+      <BaseSideBar :logoSrc="schoolLogo" />
     </el-aside>
 
     <el-container>
       <el-header v-if="!route.meta.noHeader">
-        <TeacherHeader :title="route.meta.title" />
+        <BaseHeader />
       </el-header>
       <Transition name="page" mode="out-in">
         <el-main :key="route.fullPath">
@@ -38,7 +24,7 @@ const sidebarWidth = computed(() => (isMobile.value ? "65px" : "250px"));
         </el-main>
       </Transition>
       <el-footer v-if="!route.meta.noHeader">
-        <TeacherFooter :title="route.meta.title as string" />
+        <BaseFooter />
       </el-footer>
     </el-container>
   </el-container>

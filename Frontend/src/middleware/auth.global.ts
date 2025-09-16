@@ -1,11 +1,20 @@
 import { useAuthStore } from "~/stores/authStore";
-import { Role } from "~/types";
+import { Role } from "~/api/types/enums/role.enum";
 import type { RouteLocationNormalized } from "vue-router";
+
+const routeRoles: Record<string, Role[]> = {
+  "/admin": [Role.ADMIN],
+  "/teacher": [Role.TEACHER],
+  "/student": [Role.STUDENT],
+  "/front-office": [Role.FRONT_OFFICE],
+  "/academic": [Role.ACADEMIC],
+  "/finance": [Role.FINANCE],
+  "/parent": [Role.PARENT],
+  "/hr": [Role.HR],
+};
 
 export default defineNuxtRouteMiddleware(
   (to: RouteLocationNormalized, from: RouteLocationNormalized) => {
-    console.log("to", to);
-    console.log("from", from);
     if (!process.client) return;
 
     const auth = useAuthStore();
@@ -13,18 +22,16 @@ export default defineNuxtRouteMiddleware(
     if (!auth.isAuthenticated && !to.path.startsWith("/auth")) {
       return navigateTo("/auth/login");
     }
+
     const role = auth.user?.role;
 
-    if (to.path.startsWith("/admin") && (!role || role !== Role.ADMIN)) {
-      return navigateTo("/auth/login");
-    }
-
-    if (to.path.startsWith("/teacher") && (!role || role !== Role.TEACHER)) {
-      return navigateTo("/auth/login");
-    }
-
-    if (to.path.startsWith("/student") && (!role || role !== Role.STUDENT)) {
-      return navigateTo("/auth/login");
+    for (const [prefix, allowedRoles] of Object.entries(routeRoles)) {
+      if (
+        to.path.startsWith(prefix) &&
+        (!role || !allowedRoles.includes(role))
+      ) {
+        return navigateTo("/auth/login");
+      }
     }
   }
 );

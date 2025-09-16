@@ -1,5 +1,5 @@
 // composables/useMessage.ts
-import { ElMessage } from 'element-plus'
+import { ElMessage } from "element-plus";
 
 export function useMessage() {
   /**
@@ -9,10 +9,10 @@ export function useMessage() {
   function showSuccess(msg: string) {
     ElMessage({
       message: msg,
-      type: 'success',
+      type: "success",
       duration: 3000,
       showClose: true,
-    })
+    });
   }
 
   /**
@@ -22,10 +22,10 @@ export function useMessage() {
   function showError(msg: string) {
     ElMessage({
       message: msg,
-      type: 'error',
+      type: "error",
       duration: 5000,
       showClose: true,
-    })
+    });
   }
 
   /**
@@ -35,10 +35,10 @@ export function useMessage() {
   function showInfo(msg: string) {
     ElMessage({
       message: msg,
-      type: 'info',
+      type: "info",
       duration: 3000,
       showClose: true,
-    })
+    });
   }
 
   /**
@@ -48,10 +48,10 @@ export function useMessage() {
   function showWarning(msg: string) {
     ElMessage({
       message: msg,
-      type: 'warning',
+      type: "warning",
       duration: 4000,
       showClose: true,
-    })
+    });
   }
 
   return {
@@ -59,5 +59,5 @@ export function useMessage() {
     showError,
     showInfo,
     showWarning,
-  }
+  };
 }

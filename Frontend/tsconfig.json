@@ -10,7 +10,7 @@
     "baseUrl": ".",
     "types": [
       "vue",
-      "vite/client",
+      "vite/client",  
       "node",
       "nuxt",
       "element-plus/global",
@@ -18,8 +18,9 @@
     ],
     "paths": {
       "~/*": ["./src/*"],
-      "@/*": ["./src/*"],
+      "@/*": ["./src/*"], 
       "~views/*": ["src/views/*"],
+      
       "#app": [".nuxt/app"],
       "#build/*": [".nuxt/build/*"],
       "#components": [".nuxt/components"],
@@ -35,6 +36,7 @@
       "#plugins/*": [".nuxt/plugins/*"],
       "#types": [".nuxt/types"],
       "#types/*": [".nuxt/types/*"]
+
     },
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -46,7 +48,7 @@
     "src/**/*.ts",
     "src/**/*.vue",
     "src/types/**/*.d.ts",
-    ".nuxt/**/*.d.ts"
+    ".nuxt/**/*.d.ts"   
   ],
   "exclude": ["node_modules"]
 }

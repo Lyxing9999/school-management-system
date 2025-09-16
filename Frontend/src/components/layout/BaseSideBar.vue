@@ -1,118 +1,232 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "~/stores/authStore";
-import { menus } from "~/constants/menus";
+import schoolLogo from "~/assets/image/school-logo.jpg";
+import * as Icons from "@element-plus/icons-vue";
+import { ROUTES } from "~/constants/routes";
 
-import {
-  HomeFilled,
-  User,
-  Notebook,
-  Bell,
-  Calendar,
-  Setting,
-} from "@element-plus/icons-vue";
+type RoleKey = keyof typeof ROUTES;
 
-const props = withDefaults(
-  defineProps<{
-    isMobile: boolean;
-    isCollapsed?: boolean;
-    logoSrc: string;
-    logoSectionClass?: string;
-    menuClass?: string;
-    menuItemClass?: string;
-    menuIconClass?: string;
-    menuTitleClass?: string;
-    asideClass?: string;
-  }>(),
-  {
-    isCollapsed: false,
-    logoSectionClass: "p-4 flex justify-center items-center mb-4 w-2/3 mx-auto",
-    menuClass: "",
-    menuItemClass: "",
-    menuIconClass: "",
-    menuTitleClass: "",
-    asideClass: "",
-  }
-);
+interface MenuItem {
+  title: string;
+  icon: keyof typeof Icons;
+  route: string;
+}
 
-const {
-  logoSrc,
-  logoSectionClass,
-  menuClass,
-  menuItemClass,
-  menuIconClass,
-  menuTitleClass,
-  isMobile,
-  asideClass,
-} = props;
-
-const isCollapsed = ref(props.isCollapsed);
-
-watch(
-  () => isMobile,
-  (val) => {
-    isCollapsed.value = val;
-  },
-  { immediate: true }
-);
-
-const iconMap = {
-  HomeFilled,
-  User,
-  Notebook,
-  Bell,
-  Calendar,
-  Setting,
+const menus: Record<RoleKey, MenuItem[]> = {
+  ADMIN: [
+    { title: "Dashboard", icon: "HomeFilled", route: ROUTES.ADMIN.DASHBOARD },
+    { title: "Manage Users", icon: "User", route: ROUTES.ADMIN.MANAGE_USERS },
+    {
+      title: "Manage Classes",
+      icon: "Notebook",
+      route: ROUTES.ADMIN.MANAGE_CLASSES,
+    },
+    { title: "Notifications", icon: "Bell", route: ROUTES.ADMIN.NOTIFICATIONS },
+    {
+      title: "System Events",
+      icon: "Calendar",
+      route: ROUTES.ADMIN.SYSTEM_EVENTS,
+    },
+    { title: "Settings", icon: "Setting", route: ROUTES.ADMIN.SETTINGS },
+  ],
+  TEACHER: [
+    { title: "Dashboard", icon: "HomeFilled", route: ROUTES.TEACHER.DASHBOARD },
+    {
+      title: "Manage Students",
+      icon: "User",
+      route: ROUTES.TEACHER.MANAGE_STUDENTS,
+    },
+    { title: "My Classes", icon: "Notebook", route: ROUTES.TEACHER.MY_CLASSES },
+    { title: "Attendance", icon: "Calendar", route: ROUTES.TEACHER.ATTENDANCE },
+    {
+      title: "Notifications",
+      icon: "Bell",
+      route: ROUTES.TEACHER.NOTIFICATIONS,
+    },
+    { title: "Settings", icon: "Setting", route: ROUTES.TEACHER.SETTINGS },
+  ],
+  STUDENT: [
+    { title: "Dashboard", icon: "HomeFilled", route: ROUTES.STUDENT.DASHBOARD },
+    { title: "Enrollments", icon: "User", route: ROUTES.STUDENT.ENROLLMENTS },
+    { title: "My Classes", icon: "Notebook", route: ROUTES.STUDENT.MY_CLASSES },
+    { title: "Attendance", icon: "Calendar", route: ROUTES.STUDENT.ATTENDANCE },
+    {
+      title: "Notifications",
+      icon: "Bell",
+      route: ROUTES.STUDENT.NOTIFICATIONS,
+    },
+    { title: "Settings", icon: "Setting", route: ROUTES.STUDENT.SETTINGS },
+  ],
+  ACADEMIC: [
+    {
+      title: "Dashboard",
+      icon: "HomeFilled",
+      route: ROUTES.ACADEMIC.DASHBOARD,
+    },
+    {
+      title: "Manage Students",
+      icon: "User",
+      route: ROUTES.ACADEMIC.STUDENTS,
+    },
+    {
+      title: "My Classes",
+      icon: "Notebook",
+      route: ROUTES.ACADEMIC.MY_CLASSES,
+    },
+    {
+      title: "Attendance",
+      icon: "Calendar",
+      route: ROUTES.ACADEMIC.ATTENDANCE,
+    },
+    {
+      title: "Notifications",
+      icon: "Bell",
+      route: ROUTES.ACADEMIC.NOTIFICATIONS,
+    },
+    {
+      title: "Settings",
+      icon: "Setting",
+      route: ROUTES.ACADEMIC.SETTINGS,
+    },
+  ],
+  FRONT_OFFICE: [
+    {
+      title: "Dashboard",
+      icon: "HomeFilled",
+      route: ROUTES.FRONT_OFFICE.DASHBOARD,
+    },
+    {
+      title: "Manage Visits",
+      icon: "User",
+      route: ROUTES.FRONT_OFFICE.MANAGE_VISITS,
+    },
+    {
+      title: "Notifications",
+      icon: "Bell",
+      route: ROUTES.FRONT_OFFICE.NOTIFICATIONS,
+    },
+    { title: "Settings", icon: "Setting", route: ROUTES.FRONT_OFFICE.SETTINGS },
+  ],
+  FINANCE: [
+    { title: "Dashboard", icon: "HomeFilled", route: ROUTES.FINANCE.DASHBOARD },
+    { title: "Payments", icon: "Money", route: ROUTES.FINANCE.PAYMENTS },
+    { title: "Reports", icon: "Document", route: ROUTES.FINANCE.REPORTS },
+    { title: "Settings", icon: "Setting", route: ROUTES.FINANCE.SETTINGS },
+  ],
+  PARENT: [
+    { title: "Dashboard", icon: "HomeFilled", route: ROUTES.PARENT.DASHBOARD },
+    { title: "Children", icon: "User", route: ROUTES.PARENT.CHILDREN },
+    { title: "Attendance", icon: "Calendar", route: ROUTES.PARENT.ATTENDANCE },
+    {
+      title: "Notifications",
+      icon: "Bell",
+      route: ROUTES.PARENT.NOTIFICATIONS,
+    },
+    { title: "Settings", icon: "Setting", route: ROUTES.PARENT.SETTINGS },
+  ],
+  HR: [
+    { title: "Dashboard", icon: "HomeFilled", route: ROUTES.HR.DASHBOARD },
+    { title: "Employees", icon: "User", route: ROUTES.HR.EMPLOYEES },
+    { title: "Notifications", icon: "Bell", route: ROUTES.HR.NOTIFICATIONS },
+    { title: "Settings", icon: "Setting", route: ROUTES.HR.SETTINGS },
+  ],
 };
 
 const authStore = useAuthStore();
-const role = computed(() => authStore.user?.role);
-type RoleKey = keyof typeof menus;
+const route = useRoute();
+const role = computed<RoleKey | null>(() => {
+  const r = authStore.user?.role;
+  if (!r) return null;
+  return r.toUpperCase() as RoleKey; // convert to match menus keys
+});
 
 const menuItems = computed(() => {
-  const items = menus[role.value as RoleKey] ?? [];
-  return items.map((item) => ({
-    ...item,
-    icon: iconMap[item.icon as keyof typeof iconMap] ?? HomeFilled,
-  }));
+  return (
+    menus[role.value ?? "ADMIN"]?.map((item) => ({
+      ...item,
+      iconComponent: Icons[item.icon] ?? Icons.HomeFilled,
+    })) ?? []
+  );
 });
 
-const route = useRoute();
-const activeMenu = computed(() => route.path);
-
-// Function to get icon style based on active menu
-const getIconStyle = (item: { route: string }) => ({
-  color:
-    route.path === item.route
-      ? "var(--color-primary)"
-      : "var(--menu-text-color)",
-});
+const activeMenu = computed(
+  () =>
+    menuItems.value.find((item) => route.path.startsWith(item.route))?.route ??
+    ""
+);
 </script>
 
 <template>
-  <el-aside :class="asideClass">
-    <div v-if="!isMobile" :class="logoSectionClass">
-      <img :src="logoSrc" alt="Logo" class="w-full h-full" />
+  <el-aside width="240px">
+    <div class="logo-section">
+      <img :src="schoolLogo" alt="Logo" />
     </div>
-    <el-menu :class="menuClass" :collapse="isCollapsed" router>
+    <el-menu router>
       <el-menu-item
         v-for="item in menuItems"
         :key="item.route"
         :index="item.route"
         :title="item.title"
-        :class="[
-          menuItemClass,
-          { 'active-menu-item': activeMenu === item.route },
-        ]"
+        :class="{ 'active-menu-item': activeMenu === item.route }"
       >
-        <el-icon :class="menuIconClass" :style="getIconStyle(item)">
-          <component :is="item.icon" />
+        <el-icon>
+          <component :is="item.iconComponent" />
         </el-icon>
         <template #title>
-          <span :class="menuTitleClass">{{ item.title }}</span>
+          <span>{{ item.title }}</span>
         </template>
       </el-menu-item>
     </el-menu>
   </el-aside>
 </template>
+
+<style scoped>
+.el-aside {
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.08);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+}
+.logo-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.el-menu {
+  border-right: none;
+  padding: 0.5rem 0;
+}
+.el-menu-item {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  margin: 0.25rem 0;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+  color: var(--aside-text);
+}
+.el-menu-item:hover {
+  border-color: var(--color-primary);
+  background-color: transparent;
+  color: var(--color-primary);
+}
+.active-menu-item {
+  border: 2px solid var(--color-primary);
+  background-color: rgba(126, 87, 194, 0.1);
+}
+.active-menu-item::after {
+  display: none;
+}
+
+.active-menu-item .el-icon,
+.active-menu-item span {
+  color: var(--color-primary);
+}
+</style>

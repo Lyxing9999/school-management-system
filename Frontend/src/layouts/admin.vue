@@ -1,28 +1,30 @@
 <script setup lang="ts">
-import AdminHeader from "~/views/admin/layouts/HeaderView.vue";
-import AdminFooter from "~/views/admin/layouts/FooterView.vue";
-import AdminSidebar from "~/views/admin/layouts/SidebarView.vue";
+import { useRoute } from "vue-router";
+import BaseHeader from "~/components/layout/BaseHeader.vue";
+import BaseFooter from "~/components/layout/BaseFooter.vue";
+import BaseSideBar from "~/components/layout/BaseSideBar.vue";
+import schoolLogo from "~/assets/image/school-logo.jpg";
 
 const route = useRoute();
 </script>
 
 <template>
   <el-container>
-    <el-aside>
-      <AdminSidebar />
-    </el-aside>
+    <BaseSideBar :logoSrc="schoolLogo" />
 
     <el-container>
       <el-header v-if="!route.meta.noHeader">
-        <AdminHeader />
+        <BaseHeader />
       </el-header>
+
       <Transition name="page" mode="out-in">
         <el-main :key="route.fullPath">
           <NuxtPage />
         </el-main>
       </Transition>
+
       <el-footer v-if="!route.meta.noHeader">
-        <AdminFooter />
+        <BaseFooter />
       </el-footer>
     </el-container>
   </el-container>
@@ -33,7 +35,6 @@ const route = useRoute();
 .page-leave-active {
   transition: opacity 0.25s ease;
 }
-
 .page-enter-from,
 .page-leave-to {
   opacity: 0;

@@ -1,100 +1,327 @@
 @import "tailwindcss";
-@import 'element-plus/dist/index.css'; 
-@import "./scss/main.scss";
+@import 'element-plus/dist/index.css';
 
+/* =========================
+   Root Variables - Light Purple Theme
+   ========================= */
 :root {
-  --color-primary: #ff4d4f;
-  --color-primary-light: #ff9999;
-  --color-accent: #ffdf70;
-
+  /* Colors */
+  --color-primary: #6B3FA0;
+  --color-primary-light: #7E57C2;
+--color-primary-light-1: #8F63D1;
+  --color-primary-light-2: #A17FE0;
+  --color-primary-light-3: #B39CF0;
+  --color-primary-light-4: #C5B3F7;
+  --color-primary-light-5: #D6C9FA;
+  --color-primary-light-6: #E8DEFD;
+  --color-primary-light-7: #F0E6FF;
+  --color-primary-light-8: #F5EFFF;
+  --color-primary-light-9: #FAF5FF;
+  --color-bg: #f9f9fb;
+  --color-card: #ffffff;
+  --color-dark: #333333;
   --color-light: #ffffff;
-  --color-dark: #1e1e1e;
 
-  --color-secondary: #3f51b5;
-  --color-secondary-dark: #2c387e;
-  --color-secondary-light: #6573c3;
-  --color-secondary-light-rgb: 101, 115, 195;
+  /* Typography */
+  --font-family-base: 'Poppins', sans-serif;
 
-  --color-main-light: #f9fafb;
-  --color-sidebar-light: #e5e7eb;
-  --menu-text-color: var(--color-secondary-dark);
+  /* Spacing & Transition */
+  --border-radius-base: 6px;
+  --transition-base: 0.3s ease-in-out;
+
+  /* Input / Card */
+  --input-border: #ddd;
+  --input-bg: #fff;
+  --card-shadow: rgba(126, 87, 194, 0.2);
+
+  /* Button colors */
+  --button-primary-bg: #6B3FA0;
+  --button-primary-text: #ffffff;
+  --button-primary-hover-bg: #7E57C2;
+  --button-primary-hover-text: #ffffff;
+
+  --button-danger-bg: #e53935;
+  --button-danger-text: #ffffff;
+  --button-danger-hover-bg: #f44336;
+  --button-danger-hover-text: #ffffff;
+
+  --button-success-bg: #43a047;
+  --button-success-text: #ffffff;
+  --button-success-hover-bg: #4caf50;
+  --button-success-hover-text: #ffffff;
+
+  --button-info-bg: #1e88e5;
+  --button-info-text: #ffffff;
+  --button-info-hover-bg: #2196f3;
+  --button-info-hover-text: #ffffff;
+
+  --button-warning-bg: #fb8c00;
+  --button-warning-text: #ffffff;
+  --button-warning-hover-bg: #ffa726;
+  --button-warning-hover-text: #ffffff;
+
+  --button-default-bg: #e0e0e0;
+  --button-default-text: #333333;
+  --button-default-hover-bg: #eeeeee;
+  --button-default-hover-text: #333333;
+
+  --button-text-bg: transparent;
+  --button-text-text: #6B3FA0;
+  --button-text-hover-bg: rgba(107, 63, 160, 0.1);
+  --button-text-hover-text: #7E57C2;
 }
 
-html, body, #app {
+/* =========================
+   Global Defaults
+   ========================= */
+body {
+  font-family: var(--font-family-base);
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-
-}
-
-.dark {
-  /* Brand */
-  --color-primary: #ff4d4f;
-  --color-primary-light: #ff6f71;
-  --color-accent: #ffe28f;
-
-  /* Inverted Light/Dark */
-  --color-dark: #f5f5f5;
-  --color-light: #1e1e1e;
-
-  /* Secondary Theme */
-  --color-secondary: #8796f2;
-  --color-secondary-dark: #5c6bc0;
-  --color-secondary-light: #c5cae9;
-  --color-secondary-light-rgb: 197, 202, 233;
-
-  /* Element Plus Primary (Dark Variant) */
-  --el-color-primary: #ff4d4f;
-  --el-color-primary-dark-1: #ff3335;
-  --el-color-primary-dark-2: #ff6668;
-  --el-color-primary-dark-3: #ff7d7e;
-  --el-color-primary-dark-4: #ff9495;
-  --el-color-primary-light-3: #ffb3b4;
-  --el-color-primary-light-5: #ffcacc;
-  --el-color-primary-light-6: #ffd5d6;
-  --el-color-primary-light-7: #ffe0e1;
-  --el-color-primary-light-8: #ffe8e8;
-  --el-color-primary-light-9: #fff0f0;
-  --el-color-primary-light-10: #fff8f8;
-
-  /* UI Layout Dark */
-  --color-bg: var(--color-dark);
-  --color-main-dark: #1f2937;
-  --color-sidebar-dark: #374151;
-  --color-sidebar-light: #e5e7eb;
-
-  /* Optional Menu Theme */
-  --menu-text-color: var(--color-secondary-light);
-}
-
-html.dark {
-  --card-bg: var(--color-main-dark);
-  --sidebar-bg: var(--color-sidebar-dark);
-  --text-default: var(--color-light);
-}
-
-body {
-  font-family: "Inter", sans-serif;
-  background-color: var(--color-light);
+  background-color: var(--color-bg);
   color: var(--color-dark);
-  transition: background-color 0.3s ease, color 0.3s ease;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
-html {
-  color-scheme: light;
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-base);
 }
 
-html.dark {
-  color-scheme: dark;
+a:hover {
+  color: var(--color-primary-light);
 }
 
-html.dark body {
-  background-color: var(--color-dark);
+button {
+  cursor: pointer;
+  transition: var(--transition-base);
+  border-radius: var(--border-radius-base);
+  font-family: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  outline: none;
+  border-radius: var(--border-radius-base);
+  border: 1px solid var(--input-border);
+  padding: 0.5rem 0.75rem;
+  background-color: var(--input-bg);
+  color: var(--color-dark);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-primary);
+}
+
+.card {
+  background-color: var(--color-card);
+  border-radius: var(--border-radius-base);
+  box-shadow: 0 2px 6px var(--card-shadow);
+  padding: 1rem;
+  transition: box-shadow var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px var(--card-shadow);
+}
+
+/* =========================
+   Button Styles
+   ========================= */
+.btn-primary {
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border: 1px solid var(--button-primary-bg);
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  font-weight: 500;
+  min-width: auto;
+  transition: all var(--transition-base);
+}
+
+.btn-primary:hover {
+  background-color: var(--button-primary-hover-bg);
+  color: var(--button-primary-hover-text);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background-color: var(--button-danger-bg);
+  color: var(--button-danger-text);
+  border: 1px solid var(--button-danger-bg);
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  font-weight: 500;
+  min-width: auto;
+  transition: all var(--transition-base);
+}
+
+.btn-danger:hover {
+  background-color: var(--button-danger-hover-bg);
+  color: var(--button-danger-hover-text);
+  transform: translateY(-1px);
+}
+
+.btn-success {
+  background-color: var(--button-success-bg);
+  color: var(--button-success-text);
+  border: 1px solid var(--button-success-bg);
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  font-weight: 500;
+  min-width: auto;
+  transition: all var(--transition-base);
+}
+
+.btn-success:hover {
+  background-color: var(--button-success-hover-bg);
+  color: var(--button-success-hover-text);
+  transform: translateY(-1px);
+}
+
+.btn-info {
+  background-color: var(--button-info-bg);
+  color: var(--button-info-text);
+  border: 1px solid var(--button-info-bg);
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  font-weight: 500;
+  min-width: auto;
+  transition: all var(--transition-base);
+}
+
+.btn-info:hover {
+  background-color: var(--button-info-hover-bg);
+  color: var(--button-info-hover-text);
+  transform: translateY(-1px);
+}
+
+.btn-warning {
+  background-color: var(--button-warning-bg);
+  color: var(--button-warning-text);
+  border: 1px solid var(--button-warning-bg);
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  font-weight: 500;
+  min-width: auto;
+  transition: all var(--transition-base);
+}
+
+.btn-warning:hover {
+  background-color: var(--button-warning-hover-bg);
+  color: var(--button-warning-hover-text);
+  transform: translateY(-1px);
+}
+
+.btn-default {
+  background-color: var(--button-default-bg);
+  color: var(--button-default-text);
+  border: 1px solid var(--button-default-bg);
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  font-weight: 500;
+  min-width: auto;
+  transition: all var(--transition-base);
+}
+
+.btn-default:hover {
+  background-color: var(--button-default-hover-bg);
+  color: var(--button-default-hover-text);
+  transform: translateY(-1px);
+}
+
+.btn-text {
+  background-color: var(--button-text-bg);
+  color: var(--button-text-text);
+  border: none;
+  padding: 0;
+  min-width: auto;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.btn-text:hover {
+  background-color: var(--button-text-hover-bg);
+  color: var(--button-text-hover-text);
+  transform: translateY(-1px);
+}
+
+/* =========================
+   Button Sizes
+   ========================= */
+.btn-small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.btn-medium {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+.btn-large {
+  padding: 8px 16px;
+  font-size: 16px;
+}
+
+/* =========================
+   Utility Classes
+   ========================= */
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-primary-light {
+  background-color: var(--color-primary-light);
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-primary-light {
+  color: var(--color-primary-light);
+}
+
+.bg-bg {
+  background-color: var(--color-bg);
+}
+
+.text-dark {
+  color: var(--color-dark);
+}
+
+.text-light {
   color: var(--color-light);
 }
 
-/* Element Plus*
+.rounded {
+  border-radius: var(--border-radius-base);
+}
+
+.shadow {
+  box-shadow: 0 2px 6px var(--card-shadow);
+}
+
+.shadow-md {
+  box-shadow: 0 4px 12px var(--card-shadow);
+}
+
+.transition {
+  transition: all var(--transition-base);
+}
+
+.el-container {
+  height: 100vh;
+}

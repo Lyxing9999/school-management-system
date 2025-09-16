@@ -1,162 +1,98 @@
 <script setup lang="ts">
-import { ref, watch, computed, provide } from "vue";
-import {
-  Menu,
-  Bell,
-  Sunny,
-  Moon,
-  ArrowDown,
-  User,
-} from "@element-plus/icons-vue";
-import { useDarkMode } from "~/composables/useDarkMode";
+import { ref } from "vue";
+import { Menu, Bell, Sunny, Moon, ArrowDown } from "@element-plus/icons-vue";
 import BaseInputSearch from "~/components/Base/BaseInputSearch.vue";
-import { debounce } from "lodash-es";
 
+// -----------------------------
+// Reactive State
+// -----------------------------
 const searchQuery = ref("");
-provide("searchQuery", searchQuery);
+const isDark = ref(false); // Dark mode toggle
 
-const emit = defineEmits<{
-  (e: "toggle-sidebar"): void;
-  (e: "search", q: string): void;
-  (e: "notification-click"): void;
-  (e: "profile-click"): void;
-  (e: "logout-click"): void;
-}>();
+// -----------------------------
+// Methods
+// -----------------------------
+const toggleDark = () => {
+  isDark.value = !isDark.value;
+};
 
-watch(
-  searchQuery,
-  debounce((val: string) => {
-    emit("search", val);
-  }, 300)
-);
+const handleNotificationClick = () => {
+  console.log("Notification clicked");
+};
 
-const props = withDefaults(
-  defineProps<{
-    searchPlaceholder?: string;
-    searchClearable?: boolean;
-    searchSize?: "default" | "small" | "large";
+const handleProfileClick = () => {
+  console.log("Profile clicked");
+};
 
-    mobileToggleClass?: string;
-    searchClass?: string;
-    darkModeToggleClass?: string;
-    userDropdownClass?: string;
-    userDropdownItemClass?: string;
-
-    userName?: string;
-    avatarIcon?: string;
-    notificationCount?: number;
-  }>(),
-  {
-    searchPlaceholder: "Search...",
-    searchClearable: true,
-    searchSize: "default",
-
-    mobileToggleClass: "",
-    searchClass: "",
-    darkModeToggleClass: "",
-    userDropdownClass: "",
-    userDropdownItemClass: "",
-
-    userName: "Admin User",
-    avatarIcon: "User",
-    notificationCount: 0,
-  }
-);
-
-const { isDark, toggleDark } = useDarkMode();
+const handleLogoutClick = () => {
+  console.log("Logout clicked");
+};
 </script>
 
 <template>
   <el-header>
     <el-row justify="space-between" align="middle" style="height: 100%">
+      <!-- Sidebar Toggle -->
       <el-col :span="6">
-        <el-space>
-          <el-button
-            :class="props.mobileToggleClass"
-            @click="$emit('toggle-sidebar')"
-            type="text"
-            class="mobile-toggle"
-            aria-label="Toggle sidebar"
-          >
-            <el-icon><Menu /></el-icon>
-          </el-button>
-        </el-space>
+        <el-button type="text" class="mobile-toggle">
+          <el-icon><Menu /></el-icon>
+        </el-button>
       </el-col>
 
+      <!-- Search -->
       <el-col :span="12">
         <BaseInputSearch
           v-model="searchQuery"
-          :class="props.searchClass"
-          :placeholder="props.searchPlaceholder"
-          :clearable="props.searchClearable"
-          :size="props.searchSize"
-          class="search-input"
+          placeholder="Search..."
+          clearable
+          size="default"
         />
       </el-col>
 
+      <!-- Actions -->
       <el-col :span="6">
         <el-space>
+          <!-- Notifications -->
           <el-tooltip content="Notifications" placement="bottom">
             <el-badge
-              :value="props.notificationCount"
+              :value="5"
               class="notification-badge"
-              @click="$emit('notification-click')"
+              @click="handleNotificationClick"
             >
-              <el-button
-                type="text"
-                class="icon-button"
-                aria-label="Notifications"
-              >
+              <el-button type="text" class="icon-button">
                 <el-icon><Bell /></el-icon>
               </el-button>
             </el-badge>
           </el-tooltip>
 
+          <!-- Dark Mode Toggle -->
           <el-tooltip
             :content="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
             placement="bottom"
-            :class="props.darkModeToggleClass"
           >
-            <el-button
-              @click="toggleDark"
-              type="text"
-              class="icon-button"
-              aria-label="Toggle dark mode"
-            >
+            <el-button @click="toggleDark" type="text" class="icon-button">
               <el-icon v-if="isDark"><Sunny /></el-icon>
               <el-icon v-else><Moon /></el-icon>
             </el-button>
           </el-tooltip>
 
+          <!-- User Dropdown -->
           <el-dropdown trigger="click" placement="bottom-end">
-            <el-button
-              type="text"
-              :class="props.userDropdownClass"
-              aria-label="User menu"
-            >
+            <el-button type="text" class="user-dropdown">
               <el-space>
-                <el-avatar :size="32" :icon="props.avatarIcon" />
-                <span class="user-name">{{ props.userName }}</span>
+                <el-avatar :size="32" icon="User" />
+                <span class="user-name">Admin User</span>
                 <el-icon><ArrowDown /></el-icon>
               </el-space>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <slot name="user-dropdown">
-                  <el-dropdown-item
-                    @click="$emit('profile-click')"
-                    :class="props.userDropdownItemClass"
-                  >
-                    Profile
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    divided
-                    @click="$emit('logout-click')"
-                    :class="props.userDropdownItemClass"
-                  >
-                    Logout
-                  </el-dropdown-item>
-                </slot>
+                <el-dropdown-item @click="handleProfileClick"
+                  >Profile</el-dropdown-item
+                >
+                <el-dropdown-item divided @click="handleLogoutClick"
+                  >Logout</el-dropdown-item
+                >
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -166,4 +102,20 @@ const { isDark, toggleDark } = useDarkMode();
   </el-header>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.mobile-toggle {
+  margin-left: 0.5rem;
+}
+.icon-button {
+  padding: 0.25rem;
+}
+.user-dropdown {
+  padding: 0.25rem 0.5rem;
+}
+.notification-badge {
+  cursor: pointer;
+}
+.user-name {
+  margin-left: 0.5rem;
+}
+</style>
