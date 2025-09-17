@@ -1,0 +1,20 @@
+/* ===========================
+   Element Plus Global Overrides
+   =========================== */
+/* Dropdown selected item */
+.el-select-dropdown__item.is-selected {
+    color: var(--color-primary-light) !important;
+}
+
+
+.el-radio__input.is-checked .el-radio__inner,
+.el-radio__input.is-focus .el-radio__inner {
+    border-color: var(--color-primary-light) !important;
+    /* Outer circle */
+    background-color: var(--color-primary-light) !important;
+    /* Inner circle */
+}
+
+.el-radio__input:hover .el-radio__inner {
+    border-color: var(--color-primary-light) !important;
+}

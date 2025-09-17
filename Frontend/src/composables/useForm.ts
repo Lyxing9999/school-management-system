@@ -29,7 +29,9 @@ export function useForm<T extends Record<string, any>>(
   ) => {
     loading.value = true;
     try {
-      // cast form to T
+      if (elFormRef) {
+        await elFormRef.validate();
+      }
       await service.create(form as T);
       formDialogVisible.value = false;
       options?.onSuccess?.();

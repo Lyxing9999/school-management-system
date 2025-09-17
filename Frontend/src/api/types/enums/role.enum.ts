@@ -19,10 +19,8 @@ export enum UserRole {
 // Staff members
 export enum StaffRole {
   TEACHER = "teacher",
-  FRONT_OFFICE = "front_office",
-  FINANCE = "finance",
+
   ACADEMIC = "academic",
-  HR = "hr",
 }
 
 // Arrays for easy checks

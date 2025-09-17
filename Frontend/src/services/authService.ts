@@ -30,30 +30,30 @@ export class AuthService {
   async register(form: UserRegisterForm): Promise<AuthDataDTO | null> {
     if (!this.validateCredentials(form)) return null;
 
-    const res = await this.safeApiCall<AuthDataDTO>(
+    const { data } = await this.safeApiCall<AuthDataDTO>(
       this.authApi.registerUser(form),
       {
         showSuccessNotification: true,
         showErrorNotification: true,
       }
     );
-    if (!res) return null;
+    if (!data) return null;
     await this.router.push("/auth/login");
-    return res;
+    return data;
   }
 
   async login(form: UserLoginForm): Promise<void | null> {
     if (!this.validateCredentials(form)) return null;
 
-    const response = await this.safeApiCall<AuthDataDTO>(
+    const { data } = await this.safeApiCall<AuthDataDTO>(
       this.authApi.login(form),
       {
         showErrorNotification: true,
         showSuccessNotification: true,
       }
     );
-    if (!response) return;
-    const token = response.access_token;
+    if (!data) return;
+    const token = data.access_token;
     if (!token) {
       this.message.showError("Invalid response from server: no token");
       return;

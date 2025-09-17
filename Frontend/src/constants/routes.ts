@@ -2,6 +2,7 @@ export const ROUTES = {
   ADMIN: {
     DASHBOARD: "/admin/dashboard",
     MANAGE_USERS: "/admin/manage-user",
+    MANAGE_STAFF: "/admin/manage-staff",
     MANAGE_CLASSES: "/admin/manage-class",
     NOTIFICATIONS: "/admin/notifications",
     SYSTEM_EVENTS: "/admin/events",

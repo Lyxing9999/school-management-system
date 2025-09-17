@@ -1,4 +1,4 @@
-import { Role } from "~/api/types/enums/role.enum";
+import { Role, StaffRole, UserRole } from "~/api/types/enums/role.enum";
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 export type AdminApiResponse<T> = ApiResponse<T>;
 export type AdminGetUserData = {
@@ -24,14 +24,14 @@ export type AdminCreateUser = {
   username: string;
   email: string;
   password: string;
-  role: Role;
+  role: UserRole;
 };
 
 export type AdminUpdateUser = {
   username?: string;
   email?: string;
   password?: string;
-  role?: Role;
+  role?: UserRole;
 };
 
 export type AdminUserSchema = {};
@@ -63,3 +63,28 @@ export type AdminGetClass = {
 };
 
 export type AdminGetClassResponse = AdminApiResponse<AdminGetClass>;
+
+export type AdminCreateStaff = AdminCreateUser & {
+  staff_id: string;
+  staff_name: string;
+  role: StaffRole;
+  phone_number: string;
+  address: string;
+};
+
+export type AdminUpdateStaff = AdminUpdateUser & {
+  staff_id?: string;
+  staff_name?: string;
+  role?: StaffRole;
+  phone_number?: string;
+  address?: string;
+};
+
+export type adminGetstaffData = AdminGetUserData & {
+  staff_id: string;
+  staff_name: string;
+  role: StaffRole;
+  phone_number: string;
+  address: string;
+};
+export type AdminGetStaffResponse = AdminApiResponse<adminGetstaffData>;

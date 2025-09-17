@@ -19,6 +19,11 @@ const menus: Record<RoleKey, MenuItem[]> = {
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.ADMIN.DASHBOARD },
     { title: "Manage Users", icon: "User", route: ROUTES.ADMIN.MANAGE_USERS },
     {
+      title: "Manage Staff",
+      icon: "UserFilled",
+      route: ROUTES.ADMIN.MANAGE_STAFF,
+    },
+    {
       title: "Manage Classes",
       icon: "Notebook",
       route: ROUTES.ADMIN.MANAGE_CLASSES,

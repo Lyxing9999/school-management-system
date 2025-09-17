@@ -8,6 +8,9 @@ import type {
   AdminCreateClass,
   AdminGetClass,
   AdminFindTeacherSelect,
+  AdminCreateStaff,
+  AdminUpdateStaff,
+  adminGetstaffData,
 } from "~/api/admin/admin.dto";
 import { Role } from "~/api/types/enums/role.enum";
 export class AdminService {
@@ -23,71 +26,87 @@ export class AdminService {
       showErrorNotification?: boolean;
     } = {}
   ): Promise<AdminGetPageUserData | null> {
-    const res = await this.safeApiCall<AdminGetPageUserData>(
+    const { data } = await this.safeApiCall<AdminGetPageUserData>(
       this.adminApi.getUsers(roles, page, pageSize),
       {
         showSuccessNotification: options.showSuccessNotification ?? false,
         showErrorNotification: options.showErrorNotification ?? true,
       }
     );
-
-    return res;
+    return data!;
   }
 
   async createUser(
     userData: AdminCreateUser
   ): Promise<AdminGetUserData | null> {
-    const res = await this.safeApiCall<AdminGetUserData>(
+    const { data } = await this.safeApiCall<AdminGetUserData>(
       this.adminApi.createUser(userData),
       {
         showSuccessNotification: false,
       }
     );
-    if (!res) return null;
-    return res;
+    return data!;
   }
 
   async updateUser(
     id: string,
     userData: AdminUpdateUser
   ): Promise<AdminGetUserData | null> {
-    const res = await this.safeApiCall<AdminGetUserData>(
+    const { data } = await this.safeApiCall<AdminGetUserData>(
       this.adminApi.updateUser(id, userData),
       {
         showSuccessNotification: true,
         showErrorNotification: true,
       }
     );
-    if (!res) return null;
-    return res;
+    return data!;
   }
 
   async deleteUser(id: string) {
-    return this.safeApiCall(this.adminApi.deleteUser(id), {
+    const { data } = await this.safeApiCall(this.adminApi.deleteUser(id), {
       showSuccessNotification: true,
       showErrorNotification: true,
     });
+    return data!;
   }
   async createClass(classData: AdminCreateClass) {
-    const res = await this.safeApiCall<AdminGetClass>(
+    const { data } = await this.safeApiCall<AdminGetClass>(
       this.adminApi.createClass(classData),
       {
         showSuccessNotification: true,
         showErrorNotification: true,
       }
     );
-    if (!res) return null;
-    return res;
+    return data!;
   }
   async getTeacherSelect() {
-    const res = await this.safeApiCall<AdminFindTeacherSelect[]>(
+    const { data } = await this.safeApiCall<AdminFindTeacherSelect[]>(
       this.adminApi.getTeacherSelect(),
       {
         showSuccessNotification: false,
         showErrorNotification: true,
       }
     );
-    if (!res) return null;
-    return res;
+    return data!;
+  }
+
+  async createStaff(staffData: AdminCreateStaff) {
+    const { data } = await this.safeApiCall<adminGetstaffData>(
+      this.adminApi.createStaff(staffData),
+      {
+        showSuccessNotification: false,
+      }
+    );
+    return data!;
+  }
+  async updateStaff(id: string, staffData: AdminUpdateStaff) {
+    const { data } = await this.safeApiCall<adminGetstaffData>(
+      this.adminApi.updateStaff(id, staffData),
+      {
+        showSuccessNotification: true,
+        showErrorNotification: true,
+      }
+    );
+    return data!;
   }
 }

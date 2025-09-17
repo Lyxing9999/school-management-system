@@ -5,6 +5,9 @@ import type {
   AdminCreateClass,
   AdminGetUserResponse,
   AdminUpdateUser,
+  AdminCreateStaff,
+  AdminUpdateStaff,
+  AdminGetStaffResponse,
   AdminGetClassResponse,
   AdminGetTeacherSelectResponse,
 } from "./admin.dto";
@@ -67,6 +70,34 @@ export class AdminApi {
       classData
     );
 
+    return res.data;
+  }
+
+  async createStaff(
+    staffData: AdminCreateStaff
+  ): Promise<AdminGetStaffResponse> {
+    const res = await this.$api.post<AdminGetStaffResponse>(
+      `${this.baseURL}/staff`,
+      staffData
+    );
+    return res.data;
+  }
+
+  async updateStaff(
+    id: string,
+    staffData: AdminUpdateStaff
+  ): Promise<AdminGetStaffResponse> {
+    const res = await this.$api.patch<AdminGetStaffResponse>(
+      `${this.baseURL}/staff/${id}`,
+      staffData
+    );
+    return res.data;
+  }
+
+  async deleteStaff(id: string): Promise<AdminGetStaffResponse> {
+    const res = await this.$api.delete<AdminGetStaffResponse>(
+      `${this.baseURL}/staff/${id}`
+    );
     return res.data;
   }
 

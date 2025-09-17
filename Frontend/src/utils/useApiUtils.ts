@@ -6,7 +6,6 @@ import type { ApiResponse } from "~/api/types/common/api-response.type";
 import { useMessage } from "~/composables/common/useMessage";
 
 export const useApiUtils = () => {
-  const fieldErrors = ref<Record<string, string>>({});
   const message = useMessage();
 
   type SafeApiCallOptions = {
@@ -17,19 +16,19 @@ export const useApiUtils = () => {
   const safeApiCall = async <T>(
     promise: Promise<ApiResponse<T>>,
     options: SafeApiCallOptions = {}
-  ): Promise<T | null> => {
+  ): Promise<{ data: T | null; errors: Record<string, string> }> => {
     const { showSuccessNotification = false, showErrorNotification = false } =
       options;
-    fieldErrors.value = {};
+
+    let fieldErrors: Record<string, string> = {};
 
     try {
       const apiRes = await promise;
-      const data = apiRes.data;
-      if (!apiRes) return null;
+      if (!apiRes) return { data: null, errors: fieldErrors };
 
       if (!apiRes.success) {
         if (apiRes.details?.field_errors) {
-          fieldErrors.value = apiRes.details.field_errors;
+          fieldErrors = apiRes.details.field_errors;
         }
         if (showErrorNotification) {
           eventBus.emit(
@@ -40,29 +39,29 @@ export const useApiUtils = () => {
               "An unexpected error occurred."
           );
         }
-        return null;
+        return { data: null, errors: fieldErrors };
       }
 
       if (showSuccessNotification) {
         message.showSuccess(apiRes.message);
       }
 
-      return data ?? null;
+      return { data: apiRes.data ?? null, errors: {} };
     } catch (err) {
       const axiosErr = err as AxiosError<any>;
-
       const apiErrorData = axiosErr.response?.data as
         | ApiResponse<any>
         | undefined;
-      console.log("this is apiErrorData", apiErrorData);
+
       if (apiErrorData?.details?.field_errors) {
-        fieldErrors.value = apiErrorData.details.field_errors;
+        fieldErrors = apiErrorData.details.field_errors;
       }
 
+      // Always throw errors so ErrorBoundary can catch
       if (axiosErr.response?.status === 401) {
         useAuthStore().logout();
         eventBus.emit("session-expired");
-        return null;
+        throw axiosErr;
       }
 
       if (showErrorNotification) {
@@ -74,9 +73,8 @@ export const useApiUtils = () => {
         );
       }
 
-      return null;
+      throw axiosErr;
     }
   };
-
-  return { safeApiCall, fieldErrors };
+  return { safeApiCall };
 };
