@@ -19,12 +19,12 @@ class User:
         role: SystemRole,
         id: ObjectId | None = None,
         username: str | None = None,
-        created_by: str | None = None,
+        created_by: ObjectId | None = None,
         created_at: datetime | None = None,
         updated_at: datetime | None = None,
         deleted: bool = False,
         deleted_at: datetime | None = None,
-        deleted_by: str | None = None
+        deleted_by: ObjectId | None = None
     ):
         self.id = id or ObjectId()
         self._email = email
@@ -92,13 +92,15 @@ class User:
     def is_deleted(self) -> bool:
         return self.deleted
 
-    def soft_delete(self):
+    def soft_delete(self , deleted_by: ObjectId):
         if self.deleted:
             return False
         self.deleted = True
         self.deleted_at = datetime.utcnow()
+        self.deleted_by = deleted_by
         self._mark_updated()
         return True
+
     def ready_for_purge(self, days: int = 30) -> bool:
         return self.deleted and self.deleted_at and self.deleted_at < datetime.utcnow() - timedelta(days=days)
 
@@ -186,15 +188,15 @@ class UserMapper:
         }
 
     @staticmethod
-    def to_safe(user: User) -> dict:
+    def to_safe_dict(user: User) -> dict:
         return {
             "id": str(user.id),
             "email": user.email,
             "username": user.username,
             "role": user.role.value,
-            "created_by": user.created_by,
+            "created_by": str(user.created_by),
             "created_at": user.created_at,
             "updated_at": user.updated_at,
             "deleted": user.deleted,
-            "deleted_by": user.deleted_by
+            "deleted_by": str(user.deleted_by)
         }

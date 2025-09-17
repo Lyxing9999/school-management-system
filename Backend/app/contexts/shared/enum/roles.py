@@ -3,24 +3,22 @@ from enum import Enum
 class SystemRole(str, Enum):
     ADMIN = "admin"
     TEACHER = "teacher"
-    FRONT_OFFICE = "front_office"
-    FINANCE = "finance"
     STUDENT = "student"
-    PARENT = "parent"
     ACADEMIC = "academic"
-    HR = "hr"
-    
-
-
-
+    # Optional future roles:
+    # HR = "hr"
+    # FRONT_OFFICE = "front_office"
+    # FINANCE = "finance"
+    # PARENT = "parent"
 
 class UserRole(str, Enum):
     STUDENT = "student"
-    PARENT = "parent"
+    # PARENT = "parent"
 
 class StaffRole(str, Enum):
+    ADMIN = "admin"
     TEACHER = "teacher"
-    FRONT_OFFICE = "front_office"
-    FINANCE = "finance"
     ACADEMIC = "academic"
-    HR = "hr"
+    # FRONT_OFFICE = "front_office"
+    # FINANCE = "finance"
+    # HR = "hr"

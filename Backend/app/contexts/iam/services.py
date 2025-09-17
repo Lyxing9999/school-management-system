@@ -27,7 +27,17 @@ class IAMService:
         self._user_mapper = UserMapper()
 
 
+
+    def get_user_to_domain(self, user_id: str | ObjectId) -> User:
+        user_id = mongo_converter.convert_to_object_id(user_id)
+        raw_user = self._user_read_model.get_by_id(user_id)
+        if not raw_user:
+            raise NotFoundUserException(user_id)
+        return self._user_mapper.to_domain(raw_user)
     
+    
+    def to_safe_dict(self, user: User) -> dict:
+        return self._user_mapper.to_safe_dict(user)
 
     # -------------------------
     # Helper methods
@@ -52,15 +62,13 @@ class IAMService:
             raise RoleNotAllowedException(role)
         self._validate_unique_fields(schema.username, schema.email)
         user_model = self._user_factory.create_user(email=schema.email, password=schema.password, username=schema.username, role=role, created_by=schema.created_by)
-        user_dict = self._user_mapper.to_persistence(user_model)
-
-        user_id = self._user_repository.save(user_dict)
+        user_id = self._user_repository.save(self._user_mapper.to_persistence(user_model))
         if not user_id:
             raise UserNotSavedException(user_id)
-        raw_user = self._user_read_model.get_by_id(user_id)
-        user_model = self._user_mapper.to_domain(raw_user) 
-        token = self._auth_service.create_access_token(self._user_mapper.to_safe(user_model))
+        user_model = self.get_user_to_domain(user_id)
+        token = self._auth_service.create_access_token(self._user_mapper.to_safe_dict(user_model))
         self._log("register_user", user_id=str(user_id), extra={"email": schema.email, "created_by_admin": trusted_by_admin})
+
         return user_model, token
 
     def login_user(self, email: str, password: str) -> tuple[User, str]:
@@ -68,52 +76,39 @@ class IAMService:
         if not raw_user:
             raise NotFoundUserException(email)
         user_model = self._user_mapper.to_domain(raw_user)
-
         if user_model.is_deleted():
             raise UserDeletedException(email)
         if not user_model.check_password(password, self._auth_service):
             logger.warning("Failed login attempt", extra={"email": email})
             raise InvalidPasswordException(password)
-        token = self._auth_service.create_access_token(self._user_mapper.to_safe(user_model))
+        token = self._auth_service.create_access_token(self._user_mapper.to_safe_dict(user_model))
         self._log("login", user_id=str(user_model.id), extra={"email": email})
         return user_model, token
 
 
-    def update_profile( self, user_id: str, update_schema: UserUpdateSchema, *, update_by_admin: bool = False ) -> User:
-        validated_id: ObjectId = mongo_converter.convert_to_object_id(user_id)
-
-        raw_user: dict = self._user_read_model.get_by_id(validated_id)
-        if not raw_user:
-            raise NotFoundUserException(user_id)
-        user_model: User = self._user_mapper.to_domain(raw_user)
-        update_data = update_schema.model_dump(exclude_unset=True)
-        if 'password' in update_data:
-            update_data['password'] = self._auth_service.hash_password(update_data['password'])
-        user_model.update_info(**update_data)
-        modified_count: int = self._user_repository.update(validated_id, self._user_mapper.to_persistence(user_model))
-
+    def update_profile(self, user_id: str | ObjectId, update_schema: UserUpdateSchema, *, update_by_admin: bool = False) -> User:
+        user_model = self.get_user_to_domain(user_id)
+        if update_schema.password is not None:
+            update_schema.password = self._auth_service.hash_password(update_schema.password)
+        user_model.update_info(**update_schema.model_dump(exclude_unset=True))
+        modified_count: int = self._user_repository.update(mongo_converter.convert_to_object_id(user_model.id), self._user_mapper.to_persistence(user_model))
         if modified_count == 0:
             raise NoChangeAppException()
-        self._log("update_profile", user_id=str(validated_id))
+        self._log("update_profile", user_id=str(user_id), extra={"update_by_admin": update_by_admin})
+        return user_model
 
+    def soft_delete(self, user_id: str | ObjectId, deleted_by: str | ObjectId | None = None) -> User:
+        user_model = self.get_user_to_domain(user_id)
+        deleted_by_obj = mongo_converter.convert_to_object_id(deleted_by) if deleted_by else None
+        user_model.soft_delete(deleted_by_obj)
+        modified_count = self._user_repository.soft_delete(mongo_converter.convert_to_object_id(user_model.id), deleted_by_obj)
+        if modified_count == 0:
+            raise NoChangeAppException("User already deleted in DB")
+        self._log("soft_delete", user_id=str(user_id), extra={"deleted_by": str(deleted_by_obj) if deleted_by else None})
         return user_model
 
 
-    def delete_user(self, user_id: str) -> User:
-        validated_id = mongo_converter.convert_to_object_id(user_id)
-        raw_user = self._user_read_model.get_by_id(validated_id)
-        if not raw_user:
-            raise NotFoundUserException(user_id)
-        
-        user_model = self._user_mapper.to_domain(raw_user)
-        if not user_model.soft_delete():
-            raise NoChangeAppException()
-        
-        modified_count = self._user_repository.update(validated_id, self._user_mapper.to_persistence(user_model))
-        if modified_count == 0:
-            raise NoChangeAppException()
-
-        self._log("delete_user", user_id=str(validated_id))
-        return user_model
-
-
+    def hard_delete(self, user_id: str | ObjectId) -> bool:
+        deleted_count = self._user_repository.hard_delete(mongo_converter.convert_to_object_id(user_id))
+        return deleted_count > 0
+    

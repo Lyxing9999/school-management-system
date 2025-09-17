@@ -36,3 +36,25 @@ class InvalidStaffRoleException(AppBaseException):
             category=ErrorCategory.BUSINESS_LOGIC,
             user_message="The role assigned is invalid."
         )
+
+
+    
+
+class NoChangeAppException(AppBaseException):
+    def __init__(self, message: str = "No changes made to the staff."):
+        super().__init__(
+            message=message,
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message=message
+        )
+    
+
+class StaffNotFoundException(AppBaseException):
+    def __init__(self, staff_id: str):
+        super().__init__(
+            message=f"Staff with ID '{staff_id}' not found",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message=f"The staff ID '{staff_id}' is not found."
+        )

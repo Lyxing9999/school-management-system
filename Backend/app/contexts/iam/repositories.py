@@ -20,7 +20,7 @@ class UserRepository(MongoErrorMixin):
         except Exception as e:
             self._handle_mongo_error("update", e)
 
-    def soft_delete(self, user_id: ObjectId) -> int:
+    def soft_delete(self, staff_id: ObjectId, deleted_by: ObjectId | None = None) -> int:
         try:
             update_data = {
                 "$set": {
@@ -29,6 +29,20 @@ class UserRepository(MongoErrorMixin):
                     "updated_at": datetime.utcnow()
                 }
             }
-            return self.collection.update_one({"_id": user_id, "deleted": {"$ne": True}}, update_data).modified_count
+            if deleted_by:
+                update_data["$set"]["deleted_by"] = deleted_by
+
+            result = self.collection.update_one(
+                {"_id": staff_id, "deleted": {"$ne": True}},
+                update_data
+            )
+            return result.modified_count
         except Exception as e:
-            self._handle_mongo_error("delete", e)
+            self._handle_mongo_error("soft_delete", e)
+
+    def hard_delete(self, staff_id: ObjectId) -> int:
+        try:
+            result = self.collection.delete_one({"_id": staff_id}) 
+            return result.deleted_count
+        except Exception as e:
+            self._handle_mongo_error("hard_delete", e)

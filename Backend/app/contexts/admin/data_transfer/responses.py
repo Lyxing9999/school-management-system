@@ -1,30 +1,32 @@
 from pydantic import BaseModel 
 
 from datetime import datetime
-
-class PlaceholderModel(BaseModel):
-    model_config = {
-        "extra": "allow"  # allow extra fields
-    }
-
-    def __getattr__(self, item):
-        # If attribute exists in extra fields, return it
-        return self.model_dump().get(item, None)
-
-class AdminCreateUserDataDTO(PlaceholderModel):
-    model_config = {
-        "extra": "allow"
-    }
-
-class AdminUpdateUserDataDTO(PlaceholderModel):
+from app.contexts.shared.enum.roles import SystemRole
+class AdminBaseUserDataDTO(BaseModel):
+    id: str
+    username: str | None
+    email: str
+    role: SystemRole 
+    created_at: datetime
+    created_by: str  | None 
+    updated_at: datetime  | None
+    deleted: bool 
+    deleted_by: str | None
     model_config = {
         "extra": "allow"
     }
 
+class AdminCreateUserDataDTO(AdminBaseUserDataDTO):
+    model_config = {
+        "extra": "allow"
+    }
 
+class AdminUpdateUserDataDTO(AdminBaseUserDataDTO):
+    model_config = {
+        "extra": "allow"
+    }
 
-
-class AdminCreateClassDataDTO(PlaceholderModel):
+class AdminCreateClassDataDTO(BaseModel):
     model_config = {
         "extra": "allow"
     }
@@ -33,7 +35,14 @@ class AdminCreateClassDataDTO(PlaceholderModel):
 class AdminDeleteUserDataDTO(BaseModel):   
     id: str
     deleted_at: datetime
+    deleted_by: str | None
+    model_config = {
+        "extra": "allow"
+    }
 
 class AdminStaffSelectDataDTO(BaseModel):   
     id: str
     staff_name: str
+    model_config = {
+        "extra": "allow"
+    }

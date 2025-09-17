@@ -5,7 +5,8 @@ from typing import List
 from app.contexts.shared.enum.roles import StaffRole
 from app.contexts.core.policy.policy_service import PolicyService
 from app.contexts.staff.error.staff_exceptions import InvalidStaffRoleException
-from app.contexts.staff.data_transfer.requests import StaffCreateRequestSchema
+from app.contexts.staff.data_transfer.requests import StaffCreateRequestSchema , StaffUpdateRequestSchema
+from app.contexts.staff.error.staff_exceptions import NoChangeAppException
 
 # -------------------------
 # Aggregate
@@ -19,10 +20,10 @@ class Staff:
         staff_name: str,     
         role: StaffRole,
         phone_number: str,
-        created_by: ObjectId,
         id: ObjectId | None = None,
         permissions: List[str] | None = None,
         address: str | None = None,
+        created_by: ObjectId | None = None,
         created_at: datetime = None,
         updated_at: datetime = None,
         deleted_at: datetime = None,
@@ -52,11 +53,27 @@ class Staff:
         if permission in self.permissions:
             self.permissions.remove(permission)
 
+    def _mark_updated(self):
+        self.updated_at = datetime.utcnow()
+
+    def update_staff(self, payload: StaffUpdateRequestSchema):
+        update = False
+        for field in ["staff_name", "phone_number", "address", "permissions"]:
+            value = getattr(payload, field, None)
+            if value is not None:
+                setattr(self, field, value)
+                update = True
+        if update:
+            self._mark_updated()
+        return update
+
     def soft_delete(self, deleted_by: ObjectId):
+        if self.deleted:
+            raise NoChangeAppException("Staff already deleted")
         self.deleted = True
         self.deleted_at = datetime.utcnow()
         self.deleted_by = deleted_by
-
+        self._mark_updated()
 
     def require_permission(self, permission: str):
         if self.role == StaffRole.ADMIN:
@@ -91,17 +108,6 @@ class StaffFactory:
 # Mapper
 # -------------------------
 class StaffMapper:
-    @classmethod
-    def create_from_payload(cls, payload, id: ObjectId, created_by: ObjectId) -> "Staff":
-        return cls(
-            id=id,  
-            staff_id=payload.staff_id,
-            staff_name=payload.staff_name,
-            phone_number=payload.phone_number,
-            address=payload.address,
-            role=cls.validate_role(payload.role),
-            created_by=created_by
-        )
     @classmethod
     def to_domain(cls, data: dict) -> Staff:
         id_value = data.get("_id") or data.get("id") or ObjectId()

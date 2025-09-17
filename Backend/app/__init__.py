@@ -31,11 +31,11 @@ def create_app() -> Flask:
     from .contexts.iam.routes import iam_bp
     from .contexts.academic.routes import academic_bp
     from .contexts.admin.routes import admin_bp
-    from .contexts.hr.routes import hr_bp
+    # from .contexts.hr.routes import hr_bp
     app.register_blueprint(iam_bp, url_prefix='/api/iam')
     app.register_blueprint(academic_bp, url_prefix='/api/academic')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
-    app.register_blueprint(hr_bp, url_prefix='/api/hr')
+    # app.register_blueprint(hr_bp, url_prefix='/api/hr')
 
     # Swagger UI
     app.register_blueprint(

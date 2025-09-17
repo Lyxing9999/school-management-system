@@ -63,7 +63,7 @@
 
 from pydantic import BaseModel , field_validator , Field
 from app.contexts.shared.enum.roles import UserRole , StaffRole
-ALLOWED_ROLES = [StaffRole.TEACHER.value, UserRole.STUDENT.value, UserRole.PARENT.value]
+ALLOWED_ROLES = [StaffRole.TEACHER.value, UserRole.STUDENT.value]
 from app.contexts.academic.error.academic_execptions import InvalidRoleToFindException
 from typing import List
 from datetime import datetime
