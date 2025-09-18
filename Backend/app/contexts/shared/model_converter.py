@@ -3,11 +3,8 @@ from pydantic import ValidationError as PydanticValidationError
 from typing import TypeVar, Dict, Any , Union, Type, List
 from pydantic import BaseModel
 import logging
-from abc import abstractmethod
-from app.contexts.core.error import AppBaseException , ErrorSeverity , ErrorCategory, handle_exception 
-
-from app.contexts.iam.error.user_exceptions import AppTypeError , PydanticBaseValidationError
 from enum import Enum
+from app.contexts.core.error.pydantic_error_exception import PydanticBaseValidationError, AppTypeError
 from bson import ObjectId
 logger = logging.getLogger(__name__)
 
@@ -41,9 +38,14 @@ class ModelConverterUtils():
             return model_class.model_validate(data)
         except PydanticValidationError as e:
             field_errors = self._field_errors(e)
-            app_exc = PydanticBaseValidationError( field_errors=field_errors, message=f"Validation failed while converting to {model_class.__name__}", cause=e)
-            app_exc.hint = f"Check input data for {model_class.__name__}"
-            raise app_exc
+            raise PydanticBaseValidationError(
+                message=f"Validation failed for {model_class.__name__}.",
+                cause=e,
+                details=field_errors,
+                hint="Ensure that the input data matches the expected schema "
+                    f"for {model_class.__name__}.",
+                user_message="One or more fields are invalid. Please review the provided data."
+            )
         except Exception as e:
             app_exc = handle_exception(e)
             logger.error(f"Unexpected error while converting to {model_class.__name__}: {app_exc}")
@@ -51,7 +53,12 @@ class ModelConverterUtils():
 
     def convert_to_model_list(self, data_list: list[Dict[str, Any]], model_class: Type[M]) -> list[M]:
         if not isinstance(data_list, list):
-            raise AppTypeError(type_name="list", received_value=data_list, user_message="Invalid input type, expected a list.")
+            raise AppTypeError(
+                message="Invalid input type",
+                cause=None,
+                details={"expected_type": "list", "received_value": data_list},
+                hint=f"Expected a list of items to convert to {model_class.__name__}"
+            )
         results = []
         for data in data_list:
             try:
@@ -102,14 +109,23 @@ class AdvancedMongoConverter:
             return dto_class.model_validate(converted)
         except PydanticValidationError as e:
             field_errors = { ".".join(str(x) for x in err['loc']) if err['loc'] else "unknown_field": err['msg'] for err in e.errors() }
-            raise PydanticBaseValidationError(field_errors=field_errors, message=f"Validation failed for {dto_class.__name__}", cause=e)
+            raise PydanticBaseValidationError(
+                message=f"Validation failed for {dto_class.__name__}",
+                cause=e,
+                details=field_errors
+            )
         except Exception as e:
             raise handle_exception(e)
 
     @classmethod
     def list_to_dto(cls, docs: list[dict], dto_class: Type[BaseModel]) -> List[BaseModel]:
         if not isinstance(docs, list):
-            raise AppTypeError(type_name="list", received_value=docs, user_message="Expected a list of documents.")
+            raise AppTypeError(
+                message="Expected a list of documents",
+                cause=None,
+                details={"received_value": docs},
+                hint=f"Expected list of dicts to convert to {dto_class.__name__}"
+            )
         results = []
         for doc in docs:
             results.append(cls.doc_to_dto(doc, dto_class))
@@ -129,7 +145,12 @@ class AdvancedMongoConverter:
             if isinstance(value, ObjectId):
                 return value
             if not isinstance(value, str):
-                raise AppTypeError(type_name="str", received_value=value, user_message="Expected a string value.")
+                raise AppTypeError(
+                    message="Expected string for ObjectId conversion",
+                    cause=None,
+                    details={"received_value": value},
+                    hint="Provide a valid string representing an ObjectId"
+                )
             return ObjectId(value)
         except Exception as e:
             raise handle_exception(e)

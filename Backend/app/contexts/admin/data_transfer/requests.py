@@ -37,3 +37,21 @@ class AdminUpdateUserSchema(BaseModel):
 class AdminCreateClassSchema(PlaceholderModel):
     pass
 
+
+
+class AdminCreateStaffSchema(BaseModel):
+    username: str | None = Field(None)
+    email: str = Field(... , min_length=3, max_length=50)
+    password: str = Field(..., min_length=8)
+    staff_id: str = Field(... , min_length=3, max_length=50)
+    staff_name: str = Field(... , min_length=3, max_length=50)
+    role: SystemRole = Field(...)
+    permissions: list[str] | None = Field(None)
+    phone_number: str = Field(..., min_length=3, max_length=50)
+    created_by: str | None = Field(None)
+    address: str | None = Field(None)
+
+    model_config = {
+        "enum_values_as_str": True,
+        'extra': 'forbid'
+    }

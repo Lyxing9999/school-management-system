@@ -125,6 +125,7 @@ class AppBaseException(Exception):
             return False
         return self.error_code == other.error_code and self.message == other.message
 
+
 def handle_exception(e: Exception) -> AppBaseException:
     if isinstance(e, AppBaseException):
         return e

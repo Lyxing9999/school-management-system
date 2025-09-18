@@ -46,3 +46,27 @@ class AdminStaffSelectDataDTO(BaseModel):
     model_config = {
         "extra": "allow"
     }
+
+
+
+class AdminBaseStaffDataDTO(BaseModel):
+    id: str
+    staff_name: str
+    staff_id: str
+    role: SystemRole
+    created_at: datetime
+    created_by: str | None
+    updated_at: datetime | None
+    deleted: bool
+    deleted_by: str | None
+    model_config = {
+        "extra": "allow"
+    }
+
+
+class AdminCreateStaffDataDTO(BaseModel):
+    user: AdminBaseUserDataDTO
+    staff: AdminBaseStaffDataDTO
+    model_config = {
+        "extra": "allow"
+    }

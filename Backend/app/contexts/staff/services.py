@@ -29,6 +29,25 @@ class StaffService:
             raise StaffNotFoundException(staff_id)
         return StaffMapper.to_domain(raw_staff)
 
+
+    # -------------------------
+    # converter
+    # -------------------------
+
+    def to_safe_dict(self, staff: Staff) -> dict:
+        return StaffMapper.to_safe_dict(staff)
+    
+    def to_persistence_dict(self, staff: Staff) -> dict:
+        return StaffMapper.to_persistence_dict(staff)
+    def to_domain(self, staff: dict) -> Staff:
+        return StaffMapper.to_domain(staff)
+
+    
+
+
+
+
+
     # -------------------------
     # Create Staff
     # -------------------------

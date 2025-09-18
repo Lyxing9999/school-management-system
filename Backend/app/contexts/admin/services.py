@@ -3,11 +3,11 @@ from pymongo.database import Database
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.iam.data_transfer.responses import UserReadDataDTO
 from app.contexts.schools.classes.models.school_class import SchoolClass
-from app.contexts.admin.data_transfer.requests import AdminCreateClassSchema , AdminCreateUserSchema
+from app.contexts.admin.data_transfer.requests import AdminCreateClassSchema , AdminCreateUserSchema , AdminCreateStaffSchema
 from typing import Tuple , List , Union
 from app.contexts.admin.data_transfer.requests import AdminUpdateUserSchema
 from app.contexts.iam.models import User 
-from app.contexts.admin.data_transfer.responses import   AdminStaffSelectDataDTO
+from app.contexts.admin.data_transfer.responses import   AdminBaseUserDataDTO, AdminStaffSelectDataDTO , AdminBaseStaffDataDTO
 from app.contexts.admin.error.admin_exceptions import StaffNotFoundException 
 from app.contexts.admin.error.admin_exceptions import NoChangeAppException
 from app.contexts.schools.classes.services.class_service import ClassService
@@ -105,21 +105,28 @@ class AdminService:
     # -------------------------
     # Manage staff 
     # -------------------------
-    def admin_create_staff(self, payload: AdminCreateUserSchema, created_by: str | ObjectId) -> tuple[User, Staff]:
+    def admin_create_staff(self, payload: AdminCreateStaffSchema, created_by: str | ObjectId) -> tuple[dict, dict]:
         created_by = mongo_converter.convert_to_object_id(created_by)
         user_model = None
         staff_model = None
         try:
             user_model = self.admin_create_user(payload, created_by)
             staff_model = self.staff_service.create_staff(payload, created_by)
-            return user_model , staff_model
+            return (
+                self.iam_service.to_safe_dict(user_model),
+                self.staff_service.to_safe_dict(staff_model)
+            )
+        except DuplicateEmailError as e:
+            if staff_model:
+                self.staff_service.admin_hard_delete_staff(staff_model.id)
+            raise ConflictError("Email already exists.") from e
         except Exception as e:
+            # rollback if partial success
             if staff_model:
                 self.staff_service.admin_hard_delete_staff(staff_model.id)
             if user_model:
                 self.admin_hard_delete_user(user_model.id)
-            raise e
-
+            raise
     def admin_update_staff(self, staff_id: str | ObjectId, payload: AdminUpdateUserSchema) -> tuple[User, Staff]:
         return self.staff_service.update_staff(staff_id, payload)
 

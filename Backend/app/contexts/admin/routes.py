@@ -6,11 +6,10 @@ from app.contexts.infra.database.db import get_db
 from app.contexts.common.base_response_dto import BaseResponseDTO
 from app.contexts.core.security.auth_utils import get_current_user_id
 from app.contexts.shared.model_converter import mongo_converter
-from app.contexts.admin.data_transfer.requests import AdminCreateClassSchema
-from app.contexts.admin.data_transfer.responses import AdminCreateUserDataDTO , AdminCreateClassDataDTO , AdminBaseUserDataDTO
+from app.contexts.admin.data_transfer.requests import AdminCreateClassSchema , AdminCreateStaffSchema
+from app.contexts.admin.data_transfer.responses import AdminCreateUserDataDTO , AdminCreateClassDataDTO , AdminBaseUserDataDTO , AdminCreateStaffDataDTO , AdminBaseStaffDataDTO
 from app.contexts.admin.services import AdminService
 from app.contexts.auth.jwt_utils import role_required
-from app.contexts.shared.enum.roles import SystemRole
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -120,14 +119,18 @@ def admin_add_class():
 def admin_add_staff():
     payload = request.json
     admin_id = get_current_user_id()
-    payload = converter_utils.convert_to_model(payload, AdminCreateUserSchema)
-    user_dto = AdminService(get_db()).admin_create_staff(payload, admin_id)
-    dto = AdminCreateUserDataDTO(**user_dto)
+    payload = converter_utils.convert_to_model(payload, AdminCreateStaffSchema)
+    user , staff = AdminService(get_db()).admin_create_staff(payload, admin_id)
+    user = AdminBaseUserDataDTO(**user)
+    staff = AdminBaseStaffDataDTO(**staff)
+    dto = AdminCreateStaffDataDTO(user=user, staff=staff)
     return BaseResponseDTO(
         data=dto,
-        message="User created successfully",
+        message=f"Staff {dto.staff.staff_id} created successfully",
         success=True
     )
+
+
 
 
 
