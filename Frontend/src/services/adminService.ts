@@ -42,11 +42,12 @@ export class AdminService {
     const { data } = await this.safeApiCall<AdminGetUserData>(
       this.adminApi.createUser(userData),
       {
-        showSuccessNotification: false,
+        showSuccessNotification: true,
+        showErrorNotification: true,
       }
     );
     return data!;
-  }
+  } 
 
   async updateUser(
     id: string,

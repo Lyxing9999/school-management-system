@@ -11,7 +11,11 @@ export default defineNuxtConfig({
 
   devtools: true,
 
-  css: ["~/styles/main.css", "element-plus/dist/index.css"],
+  css: [
+    "~/styles/main.css",
+    "~/styles/element-overrides.css",
+    "element-plus/dist/index.css",
+  ],
 
   vite: {
     plugins: [tailwindcss(), visualizer({ open: false })],

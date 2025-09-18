@@ -19,7 +19,11 @@ import {
 } from "~/schemas/forms/admin/staffFrom";
 import type { Role } from "~/api/types/enums/role.enum";
 import type { AxiosInstance } from "axios";
-import type { AdminGetUserData } from "~/api/admin/admin.dto";
+import type {
+  AdminCreateStaff,
+  AdminCreateUser,
+  AdminGetUserData,
+} from "~/api/admin/admin.dto";
 
 definePageMeta({ layout: "admin" });
 
@@ -34,20 +38,16 @@ const {
   data,
   save,
   cancel,
-  remove,
+  remove: removeUser,
   rowLoading,
   setData,
   autoSave,
   getPreviousValue,
   revertField,
 } = useInlineEdit<AdminGetUserData>([], {
-  update: (id, payload) => {
-    if (isStaffMode.value)
-      return adminService.updateStaff(id.toString(), payload as any);
-    return adminService.updateUser(id.toString(), payload as any);
-  },
+  update: (id, payload) => adminService.updateUser(id, payload as any),
   remove: async (id) => {
-    await adminService.deleteUser(id.toString());
+    await adminService.deleteUser(id);
   },
 });
 
@@ -85,8 +85,9 @@ const {
   {
     create: async (data) => {
       const payload = { ...toRaw(data) };
-      if (isStaffMode.value) return adminService.createStaff(payload);
-      return adminService.createUser(payload);
+      if (isStaffMode.value)
+        return adminService.createStaff(payload as AdminCreateStaff);
+      return adminService.createUser(payload as AdminCreateUser);
     },
   },
   {}, // start empty, will populate when opening
@@ -107,8 +108,8 @@ function handleRevertField(row: any, field: string) {
   revertField(row, field as keyof AdminGetUserData);
 }
 
-function handleDelete(rowId: AdminGetUserData) {
-  remove(rowId);
+function handleDelete(row: AdminGetUserData) {
+  removeUser(row);
 }
 
 function handleDetail(rowId: string | number) {
@@ -180,8 +181,8 @@ onMounted(async () => {
             :role="row.role"
             :hideDetailForRoles="['student']"
             :loading="rowLoading[row.id] ?? false"
-            @detail="handleDetail(row.id)"
-            @delete="handleDelete(row.id)"
+            @detail="handleDetail(row)"
+            @delete="handleDelete(row)"
           />
         </template>
 

@@ -1,11 +1,11 @@
 import { ref } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
-
+import { getKey } from "~/utils/aliasMapper";
 export function useInlineEdit<T extends { id: string | number }>(
   initialData: T[],
   service: {
-    update: (id: string | number, payload: Partial<T>) => Promise<T | null>;
-    remove: (id: string | number) => Promise<void>;
+    update: (id: string, payload: Partial<T>) => Promise<T | null>;
+    remove: (id: string) => Promise<void>;
   }
 ) {
   const data = ref<T[]>([...initialData]);
@@ -21,49 +21,51 @@ export function useInlineEdit<T extends { id: string | number }>(
     autoSave = false
   ) => {
     const key = field as keyof T;
+    const rowKey = getKey(row.id);
     const currentValue = row[key];
     const payload: Partial<T> = { [key]: currentValue } as Partial<T>;
 
     if (currentValue === "" || currentValue == null) {
-      row[key] = originalRows.value[row.id]?.[key] ?? currentValue;
+      row[key] = originalRows.value[rowKey]?.[key] ?? currentValue;
       ElMessage.info("This field cannot be empty.");
       return;
     }
 
-    rowLoading.value[row.id] = true;
+    rowLoading.value[rowKey] = true;
 
     try {
-      const updated = await service.update(row.id, payload);
+      const updated = await service.update(row.id.toString(), payload);
 
       if (!updated) {
-        row[key] = originalRows.value[row.id]?.[key] ?? currentValue;
+        row[key] = originalRows.value[rowKey]?.[key] ?? currentValue;
         return;
       }
 
       const index = data.value.findIndex((r) => r.id === row.id);
       if (index !== -1)
         data.value[index] = { ...data.value[index], ...updated };
-      revertedFields.value[row.id] = revertedFields.value[row.id] || new Set();
+      revertedFields.value[rowKey] = revertedFields.value[rowKey] || new Set();
 
-      if (autoSave && !revertedFields.value[row.id].has(key)) {
-        previousValues.value[row.id] = previousValues.value[row.id] || {};
-        previousValues.value[row.id][key] =
-          previousValues.value[row.id][key] || [];
-        previousValues.value[row.id][key].push(
-          originalRows.value[row.id]?.[key] ?? currentValue
+      if (autoSave && !revertedFields.value[rowKey].has(key)) {
+        previousValues.value[rowKey] = previousValues.value[rowKey] || {};
+        previousValues.value[rowKey][key] =
+          previousValues.value[rowKey][key] || [];
+        previousValues.value[rowKey][key].push(
+          originalRows.value[rowKey]?.[key] ?? currentValue
         );
       }
 
-      revertedFields.value[row.id].delete(key);
+      revertedFields.value[rowKey].delete(key);
 
-      originalRows.value[row.id] = { ...row } as T;
+      originalRows.value[rowKey] = { ...row } as T;
     } finally {
-      rowLoading.value[row.id] = false;
+      rowLoading.value[rowKey] = false;
     }
   };
   const autoSave = async (row: T, field: string | number | symbol) => {
     const key = field as keyof T;
-    const originalValue = originalRows.value[row.id]?.[key];
+    const rowKey = getKey(row.id);
+    const originalValue = originalRows.value[rowKey]?.[key];
     const currentValue = row[key];
 
     if (currentValue === originalValue) {
@@ -73,11 +75,13 @@ export function useInlineEdit<T extends { id: string | number }>(
     await save(row, key, true);
   };
   const cancel = (row: T) => {
-    const original = originalRows.value[row.id];
+    const rowKey = getKey(row.id);
+    const original = originalRows.value[rowKey];
     if (original) Object.assign(row, original);
   };
 
   const remove = async (row: T) => {
+    const rowKey = getKey(row.id);
     try {
       await ElMessageBox.confirm(
         "Are you sure you want to delete this row?",
@@ -89,39 +93,42 @@ export function useInlineEdit<T extends { id: string | number }>(
         }
       );
 
-      rowLoading.value[row.id] = true;
-      await service.remove(row.id);
+      rowLoading.value[rowKey] = true;
+      await service.remove(row.id.toString());
 
       data.value = data.value.filter((r) => r.id !== row.id);
-      delete originalRows.value[row.id];
-      delete previousValues.value[row.id];
+      delete originalRows.value[rowKey];
+      delete previousValues.value[rowKey];
     } catch (err) {
       if (err !== "cancel" && err !== "close")
         console.error("Failed to delete", err);
     } finally {
-      rowLoading.value[row.id] = false;
+      rowLoading.value[rowKey] = false;
     }
   };
 
   const getPreviousValue = (row: T, field: keyof T) => {
-    const stack = previousValues.value[row.id]?.[field];
+    const rowKey = getKey(row.id);
+    const stack = previousValues.value[rowKey]?.[field];
     return stack && stack.length ? stack[stack.length - 1] : "-";
   };
 
   const revertField = (row: T, field: keyof T) => {
-    const stack = previousValues.value[row.id]?.[field];
+    const rowKey = getKey(row.id);
+    const stack = previousValues.value[rowKey]?.[field];
     if (stack && stack.length) {
       row[field] = stack.pop();
-      revertedFields.value[row.id] = revertedFields.value[row.id] || new Set();
-      revertedFields.value[row.id].add(field);
+      revertedFields.value[rowKey] = revertedFields.value[rowKey] || new Set();
+      revertedFields.value[rowKey].add(field);
     }
   };
 
   const setData = (newData: T[]) => {
     data.value = [...newData];
     newData.forEach((row) => {
-      originalRows.value[row.id] = { ...row };
-      previousValues.value[row.id] = {} as Record<keyof T, any[]>;
+      const rowKey = getKey(row.id);
+      originalRows.value[rowKey] = { ...row };
+      previousValues.value[rowKey] = {} as Record<keyof T, any[]>;
     });
   };
 
