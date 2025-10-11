@@ -1,42 +1,65 @@
+from datetime import datetime
+from bson import ObjectId
 from pymongo.database import Database
 from app.contexts.core.error import MongoErrorMixin
-from app.contexts.staff.models import Staff
-from bson import ObjectId
 
 class StaffRepository(MongoErrorMixin):
     def __init__(self, db: Database, collection_name: str = "staff"):
         self.collection = db[collection_name]
 
+    # --- Save ---
     def save(self, staff: dict) -> ObjectId:
         try:
             return self.collection.insert_one(staff).inserted_id
         except Exception as e:
             raise self._handle_mongo_error("insert", e)
 
-
+    # --- Delete ---
     def delete(self, staff_id: ObjectId) -> int:
         try:
             result = self.collection.delete_one({"_id": staff_id})
             return result.deleted_count
         except Exception as e:
             self._handle_mongo_error("delete", e)
-    
+
+    # --- Soft delete ---
     def soft_delete(self, staff_id: ObjectId, deleted_by: ObjectId | None = None) -> int:
         try:
             update_data = {
                 "$set": {
                     "deleted": True,
                     "deleted_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.utcnow(),
                 }
             }
             if deleted_by:
                 update_data["$set"]["deleted_by"] = deleted_by
 
             result = self.collection.update_one(
-                {"_id": staff_id, "deleted": {"$ne": True}},
+                {"user_id": staff_id, "deleted": {"$ne": True}},
                 update_data
             )
             return result.modified_count
         except Exception as e:
             self._handle_mongo_error("soft_delete", e)
+
+    # --- Update (partial/PATCH) ---
+    def update(self, staff_id: ObjectId, payload: dict) -> int:
+        """
+        Partially update a staff document.
+        Only fields present in `payload` will be updated.
+        """
+        if not payload:
+            return 0  # Nothing to update
+
+        # Add updated_at timestamp
+        payload["updated_at"] = datetime.utcnow()
+
+        try:
+            result = self.collection.update_one(
+                {"user_id": staff_id, "deleted": {"$ne": True}},  # Only non-deleted
+                {"$set": payload}
+            )
+            return result.modified_count
+        except Exception as e:
+            self._handle_mongo_error("update", e)

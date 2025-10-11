@@ -10,14 +10,20 @@ defineProps<{
   onDetail?: (id: number | string) => void;
   onDelete?: (id: number | string) => void;
   hideDetailForRoles?: string[]; // roles to hide Detail button
+  detailContent?: string;
+  deleteContent?: string;
+  attributes?: Record<string, unknown>;
 }>();
 </script>
 
 <template>
   <div class="flex items-center gap-2 justify-center">
     <ElTooltip
-      v-if="hideDetailForRoles?.includes(role || '') === false && onDetail"
-      :content="`View details of this user`"
+      v-if="
+        onDetail &&
+        (!hideDetailForRoles || !role || !hideDetailForRoles.includes(role))
+      "
+      :content="detailContent"
       placement="top"
     >
       <BaseButton
@@ -25,6 +31,7 @@ defineProps<{
         class="button-detail"
         size="default"
         :loading="loading"
+        v-bind="attributes"
         :disabled="loading"
         @click="onDetail?.(rowId)"
         aria-label="View Details"
@@ -36,13 +43,14 @@ defineProps<{
       </BaseButton>
     </ElTooltip>
 
-    <ElTooltip v-if="onDelete" content="Delete this user" placement="top">
+    <ElTooltip v-if="onDelete" :content="deleteContent" placement="top">
       <BaseButton
         type="text"
         class="button-delete"
         size="default"
         :loading="loading"
         :disabled="loading"
+        v-bind="attributes"
         @click="onDelete?.(rowId)"
         aria-label="Delete User"
       >

@@ -1,26 +1,12 @@
 
 from pydantic import BaseModel , RootModel
 from typing import List
-from app.contexts.common.base_entity_dto import Timestamps
 
+from app.place_holder import PlaceholderModel
+class AcademicUserDataDTO(PlaceholderModel):
+    pass
 
-class AcademicDeptUserDataDTO(BaseModel):
-    id: str 
-    email: str 
-    username: str | None = None
-    role: str 
-    created_by_academic_dept: str | None = None
-    timestamps: Timestamps | None = None
-    deleted: bool | None = None
-    deleted_by: str | None = None
-
-    model_config = {
-        "extra": "allow",
-        "from_attributes": True     
-    }
-
-
-class AcademicFindAllByRoleDataDTO(AcademicDeptUserDataDTO):
+class AcademicFindAllByRoleDataDTO(AcademicUserDataDTO):
     pass
 
 class AcademicFindAllByRoleDataDTOList(RootModel[List[AcademicFindAllByRoleDataDTO]]):
@@ -54,6 +40,15 @@ class AcademicFindAllClassDataDTO(BaseModel):
         "from_attributes": True     
     }
 
+class AcademicFindAllClassDataDTOList(RootModel[List[AcademicFindAllClassDataDTO]]):
+    pass
+
+
+
+
+class AcademicStaffNameSelectDTO(BaseModel):
+    user_id: str | None = None
+    staff_name: str | None = None
 
 
 

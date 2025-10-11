@@ -1,4 +1,14 @@
 /**
+ * slots map
+ */
+
+export type SlotsMap = {
+  append?: () => VNode | VNode[] | null;
+  prefix?: () => VNode | VNode[] | null;
+  footer?: () => VNode | VNode[] | null;
+};
+
+/**
  * Inline edit props MultiTypeEditCell
  * @template R - The type of the row data
  * @template F - The type of the field
@@ -30,6 +40,7 @@ export type InlineEditProps<
   controlsSlot?: boolean;
   autoSave?: boolean;
   debounceMs?: number;
+  customClass?: string;
 };
 
 import type { VNode, Component } from "vue";
@@ -69,6 +80,8 @@ export type InlineEditColumnProps<
   render?: (row: R, field: F) => VNode;
   debounceMs?: number;
   operation?: boolean;
+  customClass?: string;
+  footer?: boolean;
 };
 
 /**
@@ -77,7 +90,7 @@ export type InlineEditColumnProps<
  */
 export type ColumnConfig<T> = {
   label: string;
-  field: keyof T;
+  field?: keyof T;
   inlineEditActive?: boolean;
   autoSave?: boolean;
   render?: (row: T, field: keyof T) => VNode;
@@ -92,18 +105,16 @@ export type ColumnConfig<T> = {
   operation?: boolean;
   childComponent?: Component;
   rules?: Rule[];
+  footer?: boolean;
   childComponentProps?: {
     options?: Array<Record<string, any>>;
     valueKey?: string;
     labelKey?: string;
     appendValue?: string;
     prependValue?: string;
-    slots?: {
-      append?: () => VNode;
-      prefix?: () => VNode;
-    };
+    slots?: SlotsMap;
   };
-
+  customClass?: string;
   // el-table-column props
   fixed?: "left" | "right";
   width?: string;

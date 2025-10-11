@@ -4,12 +4,15 @@ import type {
   AdminCreateUser,
   AdminCreateClass,
   AdminGetUserResponse,
-  AdminUpdateUser,
+  AdminUpdateUsers,
   AdminCreateStaff,
   AdminUpdateStaff,
   AdminGetStaffResponse,
   AdminGetClassResponse,
   AdminGetTeacherSelectResponse,
+  AdminStudentInfoCreate,
+  AdminStudentInfoUpdate,
+  AdminStudentInfoResponse,
 } from "./admin.dto";
 import { Role } from "~/api/types/enums/role.enum";
 export class AdminApi {
@@ -46,7 +49,7 @@ export class AdminApi {
 
   async updateUser(
     id: string,
-    userData: AdminUpdateUser
+    userData: AdminUpdateUsers
   ): Promise<AdminGetUserResponse> {
     const res = await this.$api.patch<AdminGetUserResponse>(
       `${this.baseURL}/users/${id}`,
@@ -97,6 +100,31 @@ export class AdminApi {
   async deleteStaff(id: string): Promise<AdminGetStaffResponse> {
     const res = await this.$api.delete<AdminGetStaffResponse>(
       `${this.baseURL}/staff/${id}`
+    );
+    return res.data;
+  }
+
+  async getStaffDetail(id: string): Promise<AdminGetStaffResponse> {
+    const res = await this.$api.get<AdminGetStaffResponse>(
+      `${this.baseURL}/staff/${id}`
+    );
+    return res.data;
+  }
+
+  async getStudentInfo(id: string): Promise<AdminStudentInfoResponse> {
+    const res = await this.$api.get<AdminStudentInfoResponse>(
+      `${this.baseURL}/student/${id}`
+    );
+    return res.data;
+  }
+
+  async updateStudentInfo(
+    id: string,
+    studentData: AdminStudentInfoCreate | AdminStudentInfoUpdate
+  ): Promise<AdminStudentInfoResponse> {
+    const res = await this.$api.put<AdminStudentInfoResponse>(
+      `${this.baseURL}/student/${id}`,
+      studentData
     );
     return res.data;
   }

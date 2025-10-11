@@ -37,6 +37,23 @@ class ClassService:
     def class_read_model(self) -> ReadClassModel:
         return ReadClassModel(self.db)
 
+
+    # -------------
+    #  converter 
+    # -------------
+    # def to_domain(self, data: dict) -> SchoolClass:
+    #     return SchoolClass.to_domain(data)
+
+    # def to_persistence_dict(self, domain: SchoolClass) -> dict:
+    #     return SchoolClass.to_persistence_dict(domain)
+
+    # def to_safe_dict(self, domain: SchoolClass) -> dict:
+    #     return SchoolClass.to_safe_dict(domain)
+
+    
+
+
+
     # -------------------------
     # Helper: Get domain class
     # -------------------------
@@ -47,14 +64,15 @@ class ClassService:
     # -------------------------
     # Create Class
     # -------------------------
-    def class_create(self, payload: ClassCreateRequestSchema, owner_id: ObjectId, created_by: ObjectId) -> SchoolClass:
-        class_model = self._school_class_factory.create_from_payload(payload, owner_id=owner_id, created_by=created_by)
-        class_id = self.class_repo.save(self._school_class_mapper.to_persistence_dict(class_model))
-        if not class_id:
-            raise ClassCreateException(class_id)
-        class_model.id = class_id
-
-        return class_model
+    def create_class(self, payload: ClassCreateRequestSchema, created_by: str) -> SchoolClass:
+        created_by_obj_id = mongo_converter.convert_to_object_id(created_by)
+        domain_class = self._school_class_factory.create_from_payload(payload)
+        domain_class.created_by = created_by_obj_id
+        saved_id = self.class_repo.save(self._school_class_mapper.to_persistence_dict(domain_class))
+        if not saved_id:
+            raise ClassCreateException(saved_id)
+        domain_class.id = saved_id
+        return self._school_class_mapper.to_safe_dict(domain_class)
 
     # -------------------------
     # Generic field modifier

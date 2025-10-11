@@ -19,11 +19,6 @@ const menus: Record<RoleKey, MenuItem[]> = {
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.ADMIN.DASHBOARD },
     { title: "Manage Users", icon: "User", route: ROUTES.ADMIN.MANAGE_USERS },
     {
-      title: "Manage Staff",
-      icon: "UserFilled",
-      route: ROUTES.ADMIN.MANAGE_STAFF,
-    },
-    {
       title: "Manage Classes",
       icon: "Notebook",
       route: ROUTES.ADMIN.MANAGE_CLASSES,
@@ -71,14 +66,14 @@ const menus: Record<RoleKey, MenuItem[]> = {
       route: ROUTES.ACADEMIC.DASHBOARD,
     },
     {
-      title: "Manage Students",
-      icon: "User",
-      route: ROUTES.ACADEMIC.STUDENTS,
-    },
-    {
       title: "My Classes",
       icon: "Notebook",
       route: ROUTES.ACADEMIC.MY_CLASSES,
+    },
+    {
+      title: "Manage Students",
+      icon: "User",
+      route: ROUTES.ACADEMIC.STUDENTS,
     },
     {
       title: "Attendance",
@@ -91,9 +86,9 @@ const menus: Record<RoleKey, MenuItem[]> = {
       route: ROUTES.ACADEMIC.NOTIFICATIONS,
     },
     {
-      title: "Settings",
-      icon: "Setting",
-      route: ROUTES.ACADEMIC.SETTINGS,
+      title: "Reports",
+      icon: "Document",
+      route: ROUTES.ACADEMIC.REPORTS,
     },
   ],
   FRONT_OFFICE: [

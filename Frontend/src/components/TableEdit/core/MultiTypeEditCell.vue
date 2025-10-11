@@ -9,13 +9,13 @@ import { ElInput } from "element-plus";
 import type { InlineEditProps } from "~/components/types/tableEdit";
 import { debounce } from "lodash-es";
 import { validateField } from "~/components/TableEdit/validate/validateField";
-import OptionalSlot from "~/components/TableEdit/slots/OptionalSlot.vue";
 const props = withDefaults(defineProps<InlineEditProps<R, F>>(), {
   inlineEditActive: false,
   controls: true,
   autoSave: false,
   debounceMs: 300,
   controlsSlot: false,
+  customClass: "flex justify-between items-center cursor-pointer",
 });
 const emit = defineEmits<{
   (e: "update:modelValue", value: R[F]): void;
@@ -103,11 +103,16 @@ onBeforeUnmount(() => {
 <template>
   <div
     v-if="!inlineEditActive"
-    class="flex justify-between items-center cursor-pointer"
+    :class="props.customClass"
     @click="inlineEditActive = true"
   >
     <span class="truncate max-w-[170px] block">
-      {{ inputValue || "—" }}
+      {{
+        Array.isArray(inputValue)
+          ? inputValue.slice(0, 3).join(", ") +
+            (inputValue.length > 3 ? "..." : "")
+          : inputValue || "—"
+      }}
     </span>
 
     <span v-if="controls" class="flex items-center space-x-1">
@@ -131,23 +136,18 @@ onBeforeUnmount(() => {
         :value="opt.value"
         :label="opt.label"
       />
-      <template #append v-if="childComponentProps?.slots?.append">
-        <OptionalSlot
-          slotName="append"
-          :row="row"
-          :field="field as string"
-          :childComponentProps="childComponentProps"
-        />
+      <template v-if="$slots.footer" #footer>
+        <slot name="footer" />
       </template>
 
-      <template #prefix v-if="childComponentProps?.slots?.prefix">
-        <OptionalSlot
-          slotName="prefix"
-          :row="row"
-          :field="field as string"
-          :childComponentProps="childComponentProps"
-        />
+      <template v-if="$slots.append" #append>
+        <slot name="append" />
       </template>
+
+      <template v-if="$slots.prefix" #prefix>
+        <slot name="prefix" />
+      </template>
+
       <template v-if="controls" #suffix>
         <SaveCancelControls @confirm="handleSave" @cancel="handleCancel" />
       </template>

@@ -1,18 +1,25 @@
 from flask import Blueprint ,request 
 from app.contexts.admin.data_transfer.requests import AdminCreateUserSchema, AdminUpdateUserSchema
 from app.contexts.shared.decorators.wrap_response import wrap_response
-from app.contexts.shared.model_converter import converter_utils
 from app.contexts.infra.database.db import get_db
 from app.contexts.common.base_response_dto import BaseResponseDTO
 from app.contexts.core.security.auth_utils import get_current_user_id
-from app.contexts.shared.model_converter import mongo_converter
-from app.contexts.admin.data_transfer.requests import AdminCreateClassSchema , AdminCreateStaffSchema
-from app.contexts.admin.data_transfer.responses import AdminCreateUserDataDTO , AdminCreateClassDataDTO , AdminBaseUserDataDTO , AdminCreateStaffDataDTO , AdminBaseStaffDataDTO
+from app.contexts.shared.model_converter import pydantic_converter
+from app.contexts.admin.data_transfer.requests import (
+    AdminCreateClassSchema , AdminCreateUserSchema , AdminCreateStaffSchema
+)
+from app.contexts.admin.data_transfer.responses import (
+    AdminCreateStaffDataDTO,
+    AdminUpdateUserDataDTO,
+    AdminCreateUserDataDTO,
+    AdminGetStaffDataDTO,
+)
+from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from app.contexts.admin.services import AdminService
+from app.contexts.staff.models import StaffMapper
 from app.contexts.auth.jwt_utils import role_required
 
 admin_bp = Blueprint('admin', __name__)
-
 
 
 
@@ -21,27 +28,31 @@ admin_bp = Blueprint('admin', __name__)
 @role_required(["admin"])
 @wrap_response
 def admin_create_user():
-    user_schema = converter_utils.convert_to_model(request.json, AdminCreateUserSchema)
+    user_schema = pydantic_converter.convert_to_model(request.json, AdminCreateUserSchema)
     admin_service = AdminService(get_db())
     admin_id = get_current_user_id() 
-    user_dto = admin_service.admin_create_user(user_schema, admin_id)
-    user_dict = admin_service.iam_service.to_safe_dict(user_dto)
-    user_dto = AdminCreateUserDataDTO(**user_dict)
+    user_response_dto = admin_service.admin_create_user(user_schema, created_by=admin_id)
+    user_dto = AdminCreateUserDataDTO(**user_response_dto.model_dump())
     return BaseResponseDTO(data=user_dto, message="User created", success=True)
 
+    
 
 @admin_bp.route('/users/<user_id>', methods=['PATCH'])
 @role_required(["admin"])
 @wrap_response
 def admin_update_user(user_id):
-    user_schema = converter_utils.convert_to_model(request.json, AdminUpdateUserSchema)
+    user_schema = pydantic_converter.convert_to_model(request.json, AdminUpdateUserSchema)
     admin_service = AdminService(get_db())
-    safe_dict = admin_service.admin_update_user(user_id, user_schema)
-    user_dto = AdminBaseUserDataDTO(**safe_dict)
+    user_update_dto = admin_service.admin_update_user(user_id, user_schema)
+    user_dto = AdminUpdateUserDataDTO(**user_update_dto.model_dump())
     return BaseResponseDTO(data=user_dto, message="User updated successfully", success=True)
 
 
+
+
+
 @admin_bp.route('/users/<user_id>', methods=['DELETE'])
+@role_required(["admin"])
 @wrap_response
 def admin_soft_delete_user(user_id):
     admin_service = AdminService(get_db())
@@ -88,27 +99,23 @@ def get_users():
 
 
 
+
 # -------------------------
 # Class requests name owner_id grade 
 # -------------------------
-
-
-
 @admin_bp.route("/classes", methods=["POST"])
 @role_required(["admin"])
 @wrap_response
 def admin_add_class():
     payload = request.json
     admin_id = get_current_user_id()
-    payload = converter_utils.convert_to_model(payload, AdminCreateClassSchema)
+    payload = pydantic_converter.convert_to_model(payload, AdminCreateClassSchema)
     class_dto = AdminService(get_db()).admin_create_class(payload, created_by=admin_id)
-    dto = AdminCreateClassDataDTO(**class_dto)
     return BaseResponseDTO(
-        data=dto,
+        data=class_dto,
         message="Class created successfully",
         success=True
     )
-
 
 
 
@@ -117,24 +124,44 @@ def admin_add_class():
 @role_required(["admin"])
 @wrap_response
 def admin_add_staff():
-    payload = request.json
+    payload_dict = request.json
     admin_id = get_current_user_id()
-    payload = converter_utils.convert_to_model(payload, AdminCreateStaffSchema)
-    user , staff = AdminService(get_db()).admin_create_staff(payload, admin_id)
-    user = AdminBaseUserDataDTO(**user)
-    staff = AdminBaseStaffDataDTO(**staff)
-    dto = AdminCreateStaffDataDTO(user=user, staff=staff)
+    payload = pydantic_converter.convert_to_model(payload_dict, AdminCreateStaffSchema)
+    user_dto, staff_dto = AdminService(get_db()).admin_create_staff(payload, admin_id)
+    merged_data = {**user_dto.model_dump(), **staff_dto.model_dump()}
+    merged_dto = AdminCreateStaffDataDTO(**merged_data)
     return BaseResponseDTO(
-        data=dto,
-        message=f"Staff {dto.staff.staff_id} created successfully",
+        data=merged_dto.model_dump(),
+        message=f"Staff {staff_dto.staff_name} created successfully",
+        success=True
+    )
+@admin_bp.route("/staff/<user_id>", methods=["PATCH"])
+@role_required(["admin"])
+@wrap_response
+def admin_update_staff(user_id: str):
+    payload = pydantic_converter.convert_to_model(request.json, AdminUpdateUserSchema)
+    admin_id = get_current_user_id()
+    admin_service = AdminService(get_db())
+    user_staff_dto = admin_service.admin_update_staff(user_id=user_id, payload=payload)
+    return BaseResponseDTO(
+        data=user_staff_dto,
+        message=f"Staff {user_staff_dto.staff_name} updated successfully",
         success=True
     )
 
 
-
-
-
-
+@admin_bp.route("/staff/<staff_id>", methods=["GET"])
+@role_required(["admin"])
+@wrap_response
+def admin_get_staff_by_id(staff_id: str):
+    admin_service = AdminService(get_db())
+    staff_dto: StaffBaseDataDTO = admin_service.admin_get_staff_by_id(staff_id)
+    
+    return BaseResponseDTO(
+        data=staff_dto,
+        message="Staff retrieved",
+        success=True
+    )
 
 
 @admin_bp.route("/staff/academic-select", methods=["GET"])
@@ -148,3 +175,31 @@ def admin_get_academic_staff_for_select():
     )
     
 
+
+@admin_bp.route("/student/<student_id>", methods=["GET"])
+@role_required(["admin"])
+@wrap_response
+def admin_get_student_info(student_id: str):
+    admin_service = AdminService(get_db())
+    data = admin_service.admin_get_student_by_user_id(student_id)
+    return BaseResponseDTO(
+        data=data,
+        message="Student retrieved",
+        success=True
+    )
+
+
+@admin_bp.route("/student", methods=["PUT"])
+@role_required(["admin"])
+@wrap_response
+def admin_update_student():
+    payload = request.json
+    admin_id = get_current_user_id()
+    admin_service = AdminService(get_db())
+    student_dto = admin_service.admin_update_student_info(payload, admin_id)
+    
+    return BaseResponseDTO(
+        data=student_dto,
+        message=f"Student {student_dto.student.student_id} updated successfully",
+        success=True
+    )

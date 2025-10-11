@@ -1,65 +1,54 @@
-// composables/pagination/usePaginatedFetch.ts
-import { ref, computed, watch, type Ref } from "vue";
+import { ref, type Ref } from "vue";
 import { Role } from "~/api/types/enums/role.enum";
-
-import {
-  roleStaffOptions,
-  roleUserOptions,
-  roleOptions,
-} from "~/utils/constants/roles";
 
 export function usePaginatedFetch<T>(
   fetchFn: (
     roles: Role[],
     page: number,
-    pageSize: number
+    pageSize: number,
+    signal?: AbortSignal // <- pass signal to backend-fetch
   ) => Promise<{ items: T[]; total: number }>,
   initialPage: number = 1,
   initialPageSize: number = 20,
-  isStaffMode: Ref<boolean | undefined>
+  selectedRoles: Ref<Role[]>
 ) {
   const data = ref<T[]>([]);
   const loading = ref(false);
   const error = ref<Error | null>(null);
 
-  // Selected roles (editable even if User/Staff)
-  const selectedRoles = ref<Role[]>([Role.STUDENT]);
-
-  // Compute current options for dropdown
-  const currentRoleOptions = computed(() => {
-    if (isStaffMode.value === true) return roleStaffOptions;
-    if (isStaffMode.value === false) return roleUserOptions;
-    return roleOptions;
-  });
-
   const currentPage = ref(initialPage);
   const pageSize = ref(initialPageSize);
   const totalRows = ref(0);
+  let controller: AbortController | null = null;
 
   const fetchPage = async (page: number = currentPage.value) => {
+    // Cancel previous request
+    controller?.abort();
+    controller = new AbortController();
+
     loading.value = true;
     error.value = null;
+
     try {
-      const res = await fetchFn(selectedRoles.value, page, pageSize.value);
+      const res = await fetchFn(
+        selectedRoles.value,
+        page,
+        pageSize.value,
+        controller.signal
+      );
       data.value = res.items;
       totalRows.value = res.total;
       currentPage.value = page;
     } catch (err: any) {
-      error.value = err;
-      console.error("Fetch failed:", err);
+      if (err.name !== "AbortError") {
+        error.value = err;
+        console.error("Fetch failed:", err);
+      }
     } finally {
       loading.value = false;
     }
   };
 
-  watch(selectedRoles, () => fetchPage(1), { deep: true });
-  watch(isStaffMode, (mode) => {
-    if (mode === true) {
-      selectedRoles.value = roleStaffOptions.map((r) => r.value);
-    } else if (mode === false) {
-      selectedRoles.value = roleUserOptions.map((r) => r.value);
-    }
-  });
   const goPage = (page: number) => {
     if (
       page < 1 ||
@@ -74,8 +63,6 @@ export function usePaginatedFetch<T>(
     loading,
     error,
     selectedRoles,
-    currentRoleOptions,
-    isStaffMode,
     currentPage,
     pageSize,
     totalRows,

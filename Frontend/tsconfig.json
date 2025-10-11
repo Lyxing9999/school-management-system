@@ -49,6 +49,6 @@
     "src/**/*.vue",
     "src/types/**/*.d.ts",
     ".nuxt/**/*.d.ts"   
-  ],
+, "src/services/formServices"  ],
   "exclude": ["node_modules"]
 }

@@ -6,12 +6,12 @@ import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import { AdminService } from "~/services/adminService";
 import { AdminApi } from "~/api/admin/admin.api";
 import type { AdminCreateClass } from "~/api/admin/admin.dto";
-import { useForm } from "~/composables/useForm";
+import { useForm } from "~/composables/useFormCreate";
 import {
   useClassFormSchema,
   formData,
   fetchOwners,
-} from "~/schemas/forms/admin/classForm";
+} from "~/schemas/forms/academic/classForm";
 
 definePageMeta({
   layout: "admin",

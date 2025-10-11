@@ -3,6 +3,7 @@ from app.contexts.shared.model_converter import mongo_converter
 from pymongo.database import Database
 from app.contexts.core.error import MongoErrorMixin
 from bson import ObjectId
+from pymongo import ASCENDING
 class StaffReadModel(MongoErrorMixin):
     def __init__(self, db: Database, collection_name: str = "staff"):
         self.collection = db[collection_name]
@@ -11,11 +12,51 @@ class StaffReadModel(MongoErrorMixin):
 
     def get_staff_by_id(self, staff_id: ObjectId) -> dict:
         try:
-            cursor = self.collection.find_one({"_id": staff_id})
+            cursor = self.collection.find_one({"user_id": staff_id})
             return cursor
         except Exception as e:
             self._handle_mongo_error("get_staff_by_id", e)
             return {}
+
+
+    def list_teacher_names(self) -> list[dict]:
+        """
+        Return all active teachers with minimal info for dropdowns or lists.
+        Fields: {user_id, staff_name}
+        """
+        try:
+            cursor = self.collection.find(
+                {"role": "teacher", "deleted": False}, 
+                {"_id": 0, "user_id": 1, "staff_name": 1}
+            ).sort("staff_name", ASCENDING)
+            return list(cursor)
+        except Exception as e:
+            self._handle_mongo_error("list_teacher_names", e)
+            return []
+
+
+
+    def get_staff_name_select(self, search_text: str = "") -> list[dict]:
+        """
+        Return staff for select dropdown.
+        Optional: search by partial staff_name.
+        Returns list of dict: [{_id, user_id, staff_name}]
+        """
+        try:
+            query = {}
+            if search_text:
+                # case-insensitive regex search
+                query["staff_name"] = {"$regex": search_text, "$options": "i"}
+            
+            projection = {"_id": 1, "user_id": 1, "staff_name": 1}
+
+            # Sort by staff_name ascending for nicer UX
+            cursor = self.collection.find(query, projection).sort("staff_name", ASCENDING)
+            return list(cursor)
+        except Exception as e:
+            self._handle_mongo_error(e)
+
+
 
     # def get_staff_permissions(self, staff_id: ObjectId) -> dict:
     #     try:

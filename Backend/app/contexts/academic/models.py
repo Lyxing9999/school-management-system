@@ -8,6 +8,7 @@ from app.contexts.shared.enum.roles import StaffRole
 class Academic(Staff):
     def __init__(
         self,
+        user_id: ObjectId,
         staff_id: str,
         staff_name: str,
         phone_number: str,
@@ -91,10 +92,6 @@ class Academic(Staff):
 
 
 
-class AcademicFactory:
-    pass
-
-
 class AcademicMapper:
     @staticmethod
     def to_domain(data: dict) -> Academic:
@@ -107,6 +104,7 @@ class AcademicMapper:
 
         return Academic(
             staff_id=data["staff_id"],
+            user_id=data["user_id"],
             staff_name=data["staff_name"],
             phone_number=data.get("phone_number", ""),
             created_by=data["created_by"],

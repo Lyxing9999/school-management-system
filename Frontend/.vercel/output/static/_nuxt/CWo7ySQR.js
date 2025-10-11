@@ -1,1 +1,0 @@
-import{E as t}from"./7qPWufmO.js";import"./BN3SMaRa.js";import{g as a,j as r,w as s,o as n,d as p}from"./logkf7nQ.js";import"./CN6nfdWM.js";const f=a({__name:"grades",setup(m){return(_,e)=>{const o=t;return n(),r(o,{class:"p-6"},{default:s(()=>e[0]||(e[0]=[p("p",null,"Welcome to the Admin Dashboard!",-1)])),_:1,__:[0]})}}});export{f as default};

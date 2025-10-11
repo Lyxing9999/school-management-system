@@ -1,17 +1,19 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 from bson import ObjectId
+from enum import Enum
+from app.contexts.auth.services import get_auth_service
+
 from app.contexts.shared.enum.roles import SystemRole
-from app.contexts.iam.error.user_exceptions import (
-    InvalidRoleException,
-    InvalidUserDataException,
-    AuthServiceRequiredException
-)
+from app.contexts.iam.error.iam_exceptions import InvalidRoleException
+from app.contexts.iam.data_transfer.responses import IAMBaseDTO
 
 
 # -------------------------
 # Domain Model
 # -------------------------
-class User:
+class IAM:
     def __init__(
         self,
         email: str,
@@ -38,6 +40,7 @@ class User:
         self.deleted_at = deleted_at
         self.deleted_by = deleted_by
 
+    # ---------- Properties ----------
     @property
     def email(self) -> str:
         return self._email
@@ -69,6 +72,7 @@ class User:
         self._role = self._validate_role(value)
         self._mark_updated()
 
+    # ---------- Methods ----------
     def _mark_updated(self):
         self.updated_at = datetime.utcnow()
 
@@ -92,7 +96,7 @@ class User:
     def is_deleted(self) -> bool:
         return self.deleted
 
-    def soft_delete(self , deleted_by: ObjectId):
+    def soft_delete(self, deleted_by: ObjectId):
         if self.deleted:
             return False
         self.deleted = True
@@ -105,30 +109,45 @@ class User:
         return self.deleted and self.deleted_at and self.deleted_at < datetime.utcnow() - timedelta(days=days)
 
     @staticmethod
-    def _validate_role(role: SystemRole) -> SystemRole:
+    def _validate_role(role: Enum | str) -> SystemRole:
+        """
+        Accept SystemRole, UserRole, StaffRole, or string.
+        Normalize into SystemRole.
+        """
         try:
-            return role if isinstance(role, SystemRole) else SystemRole(role)
+            if isinstance(role, SystemRole):
+                return role
+            if isinstance(role, str):
+                return SystemRole(role)
+            if isinstance(role, Enum):
+                return SystemRole(role.value)
+            raise InvalidRoleException(role)
         except ValueError:
             raise InvalidRoleException(role)
-
-
 
 
 # -------------------------
 # Factory
 # -------------------------
-class UserFactory:
-    def __init__(self, user_read_model, auth_service):
+class IAMFactory:
+    def __init__(self, user_read_model, auth_service=None):
         self.user_read_model = user_read_model
-        self.auth_service = auth_service
+        self.auth_service = auth_service or get_auth_service()
 
-    def create_user( self, email: str, password: str, username: str | None = None, role: SystemRole | None = None, created_by: str | None = None ) -> User:
+    def create_user(
+        self,
+        email: str,
+        password: str,
+        username: str | None = None,
+        role: SystemRole | None = None,
+        created_by: str | None = None
+    ) -> IAM:
         role = role or SystemRole.STUDENT
         username = self._generate_unique_username(username or email.split("@")[0])
         hashed_password = self.auth_service.hash_password(password)
         created_by = created_by or "self_created"
 
-        return User(
+        return IAM(
             email=email,
             password=hashed_password,
             username=username,
@@ -148,20 +167,21 @@ class UserFactory:
 # -------------------------
 # Mapper
 # -------------------------
-class UserMapper:
+class IAMMapper:
     @staticmethod
-    def to_domain(data: dict) -> User:
-        if isinstance(data, User):
+    def to_domain(data: dict) -> IAM:
+        if isinstance(data, IAM):
             return data
+
         id_value = data.get("_id") or data.get("id") or ObjectId()
         if id_value and not isinstance(id_value, ObjectId):
             id_value = ObjectId(id_value)
 
-        return User(
+        return IAM(
             id=id_value,
             email=data["email"],
             password=data["password"],
-            role=User._validate_role(data["role"]),
+            role=IAM._validate_role(data["role"]),
             username=data.get("username"),
             created_by=data.get("created_by"),
             created_at=data.get("created_at"),
@@ -172,31 +192,45 @@ class UserMapper:
         )
 
     @staticmethod
-    def to_persistence(user: User) -> dict:
+    def to_persistence(iam: IAM) -> dict:
         return {
-            "_id": user.id,
-            "email": user.email,
-            "password": user.password,
-            "role": user.role.value,
-            "username": user.username,
-            "created_by": user.created_by,
-            "created_at": user.created_at,
-            "updated_at": user.updated_at,
-            "deleted_at": user.deleted_at,
-            "deleted": user.deleted,
-            "deleted_by": user.deleted_by
+            "_id": iam.id,
+            "email": iam.email,
+            "password": iam.password,
+            "role": iam.role.value,
+            "username": iam.username,
+            "created_by": iam.created_by,
+            "created_at": iam.created_at,
+            "updated_at": iam.updated_at,
+            "deleted_at": iam.deleted_at,
+            "deleted": iam.deleted,
+            "deleted_by": iam.deleted_by
         }
 
     @staticmethod
-    def to_safe_dict(user: User) -> dict:
+    def to_safe_dict(iam: IAM) -> dict:
         return {
-            "id": str(user.id),
-            "email": user.email,
-            "username": user.username,
-            "role": user.role.value,
-            "created_by": str(user.created_by),
-            "created_at": user.created_at,
-            "updated_at": user.updated_at,
-            "deleted": user.deleted,
-            "deleted_by": str(user.deleted_by)
+            "id": str(iam.id),
+            "email": iam.email,
+            "username": iam.username,
+            "role": iam.role.value,
+            "created_by": str(iam.created_by),
+            "created_at": iam.created_at,
+            "updated_at": iam.updated_at,
+            "deleted": iam.deleted,
+            "deleted_by": str(iam.deleted_by)
         }
+
+    @staticmethod
+    def to_dto(iam: IAM) -> IAMBaseDTO:
+        return IAMBaseDTO(
+            id=str(iam.id),
+            email=iam.email,
+            username=iam.username,
+            role=iam.role.value,
+            created_by=str(iam.created_by),
+            created_at=iam.created_at,
+            updated_at=iam.updated_at,
+            deleted=iam.deleted,
+            deleted_by=str(iam.deleted_by)
+        )

@@ -6,6 +6,7 @@ import logging
 from enum import Enum
 from app.contexts.core.error.pydantic_error_exception import PydanticBaseValidationError, AppTypeError
 from bson import ObjectId
+from app.contexts.core.error import handle_exception
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel) #for schema 
@@ -31,10 +32,12 @@ class ModelConverterUtils():
             for err in e.errors()
         }
 
-    def convert_to_model(self, data: Dict[str, Any], model_class: Type[M]) -> M | None:
-        """Convert raw dict data to a Pydantic model, raising structured errors on failure."""
+    def convert_to_model(self, data: dict | BaseModel, model_class: Type[M]) -> M:
+        """Convert raw dict or Pydantic model to a Pydantic model, raising structured errors on failure."""
         try:
             logger.debug(f"Converting data to model {model_class.__name__}: {data}")
+            if isinstance(data, BaseModel):
+                data = data.model_dump()
             return model_class.model_validate(data)
         except PydanticValidationError as e:
             field_errors = self._field_errors(e)
@@ -42,8 +45,7 @@ class ModelConverterUtils():
                 message=f"Validation failed for {model_class.__name__}.",
                 cause=e,
                 details=field_errors,
-                hint="Ensure that the input data matches the expected schema "
-                    f"for {model_class.__name__}.",
+                hint=f"Ensure that the input data matches the expected schema for {model_class.__name__}.",
                 user_message="One or more fields are invalid. Please review the provided data."
             )
         except Exception as e:
@@ -51,7 +53,7 @@ class ModelConverterUtils():
             logger.error(f"Unexpected error while converting to {model_class.__name__}: {app_exc}")
             raise app_exc
 
-    def convert_to_model_list(self, data_list: list[Dict[str, Any]], model_class: Type[M]) -> list[M]:
+    def convert_to_model_list(self, data_list: list[Union[Dict[str, Any], BaseModel]], model_class: Type[M]) -> list[M]:
         if not isinstance(data_list, list):
             raise AppTypeError(
                 message="Invalid input type",
@@ -159,10 +161,10 @@ class AdvancedMongoConverter:
 
 
 
-converter_utils = ModelConverterUtils()
+pydantic_converter = ModelConverterUtils()
 mongo_converter = AdvancedMongoConverter()
 
 __all__ = [
-    "converter_utils",
+    "pydantic_converter",
     "mongo_converter"
 ]

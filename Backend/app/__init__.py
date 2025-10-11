@@ -4,7 +4,7 @@ from app.contexts.infra.database.extensions import init_extensions
 from authlib.integrations.flask_client import OAuth
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_cors import CORS
-
+from app.contexts.infra.http.errors import register_error_handlers 
 oauth = OAuth()
 
 def create_app() -> Flask:
@@ -16,7 +16,8 @@ def create_app() -> Flask:
 
     # Extensions
     init_extensions(app)
-
+    # global error handlers
+    register_error_handlers(app)
     # OAuth
     oauth.init_app(app)
     oauth.register(

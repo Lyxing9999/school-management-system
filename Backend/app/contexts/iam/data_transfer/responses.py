@@ -1,76 +1,58 @@
 from typing import List
-from pydantic import BaseModel, RootModel , Field
-from app.contexts.common.base_entity_dto import Timestamps
+from pydantic import BaseModel, RootModel
+from app.contexts.shared.enum.roles import SystemRole
 from datetime import datetime
 
 # -------------------------
-# User DTOs
+# Base User DTO
 # -------------------------
-class UserResponseDataDTO(BaseModel):
+class IAMBaseDTO(BaseModel):
+    id: str | None = None
+    email: str | None
+    role: SystemRole
+    username: str | None = None
+    created_by: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    deleted: bool = False
+    deleted_at: datetime | None = None
+    deleted_by: str | None = None
     model_config = {
-        "extra": "allow",  # accept all fields
+        "extra": "allow",
+        "arbitrary_types_allowed": True,
+        "enum_values_as_str": True
     }
 
-
-class UserResponseDataDTOList(RootModel[List[UserResponseDataDTO]]):
-    pass
-
 # -------------------------
-# Action DTOs
+# Response DTO (login/register)
 # -------------------------
-class UserLoginDataDTO(BaseModel):
+class IAMResponseDTO(BaseModel):
+    user: IAMBaseDTO
     access_token: str
-    user: UserResponseDataDTO
 
-    model_config = {
-        "extra": "forbid"
-    }
-
-class UserRegisterDataDTO(BaseModel):
-    access_token: str
-    user: UserResponseDataDTO
-
-    model_config = {
-        "extra": "forbid"
-    }
-
-
-
+    model_config = {"extra": "forbid",
+    "populate_by_name": True}
 
 # -------------------------
-# Update / Select DTOs
+# Update DTO
 # -------------------------
-class UserSelectDataDTO(BaseModel):
-    id: str  
-    username: str | None =  None
-    email: str | None =  None
-
-    model_config = {
-        "extra": "ignore",
-
-    }
-class UserSelectDataDTOList(RootModel[List[UserSelectDataDTO]]):
-    pass
-
-class UserUpdateDataDTO(BaseModel):
+class IAMUpdateDataDTO(BaseModel):
     username: str | None = None
     email: str | None = None
-    password: str | None = None
-
-    model_config = {
-        "extra": "ignore",
-    }
-
+    model_config = {"extra": "allow"}
 
 # -------------------------
-# Read DTOs
+# Read DTO
 # -------------------------
-from app.place_holder import PlaceholderModel
-class UserReadDataDTO(PlaceholderModel):
-    # Placeholder, accept any raw data
-    model_config = {
-        "extra": "allow",  # accept all fields
-    }
-class UserReadDataDTOList(RootModel[List[UserReadDataDTO]]):
+class IAMReadDataDTO(IAMBaseDTO):
     pass
+
+class IAMReadDataDTOList(RootModel[List[IAMReadDataDTO]]):
+    pass
+
+class IAMSelectDataDTO(BaseModel):
+    id: str
+    email: str
+    model_config =   {"extra": "allow"}
+    
     

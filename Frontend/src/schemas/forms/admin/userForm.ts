@@ -3,15 +3,16 @@ import type { Field } from "~/components/types/form";
 import { ElInput, ElSelect, ElOption } from "element-plus";
 import { UserFilled, Lock } from "@element-plus/icons-vue";
 import { UserRole } from "~/api/types/enums/role.enum";
-import type { AdminCreateUser } from "~/api/admin/admin.dto";
-export const userFormData = reactive<AdminCreateUser>({
+import type { AdminCreateUser, AdminUpdateUsers } from "~/api/admin/admin.dto";
+export const userFormData: AdminCreateUser = {
   username: "",
   email: "",
   password: "",
   role: UserRole.STUDENT,
-});
-
-export const userFormSchema: Field[] = [
+};
+export const userFormDataEdit: AdminUpdateUsers = userFormData;
+const roleOptionsRef = ref(roleUserOptions);
+export const userFormSchema: Field<AdminCreateUser>[] = [
   {
     key: "username",
     labelWidth: "100px",
@@ -67,7 +68,9 @@ export const userFormSchema: Field[] = [
     },
     childComponent: ElOption,
     childComponentProps: {
-      options: roleUserOptions,
+      options: roleOptionsRef,
     },
   },
 ];
+
+export const userFormSchemaEdit: Field<AdminCreateUser>[] = userFormSchema;

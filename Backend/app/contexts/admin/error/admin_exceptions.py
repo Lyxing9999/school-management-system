@@ -38,3 +38,15 @@ class NoChangeAppException(AppBaseException):
             recoverable=True
         )
     
+
+class EmailAlreadyExistsException(AppBaseException):
+    def __init__(self, email: str):
+        super().__init__(
+            message=f"Email '{email}' already exists",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This email is already registered. Please use another.",
+            details={"field": "email", "value": email},
+            hint="Ensure the email is unique and correctly formatted",
+            recoverable=True
+        )

@@ -1,16 +1,17 @@
 import type { Field } from "~/components/types/form";
 import { ElInput, ElSelect, ElOption, ElTag } from "element-plus";
 import { reactive } from "vue";
+import type { AdminCreateStaff } from "~/api/admin/admin.dto";
 
-export const formData = reactive({
+export const formData: AdminCreateStaff = {
   staff_id: "",
   staff_name: "",
   phone_number: "",
   email: "",
   password: "",
-  role: "",
+  role: StaffRole.TEACHER,
   address: "",
-});
+};
 
 import {
   User,
@@ -21,6 +22,7 @@ import {
   Location,
   Briefcase,
 } from "@element-plus/icons-vue";
+import { StaffRole } from "~/api/types/enums/role.enum";
 
 export const employeeFormSchema: Field[] = [
   {

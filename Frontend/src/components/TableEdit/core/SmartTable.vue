@@ -26,6 +26,7 @@ defineSlots<{
   controlsSlot?: boolean;
   append?: boolean;
   prefix?: boolean;
+  footer?: boolean;
 }>();
 const skeletonCount = 5;
 </script>
@@ -64,11 +65,17 @@ const skeletonCount = 5;
         :autoSave="column.autoSave"
         :operation="column.operation"
         :rules="column.rules"
+        :customClass="column.customClass"
+        :footer="column.footer"
         @save="(row, field) => emit('save', row as T, field as keyof T)"
         @cancel="(row, field) => emit('cancel', row as T, field as keyof T)"
         @auto-save="(row, field) => emit('auto-save', row as T, field as keyof T)"
       >
-        <template #operation="slotProps">
+        <template v-if="$slots.footer" #footer="slotProps">
+          <slot name="footer" v-bind="slotProps" />
+        </template>
+
+        <template v-if="$slots.operation" #operation="slotProps">
           <slot name="operation" v-bind="slotProps" />
         </template>
         <template #controlsSlot="slotProps">

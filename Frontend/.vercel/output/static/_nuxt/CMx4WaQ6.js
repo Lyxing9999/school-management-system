@@ -1,1 +1,0 @@
-import{c as o,o as a,d as n,e as r,_ as c}from"./logkf7nQ.js";import{_ as s}from"./DlAUqK2U.js";const _={};function d(l,e){const t=c;return a(),o("div",null,[e[0]||(e[0]=n("header",null,"Default Layout Header",-1)),r(t)])}const m=s(_,[["render",d]]);export{m as default};

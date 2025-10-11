@@ -3,6 +3,11 @@ from typing import List, Optional
 from app.contexts.enum.roles import Role
 
 
+
+
+
+
+
 class TeacherAggregate:
     def __init__(
         self, 
@@ -52,6 +57,10 @@ class TeacherAggregate:
         # Placeholder: integrate with GradesRepository
         # e.g., return {"student_id": student_id, "course_id": course_id, "score": score}
         pass
+
+    
+
+
 
     # -------------------------
     # Utilities

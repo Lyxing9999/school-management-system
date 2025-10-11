@@ -16,7 +16,7 @@ const emit = defineEmits<{
 defineSlots<{
   default?(props: { row: R; field: F }): any;
   header?(props: { column: { label: string; field: F } }): any;
-  footer?(props: { column: { label: string; field: F } }): any;
+  footer?(props: { row: R; field: F; value: R[F] }): any;
   operation?(props: { row: R; field: F }): any;
   controlsSlot?(props: { row: R; field: F }): any;
   name?: string;
@@ -34,7 +34,6 @@ defineSlots<{
       <template v-if="operation">
         <slot name="operation" :row="row" :field="props.field" />
       </template>
-
       <template v-else-if="render">
         <RenderCell :vnode="render(row, props.field)" />
       </template>
@@ -55,12 +54,23 @@ defineSlots<{
           :autoSave="autoSave"
           :rules="rules"
           :debounceMs="debounceMs"
+          :customClass="customClass"
           @save="emit('save', row as R, field as F)"
           @cancel="emit('cancel', row as R, field as F)"
           @auto-save="emit('auto-save', row as R, field as F)"
         >
-          <template #controlsSlot="slotProps">
-            <slot name="controlsSlot" v-bind="slotProps" />
+          <template v-if="$slots.footer" #footer>
+            <slot name="footer" :row="row" :field="field" :value="row[field]" />
+          </template>
+          <!-- forward append/prefix if you want -->
+          <template v-if="$slots.append" #append>
+            <slot name="append" />
+          </template>
+          <template v-if="$slots.prefix" #prefix>
+            <slot name="prefix" />
+          </template>
+          <template v-if="$slots.controlsSlot" #controlsSlot>
+            <slot name="controlsSlot" />
           </template>
         </MultiTypeEditCell>
       </template>
@@ -70,13 +80,6 @@ defineSlots<{
       <slot name="header" :column="{ label: label || '', field: props.field }">
         {{ label }}
       </slot>
-    </template>
-
-    <template #footer>
-      <slot
-        name="footer"
-        :column="{ label: label || '', field: props.field }"
-      />
     </template>
   </el-table-column>
 </template>

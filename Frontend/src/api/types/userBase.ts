@@ -1,4 +1,4 @@
-import { Role } from "./enums/role.enum";
+import { Role, UserRole, StaffRole } from "./enums/role.enum";
 
 /**
  * @description User Base Data
@@ -8,6 +8,7 @@ import { Role } from "./enums/role.enum";
  *  username: "admin",
  *  email: "admin@admin.com",
  *  role: "admin",
+ *  created_by: "admin",
  *  created_at: "2022-01-01T00:00:00.000Z",
  *  updated_at: "2022-01-01T00:00:00.000Z"
  *  deleted: false
@@ -15,13 +16,16 @@ import { Role } from "./enums/role.enum";
  *  deleted_by: "admin"
  * }
  */
+
 export interface UserBaseDataDTO {
   id: string;
   username?: string;
   email: string;
-  role: Role;
-  created_at?: string;
-  updated_at?: string;
+  password?: string | null;
+  role: UserRole | StaffRole;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
   deleted?: boolean;
   deleted_at?: string;
   deleted_by?: string;

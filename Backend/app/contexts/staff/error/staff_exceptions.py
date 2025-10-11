@@ -58,3 +58,25 @@ class StaffNotFoundException(AppBaseException):
             category=ErrorCategory.BUSINESS_LOGIC,
             user_message=f"The staff ID '{staff_id}' is not found."
         )
+
+class StaffMissingFieldsException(AppBaseException):
+    def __init__(self, message: str = "No changes made to the staff."):
+        super().__init__(
+            message=message,
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.VALIDATION,
+            user_message=message,
+            hint="Ensure all required fields are provided",
+            recoverable=True
+        )
+
+class StaffNoChangeAppException(AppBaseException):
+    def __init__(self, message: str = "No changes made to the staff."):
+        super().__init__(
+            message=message,
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message=message,
+            hint="Ensure all required fields are provided",
+            recoverable=True
+        )

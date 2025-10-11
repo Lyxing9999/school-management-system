@@ -1,12 +1,30 @@
 import { ref } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { getKey } from "~/utils/aliasMapper";
+
+export interface UseInlineEditService<T> {
+  update: (id: string, payload: Partial<T>) => Promise<T>;
+  delete: (id: string) => Promise<void>;
+}
+
+export function toInlineEditUpdateService<T>(
+  service: UseFormDetailService<any, Partial<T>, T>
+): UseInlineEditService<T> {
+  return {
+    update: async (id: string, payload: Partial<T>) => {
+      if (!service.update) throw new Error("Update method not implemented");
+      return await service.update(id, payload);
+    },
+    delete: async (id: string) => {
+      if (!service.delete) throw new Error("Delete method not implemented");
+      return await service.delete(id);
+    },
+  };
+}
+
 export function useInlineEdit<T extends { id: string | number }>(
   initialData: T[],
-  service: {
-    update: (id: string, payload: Partial<T>) => Promise<T | null>;
-    remove: (id: string) => Promise<void>;
-  }
+  service: UseInlineEditService<T>
 ) {
   const data = ref<T[]>([...initialData]);
   const rowLoading = ref<Record<string | number, boolean>>({});
@@ -94,7 +112,7 @@ export function useInlineEdit<T extends { id: string | number }>(
       );
 
       rowLoading.value[rowKey] = true;
-      await service.remove(row.id.toString());
+      await service.delete(row.id.toString());
 
       data.value = data.value.filter((r) => r.id !== row.id);
       delete originalRows.value[rowKey];

@@ -18,3 +18,38 @@
 .el-radio__input:hover .el-radio__inner {
     border-color: var(--color-primary-light) !important;
 }
+
+.el-table__row .el-table__cell.clicked-column {
+    background-color: var(--color-primary) !important;
+    color: #fff !important;
+    font-weight: 500;
+}
+
+
+
+/* Switch handle */
+.el-switch__button {
+    background-color: var(--color-light) !important;
+    /* white handle */
+}
+
+.el-switch.is-checked .el-switch__core {
+    background-color: var(--color-primary-light) !important;
+}
+
+/* Optional: hover effect for active switch */
+.el-switch.is-checked:hover .el-switch__core {
+    background-color: var(--color-primary-light-3) !important;
+}
+
+/* Switch handle (button) */
+.el-switch__button {
+    background-color: var(--color-light) !important;
+}
+
+/* Inner label/text inside handle */
+.el-switch__inner {
+    color: var(--color-light) !important;
+    font-weight: 500;
+}
+

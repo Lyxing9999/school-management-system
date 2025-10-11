@@ -1,114 +1,151 @@
+from time import time
 from pymongo.database import Database
-from app.contexts.iam.repositories import UserRepository
-from app.contexts.iam.data_transfer.requests import UserRegisterSchema, UserLoginSchema, UserUpdateSchema
-from app.contexts.iam.data_transfer.responses import UserRegisterDataDTO, UserLoginDataDTO, UserReadDataDTO, UserResponseDataDTO
 from bson import ObjectId
-from app.contexts.iam.error.user_exceptions import UsernameAlreadyExistsException, EmailAlreadyExistsException, NotFoundUserException, InvalidPasswordException, UnknownRoleException, RoleNotAllowedException, NoChangeAppException , UserDeletedException, UserNotSavedException
-from app.contexts.iam.models import User , UserFactory , UserMapper
-from app.contexts.shared.enum.roles import UserRole , SystemRole
-from app.contexts.iam.read_models import UserReadModel
+from app.contexts.iam.repositories import IAMRepository
+from app.contexts.iam.read_models import IAMReadModel
+from app.contexts.iam.models import IAM, IAMFactory, IAMMapper
 from app.contexts.auth.services import AuthService
 from app.contexts.shared.model_converter import mongo_converter
-
-import logging
-
-logger = logging.getLogger(__name__)
+from app.contexts.core.log.log_service import LogService
+from app.contexts.iam.data_transfer.requests import IAMUpdateSchema
+from app.contexts.iam.data_transfer.responses import (
+    IAMResponseDTO,
+    IAMUpdateDataDTO,
+    IAMReadDataDTO,
+    IAMBaseDTO,
+)
+from app.contexts.iam.error.iam_exceptions import (
+    NotFoundUserException,
+    UserDeletedException,
+    NoChangeAppException,
+    InvalidPasswordException,
+    UsernameAlreadyExistsException,
+    EmailAlreadyExistsException,
+)
 
 class IAMService:
     """Identity & Access Management Service"""
 
     def __init__(self, db: Database):
         self.db = db
-        self.mongo_converter = mongo_converter
-        self._user_repository = UserRepository(db)
-        self._user_read_model = UserReadModel(db)
-        self._auth_service = AuthService()
-        self._user_factory = UserFactory(self._user_read_model, self._auth_service)
-        self._user_mapper = UserMapper()
-
-
-
-    def get_user_to_domain(self, user_id: str | ObjectId) -> User:
-        user_id = mongo_converter.convert_to_object_id(user_id)
-        raw_user = self._user_read_model.get_by_id(user_id)
-        if not raw_user:
-            raise NotFoundUserException(user_id)
-        return self._user_mapper.to_domain(raw_user)
-    
-    
-    def to_safe_dict(self, user: User) -> dict:
-        return self._user_mapper.to_safe_dict(user)
+        self.mongo_converter = mongo_converter 
+        self._iam_repository = IAMRepository(db) 
+        self._iam_read_model = IAMReadModel(db) 
+        self._auth_service = AuthService()  # auth helper (hash, token)
+        self._iam_mapper = IAMMapper()  # map raw dict <-> domain <-> DTO
+        self._log_service = LogService.get_instance()  # singleton log service
 
     # -------------------------
-    # Helper methods
+    # Logging helper
     # -------------------------
-    def _validate_unique_fields(self, username: str | None, email: str):
-        if username and self._user_read_model.get_by_username(username):
-            raise UsernameAlreadyExistsException(username)
-        if self._user_read_model.get_by_email(email):
-            raise EmailAlreadyExistsException(email)
+    def _log(self, operation: str, user_id: str | None = None, extra: dict | None = None, level: str = "INFO"):
+        msg = f"IAMService::{operation}" + (f" [user_id={user_id}]" if user_id else "")  # construct message
+        self._log_service.log(msg, level=level, module="IAMService", user_id=user_id, extra=extra or {})  # send to logger
 
-    def _log(self, operation: str, user_id: str | None = None, extra: dict | None = None):
-        msg = f"IAMService::{operation}"
-        if user_id:
-            msg += f" [user_id={user_id}]"
-        logger.info(msg, extra=extra or {})
+    # -------------------------
+    # Validate unique username/email
+    # -------------------------
+    def _validate_unique_fields(self, username: str | None = None, email: str | None = None, exclude_user_id: ObjectId | None = None):
+        query = {"$or": []}  # initialize OR query
+        if username: query["$or"].append({"username": username})  # check username
+        if email: query["$or"].append({"email": email})  # check email
+        if not query["$or"]:
+            return 
+        if exclude_user_id: query = {"$and": [{"_id": {"$ne": exclude_user_id}}, query]}  # exclude current user
+        existing_user = self._iam_repository.find_one(query)  # query db
+        if existing_user:  # if conflict
+            if username and existing_user.get("username") == username:
+                raise UsernameAlreadyExistsException(username)  # raise error
+            if email and existing_user.get("email") == email:
+                raise EmailAlreadyExistsException(email)
 
-    def register_user(self, schema: UserRegisterSchema, *, trusted_by_admin: bool = False) -> tuple[User, str]:
-        role = schema.role or UserRole.STUDENT
-        if role not in SystemRole:
-            raise UnknownRoleException(role)
-        if not trusted_by_admin and role not in (UserRole.STUDENT, UserRole.PARENT):
-            raise RoleNotAllowedException(role)
-        self._validate_unique_fields(schema.username, schema.email)
-        user_model = self._user_factory.create_user(email=schema.email, password=schema.password, username=schema.username, role=role, created_by=schema.created_by)
-        user_id = self._user_repository.save(self._user_mapper.to_persistence(user_model))
-        if not user_id:
-            raise UserNotSavedException(user_id)
-        user_model = self.get_user_to_domain(user_id)
-        token = self._auth_service.create_access_token(self._user_mapper.to_safe_dict(user_model))
-        self._log("register_user", user_id=str(user_id), extra={"email": schema.email, "created_by_admin": trusted_by_admin})
+    # -------------------------
+    # Get IAM Domain Model
+    # -------------------------
+    def get_user_to_domain(self, user_id: str | ObjectId) -> IAM:
+        start = time()  # start timer
+        user_id_obj = mongo_converter.convert_to_object_id(user_id)  # convert to ObjectId
+        raw_user = self._iam_read_model.get_by_id(user_id_obj)  # get raw dict
+        duration_ms = (time() - start) * 1000  # measure duration
+        self._log("get_user_to_domain", user_id=str(user_id), extra={"duration_ms": duration_ms})  # log operation
+        if not raw_user: raise NotFoundUserException(user_id)  # raise if missing
+        return self._iam_mapper.to_domain(raw_user)  # map to domain
 
-        return user_model, token
-
-    def login_user(self, email: str, password: str) -> tuple[User, str]:
-        raw_user = self._user_read_model.get_by_email(email)
+    # -------------------------
+    # Login IAM User
+    # -------------------------
+    def login(self, email: str, password: str) -> IAMResponseDTO:
+        start = time()  # start timer
+        raw_user = self._iam_read_model.get_by_email(email)  # query by email
         if not raw_user:
-            raise NotFoundUserException(email)
-        user_model = self._user_mapper.to_domain(raw_user)
-        if user_model.is_deleted():
-            raise UserDeletedException(email)
-        if not user_model.check_password(password, self._auth_service):
-            logger.warning("Failed login attempt", extra={"email": email})
+            raise NotFoundUserException(email)  # raise if not found
+        iam_model = self._iam_mapper.to_domain(raw_user)  # map to domain
+        if iam_model.is_deleted():
+            raise UserDeletedException(email)  # deleted check
+        if not iam_model.check_password(password, self._auth_service):  # password check
+            self._log("login_failed", extra={"email": email}, level="WARNING")  # log failed attempt
             raise InvalidPasswordException(password)
-        token = self._auth_service.create_access_token(self._user_mapper.to_safe_dict(user_model))
-        self._log("login", user_id=str(user_model.id), extra={"email": email})
-        return user_model, token
+        safe_dict = self._iam_mapper.to_safe_dict(iam_model)  # prepare safe dict
+        token = self._auth_service.create_access_token(safe_dict)  # generate token
+        duration_ms = (time() - start) * 1000  # log duration
+        self._log("login", user_id=str(iam_model.id), extra={"duration_ms": duration_ms, "email": email})
+        return IAMResponseDTO(user=IAMBaseDTO(**safe_dict), access_token=token)  # return response
 
-
-    def update_profile(self, user_id: str | ObjectId, update_schema: UserUpdateSchema, *, update_by_admin: bool = False) -> User:
-        user_model = self.get_user_to_domain(user_id)
+    # -------------------------
+    # Update profile
+    # -------------------------
+    def update_info(self, user_id: str | ObjectId, update_schema: IAMUpdateSchema, *, update_by_admin: bool = False) -> IAMUpdateDataDTO:
+        start = time()  # start timer
+        iam_model = self.get_user_to_domain(user_id)  # fetch domain model
         if update_schema.password is not None:
-            update_schema.password = self._auth_service.hash_password(update_schema.password)
-        user_model.update_info(**update_schema.model_dump(exclude_unset=True))
-        modified_count: int = self._user_repository.update(mongo_converter.convert_to_object_id(user_model.id), self._user_mapper.to_persistence(user_model))
+            iam_model.password = self._auth_service.hash_password(update_schema.password)
+        self._validate_unique_fields(
+            username=update_schema.username,
+            email=update_schema.email,
+            exclude_user_id=mongo_converter.convert_to_object_id(iam_model.id)
+        )
+        iam_model.update_info(email=update_schema.email, username=update_schema.username)
+        modified_count = self._iam_repository.update(
+            mongo_converter.convert_to_object_id(iam_model.id),
+            self._iam_mapper.to_persistence(iam_model)
+        )
         if modified_count == 0:
-            raise NoChangeAppException()
-        self._log("update_profile", user_id=str(user_id), extra={"update_by_admin": update_by_admin})
-        return user_model
+            raise NoChangeAppException()  
+        duration_ms = (time() - start) * 1000
+        self._log("update_info", user_id=str(user_id), extra={"duration_ms": duration_ms, "update_by_admin": update_by_admin})
+        return self._iam_mapper.to_dto(iam_model)
 
-    def soft_delete(self, user_id: str | ObjectId, deleted_by: str | ObjectId | None = None) -> User:
-        user_model = self.get_user_to_domain(user_id)
-        deleted_by_obj = mongo_converter.convert_to_object_id(deleted_by) if deleted_by else None
-        user_model.soft_delete(deleted_by_obj)
-        modified_count = self._user_repository.soft_delete(mongo_converter.convert_to_object_id(user_model.id), deleted_by_obj)
+    # -------------------------
+    # Soft delete user
+    # -------------------------
+    def soft_delete(self, user_id: str | ObjectId, deleted_by: str | ObjectId | None = None) -> IAMReadDataDTO:
+        start = time()
+        iam_model = self.get_user_to_domain(user_id)  # fetch domain
+        deleted_by_obj = mongo_converter.convert_to_object_id(deleted_by) if deleted_by else None  # optional deleted_by
+        iam_model.soft_delete(deleted_by_obj)  # update domain
+        modified_count = self._iam_repository.soft_delete(mongo_converter.convert_to_object_id(iam_model.id), deleted_by_obj)  # persist
         if modified_count == 0:
-            raise NoChangeAppException("User already deleted in DB")
-        self._log("soft_delete", user_id=str(user_id), extra={"deleted_by": str(deleted_by_obj) if deleted_by else None})
-        return user_model
+            raise NoChangeAppException("User already deleted in DB")  # check result
+        safe_dict = self._iam_mapper.to_safe_dict(iam_model)  # prepare DTO
+        duration_ms = (time() - start) * 1000
+        self._log("soft_delete", user_id=str(user_id), extra={"duration_ms": duration_ms, "deleted_by": str(deleted_by_obj) if deleted_by else None})  # log
+        return IAMReadDataDTO(**safe_dict)  # return DTO
 
-
+    # -------------------------
+    # Hard delete user
+    # -------------------------
     def hard_delete(self, user_id: str | ObjectId) -> bool:
-        deleted_count = self._user_repository.hard_delete(mongo_converter.convert_to_object_id(user_id))
-        return deleted_count > 0
-    
+        start = time()
+        deleted_count = self._iam_repository.hard_delete(mongo_converter.convert_to_object_id(user_id))  # delete
+        duration_ms = (time() - start) * 1000
+        self._log("hard_delete", user_id=str(user_id), extra={"duration_ms": duration_ms})  # log
+        return deleted_count > 0  # return boolean
+
+    # -------------------------
+    # Save domain
+    # -------------------------
+    def save_domain(self, iam_model: IAM) -> IAM:
+        """Persist a domain object and return updated domain with ID."""
+        saved_id = self._iam_repository.save(self._iam_mapper.to_persistence(iam_model))
+        iam_model.id = saved_id
+        return iam_model

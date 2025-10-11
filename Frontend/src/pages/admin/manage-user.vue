@@ -1,39 +1,146 @@
 <script setup lang="ts">
-import { onMounted, ref, reactive, computed, toRaw } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { useNuxtApp } from "nuxt/app";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 import Pagination from "~/components/TableEdit/Pagination/Pagination.vue";
-import { userColumns } from "~/schemas/columns/admin/userColumns";
-import { AdminApi } from "~/api/admin/admin.api";
-import { AdminService } from "~/services/adminService";
-import { usePaginatedFetch } from "~/composables/pagination/usePaginatedFetch";
-import { useInlineEdit } from "~/composables/inline-edit/useInlineEdit";
-import SmartForm from "~/components/Form/SmartForm.vue";
-import { useForm } from "~/composables/useForm";
+import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
-import { userFormSchema, userFormData } from "~/schemas/forms/admin/userForm";
+import BaseButton from "~/components/Base/BaseButton.vue";
+import { useDialogDynamicWidth } from "~/composables/useDialogDynamicWidth";
+
+definePageMeta({
+  layout: "admin",
+});
+import { usePaginatedFetch } from "~/composables/pagination/usePaginatedFetch";
 import {
-  staffFormSchema,
-  staffFormData,
-} from "~/schemas/forms/admin/staffFrom";
-import type { Role } from "~/api/types/enums/role.enum";
-import type { AxiosInstance } from "axios";
-import type {
-  AdminCreateStaff,
-  AdminCreateUser,
-  AdminGetUserData,
-} from "~/api/admin/admin.dto";
+  useInlineEdit,
+  toInlineEditUpdateService,
+} from "~/composables/inline-edit/useInlineEdit";
 
-definePageMeta({ layout: "admin" });
+import { userColumns } from "~/schemas/columns/admin/userColumns";
+import {
+  roleOptions,
+  roleStaffOptions,
+  roleUserOptions,
+} from "~/utils/constants/roles";
+import {
+  formRegistryCreate,
+  formRegistryEdit,
+} from "~/schemas/registry/AdminFormRegistry";
 
-const $api = useNuxtApp().$api as AxiosInstance;
-const adminApi = new AdminApi($api);
-const adminService = new AdminService(adminApi);
+import { useFormEdit } from "~/composables/useFormEdit";
+import { useFormCreate } from "~/composables/useFormCreate";
 
+import type { AdminCreateUser, AdminGetUserData } from "~/api/admin/admin.dto";
+import { Role } from "~/api/types/enums/role.enum";
+
+/* ----------------------------- types ----------------------------- */
+type CreateFields =
+  (typeof formRegistryCreate)[keyof typeof formRegistryCreate]["schema"];
+type EditFields =
+  (typeof formRegistryEdit)[keyof typeof formRegistryEdit]["schema"];
+type CreateMode = "USER" | "STAFF";
+type EditMode = "USER" | "STAFF" | "STUDENT";
+interface AdminEditable extends AdminGetUserData {
+  id: string;
+}
+/* --------------------------- reactive ---------------------------- */
 const isStaffMode = ref<boolean | undefined>(undefined);
+const selectedRoles = ref<Role[]>([Role.STUDENT]);
+const editFormKey = ref(0);
+const selectedFormCreate = ref<CreateMode>("USER");
+const selectedFormEdit = ref<EditMode>("USER");
+const editFormDataKey = ref("");
+/* --------------------------- registries -------------------------- */
+const registryCreate = computed(
+  () => formRegistryCreate[selectedFormCreate.value]
+);
 
-// Inline Edit
+const registryEdit = computed(() => formRegistryEdit[selectedFormEdit.value]);
+const registryCreateFormData = computed(() => registryCreate.value.formData());
+/* --------------------------- create form ------------------------- */
+/*
+  Note: getFields must return the schema (Field<T>[]).
+  useFormCreate signature (expected):
+    useFormCreate(getService, initialData, getFields)
+  where initialData is () => ({ ... }) and getFields is () => Field<T>[]
+*/
+const {
+  formDialogVisible: createFormVisible,
+  formData: createFormData,
+  openForm: openCreateForm,
+  saveForm: saveCreateForm,
+  cancelForm: cancelCreateForm,
+  resetFormData: resetCreateFormData,
+  loading: createFormLoading,
+} = useFormCreate(
+  () => registryCreate.value.service,
+  () => registryCreateFormData.value, // initial empty/default values
+  () => registryCreate.value.schema as CreateFields
+);
+
+const handleOpenCreateForm = async () => {
+  // pick schema before opening
+  selectedFormCreate.value = isStaffMode.value ? "STAFF" : "USER";
+  await nextTick();
+  openCreateForm();
+};
+
+const handleSaveCreateForm = async (payload?: Partial<AdminCreateUser>) => {
+  // composable saveForm returns boolean: true=success, false=failure
+  await saveCreateForm(payload);
+
+  // on success, you can refresh list
+  fetchPage(1);
+};
+
+const handleCancelCreateForm = () => {
+  cancelCreateForm(); // composable handles resetting + hiding
+};
+
+/* ---------------------------- edit form -------------------------- */
+const {
+  formDialogVisible: editFormVisible,
+  formData: editFormData,
+  openForm: openEditForm,
+  saveForm: saveEditForm,
+  cancelForm: cancelEditForm,
+  resetFormData: resetEditFormData,
+  loading: editFormLoading,
+} = useFormEdit(
+  () => registryEdit.value.service,
+  () => registryEdit.value.schema as EditFields
+);
+
+const handleOpenEditForm = async (row: AdminGetUserData) => {
+  if (row.role === "academic" || row.role === "teacher")
+    selectedFormEdit.value = "STAFF";
+  else if (row.role === "student") selectedFormEdit.value = "STUDENT";
+  else selectedFormEdit.value = "USER";
+  editFormKey.value++;
+  editFormDataKey.value = row.id;
+
+  await nextTick();
+  await openEditForm(row.id);
+};
+
+const handleSaveEditForm = async (payload: Partial<any>) => {
+  if (selectedFormEdit.value === "STUDENT") {
+    await saveEditForm(payload);
+  }
+};
+
+const handleCancelEditForm = () => {
+  cancelEditForm();
+};
+
+/* ---------------------------- inline edit ------------------------ */
+const registryInlineEdit = formRegistryEdit["USER"];
+const inlineEditService = computed(() =>
+  toInlineEditUpdateService<AdminGetUserData>(registryInlineEdit.service)
+);
+
 const {
   data,
   save,
@@ -44,14 +151,11 @@ const {
   autoSave,
   getPreviousValue,
   revertField,
-} = useInlineEdit<AdminGetUserData>([], {
-  update: (id, payload) => adminService.updateUser(id, payload as any),
-  remove: async (id) => {
-    await adminService.deleteUser(id);
-  },
-});
+} = useInlineEdit<AdminGetUserData>([], inlineEditService.value);
 
-// Pagination
+/* ---------------------------- pagination ------------------------- */
+const { $adminService } = useNuxtApp();
+
 const {
   loading: fetchLoading,
   fetchPage,
@@ -59,69 +163,50 @@ const {
   currentPage,
   pageSize,
   totalRows,
-  selectedRoles,
-  currentRoleOptions,
 } = usePaginatedFetch(
   async (roles: Role[], page: number, pageSize: number) => {
-    const res = await adminService.getUsers(roles, page, pageSize);
+    const res = await $adminService.getUsers(roles, page, pageSize);
     setData(res?.users ?? []);
     return { items: res?.users ?? [], total: res?.total ?? 0 };
   },
   1,
   15,
-  isStaffMode
+  selectedRoles
 );
 
-// -------------------------
-// useForm
-// -------------------------
-const {
-  formDialogVisible,
-  formData,
-  loading: createLoading,
-  saveForm,
-  cancelForm,
-} = useForm(
-  {
-    create: async (data) => {
-      const payload = { ...toRaw(data) };
-      if (isStaffMode.value)
-        return adminService.createStaff(payload as AdminCreateStaff);
-      return adminService.createUser(payload as AdminCreateUser);
-    },
-  },
-  {}, // start empty, will populate when opening
-  { onError: (err) => console.error(err) }
-);
+/* ----------------------------- misc ------------------------------ */
+const currentRoleOptions = computed(() => {
+  if (isStaffMode.value === true) return roleStaffOptions;
+  if (isStaffMode.value === false) return roleUserOptions;
+  return roleOptions;
+});
 
-// Open form correctly
-function handleOpenForm() {
-  const initialData = isStaffMode.value
-    ? toRaw(staffFormData)
-    : toRaw(userFormData);
-  Object.assign(formData, initialData); // populate reactive formData
-  formDialogVisible.value = true;
-}
+watch(selectedRoles, () => fetchPage(1), { deep: true });
+watch(isStaffMode, (mode) => {
+  if (mode === true) selectedRoles.value = roleStaffOptions.map((r) => r.value);
+  else if (mode === false)
+    selectedRoles.value = roleUserOptions.map((r) => r.value);
+  fetchPage(1);
+});
 
-// Inline edit helpers
-function handleRevertField(row: any, field: string) {
-  revertField(row, field as keyof AdminGetUserData);
-}
+const createDialogWidth = computed(() => {
+  const schema = registryCreate.value.schema;
+  const width = useDialogDynamicWidth(schema).value;
 
-function handleDelete(row: AdminGetUserData) {
-  removeUser(row);
-}
+  if (selectedFormCreate.value === "STAFF") return "80%";
+  if (selectedFormCreate.value === "USER") return "40%";
+  return width;
+});
+const editDialogWidth = computed(() => {
+  const schema = registryEdit.value.schema;
+  const width = useDialogDynamicWidth(schema).value;
 
-function handleDetail(rowId: string | number) {
-  console.log("Detail", rowId);
-}
-
-const handleRefresh = () => fetchPage();
-
-onMounted(async () => {
-  await fetchPage();
+  if (selectedFormEdit.value === "STAFF") return "60%";
+  if (selectedFormEdit.value === "STUDENT") return "70%";
+  return width;
 });
 </script>
+
 <template>
   <el-row class="m-2" justify="space-between">
     <el-col :span="12">
@@ -131,6 +216,7 @@ onMounted(async () => {
         <el-radio :label="true">Staff</el-radio>
       </el-radio-group>
     </el-col>
+
     <el-col :span="12">
       <el-select
         v-model="selectedRoles"
@@ -151,13 +237,14 @@ onMounted(async () => {
 
   <el-row justify="space-between" class="m-4">
     <el-col :span="24">
-      <BaseButton type="default" :loading="fetchLoading" @click="handleRefresh">
+      <BaseButton type="default" :loading="fetchLoading" @click="fetchPage(1)">
         Refresh
       </BaseButton>
+
       <BaseButton
         v-if="isStaffMode !== undefined"
         type="primary"
-        @click="handleOpenForm"
+        @click="handleOpenCreateForm"
       >
         Add {{ isStaffMode ? "Staff" : "User" }}
       </BaseButton>
@@ -179,9 +266,14 @@ onMounted(async () => {
           <ActionButtons
             :rowId="row.id"
             :role="row.role"
-            :hideDetailForRoles="['student']"
+            :detailContent="`Edit ${
+              row.role.charAt(0).toUpperCase() + row.role.slice(1)
+            } details`"
+            :deleteContent="`Delete ${
+              row.role.charAt(0).toUpperCase() + row.role.slice(1)
+            }`"
             :loading="rowLoading[row.id] ?? false"
-            @detail="handleDetail(row)"
+            @detail="handleOpenEditForm(row)"
             @delete="handleDelete(row)"
           />
         </template>
@@ -194,9 +286,8 @@ onMounted(async () => {
             <el-icon
               class="cursor-pointer"
               @click="handleRevertField(row, field)"
-            >
-              <Refresh />
-            </el-icon>
+              ><Refresh
+            /></el-icon>
           </el-tooltip>
         </template>
       </SmartTable>
@@ -204,30 +295,45 @@ onMounted(async () => {
   </ErrorBoundary>
 
   <ErrorBoundary>
-    <template #default>
-      <Pagination
-        class-name="mt-6"
-        :current-page="currentPage"
-        :page-size="pageSize"
-        :total="totalRows"
-        @page-change="goPage"
-      />
-    </template>
+    <Pagination
+      class-name="mt-6"
+      :current-page="currentPage"
+      :page-size="pageSize"
+      :total="totalRows"
+      @page-change="goPage"
+    />
   </ErrorBoundary>
 
+  <!-- CREATE DIALOG -->
   <ErrorBoundary>
-    <template #default>
-      <el-dialog v-model="formDialogVisible" title="Add New User" width="500px">
-        <SmartForm
-          :model-value="formData"
-          :fields="isStaffMode ? staffFormSchema : userFormSchema"
-          :loading="createLoading"
-          @save="saveForm"
-          @cancel="cancelForm"
-          :useElForm="true"
-        />
-      </el-dialog>
-    </template>
+    <SmartFormDialog
+      :key="selectedFormCreate"
+      v-model:visible="createFormVisible"
+      v-model="createFormData"
+      :fields="registryCreate.schema"
+      :title="`Add ${isStaffMode ? 'Staff' : 'User'}`"
+      :loading="createFormLoading"
+      @save="handleSaveCreateForm"
+      @cancel="handleCancelCreateForm"
+      :useElForm="true"
+      :width="createDialogWidth"
+    />
+  </ErrorBoundary>
+
+  <!-- EDIT DIALOG -->
+  <ErrorBoundary>
+    <SmartFormDialog
+      :key="`${selectedFormEdit}-${editFormKey}-${editFormDataKey}`"
+      v-model:visible="editFormVisible"
+      v-model="editFormData"
+      :fields="registryEdit.schema"
+      :title="'Edit'"
+      :loading="editFormLoading"
+      @save="handleSaveEditForm"
+      @cancel="handleCancelEditForm"
+      :useElForm="true"
+      :width="editDialogWidth"
+    />
   </ErrorBoundary>
 </template>
 

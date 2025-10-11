@@ -1,10 +1,22 @@
 from app.place_holder import PlaceholderModel
+from pydantic import BaseModel
+from bson.objectid import ObjectId
+from typing import List
 
 
 
-class ClassCreateRequestSchema(PlaceholderModel):
-    pass
-
+class ClassCreateRequestSchema(BaseModel):
+    name: str
+    grade: int
+    max_students: int
+    status: bool
+    created_by: ObjectId
+    homeroom_teacher: ObjectId | None = None
+    subjects: List[ObjectId] | None = None
+    students: List[ObjectId] | None = None
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
 
 class ClassUpdateRequestSchema(PlaceholderModel):
     pass

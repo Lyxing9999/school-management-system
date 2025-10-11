@@ -4,13 +4,15 @@ import type {
   AdminGetUserData,
   AdminGetPageUserData,
   AdminCreateUser,
-  AdminUpdateUser,
+  AdminUpdateUsers,
   AdminCreateClass,
   AdminGetClass,
   AdminFindTeacherSelect,
   AdminCreateStaff,
   AdminUpdateStaff,
-  adminGetstaffData,
+  AdminGetStaffData,
+  BaseStudentInfo,
+  AdminStudentInfoUpdate,
 } from "~/api/admin/admin.dto";
 import { Role } from "~/api/types/enums/role.enum";
 export class AdminService {
@@ -25,7 +27,7 @@ export class AdminService {
       showSuccessNotification?: boolean;
       showErrorNotification?: boolean;
     } = {}
-  ): Promise<AdminGetPageUserData | null> {
+  ): Promise<AdminGetPageUserData> {
     const { data } = await this.safeApiCall<AdminGetPageUserData>(
       this.adminApi.getUsers(roles, page, pageSize),
       {
@@ -36,9 +38,7 @@ export class AdminService {
     return data!;
   }
 
-  async createUser(
-    userData: AdminCreateUser
-  ): Promise<AdminGetUserData | null> {
+  async createUser(userData: AdminCreateUser): Promise<AdminGetUserData> {
     const { data } = await this.safeApiCall<AdminGetUserData>(
       this.adminApi.createUser(userData),
       {
@@ -47,12 +47,12 @@ export class AdminService {
       }
     );
     return data!;
-  } 
+  }
 
   async updateUser(
     id: string,
-    userData: AdminUpdateUser
-  ): Promise<AdminGetUserData | null> {
+    userData: AdminUpdateUsers
+  ): Promise<AdminGetUserData> {
     const { data } = await this.safeApiCall<AdminGetUserData>(
       this.adminApi.updateUser(id, userData),
       {
@@ -92,17 +92,50 @@ export class AdminService {
   }
 
   async createStaff(staffData: AdminCreateStaff) {
-    const { data } = await this.safeApiCall<adminGetstaffData>(
+    const { data } = await this.safeApiCall<AdminGetStaffData>(
       this.adminApi.createStaff(staffData),
       {
-        showSuccessNotification: false,
+        showSuccessNotification: true,
+        showErrorNotification: true,
       }
     );
     return data!;
   }
   async updateStaff(id: string, staffData: AdminUpdateStaff) {
-    const { data } = await this.safeApiCall<adminGetstaffData>(
+    const { data } = await this.safeApiCall<AdminGetStaffData>(
       this.adminApi.updateStaff(id, staffData),
+      {
+        showSuccessNotification: true,
+        showErrorNotification: true,
+      }
+    );
+    return data!;
+  }
+
+  async getStaffDetail(id: string) {
+    console.log(this.adminApi.getStaffDetail(id));
+    const { data } = await this.safeApiCall<AdminGetStaffData>(
+      this.adminApi.getStaffDetail(id),
+      {
+        showSuccessNotification: false,
+        showErrorNotification: true,
+      }
+    );
+    return data!;
+  }
+  async getStudentInfo(id: string) {
+    const { data } = await this.safeApiCall<BaseStudentInfo>(
+      this.adminApi.getStudentInfo(id),
+      {
+        showSuccessNotification: false,
+        showErrorNotification: true,
+      }
+    );
+    return data!;
+  }
+  async updateStudentInfo(id: string, studentData: AdminStudentInfoUpdate) {
+    const { data } = await this.safeApiCall<BaseStudentInfo>(
+      this.adminApi.updateStudentInfo(id, studentData),
       {
         showSuccessNotification: true,
         showErrorNotification: true,

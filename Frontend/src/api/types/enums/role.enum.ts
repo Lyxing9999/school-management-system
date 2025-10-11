@@ -19,7 +19,6 @@ export enum UserRole {
 // Staff members
 export enum StaffRole {
   TEACHER = "teacher",
-
   ACADEMIC = "academic",
 }
 
@@ -39,8 +38,5 @@ export const AllUserRoles: UserRole[] = [UserRole.STUDENT, UserRole.PARENT];
 
 export const AllStaffRoles: StaffRole[] = [
   StaffRole.TEACHER,
-  StaffRole.FRONT_OFFICE,
-  StaffRole.FINANCE,
   StaffRole.ACADEMIC,
-  StaffRole.HR,
 ];

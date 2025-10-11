@@ -1,6 +1,5 @@
 
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.contexts.iam.data_transfer.responses import UserResponseDataDTO
 from app.contexts.auth.jwt_utils import create_access_token
 from datetime import timedelta
 
