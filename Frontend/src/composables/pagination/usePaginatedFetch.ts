@@ -1,37 +1,33 @@
 import { ref, type Ref } from "vue";
-import { Role } from "~/api/types/enums/role.enum";
-
-export function usePaginatedFetch<T>(
+export function usePaginatedFetch<T, F = undefined>(
   fetchFn: (
-    roles: Role[],
+    filter: F,
     page: number,
     pageSize: number,
-    signal?: AbortSignal // <- pass signal to backend-fetch
+    signal?: AbortSignal
   ) => Promise<{ items: T[]; total: number }>,
   initialPage: number = 1,
-  initialPageSize: number = 20,
-  selectedRoles: Ref<Role[]>
+  initialPageSize: number = 10,
+  filter?: Ref<F>
 ) {
   const data = ref<T[]>([]);
   const loading = ref(false);
   const error = ref<Error | null>(null);
-
   const currentPage = ref(initialPage);
   const pageSize = ref(initialPageSize);
   const totalRows = ref(0);
   let controller: AbortController | null = null;
-
+  
   const fetchPage = async (page: number = currentPage.value) => {
-    // Cancel previous request
     controller?.abort();
     controller = new AbortController();
-
     loading.value = true;
     error.value = null;
 
     try {
+      const filterValue = filter?.value as F;
       const res = await fetchFn(
-        selectedRoles.value,
+        filterValue,
         page,
         pageSize.value,
         controller.signal
@@ -62,7 +58,7 @@ export function usePaginatedFetch<T>(
     data,
     loading,
     error,
-    selectedRoles,
+    filter,
     currentPage,
     pageSize,
     totalRows,

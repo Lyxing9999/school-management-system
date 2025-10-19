@@ -2,13 +2,14 @@ from pydantic import BaseModel
 
 from datetime import datetime
 from app.contexts.shared.enum.roles import SystemRole
-from app.contexts.iam.data_transfer.responses import IAMBaseDTO , IAMUpdateDataDTO
+from app.contexts.iam.data_transfer.responses import IAMBaseDataDTO , IAMUpdateDataDTO
 from app.contexts.staff.data_transfer.responses import StaffReadDataDTO
 from app.contexts.shared.enum.roles import StaffRole
+from app.contexts.student.data_transfer.responses import StudentInfoReadDataDTO
 from typing import List
 
 
-class AdminCreateUserDataDTO(IAMBaseDTO):
+class AdminCreateUserDataDTO(IAMBaseDataDTO):
     pass
 
 class AdminUpdateUserDataDTO(IAMUpdateDataDTO):
@@ -37,16 +38,26 @@ class AdminCreateStaffDataDTO(BaseModel):
     }
     
 
+class PaginatedUsersDataDTO(BaseModel):
+    users: List[IAMBaseDataDTO]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+
 class AdminGetStaffDataDTO(StaffReadDataDTO):
     model_config = {
         "extra": "forbid"
     }
 
-
+class AdminGetStudentInfoDataDTO(StudentInfoReadDataDTO):
+    pass
 
 class AdminUpdateStaffDataDTO(StaffReadDataDTO):
     model_config = {
-        "extra": "forbid"
+        "extra": "ignore"
     }
 
 
@@ -54,7 +65,7 @@ class AdminUpdateStaffDataDTO(StaffReadDataDTO):
 
 
 
-class AdminStaffSelectDataDTO(BaseModel):   
+class AdminStaffSelectDTO(BaseModel):   
     id: str
     staff_name: str
     model_config = {
@@ -62,7 +73,7 @@ class AdminStaffSelectDataDTO(BaseModel):
     }
 
 
-class AdminDeleteUserDataDTO(BaseModel):   
+class AdminDeleteUserDTO(BaseModel):   
     id: str
     deleted_at: datetime
     deleted_by: str | None
@@ -75,16 +86,11 @@ class AdminDeleteUserDataDTO(BaseModel):
 
 
 
-class AdminCreateClassDataDTO(BaseModel):
+class AdminCreateClassDTO(BaseModel):
     model_config = {
         "extra": "allow"
     }
     
-
-
-
-
-
 
 
 

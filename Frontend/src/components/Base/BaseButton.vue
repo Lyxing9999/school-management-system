@@ -16,6 +16,7 @@ const props = withDefaults(
     hoverColor?: string;
     textColor?: string;
     textHoverColor?: string;
+    loading?: boolean;
   }>(),
   {
     type: "default",
@@ -94,6 +95,8 @@ const handleClick = (event: MouseEvent) => emit("click", event);
     v-bind="$attrs"
     :class="classes"
     :style="style"
+    :loading="props.loading"
+    :disabled="props.loading || Boolean($attrs.disabled)"
     @click="handleClick"
   >
     <slot name="iconPre" />

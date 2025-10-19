@@ -53,3 +53,7 @@
     font-weight: 500;
 }
 
+.el-main,
+.smart-table-wrapper {
+    overscroll-behavior: contain;
+}

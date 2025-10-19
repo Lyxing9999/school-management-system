@@ -1,3 +1,4 @@
+
 from flask import Blueprint ,request
 # from app.contexts.academic_dept.services import AcademicDeptService
 # from app.contexts.shared.decorators.wrap_response import wrap_response
@@ -9,8 +10,20 @@ from app.contexts.shared.decorators.wrap_response import wrap_response
 from app.contexts.infra.database.db import get_db
 from app.contexts.common.base_response_dto import BaseResponseDTO
 from app.contexts.academic.services import AcademicService
-from app.contexts.academic.data_transfer.requests import AcademicCreateClassSchema
+from app.contexts.academic.data_transfer.requests import(
+    AcademicCreateClassSchema, 
+    AcademicUpdateUserSchema, 
+    AcademicCreateStudentSchema, 
+    AcademicUpdateStudentInfoSchema
+)
 from app.contexts.core.security.auth_utils import get_current_user_id
+from app.contexts.academic.data_transfer.responses import (
+    AcademicUpdateUserDTO,
+    AcademicStudentsPageDTO,
+    AcademicCreateStudentDTO,
+)
+from app.uploads.students import save_file, delete_file
+
 academic_bp = Blueprint('academic', __name__)
 
 
@@ -20,27 +33,101 @@ academic_bp = Blueprint('academic', __name__)
 def academic_get_students_page():
     academic_service = AcademicService(get_db())
     page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("page_size", 5))
+    page_size = int(request.args.get("pageSize", 5))
     students_dto, total = academic_service.academic_get_students_page(page=page, page_size=page_size)
-    
-    return BaseResponseDTO(
-        data={
-            "students": [
-                {**u.model_dump(), 
-                 "created_at": u.created_at.isoformat() if u.created_at else None,
-                 "updated_at": u.updated_at.isoformat() if u.updated_at else None,
-                 "deleted_at": u.deleted_at.isoformat() if u.deleted_at else None
-                } 
-                for u in students_dto
-            ],
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": max((total + page_size - 1) // page_size, 1),
-        },
-        message="Students retrieved",
-        success=True
+    return AcademicStudentsPageDTO(
+        users=students_dto,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=max((total + page_size - 1) // page_size, 1)
     )
+
+
+@academic_bp.route("/student", methods=["POST"])
+@wrap_response
+def academic_create_student():
+    academic_service = AcademicService(get_db())
+    create_schema = pydantic_converter.convert_to_model(request.json, AcademicCreateStudentSchema)
+    created_by = get_current_user_id()  
+    student_dto = academic_service.academic_create_student(create_schema, created_by)
+    return student_dto
+
+@academic_bp.route("/student/<user_id>", methods=["PATCH"])
+@wrap_response
+def academic_update_iam_user(user_id: str):
+    academic_service = AcademicService(get_db())
+    update_schema = pydantic_converter.convert_to_model(request.json, AcademicUpdateUserSchema)
+    updated_user = academic_service.academic_update_iam_user(user_id, update_schema)
+    return updated_user
+    
+
+@academic_bp.route("/student/<user_id>", methods=["DELETE"])
+@wrap_response
+def academic_delete_iam_user(user_id: str):
+    academic_service = AcademicService(get_db())
+    deleted_user: bool = academic_service.academic_delete_iam_user(user_id)
+    return deleted_user
+
+@academic_bp.route("/student-info/<student_id>", methods=["GET"])
+@wrap_response
+def academic_get_student_info(student_id: str):
+    academic_service = AcademicService(get_db())
+    student_dto = academic_service.academic_get_student_info(student_id)
+    return student_dto
+
+@academic_bp.route("/student-info/<student_id>", methods=["PATCH"])
+@wrap_response
+def academic_update_student_info(student_id: str):
+    print("=== PATCH /student called ===")
+    print("Form data keys:", list(request.form.keys()))
+    print("Files received:", list(request.files.keys()))
+    academic_service = AcademicService(get_db())
+    payload = dict(request.form)
+
+    # Convert classes from JSON string to list
+    if "classes" in payload:
+        import json
+        try:
+            payload["classes"] = json.loads(payload["classes"])
+        except Exception:
+            payload["classes"] = []
+    print("Payload after parsing classes:", payload)
+
+    # Handle photo file
+    file = request.files.get("photo_url")
+    print("Received photo file:", file)
+    if file:
+        print(f"Received photo file: {file.filename}")
+        new_photo_url = save_file(file, "students", student_id)
+        payload["photo_url"] = new_photo_url
+        
+        # Delete old photo if replaced
+        student = academic_service.academic_get_student_info(student_id)
+        old_photo_url = student.photo_url if student else None
+        print(f"Old photo_url: {old_photo_url} -> New: {new_photo_url}")
+        if old_photo_url and old_photo_url != new_photo_url:
+            delete_file(old_photo_url)
+    else:
+        print("No photo uploaded in this request")
+    # Convert to Pydantic model
+    print("Final payload before model convert:", payload)
+    payload_model = pydantic_converter.convert_to_model(payload, AcademicUpdateStudentInfoSchema)
+    print("After convert_to_model:", payload_model)
+
+    # Update student
+    student_dto = academic_service.academic_update_student_info(student_id, payload_model)
+    print("Student DTO after DB update:", student_dto)
+
+    return student_dto
+
+
+
+
+
+
+
+
 
 
 @academic_bp.route("/classes", methods=["GET"])

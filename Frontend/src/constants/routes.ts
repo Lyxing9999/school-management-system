@@ -3,6 +3,7 @@ export const ROUTES = {
     DASHBOARD: "/admin/dashboard",
     MANAGE_USERS: "/admin/manage-user",
     MANAGE_CLASSES: "/admin/manage-class",
+    MANAGE_SUBJECTS: "/admin/manage-subject",
     NOTIFICATIONS: "/admin/notifications",
     SYSTEM_EVENTS: "/admin/events",
     SETTINGS: "/admin/settings",

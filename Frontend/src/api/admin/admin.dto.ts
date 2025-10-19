@@ -1,8 +1,10 @@
 import { Role, StaffRole, UserRole } from "~/api/types/enums/role.enum";
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 import type { UserBaseDataDTO } from "~/api/types/userBase";
+import type { BaseStudentInfo } from "~/api/types/baseStudentInfo";
+import type { BaseClassDataDTO } from "~/api/types/baseClass";
+import type { BaseSubject } from "~/api/types/baseSubject";
 export type AdminApiResponse<T> = ApiResponse<T>;
-
 export interface AdminGetUserData extends UserBaseDataDTO {}
 export interface AdminGetPageUserData {
   users: AdminGetUserData[];
@@ -19,7 +21,7 @@ export interface AdminCreateUser {
   role: UserRole;
 }
 
-export interface AdminUpdateUsers {
+export interface AdminUpdateUser {
   username?: string;
   email?: string;
   password?: string;
@@ -30,12 +32,37 @@ export type AdminUserSchema = {};
 export type AdminGetPageUserResponse = AdminApiResponse<AdminGetPageUserData>;
 export type AdminGetUserResponse = AdminApiResponse<AdminGetUserData>;
 
+//class api
 export interface AdminCreateClass {
   name: string;
-  owner_id: string;
-  max_students: number;
   grade: number;
-  status: boolean;
+  max_students: number;
+  academic_year?: string;
+  code?: string;
+  status?: boolean;
+}
+
+export interface AdminUpdateClass {
+  name?: string;
+  owner_id?: string;
+  max_students?: number;
+  grade?: number;
+  status?: boolean;
+}
+
+export interface AdminAssignTeacher {
+  teacher_id: string;
+}
+export interface AdminUnassignTeacher {
+  teacher_id: string;
+}
+
+export interface AdminAssignStudent {
+  student_id: string;
+}
+
+export interface AdminUnassignStudent {
+  student_id: string;
 }
 
 export interface AdminFindTeacherSelect {
@@ -51,11 +78,24 @@ export interface AdminGetClass {
   name: string;
   owner_id: string;
   max_students: number;
+  class_room?: string | null;
+  homeroom_teacher?: string | null;
+  subjects?: string[] | null;
+  students?: string[] | null;
   grade: number;
   status: boolean;
 }
-
-export type AdminGetClassResponse = AdminApiResponse<AdminGetClass>;
+export interface AdminUpdateClass {
+  name?: string;
+  owner_id?: string;
+  max_students?: number;
+  grade?: number;
+  status?: boolean;
+  class_room?: string | null;
+  homeroom_teacher?: string | null;
+  subjects?: string[] | null;
+  students?: string[] | null;
+}
 
 export interface AdminCreateStaff {
   email: string;
@@ -99,32 +139,25 @@ export interface AdminUpdateStaffData {
   phone_number: string;
   address: string;
 }
-export type AdminUpdateStaffResponse = AdminApiResponse<AdminUpdateStaffData>;
-
-export interface BaseStudentInfo {
-  student_id: string;
-  full_name: string;
-  first_name?: string;
-  last_name?: string;
-  nickname?: string;
-  birth_date?: string;
-  gender?: string;
-  grade_level?: number;
-  classes?: string[];
-  enrollment_date?: string;
-  address?: string;
-  photo_url?: string;
-  guardian?: GuardianInfo;
-  additional_info?: Record<string, any>;
+export interface AdminUpdateSubject {
+  name?: string;
+  teacher_id?: string[];
 }
 
-export interface GuardianInfo {
+export interface AdminCreateSubject {
   name: string;
-  phone: string;
-  relation: string;
+  teacher_id: string[];
 }
-
-export type AdminStudentInfoCreate = BaseStudentInfo;
-export type AdminStudentInfoUpdate = Partial<BaseStudentInfo>;
+export interface AdminUpdateSubject {
+  name?: string;
+  teacher_id?: string[];
+}
+// response
+export type AdminUpdateStaffResponse = AdminApiResponse<AdminUpdateStaffData>;
+export type AdminGetClassResponse = AdminApiResponse<BaseClassDataDTO>;
+export type AdminGetAllClassesResponse = AdminApiResponse<BaseClassDataDTO[]>;
+export type AdminStudentInfoCreate = BaseStudentInfo["student_info"];
+export type AdminStudentInfoUpdate = Partial<BaseStudentInfo["student_info"]>;
 
 export type AdminStudentInfoResponse = AdminApiResponse<BaseStudentInfo>;
+export type AdminSubjectResponse = AdminApiResponse<BaseSubject>;

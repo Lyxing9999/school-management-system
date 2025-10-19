@@ -5,7 +5,7 @@ from pymongo.database import Database
 from typing import List
 from app.contexts.staff.repositories import StaffRepository
 from app.contexts.staff.read_models import StaffReadModel
-from app.contexts.staff.data_transfer.requests import StaffCreateRequestSchema, StaffUpdateRequestSchema
+from app.contexts.staff.data_transfer.requests import StaffCreateSchema, StaffUpdateSchema
 from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from app.contexts.staff.models import Staff, StaffFactory, StaffMapper
 from app.contexts.staff.error.staff_exceptions import (
@@ -14,7 +14,7 @@ from app.contexts.staff.error.staff_exceptions import (
     StaffPermissionException
 )
 from app.contexts.shared.model_converter import mongo_converter
-from app.contexts.shared.enum.roles import SystemRole
+from app.contexts.core.log.log_service import LogService
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +25,11 @@ class StaffService:
         self._staff_read_model = StaffReadModel(db)
         self._staff_factory = StaffFactory()
         self._staff_mapper = StaffMapper()
+        self._log_service = LogService.get_instance()
 
-    def _log(self, operation: str, staff_id: str | None = None, extra: dict | None = None):
-        msg = f"StaffService::{operation}"
-        if staff_id:
-            msg += f" [staff_id={staff_id}]"
-        logger.info(msg, extra=extra or {})
+    def _log(self, operation: str, staff_id: str | None = None, extra: dict | None = None, level: str = "INFO"):
+        msg = f"StaffService::{operation}" + (f" [staff_id={staff_id}]" if staff_id else "")  # construct message
+        self._log_service.log(msg, level=level, module="StaffService", user_id=staff_id, extra=extra or {})  # send to logger
 
     # -------------------------
     # Domain helpers
@@ -49,25 +48,23 @@ class StaffService:
     # -------------------------
     # CRUD operations
     # -------------------------
-    def create_staff(self, payload: StaffCreateRequestSchema, created_by: str, user_id: str | None = None) -> Staff:
+    def create_staff(self, payload: StaffCreateSchema, created_by: str, user_id: str | None = None) -> Staff:
         created_by = mongo_converter.convert_to_object_id(created_by)
         staff_obj = self._staff_factory.create_staff(payload, created_by, user_id)
         self._staff_repo.save(StaffMapper.to_persistence_dict(staff_obj))
         self._log("create_staff", staff_id=staff_obj.staff_id, extra={"created_by": str(created_by)})
         return staff_obj
 
-    def create_staff_dto(self, payload: StaffCreateRequestSchema, created_by: str, user_id: str | None = None) -> StaffBaseDataDTO:
+    def create_staff_dto(self, payload: StaffCreateSchema, created_by: str, user_id: str | None = None) -> StaffBaseDataDTO:
         created_by = mongo_converter.convert_to_object_id(created_by)
         staff_obj = self.create_staff(payload, created_by, user_id)
         return StaffMapper.to_dto(staff_obj)
 
-    def update_staff(self, staff_id: str | ObjectId, payload: StaffUpdateRequestSchema | dict) -> StaffBaseDataDTO:
-        staff_obj = self.get_to_staff_domain(staff_id)
-        changed_fields = staff_obj.update_staff_patch(payload)
-        if not changed_fields:
-            raise StaffNoChangeAppException(f"No changes detected for Staff {staff_id}")
-        self._staff_repo.update(staff_obj.id, StaffMapper.to_persistence_dict(staff_obj))
-        self._log("update_staff", staff_id=str(staff_obj.id), extra={"changed_fields": changed_fields})
+    def update_staff(self, staff_id: str | ObjectId, payload: StaffUpdateSchema | dict) -> StaffBaseDataDTO:
+        staff_id_obj = mongo_converter.convert_to_object_id(staff_id)
+        staff_obj = self.get_to_staff_domain(staff_id_obj)
+        staff_obj.update_staff_patch(payload, self._staff_repo)
+        self._staff_repo.update(staff_id_obj, StaffMapper.to_persistence_dict(staff_obj))
         return StaffMapper.to_dto(staff_obj)
 
     def soft_staff_delete(self, staff_id: str | ObjectId, deleted_by: str) -> StaffBaseDataDTO:

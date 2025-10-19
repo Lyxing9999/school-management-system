@@ -8,12 +8,7 @@ from app.contexts.auth.services import AuthService
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.core.log.log_service import LogService
 from app.contexts.iam.data_transfer.requests import IAMUpdateSchema
-from app.contexts.iam.data_transfer.responses import (
-    IAMResponseDTO,
-    IAMUpdateDataDTO,
-    IAMReadDataDTO,
-    IAMBaseDTO,
-)
+from app.contexts.iam.data_transfer.responses import IAMReadDataDTO, IAMUpdateDataDTO, IAMResponseDataDTO, IAMBaseDataDTO
 from app.contexts.iam.error.iam_exceptions import (
     NotFoundUserException,
     UserDeletedException,
@@ -74,7 +69,7 @@ class IAMService:
     # -------------------------
     # Login IAM User
     # -------------------------
-    def login(self, email: str, password: str) -> IAMResponseDTO:
+    def login(self, email: str, password: str) -> IAMResponseDataDTO:
         start = time()  # start timer
         raw_user = self._iam_read_model.get_by_email(email)  # query by email
         if not raw_user:
@@ -89,7 +84,7 @@ class IAMService:
         token = self._auth_service.create_access_token(safe_dict)  # generate token
         duration_ms = (time() - start) * 1000  # log duration
         self._log("login", user_id=str(iam_model.id), extra={"duration_ms": duration_ms, "email": email})
-        return IAMResponseDTO(user=IAMBaseDTO(**safe_dict), access_token=token)  # return response
+        return IAMResponseDataDTO(user=IAMBaseDataDTO(**safe_dict), access_token=token)  # return response
 
     # -------------------------
     # Update profile
@@ -126,10 +121,9 @@ class IAMService:
         modified_count = self._iam_repository.soft_delete(mongo_converter.convert_to_object_id(iam_model.id), deleted_by_obj)  # persist
         if modified_count == 0:
             raise NoChangeAppException("User already deleted in DB")  # check result
-        safe_dict = self._iam_mapper.to_safe_dict(iam_model)  # prepare DTO
         duration_ms = (time() - start) * 1000
         self._log("soft_delete", user_id=str(user_id), extra={"duration_ms": duration_ms, "deleted_by": str(deleted_by_obj) if deleted_by else None})  # log
-        return IAMReadDataDTO(**safe_dict)  # return DTO
+        return self._iam_mapper.to_dto(iam_model)  # return DTO
 
     # -------------------------
     # Hard delete user
@@ -146,6 +140,11 @@ class IAMService:
     # -------------------------
     def save_domain(self, iam_model: IAM) -> IAM:
         """Persist a domain object and return updated domain with ID."""
+        self._validate_unique_fields(
+            username=iam_model.username,
+            email=iam_model.email,
+            exclude_user_id=iam_model.id
+        )
         saved_id = self._iam_repository.save(self._iam_mapper.to_persistence(iam_model))
         iam_model.id = saved_id
         return iam_model

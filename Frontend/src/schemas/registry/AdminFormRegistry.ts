@@ -1,83 +1,83 @@
-// ~/schemas/registry/AdminFormRegistry.ts
-import type { UseFormService } from "~/services/types";
-import type { Field } from "~/components/types/form";
-
+import { toRefs } from "vue";
 import {
   serviceFormUser,
   serviceFormStaff,
   serviceFormStudent,
+  serviceClass,
 } from "~/services/formServices/adminFormService";
-
 import { userFormSchema, userFormData } from "~/schemas/forms/admin/userForm";
-
+import { userFormSchemaEdit } from "~/schemas/forms/admin/userForm";
 import {
   staffFormSchema,
   staffFormData,
   staffFormSchemaEdit,
   staffFormDataEdit,
 } from "~/schemas/forms/admin/staffForm";
-
+import {
+  classFormSchema,
+  classFormData,
+} from "~/schemas/forms/admin/classForm";
 import {
   studentInfoFormSchemaEdit,
   studentInfoFormDataEdit,
 } from "~/schemas/forms/admin/studentForm";
+import type { AdminStudentInfoUpdate } from "~/api/admin/admin.dto";
 
 import type {
-  AdminCreateUser,
-  AdminUpdateUsers,
-  AdminGetUserData,
-  AdminCreateStaff,
-  AdminUpdateStaff,
-  AdminGetStaffData,
-  AdminStudentInfoUpdate,
-  AdminStudentInfoCreate,
-} from "~/api/admin/admin.dto";
+  CreateRegistryItem,
+  EditRegistryItem,
+} from "~/schemas/types/admin";
 
-// --- Registry item types ---
-export type FormRegistryCreateItem<C extends object> = {
-  service: UseFormService<C, any, any>;
-  schema: Field<C>[];
-  formData: () => C;
-};
-
-export type FormRegistryEditItem<U extends object> = {
-  service: UseFormService<any, U, any>;
-  schema: Field<U>[];
-  formData: () => U;
-};
-
-// --- Create registry ---
-export const formRegistryCreate = {
+// Create registry
+export const formRegistryCreate: CreateRegistryItem = {
   USER: {
     service: serviceFormUser,
     schema: userFormSchema,
-    formData: () => ({ ...userFormData } as AdminCreateUser),
+    formData: () => ({ ...userFormData }),
   },
   STAFF: {
     service: serviceFormStaff,
     schema: staffFormSchema,
-    formData: () => ({ ...staffFormData } as AdminCreateStaff),
+    formData: () => ({ ...staffFormData }),
   },
-} as const satisfies Record<"USER" | "STAFF", FormRegistryCreateItem<any>>;
+  STUDENT: {
+    service: serviceFormStudent,
+    schema: undefined,
+    formData: undefined,
+  },
+  CLASS: {
+    service: serviceClass,
+    schema: classFormSchema,
+    formData: () => ({ ...classFormData }),
+  },
+};
 
-// --- Edit registry ---
-export const formRegistryEdit = {
+// Edit registry
+export const formRegistryEdit: EditRegistryItem = {
   USER: {
     service: serviceFormUser,
-    schema: userFormSchema,
-    formData: () => ({ ...userFormData } as AdminUpdateUsers),
+    schema: userFormSchemaEdit,
+    formData: () => ({ ...userFormData }),
   },
   STAFF: {
     service: serviceFormStaff,
     schema: staffFormSchemaEdit,
-    formData: () => ({ ...staffFormDataEdit } as AdminUpdateStaff),
+    formData: () => ({ ...staffFormDataEdit }),
   },
   STUDENT: {
     service: serviceFormStudent,
     schema: studentInfoFormSchemaEdit,
-    formData: () => ({ ...studentInfoFormDataEdit } as AdminStudentInfoUpdate),
+    formData: () => {
+      const { photo_file, ...rest } = studentInfoFormDataEdit;
+      return {
+        ...toRefs(rest),
+        photo_file,
+      } as AdminStudentInfoUpdate & { photo_file: typeof photo_file };
+    },
   },
-} as const satisfies Record<
-  "USER" | "STAFF" | "STUDENT",
-  FormRegistryEditItem<any>
->;
+  CLASS: {
+    service: serviceClass,
+    schema: undefined,
+    formData: undefined,
+  },
+};

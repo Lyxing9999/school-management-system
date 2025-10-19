@@ -1,5 +1,4 @@
 from bson import ObjectId
-from typing import Optional, List
 from pymongo.database import Database
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
 from datetime import datetime

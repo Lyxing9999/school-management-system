@@ -1,17 +1,15 @@
-from heapq import merge
-import token
 from pymongo.database import Database
 from bson import ObjectId
 from typing import List, Tuple, Union, Optional
 
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.iam.models import IAMFactory , IAMMapper 
-from app.contexts.iam.data_transfer.responses import IAMBaseDTO
+from app.contexts.iam.data_transfer.responses import IAMBaseDataDTO
 from app.contexts.iam.services import IAMService
 from app.contexts.staff.models import StaffMapper, Staff
 from app.contexts.staff.services import StaffService
 from app.contexts.student.services import StudentService
-from app.contexts.schools.classes.services.class_service import ClassService
+from app.contexts.schools.services.class_service import ClassService
 from enum import Enum
 from app.contexts.admin.read_models import AdminReadModel
 from app.contexts.admin.data_transfer.requests import (
@@ -20,32 +18,24 @@ from app.contexts.admin.data_transfer.requests import (
     AdminCreateClassSchema,
     AdminUpdateUserSchema,
     AdminUpdateStaffSchema,
+    AdminUpdateInfoStudentSchema,
+    AdminUpdateClassSchema,
+    AdminCreateSubjectSchema,
+    AdminUpdateSubjectSchema
 )
 
-from app.contexts.admin.data_transfer.responses import (
-    AdminCreateUserDataDTO,
-    AdminUpdateUserDataDTO,
-    AdminUpdateStaffDataDTO,
-    AdminCreateStaffDataDTO,
-
-    
-)
-
-from app.contexts.staff.data_transfer.requests  import (
-    StaffCreateRequestSchema
-    
-)
-
-from app.contexts.staff.data_transfer.responses import (
-    StaffBaseDataDTO,
-)
-
-
-
+from app.contexts.admin.data_transfer.responses import AdminUpdateStaffDataDTO
+from app.contexts.student.data_transfer.responses import StudentInfoBaseDataDTO
+from app.contexts.staff.data_transfer.requests  import  StaffCreateSchema
+from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from app.contexts.admin.error.admin_exceptions import EmailAlreadyExistsException
+from time import time
+from app.contexts.shared.enum.roles import SystemRole 
+from app.contexts.core.log.log_service import LogService
+from app.contexts.schools.models.school_class import SchoolClassBaseDataDTO
 
-from app.contexts.shared.enum.roles import SystemRole ,StaffRole
-  
+from app.contexts.schools.services.subject_service import SubjectService
+from app.contexts.schools.data_transfer.responses.subject_responses import SubjectBaseDataDTO
 class AdminService:
     def __init__(self, db: Database):
         self.db = db
@@ -56,6 +46,7 @@ class AdminService:
         self._student_service: Optional[StudentService] = None
         self._iam_factory: Optional[IAMFactory] = None
         self._staff_mapper: Optional[StaffMapper] = None
+        self._log_service: Optional[LogService] = None
     # ------------------------- Lazy-loaded services -------------------------
     @property
     def class_service(self) -> ClassService:
@@ -99,20 +90,46 @@ class AdminService:
             self._staff_mapper = StaffMapper()
         return self._staff_mapper
 
+
+    @property
+    def subject_service(self) -> SubjectService:
+        if self._subject_service is None:
+            self._subject_service = SubjectService(self.db)
+        return self._subject_service
+
+
+    # ------------------------- Log service -------------------------
+    def _log(self, operation: str, user_id: str | None = None, extra: dict | None = None, level: str = "INFO"):
+        if self._log_service is None:
+            self._log_service = LogService.get_instance()
+
+        msg = f"AdminService::{operation}" + (f" [user_id={user_id}]" if user_id else "")
+        self._log_service.log(
+            msg,
+            level=level,
+            module="AdminService",
+            user_id=user_id,
+            extra=extra or {}
+        )
+
     # ------------------------- Helper Methods -------------------------
     def _convert_id(self, obj_id: str | ObjectId) -> ObjectId:
         return mongo_converter.convert_to_object_id(obj_id)
 
-    def _rollback(self, user: IAMBaseDTO | None, staff: Staff | None):
+    def _rollback(self, user: IAMBaseDataDTO | None, staff: Staff | None):
         """Rollback created user/staff on failure."""
         if staff:
             self.staff_service.admin_hard_delete_staff(staff.id)
         if user:
             self.admin_hard_delete_user(user.id)
 
-    # ------------------------- Users CRUD -------------------------
-    def admin_create_user(self, payload: AdminCreateUserSchema, created_by: str | ObjectId) -> IAMBaseDTO:
+# =====================================================
+# SECTION 1: USER MANAGEMENT (IAM)
+# =====================================================
+    def admin_create_user(self, payload: AdminCreateUserSchema, created_by: str | ObjectId) -> IAMBaseDataDTO:
+        start = time()
         payload.created_by = self._convert_id(created_by)
+        self._log("CreateUser - start", user_id=str(created_by), extra={"email": payload.email, "role": payload.role.value})
         iam_model = self.iam_factory.create_user(
             email=payload.email,
             password=payload.password,
@@ -121,15 +138,17 @@ class AdminService:
             created_by=payload.created_by
         )
         iam_model = self.iam_service.save_domain(iam_model)
+        duration_ms = (time() - start) * 1000
+        self._log("CreateUser - end", user_id=str(created_by), extra={"email": payload.email, "role": payload.role.value, "duration_ms": duration_ms})
         return IAMMapper.to_dto(iam_model)
 
 
     def admin_update_user(
         self, user_id: str | ObjectId, payload: AdminUpdateUserSchema
-    ) -> IAMBaseDTO:
+    ) -> IAMBaseDataDTO:
         return self.iam_service.update_info(self._convert_id(user_id), payload, update_by_admin=True)
 
-    def admin_soft_delete_user(self, user_id: str | ObjectId) -> IAMBaseDTO:
+    def admin_soft_delete_user(self, user_id: str | ObjectId) -> IAMBaseDataDTO:
         return self.iam_service.soft_delete(self._convert_id(user_id))
 
     def admin_hard_delete_user(self, user_id: str | ObjectId) -> bool:
@@ -138,29 +157,21 @@ class AdminService:
     
     def admin_get_users(
         self, role: Union[str, list[str]], page: int, page_size: int
-    ) -> Tuple[List[IAMBaseDTO], int]:
+    ) -> Tuple[List[IAMBaseDataDTO], int]:
+        start = time()
         cursor, total = self.admin_read_model.get_page_by_role(
             role, page=page, page_size=page_size
         )
-        users = mongo_converter.cursor_to_dto(cursor, IAMBaseDTO)
+        users = mongo_converter.cursor_to_dto(cursor, IAMBaseDataDTO)
+        duration_ms = (time() - start) * 1000
+        self._log("GetUsers - end", extra={"role": role, "page": page, "page_size": page_size, "duration_ms": duration_ms})
         return users, total
 
-    # ------------------------- Classes -------------------------
-    def admin_create_class(
-        self, payload: AdminCreateClassSchema, created_by: str | ObjectId
-    ) -> dict:
-        created_by = self._convert_id(created_by)
-        owner_id = self._convert_id(payload.owner_id)
-        school_class_model = self.class_service.class_create(
-            payload, owner_id=owner_id, created_by=created_by
-        )
-        owner_name = self.staff_service.get_staff_username_by_id(owner_id)
-        safe_dict = school_class_model.to_dict()
-        safe_dict["owner"] = owner_name
-        return safe_dict
-
-    # ------------------------- Staff CRUD -------------------------
-    def admin_create_staff( self, payload: AdminCreateStaffSchema, created_by: str ) -> Union[IAMBaseDTO, StaffBaseDataDTO]:
+    # =====================================================
+    # SECTION 2: STAFF MANAGEMENT
+    # =====================================================
+    def admin_create_staff( self, payload: AdminCreateStaffSchema, created_by: str ) -> Union[IAMBaseDataDTO, StaffBaseDataDTO]:
+        
         user_obj = None
         staff_obj = None
         try:
@@ -177,7 +188,7 @@ class AdminService:
             payload.user_id = user_id
             if user_id:
                 staff_obj = self.staff_service.create_staff(
-                    StaffCreateRequestSchema(
+                    StaffCreateSchema(
                         staff_id=payload.staff_id,
                         staff_name=payload.staff_name,
                         role=role,
@@ -197,33 +208,78 @@ class AdminService:
         except Exception as e:
             self._rollback(user_obj, staff_obj)
             raise
-
-
-
-
-
-    def admin_update_staff(
-        self, user_id: str | ObjectId, payload: AdminUpdateUserSchema
-    ) -> AdminUpdateStaffDataDTO:
-        staff_dto = self.staff_service.update_staff(user_id, payload)
-        return AdminUpdateStaffDataDTO(staff=staff_dto)
-
+    def admin_update_staff( self, user_id: str | ObjectId, payload: AdminUpdateStaffSchema ) -> AdminUpdateStaffDataDTO:
+        return self.staff_service.update_staff(user_id, payload)
     def admin_soft_delete_staff(self, staff_id: str | ObjectId, deleted_by: str | ObjectId) -> bool:
         staff = self.staff_service.soft_staff_delete(staff_id, deleted_by)
         self.admin_soft_delete_user(staff.user_id)
         return True
-
-
     def admin_hard_delete_staff(self, staff_id: str | ObjectId) -> bool:
         return self.staff_service.hard_staff_delete(staff_id)
-
     def admin_get_staff_by_id(self, staff_id: str) -> StaffBaseDataDTO:
         staff_domain:Staff =  self.staff_service.get_to_staff_domain(staff_id)
         return StaffMapper.to_dto(staff_domain)
 
-    # ------------------------- Students -------------------------
-    def admin_get_student_by_user_id(self, user_id: str):
+
+    # =====================================================
+    # SECTION 3: STUDENT MANAGEMENT
+    # =====================================================
+    def admin_get_student_by_user_id(self, user_id: str) -> StudentInfoBaseDataDTO:
         return self.student_service.get_student_info(user_id)
 
-    def admin_update_student_info(self, user_id: str, student_payload: dict):
+    def admin_update_student_info(self, user_id: str, student_payload: AdminUpdateInfoStudentSchema) -> StudentInfoBaseDataDTO:
         return self.student_service.save_student_info(user_id, student_payload)
+
+
+
+
+
+    # =====================================================
+    # SECTION 4: CLASS MANAGEMENT
+    # =====================================================
+    def admin_get_class_by_id(self, class_id: str) -> SchoolClassBaseDataDTO:
+        """Fetch a single class by ID."""
+        return self.class_service.find_class_by_id_dto(class_id)
+
+    def admin_get_classes(self) -> List[SchoolClassBaseDataDTO]:
+        """Fetch all classes."""
+        return self.class_service.find_all_classes_dto()
+    def admin_create_class( self, payload: AdminCreateClassSchema, created_by: str | ObjectId ) -> SchoolClassBaseDataDTO:
+        created_by_obj = mongo_converter.convert_to_object_id(created_by)
+        return self.class_service.create_class(payload, created_by_obj)
+    def admin_update_class( self, class_id: str | ObjectId, payload: AdminUpdateClassSchema ) -> SchoolClassBaseDataDTO:
+        return self.class_service.update_class(class_id, payload)
+
+    def admin_soft_delete_class( self, class_id: str | ObjectId, deleted_by: str | ObjectId ) -> bool:
+        deleted = self.class_service.soft_delete(class_id)
+        return bool(deleted)
+    def admin_assign_teacher( self, class_id: str | ObjectId, teacher_id: str | ObjectId ) -> SchoolClassBaseDataDTO:
+        return self.class_service.modify_teacher(class_id, teacher_id)
+    def admin_assign_student( self, class_id: str | ObjectId, student_id: str | ObjectId ) -> SchoolClassBaseDataDTO:
+        return self.class_service.modify_student(class_id, student_id, action="assign")
+    def admin_remove_student( self, class_id: str | ObjectId, student_id: str | ObjectId ) -> SchoolClassBaseDataDTO:
+        return self.class_service.modify_student(class_id, student_id, action="remove")
+    def admin_change_class_room( self, class_id: str | ObjectId, new_room: str ) -> SchoolClassBaseDataDTO:
+        return self.class_service.modify_class_room(class_id, new_room)
+
+    
+
+
+    # =====================================================
+    # SECTION 5: SUBJECT MANAGEMENT
+    # =====================================================
+
+    def admin_get_subject_by_id(self, subject_id: str) -> SubjectBaseDataDTO:
+        return self.subject_service.find_subject_by_id_dto(subject_id)
+
+    def admin_get_subjects(self) -> List[SubjectBaseDataDTO]:
+        return self.subject_service.find_all_subjects_dto()
+        
+    def admin_create_subject(self, payload: AdminCreateSubjectSchema, created_by: str | ObjectId) -> SubjectBaseDataDTO:
+        return self.subject_service.create_subject(payload, created_by)
+
+    def admin_update_subject(self, subject_id: str | ObjectId, payload: AdminUpdateSubjectSchema) -> SubjectBaseDataDTO:
+        return self.subject_service.update_subject(subject_id, payload)
+
+    def remove_subject_from_class(self, class_id: str | ObjectId, subject_id: str | ObjectId) -> SchoolClassBaseDataDTO:
+        return self.subject_service.remove_teacher_from_subject(class_id, subject_id)

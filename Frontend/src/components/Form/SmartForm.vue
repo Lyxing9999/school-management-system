@@ -1,27 +1,26 @@
-<script setup lang="ts">
-import { reactive, ref, watch } from "vue";
+<script
+  lang="ts"
+  setup
+  generic="T extends Record<string, any> = Record<string, any>"
+>
+import { reactive, ref, watch, unref } from "vue";
 import { ElInput, ElForm, ElFormItem } from "element-plus";
 import type { Field } from "../types/form";
 import type { FormInstance } from "element-plus";
+import { ElUpload } from "element-plus";
 import DisplayOnlyField from "~/components/Form/DisplayOnlyField.vue";
+
 const props = defineProps<{
-  modelValue: Record<string, any>;
+  modelValue: Partial<T>;
   useElForm: boolean;
-  fields: Field[];
+  fields: Field<T>[];
+  loading?: boolean;
 }>();
 
 const emit = defineEmits<{
-  (
-    e: "save",
-    form: Record<string, any>,
-    elFormRef: FormInstance | undefined
-  ): void;
-  (
-    e: "cancel",
-    form: Record<string, any>,
-    elFormRef: FormInstance | undefined
-  ): void;
-  (e: "update:modelValue", value: Record<string, any>): void;
+  (e: "save", form: T, elFormRef: FormInstance | undefined): void;
+  (e: "cancel", form: T, elFormRef: FormInstance | undefined): void;
+  (e: "update:modelValue", value: T): void;
 }>();
 
 const form = reactive({ ...props.modelValue });
@@ -35,15 +34,96 @@ watch(
   { deep: true }
 );
 
+import type { UploadUserFile } from "element-plus";
+const fileList = ref<Record<string, UploadUserFile[]>>({});
 watch(form, (val) => emit("update:modelValue", { ...val }), { deep: true });
+const getUploadFileList = (
+  urlOrUrls: string | string[] | UploadUserFile[] | null | undefined
+): UploadUserFile[] => {
+  if (!urlOrUrls) return [];
 
+  const list = Array.isArray(urlOrUrls) ? urlOrUrls : [urlOrUrls];
+
+  return list.map((item) => {
+    if (typeof item === "string") {
+      return {
+        uid: Date.now() + Math.floor(Math.random() * 1000),
+        name: item.split("/").pop() || "Photo",
+        url: item.startsWith("/") ? `${window.location.origin}${item}` : item,
+        status: "success" as const,
+      };
+    }
+    return item; // already UploadUserFile
+  });
+};
+
+// Map backend URL to UploadUserFile
 const getOptionsForField = (field: Field) => {
-  const rawOptions =
-    typeof field.childComponentProps?.options === "function"
-      ? field.childComponentProps.options()
-      : field.childComponentProps?.options?.value || [];
+  let rawOptions: any[] = [];
+
+  // unwrap ref if needed
+  const options = unref(field.childComponentProps?.options);
+
+  if (typeof options === "function") {
+    const result = options();
+    rawOptions = Array.isArray(result) ? result : [];
+  } else if (Array.isArray(options)) {
+    rawOptions = options;
+  }
+
   return rawOptions.map((opt) => ({ value: opt.value, label: opt.label }));
 };
+// Handle upload changes
+const handleUploadChange = (
+  key: string,
+  files: UploadUserFile[] | UploadUserFile | string
+) => {
+  let normalizedFiles: UploadUserFile[] = [];
+
+  if (typeof files === "string") {
+    normalizedFiles = getUploadFileList(files);
+  } else if (Array.isArray(files)) {
+    normalizedFiles = files.map((f) => ({
+      ...f,
+      url: f.url || (f.raw ? URL.createObjectURL(f.raw) : undefined),
+    }));
+  } else {
+    normalizedFiles = [
+      { ...files, url: files.url || URL.createObjectURL(files.raw) },
+    ];
+  }
+
+  // Update reactive fileList
+  fileList.value[key] = normalizedFiles;
+
+  // Update form[key] with raw file or URL
+  const lastFile = normalizedFiles[normalizedFiles.length - 1];
+  form[key] = lastFile ? lastFile.raw || lastFile.url : null;
+};
+const handleUploadRemove = (key: string, file: UploadUserFile) => {
+  // Update form value
+  form[key] = null;
+
+  // Safely update fileList
+  if (fileList.value[key]) {
+    fileList.value[key] = fileList.value[key].filter((f) => f.uid !== file.uid);
+  }
+};
+onMounted(() => {
+  props.fields.forEach((field) => {
+    if (field.row) {
+      field.row.forEach((subField) => {
+        if (subField.component === ElUpload && form[subField.key]) {
+          fileList.value[subField.key] = getUploadFileList(form[subField.key]);
+        }
+      });
+    } else {
+      if (field.component === ElUpload && form[field.key]) {
+        fileList.value[field.key] = getUploadFileList(form[field.key]);
+      }
+    }
+  });
+});
 </script>
 
 <template>
@@ -80,6 +160,15 @@ const getOptionsForField = (field: Field) => {
                 <DisplayOnlyField :value="form[subField.key]" />
               </slot>
             </template>
+            <ElUpload
+              v-if="subField.component === ElUpload"
+              :file-list="fileList[subField.key]"
+              list-type="picture-card"
+              :auto-upload="false"
+              @change="(files) => handleUploadChange(subField.key, files)"
+              @remove="(file) => handleUploadRemove(subField.key, file)"
+              v-bind="subField.componentProps"
+            />
 
             <!-- Editable field -->
             <component
@@ -89,6 +178,7 @@ const getOptionsForField = (field: Field) => {
               v-bind="subField.componentProps"
             >
               <component
+                v-if="subField.component !== ElUpload"
                 v-for="opt in getOptionsForField(subField)"
                 :is="subField.childComponent"
                 :key="opt.value"
@@ -128,6 +218,16 @@ const getOptionsForField = (field: Field) => {
         </template>
 
         <!-- Editable field -->
+        <ElUpload
+          v-if="field.component === ElUpload"
+          :file-list="fileList[field.key] || getUploadFileList(form[field.key])"
+          list-type="picture-card"
+          :auto-upload="false"
+          @change="(files) => handleUploadChange(field.key, files)"
+          @remove="(file) => handleUploadRemove(field.key, file)"
+          :show-file-list="true"
+          v-bind="field.componentProps"
+        />
         <component
           v-else
           v-model="form[field.key]"
@@ -157,6 +257,7 @@ const getOptionsForField = (field: Field) => {
         <BaseButton
           type="info"
           class="w-20"
+          :loading="loading"
           @click="emit('save', form, elFormRef)"
         >
           Save

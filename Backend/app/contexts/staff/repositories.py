@@ -2,7 +2,7 @@ from datetime import datetime
 from bson import ObjectId
 from pymongo.database import Database
 from app.contexts.core.error import MongoErrorMixin
-
+from typing import Optional
 class StaffRepository(MongoErrorMixin):
     def __init__(self, db: Database, collection_name: str = "staff"):
         self.collection = db[collection_name]
@@ -63,3 +63,23 @@ class StaffRepository(MongoErrorMixin):
             return result.modified_count
         except Exception as e:
             self._handle_mongo_error("update", e)
+
+    
+    def exists_staff_id(self, staff_id: str, exclude_id: Optional[str] = None) -> bool:
+        query = {"staff_id": staff_id}
+        if exclude_id:
+            query["_id"] = {"$ne": ObjectId(exclude_id)}
+        return self.collection.find_one(query) is not None
+
+
+    def exists_staff_name(self, staff_name: str, exclude_id: Optional[str] = None) -> bool:
+        query = {"staff_name": staff_name}
+        if exclude_id:
+            query["_id"] = {"$ne": ObjectId(exclude_id)}
+        return self.collection.find_one(query) is not None
+
+    def exists_phone_number(self, phone_number: str, exclude_id: Optional[str] = None) -> bool:
+        query = {"phone_number": phone_number}
+        if exclude_id:
+            query["_id"] = {"$ne": ObjectId(exclude_id)}
+        return self.collection.find_one(query) is not None

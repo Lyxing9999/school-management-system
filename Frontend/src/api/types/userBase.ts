@@ -21,8 +21,7 @@ export interface UserBaseDataDTO {
   id: string;
   username?: string;
   email: string;
-  password?: string | null;
-  role: UserRole | StaffRole;
+  role: Role;
   created_by: string;
   created_at: string;
   updated_at: string;

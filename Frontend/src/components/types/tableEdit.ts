@@ -2,7 +2,7 @@
  * slots map
  */
 
-export type SlotsMap = {
+export type ChildComponentSlots = {
   append?: () => VNode | VNode[] | null;
   prefix?: () => VNode | VNode[] | null;
   footer?: () => VNode | VNode[] | null;
@@ -30,11 +30,9 @@ export type InlineEditProps<
     labelKey?: string;
     appendValue?: string;
     prependValue?: string;
-    slots?: {
-      append?: () => VNode;
-      prefix?: () => VNode;
-    };
+    slots?: ChildComponentSlots;
   };
+  slotName?: string;
   inlineEditActive?: boolean;
   controls?: boolean;
   controlsSlot?: boolean;
@@ -66,10 +64,7 @@ export type InlineEditColumnProps<
     labelKey?: string;
     appendValue?: string;
     prependValue?: string;
-    slots?: {
-      append?: () => VNode;
-      prefix?: () => VNode;
-    };
+    slots?: ChildComponentSlots;
   };
   inlineEditActive?: boolean;
   placeholder?: string;
@@ -82,6 +77,8 @@ export type InlineEditColumnProps<
   operation?: boolean;
   customClass?: string;
   footer?: boolean;
+  slotName?: string;
+  useSlots?: boolean;
 };
 
 /**
@@ -99,20 +96,22 @@ export type ColumnConfig<T> = {
   clearable?: boolean;
   controls?: boolean;
   controlsSlot?: boolean;
+  operation?: boolean;
   debounceMs?: number;
   component?: Component;
   componentProps?: Record<string, unknown>;
-  operation?: boolean;
   childComponent?: Component;
   rules?: Rule[];
   footer?: boolean;
+  slotName?: string;
+  useSlots?: boolean;
   childComponentProps?: {
     options?: Array<Record<string, any>>;
     valueKey?: string;
     labelKey?: string;
     appendValue?: string;
     prependValue?: string;
-    slots?: SlotsMap;
+    slots?: ChildComponentSlots;
   };
   customClass?: string;
   // el-table-column props

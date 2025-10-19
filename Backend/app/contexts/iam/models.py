@@ -7,7 +7,7 @@ from app.contexts.auth.services import get_auth_service
 
 from app.contexts.shared.enum.roles import SystemRole
 from app.contexts.iam.error.iam_exceptions import InvalidRoleException
-from app.contexts.iam.data_transfer.responses import IAMBaseDTO
+from app.contexts.iam.data_transfer.responses import IAMBaseDataDTO
 
 
 # -------------------------
@@ -146,7 +146,7 @@ class IAMFactory:
         username = self._generate_unique_username(username or email.split("@")[0])
         hashed_password = self.auth_service.hash_password(password)
         created_by = created_by or "self_created"
-
+        
         return IAM(
             email=email,
             password=hashed_password,
@@ -222,8 +222,8 @@ class IAMMapper:
         }
 
     @staticmethod
-    def to_dto(iam: IAM) -> IAMBaseDTO:
-        return IAMBaseDTO(
+    def to_dto(iam: IAM) -> IAMBaseDataDTO:
+        return IAMBaseDataDTO(
             id=str(iam.id),
             email=iam.email,
             username=iam.username,

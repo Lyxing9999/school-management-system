@@ -1,35 +1,20 @@
-import { Role } from "~/api/types/enums/role.enum";
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 import type { UserBaseDataDTO } from "~/api/types/userBase";
-
+import type { BaseStudentInfo } from "~/api/types/baseStudentInfo";
+import type { BaseClassDataDTO } from "~/api/types/baseClass";
+import { Role } from "~/api/types/enums/role.enum";
 export type AcademicApiResponse<T> = ApiResponse<T>;
+/* ----------------------------- payload ----------------------------- */
 
-export interface AcademicGetStudentData extends UserBaseDataDTO {}
-
-export interface AcademicGetStudentsPayload {
-  students: AcademicGetStudentData[];
-  total: number;
+export interface AcademicStudentData extends UserBaseDataDTO {}
+export interface AcademicStudentInfoData extends BaseStudentInfo {}
+export interface AcademicCreateStudentData {
+  username?: string;
+  email: string;
+  password: string;
+  role?: Role.STUDENT;
 }
-
-export interface AcademicBaseClassDataDTO {
-  id: string;
-  name: string;
-  grade: number;
-  max_students: number;
-  status: boolean;
-  homeroom_teacher: string | null;
-  subjects: string[] | null;
-  students: string[] | null;
-  deleted: boolean;
-  deleted_at?: string;
-  deleted_by?: string;
-  created_at: string;
-  created_by: string;
-  updated_at: string;
-  updated_by: string;
-}
-
-export interface AcademicCreateClassPayload {
+export interface AcademicCreateClassData {
   name: string;
   grade: number;
   max_students: number;
@@ -38,56 +23,41 @@ export interface AcademicCreateClassPayload {
   subjects: string[] | null;
   students: string[] | null;
 }
+export interface AcademicUpdateStudentData {
+  username?: string;
+  email?: string;
+  password?: string;
+}
 
-export type AcademicGetClassResponse =
-  AcademicApiResponse<AcademicBaseClassDataDTO>;
-
-export type AcademicGetClassesResponse = AcademicApiResponse<
-  AcademicBaseClassDataDTO[]
->;
-
+/* ----------------------------- response ----------------------------- */
 export interface AcademicGetTeacherSelect {
   user_id: string;
   staff_name: string;
 }
+
 export type AcademicGetTeacherSelectResponseList = AcademicApiResponse<
   AcademicGetTeacherSelect[]
 >;
-
+export type AcademicGetClassData = AcademicApiResponse<BaseClassDataDTO[]>;
+export type AcademicGetClassesResponse = AcademicApiResponse<
+  AcademicGetClassData[]
+>;
+export interface AcademicGetStudentsPageData {
+  users: AcademicStudentData[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
 export type AcademicGetStudentResponse =
-  AcademicApiResponse<AcademicGetStudentsPayload>;
+  AcademicApiResponse<AcademicStudentData>;
 
-/**
- * -------------------------------
- * Generic Admin API Response Wrapper
- * -------------------------------
- * Uses generics to avoid repeating ApiResponse for every entity
- */
+export type AcademicGetStudentPageResponse =
+  AcademicApiResponse<AcademicGetStudentsPageData>;
 
-// export type AcademicFindClassDTO = {
-//   id: string;
-//   name: string;
-//   owner_id: string;
-//   grade: number;
-//   owner?: string;
-//   owner_name?: string;
-//   max_students: number;
-//   status: boolean;
-//   created_at?: string;
-//   updated_at?: string;
-//   deleted?: boolean;
-//   deleted_at?: string;
-//   deleted_by?: string;
-// };
+export type AcademicStudentInfoCreate = BaseStudentInfo["student_info"];
+export type AcademicStudentInfoUpdate = Partial<
+  BaseStudentInfo["student_info"]
+>;
 
-// export type AcademicFindClassDTOList = AcademicFindClassDTO[];
-
-/**
- * -------------------------------
- * Academic API Response Wrapper
- * -------------------------------
- */
-// export type AcademicFindClassResponseDTO =
-//   AcademicApiResponse<AcademicFindClassDTO>;
-// export type AcademicFindClassResponseDTOList =
-//   AcademicApiResponse<AcademicFindClassDTOList>;
+export type AcademicStudentInfoResponse = AcademicApiResponse<BaseStudentInfo>;

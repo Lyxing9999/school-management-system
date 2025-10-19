@@ -1,19 +1,26 @@
 import type { AxiosInstance } from "axios";
 import type {
   AcademicGetStudentResponse,
-  AcademicCreateClassPayload,
-  AcademicGetClassResponse,
+  AcademicCreateClassData,
   AcademicGetClassesResponse,
   AcademicGetTeacherSelectResponseList,
+  AcademicStudentInfoUpdate,
+  AcademicGetStudentPageResponse,
+  AcademicCreateStudentData,
+  AcademicUpdateStudentData,
+  AcademicStudentInfoResponse,
 } from "~/api/academic/academic.dto";
 
 export class AcademicApi {
   constructor(private $api: AxiosInstance, private baseURL = "/api/academic") {}
-  async getStudents(
+  //
+  // ------------------------- student api   -----------------------------//
+  //
+  async getStudentsPage(
     page: number,
     pageSize: number
-  ): Promise<AcademicGetStudentResponse> {
-    const response = await this.$api.get<AcademicGetStudentResponse>(
+  ): Promise<AcademicGetStudentPageResponse> {
+    const response = await this.$api.get<AcademicGetStudentPageResponse>(
       `${this.baseURL}/students`,
       {
         params: {
@@ -22,6 +29,66 @@ export class AcademicApi {
         },
       }
     );
+    console.log(page, pageSize);
+    return response.data;
+  }
+
+  async updateStudent(user_id: string, payload: AcademicUpdateStudentData) {
+    const response = await this.$api.patch<AcademicGetStudentResponse>(
+      `${this.baseURL}/student/${user_id}`,
+      payload
+    );
+    return response.data;
+  }
+
+  async deleteStudent(user_id: string) {
+    const response = await this.$api.delete<AcademicGetStudentResponse>(
+      `${this.baseURL}/student/${user_id}`
+    );
+    return response.data;
+  }
+
+  async createStudent(payload: AcademicCreateStudentData) {
+    const response = await this.$api.post<AcademicGetStudentResponse>(
+      `${this.baseURL}/student`,
+      payload
+    );
+    return response.data;
+  }
+
+  async getStudentInfo(user_id: string) {
+    const response = await this.$api.get<AcademicStudentInfoResponse>(
+      `${this.baseURL}/student-info/${user_id}`
+    );
+    return response.data;
+  }
+
+  async updateStudentInfo(user_id: string, payload: AcademicStudentInfoUpdate) {
+    const formData = new FormData();
+
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === undefined || value === null || key === "photo_file") return;
+      formData.append(
+        key,
+        Array.isArray(value) ? JSON.stringify(value) : (value as string | Blob)
+      );
+    });
+
+    if (payload.photo_file) {
+      formData.append("photo_url", payload.photo_file); // matches backend
+    }
+
+    // Debug
+    for (const [key, value] of formData.entries()) {
+      console.log(key, value);
+    }
+
+    const response = await this.$api.patch<AcademicStudentInfoResponse>(
+      `${this.baseURL}/student-info/${user_id}`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+
     return response.data;
   }
 
@@ -32,9 +99,9 @@ export class AcademicApi {
     return response.data;
   }
   async createClass(
-    payload: AcademicCreateClassPayload
-  ): Promise<AcademicGetClassResponse> {
-    const response = await this.$api.post<AcademicGetClassResponse>(
+    payload: AcademicCreateClassData
+  ): Promise<AcademicGetClassesResponse> {
+    const response = await this.$api.post<AcademicGetClassesResponse>(
       `${this.baseURL}/classes`,
       payload
     );

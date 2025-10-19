@@ -6,7 +6,7 @@ from datetime import datetime
 # -------------------------
 # Base User DTO
 # -------------------------
-class IAMBaseDTO(BaseModel):
+class IAMBaseDataDTO(BaseModel):
     id: str | None = None
     email: str | None
     role: SystemRole
@@ -26,8 +26,8 @@ class IAMBaseDTO(BaseModel):
 # -------------------------
 # Response DTO (login/register)
 # -------------------------
-class IAMResponseDTO(BaseModel):
-    user: IAMBaseDTO
+class IAMResponseDataDTO(BaseModel):
+    user: IAMBaseDataDTO
     access_token: str
 
     model_config = {"extra": "forbid",
@@ -44,7 +44,7 @@ class IAMUpdateDataDTO(BaseModel):
 # -------------------------
 # Read DTO
 # -------------------------
-class IAMReadDataDTO(IAMBaseDTO):
+class IAMReadDataDTO(IAMBaseDataDTO):
     pass
 
 class IAMReadDataDTOList(RootModel[List[IAMReadDataDTO]]):

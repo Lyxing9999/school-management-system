@@ -2,18 +2,10 @@
 from pydantic import BaseModel , RootModel
 from typing import List
 
-from app.place_holder import PlaceholderModel
-class AcademicUserDataDTO(PlaceholderModel):
-    pass
 
-class AcademicFindAllByRoleDataDTO(AcademicUserDataDTO):
-    pass
-
-class AcademicFindAllByRoleDataDTOList(RootModel[List[AcademicFindAllByRoleDataDTO]]):
-    pass
-
-
-
+from app.contexts.admin.data_transfer.responses import IAMBaseDataDTO
+from app.contexts.admin.data_transfer.responses import PaginatedUsersDataDTO
+from app.contexts.student.data_transfer.responses import StudentInfoReadDataDTO
 from datetime import datetime
 
 # -------------------------
@@ -40,8 +32,6 @@ class AcademicFindAllClassDataDTO(BaseModel):
         "from_attributes": True     
     }
 
-class AcademicFindAllClassDataDTOList(RootModel[List[AcademicFindAllClassDataDTO]]):
-    pass
 
 
 
@@ -51,9 +41,19 @@ class AcademicStaffNameSelectDTO(BaseModel):
     staff_name: str | None = None
 
 
+class AcademicGetStudentInfoDataDTO(StudentInfoReadDataDTO):
+    pass
+
+
+class AcademicStudentsPageDTO(PaginatedUsersDataDTO):
+    pass
+class AcademicCreateStudentDTO(IAMBaseDataDTO):
+    pass
 
 
 
+class AcademicUpdateUserDTO(IAMBaseDataDTO):
+    pass
 
 # class ClassCreateDTO(BaseEntityDTO):
 #     class_data: dict

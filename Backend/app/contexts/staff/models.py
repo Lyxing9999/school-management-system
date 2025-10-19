@@ -10,10 +10,12 @@ from app.contexts.staff.error.staff_exceptions import (
     InvalidStaffRoleException,
     NoChangeAppException,
     StaffPermissionException,
+    StaffNoChangeAppException,
+    StaffAlreadyExistsAppException
 )
 from app.contexts.staff.data_transfer.requests import (
-    StaffCreateRequestSchema,
-    StaffUpdateRequestSchema,
+    StaffCreateSchema,
+    StaffUpdateSchema,
 )
 from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 
@@ -87,14 +89,31 @@ class Staff:
         """Update the timestamp whenever modification occurs."""
         self.updated_at = datetime.utcnow()
 
-    def update_staff_patch(self, payload: StaffUpdateRequestSchema | dict) -> dict:
+    def update_staff_patch(self, payload: StaffUpdateRequestSchema | dict, staff_repo) -> dict:
         """
         Partial update (PATCH) — returns a dict of only fields that actually changed.
         Supports both dict or Pydantic model as input.
+        `staff_repo` is your repository/data access layer to query existing staff.
         """
-        updatable_fields = ["staff_name", "staff_id", "phone_number", "address", "permissions"]
+
+        updatable_fields = ["staff_name", "staff_id", "phone_number", "address", "permissions", "role"]
         changed = {}
 
+        # --- uniqueness checks ---
+        staff_id_value = payload.get("staff_id") if isinstance(payload, dict) else getattr(payload, "staff_id", None)
+        staff_name_value = payload.get("staff_name") if isinstance(payload, dict) else getattr(payload, "staff_name", None)
+        phone_value = payload.get("phone_number") if isinstance(payload, dict) else getattr(payload, "phone_number", None)
+
+        if staff_id_value and staff_repo.exists_staff_id(staff_id_value, exclude_id=self.id):
+            raise StaffAlreadyExistsAppException("staff_id", staff_id_value)
+
+        if staff_name_value and staff_repo.exists_staff_name(staff_name_value, exclude_id=self.id):
+            raise StaffAlreadyExistsAppException("staff_name", staff_name_value)
+
+        if phone_value and staff_repo.exists_phone_number(phone_value, exclude_id=self.id):
+            raise StaffAlreadyExistsAppException("phone_number", phone_value)
+
+        # --- apply updates ---
         for field in updatable_fields:
             value = payload.get(field) if isinstance(payload, dict) else getattr(payload, field, None)
             if value is not None:
@@ -105,7 +124,9 @@ class Staff:
 
         if changed:
             self._mark_updated()
-
+        else:
+            raise StaffNoChangeAppException("No changes detected for Staff")
+        
         return changed
 
     def soft_delete(self, deleted_by: ObjectId):

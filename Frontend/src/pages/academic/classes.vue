@@ -12,6 +12,8 @@ import {
   initialClassData,
 } from "~/schemas/forms/academic/classForm";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
+import { useFormCreate } from "~/composables/useFormCreate";
+import type { AdminCreateClass } from "~/api/admin/admin.dto";
 
 const classes = ref<AcademicBaseClassDataDTO[]>([]);
 
@@ -29,20 +31,12 @@ function fetchClasses() {
 onMounted(async () => {
   fetchClasses();
 });
-const {
-  formDialogVisible,
-  formData,
-  loading,
-  openForm,
-  saveForm,
-  cancelForm,
-  deleteItem,
-} = useFormDetail<AcademicBaseClassDataDTO>(serviceWrapper, initialClassData, {
-  notify: (msg, type) => console.log(type, msg),
-  enableDelete: true,
-  onSuccess: () => fetchClasses(),
-  onError: (err) => console.error(err),
-});
+const { formDialogVisible, formData, loading, openForm, saveForm, cancelForm } =
+  useFormCreate<AdminCreateClass, AcademicBaseClassDataDTO>(
+    serviceWrapper.create,
+    initialClassData,
+    
+  );
 const openFormDialog = () => {
   openForm();
 };

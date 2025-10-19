@@ -17,13 +17,15 @@ export type InitialData<I> =
   | Ref<Partial<I>>
   | ComputedRef<Partial<I>>;
 
+type WithResult<T> = { result: T };
 /**
  * useFormEdit
  * Handles dynamic edit/detail forms with patch/put/update support.
  * Defaults to PATCH on save.
  */
 export function useFormEdit<I extends object, O extends I = I>(
-  getService: () => UseFormService<I, O>,
+  getService: () => UseFormService<any, I, any, O, any>,
+  getDefaultData: () => I,
   getFields: () => Field<I>[]
 ) {
   const service = computed(() => getService());
@@ -34,13 +36,14 @@ export function useFormEdit<I extends object, O extends I = I>(
   const formData = ref<Partial<I>>({});
   const reactiveInitialData = ref<Partial<I>>({});
   const patchData = ref<Partial<I>>({});
-
+  const schema = computed(() => unref(getFields()));
+  const defaultData = computed(() => unref(getDefaultData()));
   // Automatically track changes for PATCH
   watch(
     formData,
     (newVal) => {
       if (!newVal || typeof newVal !== "object") return;
-      const fields = unref(getFields());
+      const fields = schema.value;
       fields.forEach((field) => {
         const key = field.key as keyof I;
         if (!key) return;
@@ -66,53 +69,82 @@ export function useFormEdit<I extends object, O extends I = I>(
   /** Open form and load detail by ID */
   const openForm = async (id: string | number) => {
     if (!service.value?.getDetail) return;
-    formDialogVisible.value = true;
     loading.value = true;
     saveId.value = id;
+
     try {
       const detail = await service.value.getDetail(saveId.value.toString());
-      reactiveInitialData.value = toRaw(detail);
-      resetFormData(detail);
+      console.log("Detail:", detail);
+
+      // Normalize the payload: use `result` if exists, otherwise use detail
+      const data = (
+        detail && "result" in detail ? (detail as WithResult<O>).result : detail
+      ) as Partial<I>;
+
+      if (!data || Object.keys(data).length === 0) {
+        resetFormData(defaultData.value);
+        return;
+      }
+
+      reactiveInitialData.value = toRaw(data);
+      resetFormData(data);
     } finally {
       loading.value = false;
     }
   };
-
   /** Save form — PATCH by default, PUT if method is explicitly set */
   const saveForm = async (
     payload: Partial<I>,
-    method: "PATCH" | "PUT" = "PATCH" // 👈 added optional method param
+    method: "PATCH" | "PUT" = "PATCH"
   ): Promise<boolean> => {
     if (!service.value.update) return false;
     loading.value = true;
+
     try {
+      // Validate form
       if (elFormRef.value) await elFormRef.value.validate();
       let response: I | null = null;
+
+      // Merge payload into formData
       if (payload) Object.assign(formData.value, payload);
 
-      const fields = unref(getFields()) as Field<I>[];
+      // Collect fields based on form schema
+      const fields = schema.value as Field<I>[];
       const filteredData: Partial<I> = {};
 
-      fields.forEach((field) => {
-        const key = field.key;
-        if (key != null && key in formData.value) {
-          filteredData[key] = formData.value[key];
-        }
-      });
+      const collectKeys = (fields: Field<I>[]) => {
+        fields.forEach((field) => {
+          if (field.row) {
+            collectKeys(field.row);
+          } else if (field.key != null && field.key in formData.value) {
+            filteredData[field.key] = formData.value[field.key];
+          }
+        });
+      };
 
-      console.log("filteredData", filteredData);
+      collectKeys(fields);
 
+      // --- Handle file upload ---
+      if (
+        "photo_file" in formData.value &&
+        (formData.value as any).photo_file
+      ) {
+        const file = (formData.value as any).photo_file as File;
+        console.log("Appending photo_file to filteredData:", file.name);
+        (filteredData as any).photo_file = file;
+      }
+
+      // --- Send request ---
       try {
-        // ✅ use PUT if explicitly requested
-        if (method === "PUT" && service.value.replace) {
-          response = await service.value.replace(
+        if (method === "PUT" && service.value.update) {
+          response = await service.value.update(
             saveId.value.toString(),
-            filteredData as O
+            formData as unknown as I
           );
         } else {
           response = await service.value.update(
             saveId.value.toString(),
-            filteredData as O
+            filteredData as I
           );
         }
       } catch (err) {
@@ -120,17 +152,18 @@ export function useFormEdit<I extends object, O extends I = I>(
         return false; // do NOT close dialog
       }
 
+      // --- Update local state ---
       if (response) {
         resetFormData(response);
         formDialogVisible.value = false;
         return true;
       }
+
       return false;
     } finally {
       loading.value = false;
     }
   };
-
   /** Cancel and reset */
   const cancelForm = () => {
     formDialogVisible.value = false;
@@ -142,6 +175,7 @@ export function useFormEdit<I extends object, O extends I = I>(
     loading,
     elFormRef,
     formData,
+    schema,
     patchData,
     openForm,
     saveForm,

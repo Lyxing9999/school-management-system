@@ -18,71 +18,79 @@ def wrap_response(func):
         try:
             result = func(*args, **kwargs)
 
-            # Handle BaseResponseDTO
+            # Default message
+            default_message = f"{func.__name__.replace('_', ' ').title()} executed successfully"
+
+            # BaseResponseDTO
             if isinstance(result, BaseResponseDTO):
                 data = result.data
-
-                # Pydantic models
                 if isinstance(data, BaseModel):
                     if isinstance(data, RootModel):
                         data = [x.model_dump(mode="json", exclude_none=True) for x in data.__root__]
                     else:
                         data = data.model_dump(mode="json", exclude_none=True)
-
-                # List of BaseModels
                 elif isinstance(data, list) and all(isinstance(x, BaseModel) for x in data):
                     data = [x.model_dump(mode="json", exclude_none=True) for x in data]
-
-                duration_ms = (time() - start_time) * 1000
-                log_service.log(
-                    f"{func.__name__} executed successfully",
-                    level="INFO",
-                    module=func.__module__,
-                    extra={"duration_ms": duration_ms, "path": request.path}
-                )
-
                 return Response.success_response(
                     data=data,
-                    message=result.message,
-                    success=result.success
+                    message=getattr(result, "message", default_message),
+                    success=getattr(result, "success", True)
                 )
 
-            return result
+            # Plain BaseModel
+            elif isinstance(result, BaseModel):
+                return Response.success_response(
+                    data=result.model_dump(mode="json", exclude_none=True),
+                    message=default_message,
+                    success=True
+                )
+
+            # Plain dict/list
+            elif isinstance(result, (dict, list)):
+                return Response.success_response(
+                    data=result,
+                    message=default_message,
+                    success=True
+                )
+
+            # fallback for any other type
+            return Response.success_response(
+                data={"result": result},
+                message=default_message,
+                success=True
+            )
 
         except AppBaseException as e:
-            # Log full context
-            context = {
-                "path": request.path,
-                "method": request.method,
-                "args": request.args.to_dict(),
-                "json": request.get_json(silent=True),
-                "form": request.form.to_dict(),
-                "headers": dict(request.headers),
-                "stack": traceback.format_exc(),
-            }
             log_service.log(
                 f"AppBaseException: {str(e)}",
                 level="ERROR",
                 module=func.__module__,
-                extra=context
+                extra={
+                    "path": request.path,
+                    "method": request.method,
+                    "args": request.args.to_dict(),
+                    "json": request.get_json(silent=True),
+                    "form": request.form.to_dict(),
+                    "headers": dict(request.headers),
+                    "stack": traceback.format_exc(),
+                }
             )
             return Response._prepare_error_response(error=e)
 
         except Exception as e:
-            context = {
-                "path": request.path,
-                "method": request.method,
-                "args": request.args.to_dict(),
-                "json": request.get_json(silent=True),
-                "form": request.form.to_dict(),
-                "headers": dict(request.headers),
-                "stack": traceback.format_exc(),
-            }
             log_service.log(
                 f"Unexpected Exception: {str(e)}",
                 level="CRITICAL",
                 module=func.__module__,
-                extra=context
+                extra={
+                    "path": request.path,
+                    "method": request.method,
+                    "args": request.args.to_dict(),
+                    "json": request.get_json(silent=True),
+                    "form": request.form.to_dict(),
+                    "headers": dict(request.headers),
+                    "stack": traceback.format_exc(),
+                }
             )
             app_exc = handle_exception(e)
             return Response._prepare_error_response(error=app_exc)

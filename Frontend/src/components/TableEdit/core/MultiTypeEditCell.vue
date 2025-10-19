@@ -5,10 +5,10 @@
 >
 import SaveCancelControls from "~/components/TableEdit/controls/SaveCancelControls.vue";
 import { useVModel } from "@vueuse/core";
-import { ElInput } from "element-plus";
 import type { InlineEditProps } from "~/components/types/tableEdit";
 import { debounce } from "lodash-es";
 import { validateField } from "~/components/TableEdit/validate/validateField";
+import { markRaw, computed } from "vue";
 const props = withDefaults(defineProps<InlineEditProps<R, F>>(), {
   inlineEditActive: false,
   controls: true,
@@ -24,16 +24,14 @@ const emit = defineEmits<{
   (e: "cancel", row: R, field: F): void;
   (e: "auto-save", row: R, field: F): void;
 }>();
-
+let hasPendingSave = false;
 function getFinalValue(): R[F] {
   let val: any = inputValue.value;
 
-  // Apply prepend
   if (props.childComponentProps?.prependValue) {
     val = props.childComponentProps.prependValue + val;
   }
 
-  // Apply append
   if (props.childComponentProps?.appendValue) {
     val = val + props.childComponentProps.appendValue;
   }
@@ -79,11 +77,22 @@ function handleCancel() {
   emit("cancel", props.row, props.field);
   inlineEditActive.value = false;
 }
-const inputComponent = computed(() => props.component || ElInput);
 
 const triggerAutoSave = debounce(() => {
+  props.row[props.field] = getFinalValue() as any;
   emit("auto-save", props.row, props.field);
+  hasPendingSave = true;
 }, props.debounceMs);
+
+function triggerAutoSaveOnce() {
+  if (!hasPendingSave) {
+    hasPendingSave = true;
+    triggerAutoSave();
+    setTimeout(() => {
+      hasPendingSave = false;
+    }, props.debounceMs);
+  }
+}
 
 function handleBlur() {
   if (props.autoSave) {
@@ -93,12 +102,26 @@ function handleBlur() {
       return;
     }
     inlineEditActive.value = false;
-    triggerAutoSave();
+    triggerAutoSaveOnce();
   }
 }
 onBeforeUnmount(() => {
   triggerAutoSave.flush();
 });
+const component = computed(() =>
+  props.component ? markRaw(props.component) : null
+);
+const childComponent = computed(() =>
+  props.childComponent ? markRaw(props.childComponent) : null
+);
+function handleChange(value: any) {
+  inputValue.value = value;
+  if (props.autoSave) {
+    const error = validateField(inputValue.value, props.rules || []);
+    if (error) return;
+    triggerAutoSaveOnce();
+  }
+}
 </script>
 <template>
   <div
@@ -122,12 +145,13 @@ onBeforeUnmount(() => {
 
   <div v-else>
     <component
-      :is="inputComponent"
+      :is="component"
       v-model="inputValue"
       v-bind="componentProps"
       @keydown.enter.prevent="handleSave"
       @keydown.esc.prevent="handleCancel"
       @blur="handleBlur"
+      @change="handleChange"
     >
       <component
         v-for="opt in childComponentProps?.options || []"
@@ -136,23 +160,24 @@ onBeforeUnmount(() => {
         :value="opt.value"
         :label="opt.label"
       />
-      <template v-if="$slots.footer" #footer>
-        <slot name="footer" />
-      </template>
-
-      <template v-if="$slots.append" #append>
-        <slot name="append" />
-      </template>
-
-      <template v-if="$slots.prefix" #prefix>
-        <slot name="prefix" />
-      </template>
-
       <template v-if="controls" #suffix>
         <SaveCancelControls @confirm="handleSave" @cancel="handleCancel" />
       </template>
-      <template v-else-if="controlsSlot" #suffix>
-        <slot name="controlsSlot" :row="row" :field="field" />
+
+      <template v-else-if="childComponentProps?.appendValue" #append>
+        <span
+          v-if="childComponentProps?.appendValue"
+          class="px-2 text-gray-500"
+        >
+          {{ childComponentProps.appendValue }}
+        </span>
+
+        <slot
+          v-if="controlsSlot"
+          name="controlsSlot"
+          :row="row"
+          :field="field"
+        />
       </template>
     </component>
   </div>

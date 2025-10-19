@@ -1,34 +1,38 @@
+import { ref, reactive, toRefs } from "vue";
+import type { AdminStudentInfoUpdate } from "~/api/admin/admin.dto";
 import type { Field } from "~/components/types/form";
-import { ElInput } from "element-plus";
+import {
+  ElInput,
+  ElUpload,
+  ElDatePicker,
+  ElSelect,
+  ElInputNumber,
+  ElOption,
+  ElInputTag,
+} from "element-plus";
 import { User, Message } from "@element-plus/icons-vue";
-import type {
-  AdminStudentInfoUpdate,
-  GuardianInfo,
-} from "~/api/admin/admin.dto";
 
-const guardianFormData = <GuardianInfo>{
-  name: "",
-  phone: "",
-  relation: "",
-};
+// --- Reactive form data ---
 
-export const studentInfoFormData: AdminStudentInfoUpdate = {
+const photo_file = ref<File | null>(null);
+const studentInfoFormData: AdminStudentInfoUpdate & {
+  photo_file?: File | null;
+} = reactive({
   student_id: "",
   full_name: "",
   first_name: "",
   last_name: "",
-  nickname: "",
   birth_date: "",
   gender: "",
   grade_level: 0,
-  classes: [],
+  classes: [] as string[],
   enrollment_date: "",
   address: "",
   photo_url: "",
-  guardian: guardianFormData,
-  additional_info: {},
-};
+  photo_file: null,
+});
 
+// --- Form schema ---
 export const studentInfoFormSchema: Field<AdminStudentInfoUpdate>[] = [
   {
     row: [
@@ -75,7 +79,10 @@ export const studentInfoFormSchema: Field<AdminStudentInfoUpdate>[] = [
         labelWidth: "100px",
         labelPosition: "left",
         component: ElInput,
-        componentProps: { placeholder: "Enter last name", suffixIcon: Message },
+        componentProps: {
+          placeholder: "Enter last name",
+          suffixIcon: Message,
+        },
         rules: [
           { required: true, message: "Last name required", trigger: "blur" },
         ],
@@ -85,14 +92,17 @@ export const studentInfoFormSchema: Field<AdminStudentInfoUpdate>[] = [
   {
     row: [
       {
-        key: "nickname",
-        label: "Nickname",
-        labelWidth: "100px",
+        key: "address",
+        label: "Address",
+        labelWidth: "120px",
         labelPosition: "left",
         component: ElInput,
-        componentProps: { placeholder: "Enter nickname", suffixIcon: Message },
+        componentProps: {
+          placeholder: "Enter address",
+          suffixIcon: Message,
+        },
         rules: [
-          { required: true, message: "Nickname required", trigger: "blur" },
+          { required: true, message: "Address required", trigger: "blur" },
         ],
       },
       {
@@ -100,9 +110,12 @@ export const studentInfoFormSchema: Field<AdminStudentInfoUpdate>[] = [
         label: "Birth Date",
         labelWidth: "100px",
         labelPosition: "left",
-        component: ElInput,
+        component: ElDatePicker,
         componentProps: {
           placeholder: "Enter birth date",
+          type: "date",
+          format: "YYYY-MM-DD",
+          valueFormat: "YYYY-MM-DD",
           suffixIcon: Message,
         },
         rules: [
@@ -118,8 +131,18 @@ export const studentInfoFormSchema: Field<AdminStudentInfoUpdate>[] = [
         label: "Gender",
         labelWidth: "100px",
         labelPosition: "left",
-        component: ElInput,
-        componentProps: { placeholder: "Enter gender", suffixIcon: Message },
+        component: ElSelect,
+        componentProps: {
+          placeholder: "Enter gender",
+          suffixIcon: Message,
+        },
+        childComponent: ElOption,
+        childComponentProps: {
+          options: [
+            { value: "male", label: "Male" },
+            { value: "female", label: "Female" },
+          ],
+        },
         rules: [
           { required: true, message: "Gender required", trigger: "blur" },
         ],
@@ -129,13 +152,22 @@ export const studentInfoFormSchema: Field<AdminStudentInfoUpdate>[] = [
         label: "Grade Level",
         labelWidth: "120px",
         labelPosition: "left",
-        component: ElInput,
+        component: ElInputNumber,
         componentProps: {
           placeholder: "Enter grade level",
+          min: 1,
+          max: 12,
           suffixIcon: Message,
         },
         rules: [
           { required: true, message: "Grade level required", trigger: "blur" },
+          {
+            type: "number",
+            min: 1,
+            max: 12,
+            message: "Grade level must be 1-12",
+            trigger: "blur",
+          },
         ],
       },
     ],
@@ -147,7 +179,7 @@ export const studentInfoFormSchema: Field<AdminStudentInfoUpdate>[] = [
         label: "Classes",
         labelWidth: "100px",
         labelPosition: "left",
-        component: ElInput,
+        component: ElInputTag,
         componentProps: { placeholder: "Enter classes", suffixIcon: Message },
         rules: [
           { required: true, message: "Classes required", trigger: "blur" },
@@ -158,9 +190,12 @@ export const studentInfoFormSchema: Field<AdminStudentInfoUpdate>[] = [
         label: "Enrollment Date",
         labelWidth: "140px",
         labelPosition: "left",
-        component: ElInput,
+        component: ElDatePicker,
         componentProps: {
           placeholder: "Enter enrollment date",
+          type: "date",
+          format: "YYYY-MM-DD",
+          valueFormat: "YYYY-MM-DD",
           suffixIcon: Message,
         },
         rules: [
@@ -176,53 +211,26 @@ export const studentInfoFormSchema: Field<AdminStudentInfoUpdate>[] = [
   {
     row: [
       {
-        key: "address",
-        label: "Address",
-        labelWidth: "120px",
-        labelPosition: "left",
-        component: ElInput,
-        componentProps: { placeholder: "Enter address", suffixIcon: Message },
-        rules: [
-          { required: true, message: "Address required", trigger: "blur" },
-        ],
-      },
-      {
         key: "photo_url",
-        label: "Photo URL",
-        labelWidth: "120px",
+        label: "Photo (Optional)",
+        labelWidth: "100px",
         labelPosition: "left",
-        component: ElInput,
-        componentProps: { placeholder: "Enter photo url", suffixIcon: Message },
-        rules: [
-          { required: true, message: "Photo url required", trigger: "blur" },
-        ],
-      },
-    ],
-  },
-  {
-    row: [
-      {
-        key: "additional_info",
-        label: "Additional Info",
-        labelWidth: "120px",
-        labelPosition: "left",
-        component: ElInput,
+        component: ElUpload,
         componentProps: {
-          placeholder: "Enter additional info",
-          suffixIcon: Message,
+          listType: "picture-card",
+          autoUpload: false,
+          accept: "image/*",
+          action: "",
         },
-        rules: [
-          {
-            required: true,
-            message: "Additional info required",
-            trigger: "blur",
-          },
-        ],
       },
     ],
   },
 ];
 
-export const studentInfoFormDataEdit = studentInfoFormData;
+// --- Exports for composable ---
+export const studentInfoFormDataEdit = {
+  ...toRefs(studentInfoFormData),
+  photo_file,
+};
 export const studentInfoFormSchemaEdit: Field<AdminStudentInfoUpdate>[] =
   studentInfoFormSchema;

@@ -3,25 +3,26 @@ from app.contexts.core.error import AppBaseException, ErrorSeverity, ErrorCatego
 
 
 
-class StaffAlreadyExistsException(AppBaseException):
-    def __init__(self, staff_id: str):
+class StaffAlreadyExistsAppException(AppBaseException):
+    def __init__(self, field: str, value: str):
         super().__init__(
-            message=f"Staff with ID '{staff_id}' already exists",
+            message="This staff ID is already registered. Please use another.",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.BUSINESS_LOGIC,
-            user_message="This staff ID is already registered. Please use another.",
-            details={"field": "staff_id", "value": staff_id},
+            user_message=f"Staff with {field} '{value}' already exists",
+            details={"field": field, "value": value},
             hint="Ensure the staff ID is unique and correctly formatted",
             recoverable=True
         )
 
+
 class StaffPermissionException(AppBaseException):
     def __init__(self, role: str):
         super().__init__(
-            message=f"Staff with ID '{staff_id}' does not have permission to perform this action",
+            user_message=f"Staff with ID '{staff_id}' does not have permission to perform this action",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.BUSINESS_LOGIC,
-            user_message="You do not have permission to perform this action.",
+            message="You do not have permission to perform this action.",
             details={"field": "staff_id", "value": staff_id},
             hint="Ensure the staff ID is unique and correctly formatted",
             recoverable=True

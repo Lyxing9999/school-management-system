@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from app.contexts.shared.enum.roles import SystemRole
 from bson import ObjectId
 from typing import Optional
-class StaffCreateRequestSchema(BaseModel):
+class StaffCreateSchema(BaseModel):
     staff_id: str
     staff_name: str
     role: SystemRole = SystemRole.TEACHER 
@@ -16,11 +16,12 @@ class StaffCreateRequestSchema(BaseModel):
     }
 
 
-class StaffUpdateRequestSchema(BaseModel):
+class StaffUpdateSchema(BaseModel):
     user_id: str | None = None
     staff_id: str | None = None
     staff_name: str | None = None
     role: SystemRole | None = None
+
     phone_number: str | None = None
     address: str | None = None
     model_config = {

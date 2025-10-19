@@ -13,7 +13,7 @@ export function useFormCreate<
   I extends Record<string, any>,
   O extends Record<string, any>
 >(
-  getService: () => UseFormService<I, O>,
+  getService: () => UseFormService<I, any, any, O, any, any>,
   getDefaultData: () => I,
   getFields: () => Field<I>[]
 ) {
@@ -22,16 +22,15 @@ export function useFormCreate<
   const loading = ref(false);
   const elFormRef = ref<FormInstance>();
   const formData = ref<Partial<I>>({ ...unref(getDefaultData()) });
+  const schema = computed(() => unref(getFields()));
 
   const resetFormData = (data?: Partial<I>) => {
     const schemaDefault = unref(getDefaultData());
-    // remove keys not in default
     Object.keys(formData.value).forEach((key) => {
       if (!(key in schemaDefault)) delete (formData.value as any)[key];
     });
     Object.assign(formData.value, { ...schemaDefault, ...data });
   };
-
   const openForm = (data?: Partial<I>) => {
     resetFormData(data);
     formDialogVisible.value = true;
@@ -48,7 +47,6 @@ export function useFormCreate<
       const fields = unref(getFields()) as Field<I>[];
       const filteredData: Partial<I> = {};
 
-      // ✅ handle both single fields and row fields
       const collectKeys = (fields: Field<I>[]) => {
         fields.forEach((field) => {
           if (field.row) {
@@ -91,6 +89,7 @@ export function useFormCreate<
     loading,
     elFormRef,
     formData,
+    schema,
     resetFormData,
     openForm,
     saveForm,

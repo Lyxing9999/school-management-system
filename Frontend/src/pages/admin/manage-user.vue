@@ -1,161 +1,173 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from "vue";
-import { useNuxtApp } from "nuxt/app";
-import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
-import ActionButtons from "~/components/Button/ActionButtons.vue";
-import Pagination from "~/components/TableEdit/Pagination/Pagination.vue";
-import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
-import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
-import BaseButton from "~/components/Base/BaseButton.vue";
-import { useDialogDynamicWidth } from "~/composables/useDialogDynamicWidth";
-
+// --------------------
+// Page Meta
+// --------------------
 definePageMeta({
   layout: "admin",
 });
-import { usePaginatedFetch } from "~/composables/pagination/usePaginatedFetch";
-import {
-  useInlineEdit,
-  toInlineEditUpdateService,
-} from "~/composables/inline-edit/useInlineEdit";
+// --------------------
+// Base Components
+// --------------------
+import ActionButtons from "~/components/Button/ActionButtons.vue";
+import Pagination from "~/components/TableEdit/Pagination/Pagination.vue";
+import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
+import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
+import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
+import BaseButton from "~/components/Base/BaseButton.vue";
 
+// --------------------
+// Composables
+// --------------------
+import { useDialogDynamicWidth } from "~/composables/useDialogDynamicWidth";
+import { usePaginatedFetch } from "~/composables/pagination/usePaginatedFetch";
+import { useInlineEdit } from "~/composables/inline-edit/useInlineEdit";
+
+// --------------------
+// Schemas & Registry
+// --------------------
+import {
+  formRegistryCreate,
+  formRegistryEdit,
+} from "~/schemas/registry/AdminFormRegistry";
+
+// --------------------
+// use dynamic form
+// --------------------
+import {
+  useDynamicCreateFormReactive,
+  useDynamicEditFormReactive,
+  useInlineEditService,
+} from "~/schemas/registry/formDynamic";
+// --------------------
+// Columns & Constants
+// --------------------
 import { userColumns } from "~/schemas/columns/admin/userColumns";
 import {
   roleOptions,
   roleStaffOptions,
   roleUserOptions,
 } from "~/utils/constants/roles";
-import {
-  formRegistryCreate,
-  formRegistryEdit,
-} from "~/schemas/registry/AdminFormRegistry";
 
-import { useFormEdit } from "~/composables/useFormEdit";
-import { useFormCreate } from "~/composables/useFormCreate";
-
-import type { AdminCreateUser, AdminGetUserData } from "~/api/admin/admin.dto";
+// --------------------
+// API & Types
+// --------------------
+import type {
+  AdminCreateStaff,
+  AdminCreateUser,
+  AdminGetUserData,
+  AdminUpdateStaffData,
+  AdminUpdateUser,
+} from "~/api/admin/admin.dto";
 import { Role } from "~/api/types/enums/role.enum";
 
+// --------------------
+// Services
+// --------------------
+import { serviceFormUser } from "~/services/formServices/adminFormService";
+import type {
+  CreateRegistryItem,
+  EditRegistryItem,
+} from "~/schemas/types/admin";
 /* ----------------------------- types ----------------------------- */
-type CreateFields =
-  (typeof formRegistryCreate)[keyof typeof formRegistryCreate]["schema"];
-type EditFields =
-  (typeof formRegistryEdit)[keyof typeof formRegistryEdit]["schema"];
 type CreateMode = "USER" | "STAFF";
 type EditMode = "USER" | "STAFF" | "STUDENT";
-interface AdminEditable extends AdminGetUserData {
-  id: string;
-}
 /* --------------------------- reactive ---------------------------- */
 const isStaffMode = ref<boolean | undefined>(undefined);
 const selectedRoles = ref<Role[]>([Role.STUDENT]);
-const editFormKey = ref(0);
 const selectedFormCreate = ref<CreateMode>("USER");
 const selectedFormEdit = ref<EditMode>("USER");
 const editFormDataKey = ref("");
-/* --------------------------- registries -------------------------- */
-const registryCreate = computed(
-  () => formRegistryCreate[selectedFormCreate.value]
-);
 
-const registryEdit = computed(() => formRegistryEdit[selectedFormEdit.value]);
-const registryCreateFormData = computed(() => registryCreate.value.formData());
-/* --------------------------- create form ------------------------- */
-/*
-  Note: getFields must return the schema (Field<T>[]).
-  useFormCreate signature (expected):
-    useFormCreate(getService, initialData, getFields)
-  where initialData is () => ({ ... }) and getFields is () => Field<T>[]
-*/
+/* ---------------------------- create form -------------------------- */
 const {
   formDialogVisible: createFormVisible,
   formData: createFormData,
   openForm: openCreateForm,
+  schema: createFormSchema,
   saveForm: saveCreateForm,
   cancelForm: cancelCreateForm,
-  resetFormData: resetCreateFormData,
   loading: createFormLoading,
-} = useFormCreate(
-  () => registryCreate.value.service,
-  () => registryCreateFormData.value, // initial empty/default values
-  () => registryCreate.value.schema as CreateFields
-);
+} = useDynamicCreateFormReactive(selectedFormCreate);
 
 const handleOpenCreateForm = async () => {
-  // pick schema before opening
   selectedFormCreate.value = isStaffMode.value ? "STAFF" : "USER";
   await nextTick();
   openCreateForm();
 };
-
-const handleSaveCreateForm = async (payload?: Partial<AdminCreateUser>) => {
-  // composable saveForm returns boolean: true=success, false=failure
-  await saveCreateForm(payload);
-
-  // on success, you can refresh list
-  fetchPage(1);
+const handleSaveCreateForm = (
+  payload: Partial<AdminCreateUser> | Partial<AdminCreateStaff>
+) => {
+  saveCreateForm(payload);
 };
-
 const handleCancelCreateForm = () => {
-  cancelCreateForm(); // composable handles resetting + hiding
+  cancelCreateForm();
 };
 
 /* ---------------------------- edit form -------------------------- */
 const {
   formDialogVisible: editFormVisible,
   formData: editFormData,
+  schema: editFormSchema,
   openForm: openEditForm,
   saveForm: saveEditForm,
   cancelForm: cancelEditForm,
-  resetFormData: resetEditFormData,
   loading: editFormLoading,
-} = useFormEdit(
-  () => registryEdit.value.service,
-  () => registryEdit.value.schema as EditFields
-);
+} = useDynamicEditFormReactive(selectedFormEdit);
 
 const handleOpenEditForm = async (row: AdminGetUserData) => {
-  if (row.role === "academic" || row.role === "teacher")
-    selectedFormEdit.value = "STAFF";
-  else if (row.role === "student") selectedFormEdit.value = "STUDENT";
-  else selectedFormEdit.value = "USER";
-  editFormKey.value++;
-  editFormDataKey.value = row.id;
-
+  editFormDataKey.value = row.id?.toString() ?? "new";
+  selectedFormEdit.value =
+    row.role === "student"
+      ? "STUDENT"
+      : row.role === "academic" || row.role === "teacher"
+      ? "STAFF"
+      : "USER";
+  editFormData.value = {};
   await nextTick();
   await openEditForm(row.id);
+  editFormVisible.value = true;
 };
-
-const handleSaveEditForm = async (payload: Partial<any>) => {
-  if (selectedFormEdit.value === "STUDENT") {
-    await saveEditForm(payload);
-  }
+const handleSaveEditForm = (payload: Partial<any>) => {
+  saveEditForm(payload);
 };
-
 const handleCancelEditForm = () => {
   cancelEditForm();
 };
 
 /* ---------------------------- inline edit ------------------------ */
-const registryInlineEdit = formRegistryEdit["USER"];
-const inlineEditService = computed(() =>
-  toInlineEditUpdateService<AdminGetUserData>(registryInlineEdit.service)
-);
-
 const {
   data,
   save,
   cancel,
   remove: removeUser,
-  rowLoading,
+  loading: inlineEditLoading,
   setData,
   autoSave,
   getPreviousValue,
   revertField,
-} = useInlineEdit<AdminGetUserData>([], inlineEditService.value);
+} = useInlineEdit<AdminGetUserData, AdminUpdateUser>(
+  [],
+  useInlineEditService("USER")
+);
 
 /* ---------------------------- pagination ------------------------- */
-const { $adminService } = useNuxtApp();
-
+const fetchUsers = async (
+  rolesArray: Role[],
+  page: number,
+  pageSize: number
+) => {
+  const res = await serviceFormUser.page!({
+    roles: rolesArray,
+    page,
+    pageSize,
+  });
+  setData(res?.items ?? []);
+  return {
+    items: res?.items ?? [],
+    total: res?.total ?? 0,
+  };
+};
 const {
   loading: fetchLoading,
   fetchPage,
@@ -163,16 +175,7 @@ const {
   currentPage,
   pageSize,
   totalRows,
-} = usePaginatedFetch(
-  async (roles: Role[], page: number, pageSize: number) => {
-    const res = await $adminService.getUsers(roles, page, pageSize);
-    setData(res?.users ?? []);
-    return { items: res?.users ?? [], total: res?.total ?? 0 };
-  },
-  1,
-  15,
-  selectedRoles
-);
+} = usePaginatedFetch(fetchUsers, 1, 15, selectedRoles);
 
 /* ----------------------------- misc ------------------------------ */
 const currentRoleOptions = computed(() => {
@@ -183,37 +186,97 @@ const currentRoleOptions = computed(() => {
 
 watch(selectedRoles, () => fetchPage(1), { deep: true });
 watch(isStaffMode, (mode) => {
-  if (mode === true) selectedRoles.value = roleStaffOptions.map((r) => r.value);
-  else if (mode === false)
+  if (mode === true) {
+    selectedFormCreate.value = "STAFF";
+    selectedRoles.value = roleStaffOptions.map((r) => r.value);
+  } else if (mode === false) {
+    selectedFormCreate.value = "USER";
     selectedRoles.value = roleUserOptions.map((r) => r.value);
+  } else {
+    selectedFormCreate.value = "USER";
+    selectedRoles.value = roleOptions.map((r) => r.value);
+  }
   fetchPage(1);
 });
 
+/* --------------------------- computed -------------------------- */
+
+const schemaCreate = computed(
+  () => formRegistryCreate[selectedFormCreate.value].schema ?? []
+);
+const schemaEdit = computed(
+  () => formRegistryEdit[selectedFormEdit.value].schema ?? []
+);
+
+const dynamicWidthCreate = computed(
+  () => useDialogDynamicWidth(schemaCreate.value).value
+);
+const dynamicWidthEdit = computed(
+  () => useDialogDynamicWidth(schemaEdit.value).value
+);
+/* ----------------------------- create form width ------------------------------ */
+
 const createDialogWidth = computed(() => {
-  const schema = registryCreate.value.schema;
-  const width = useDialogDynamicWidth(schema).value;
-
-  if (selectedFormCreate.value === "STAFF") return "80%";
+  if (selectedFormCreate.value === "STAFF") return "65%";
   if (selectedFormCreate.value === "USER") return "40%";
-  return width;
+  return dynamicWidthCreate.value;
 });
-const editDialogWidth = computed(() => {
-  const schema = registryEdit.value.schema;
-  const width = useDialogDynamicWidth(schema).value;
 
+/* ----------------------------- edit form width ------------------------------ */
+
+const editDialogWidth = computed(() => {
   if (selectedFormEdit.value === "STAFF") return "60%";
   if (selectedFormEdit.value === "STUDENT") return "70%";
-  return width;
+  return dynamicWidthEdit.value;
 });
+const handleRevertField = (
+  row: AdminGetUserData,
+  field: keyof AdminGetUserData
+) => {
+  revertField(row, field);
+};
+onMounted(() => {
+  selectedRoles.value = [
+    Role.STUDENT,
+    Role.TEACHER,
+    Role.ACADEMIC,
+    Role.PARENT,
+  ];
+});
+
+function handleSaveWrapper(
+  row: AdminGetUserData,
+  field: keyof AdminGetUserData
+) {
+  if (field === "id") return;
+  save(row, field as keyof AdminUpdateUser).catch((err) => {
+    console.error(err);
+  });
+}
+function handleAutoSaveWrapper(
+  row: AdminGetUserData,
+  field: keyof AdminGetUserData
+) {
+  if (field === "id") return;
+  autoSave(row, field as keyof AdminUpdateUser).catch((err) => {
+    console.error(err);
+  });
+}
+const createFormDataTyped = computed(
+  () => createFormData.value as CreateRegistryItem
+);
+const editFormDataTyped = computed(
+  () => editFormData.value as EditRegistryItem
+);
 </script>
 
 <template>
   <el-row class="m-2" justify="space-between">
     <el-col :span="12">
       <el-radio-group v-model="isStaffMode">
-        <el-radio :label="undefined">Default</el-radio>
-        <el-radio :label="false">User</el-radio>
-        <el-radio :label="true">Staff</el-radio>
+        <el-radio :value="undefined">Default</el-radio>
+        <el-radio :value="false">User</el-radio>
+        <el-radio :value="true">Staff</el-radio>
       </el-radio-group>
     </el-col>
 
@@ -257,10 +320,10 @@ const editDialogWidth = computed(() => {
         :data="data"
         :columns="userColumns"
         :loading="fetchLoading"
-        :smart-props="{ style: { width: '100%' }, rowLoading }"
-        @save="save"
+        :smart-props="{ inlineEditLoading }"
+        @save="handleSaveWrapper"
         @cancel="cancel"
-        @auto-save="autoSave"
+        @auto-save="handleAutoSaveWrapper"
       >
         <template #operation="{ row }">
           <ActionButtons
@@ -272,9 +335,9 @@ const editDialogWidth = computed(() => {
             :deleteContent="`Delete ${
               row.role.charAt(0).toUpperCase() + row.role.slice(1)
             }`"
-            :loading="rowLoading[row.id] ?? false"
+            :loading="inlineEditLoading[row.id] ?? false"
             @detail="handleOpenEditForm(row)"
-            @delete="handleDelete(row)"
+            @delete="removeUser(row)"
           />
         </template>
 
@@ -309,8 +372,8 @@ const editDialogWidth = computed(() => {
     <SmartFormDialog
       :key="selectedFormCreate"
       v-model:visible="createFormVisible"
-      v-model="createFormData"
-      :fields="registryCreate.schema"
+      v-model="createFormDataTyped"
+      :fields="createFormSchema"
       :title="`Add ${isStaffMode ? 'Staff' : 'User'}`"
       :loading="createFormLoading"
       @save="handleSaveCreateForm"
@@ -323,10 +386,10 @@ const editDialogWidth = computed(() => {
   <!-- EDIT DIALOG -->
   <ErrorBoundary>
     <SmartFormDialog
-      :key="`${selectedFormEdit}-${editFormKey}-${editFormDataKey}`"
+      :key="`${selectedFormEdit}-${editFormDataKey}`"
       v-model:visible="editFormVisible"
-      v-model="editFormData"
-      :fields="registryEdit.schema"
+      v-model="editFormDataTyped"
+      :fields="editFormSchema"
       :title="'Edit'"
       :loading="editFormLoading"
       @save="handleSaveEditForm"

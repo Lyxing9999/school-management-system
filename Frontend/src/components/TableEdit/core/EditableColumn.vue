@@ -16,11 +16,14 @@ const emit = defineEmits<{
 defineSlots<{
   default?(props: { row: R; field: F }): any;
   header?(props: { column: { label: string; field: F } }): any;
-  footer?(props: { row: R; field: F; value: R[F] }): any;
   operation?(props: { row: R; field: F }): any;
   controlsSlot?(props: { row: R; field: F }): any;
-  name?: string;
 }>();
+// Make TS aware of dynamic slots
+
+// Check if slot exists
+
+const slots = useSlots() as Record<string, (props: any) => any>;
 </script>
 
 <template>
@@ -31,17 +34,25 @@ defineSlots<{
     :prop="String(props.field)"
   >
     <template #default="{ row }">
-      <template v-if="operation">
+      <template v-if="useSlots">
+        <component
+          :is="slots[props.slotName]"
+          v-bind="{ row, field: props.field, value: row[props.field] }"
+        />
+      </template>
+
+      <template v-else-if="operation">
         <slot name="operation" :row="row" :field="props.field" />
       </template>
+
       <template v-else-if="render">
         <RenderCell :vnode="render(row, props.field)" />
       </template>
 
       <template v-else>
         <MultiTypeEditCell
-          :row="row"
           v-model="row[field]"
+          :row="row"
           :field="field"
           :component="component"
           :componentProps="componentProps"
@@ -59,18 +70,8 @@ defineSlots<{
           @cancel="emit('cancel', row as R, field as F)"
           @auto-save="emit('auto-save', row as R, field as F)"
         >
-          <template v-if="$slots.footer" #footer>
-            <slot name="footer" :row="row" :field="field" :value="row[field]" />
-          </template>
-          <!-- forward append/prefix if you want -->
-          <template v-if="$slots.append" #append>
-            <slot name="append" />
-          </template>
-          <template v-if="$slots.prefix" #prefix>
-            <slot name="prefix" />
-          </template>
           <template v-if="$slots.controlsSlot" #controlsSlot>
-            <slot name="controlsSlot" />
+            <slot name="controlsSlot" :row="row" :field="field" />
           </template>
         </MultiTypeEditCell>
       </template>

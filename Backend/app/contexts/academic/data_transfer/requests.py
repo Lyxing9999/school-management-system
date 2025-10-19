@@ -1,10 +1,13 @@
 
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 from datetime import datetime
+from app.contexts.iam.data_transfer.requests import IAMUpdateSchema
+from app.contexts.shared.enum.roles import SystemRole
+from app.contexts.student.data_transfer.requests import StudentInfoUpdateSchema
 
-
+from typing import Optional
 class AcademicCreateClassSchema(BaseModel):
     name: str
     grade: int
@@ -23,6 +26,28 @@ class AcademicCreateClassSchema(BaseModel):
         "enum_values_as_str": True,
         "extra": "forbid"
     }
+
+
+from typing import Literal
+
+class AcademicCreateStudentSchema(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=3, max_length=50)
+    role: Literal[SystemRole.STUDENT] = SystemRole.STUDENT
+    created_by: Optional[str] = None
+
+    model_config = {
+        "enum_values_as_str": True,
+        "extra": "forbid"
+    }
+
+class AcademicUpdateUserSchema(IAMUpdateSchema):
+    role: Optional[SystemRole] = None
+
+class AcademicUpdateStudentInfoSchema(StudentInfoUpdateSchema):
+    pass
+
 
 
 

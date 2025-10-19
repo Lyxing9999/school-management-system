@@ -1,21 +1,23 @@
-<script setup lang="ts">
-import { ref, reactive, watch } from "vue";
+<script setup lang="ts" generic="I extends object">
+import { reactive, watch } from "vue";
 import type { FormInstance } from "element-plus";
 import type { Field } from "../types/form";
 import { ElDialog } from "element-plus";
 import SmartForm from "~/components/Form/SmartForm.vue";
 
 const props = defineProps<{
-  modelValue: Record<string, any>; // form data
+  modelValue: Partial<I>; // form data
   visible: boolean;
   title?: string;
   fields: Field[];
   width?: string;
+  loading?: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: "update:visible", val: boolean): void;
-  (e: "save", form: Record<string, any>): void;
+  (e: "update:modelValue", value: any): void;
+  (e: "update:visible", value: boolean): void;
+  (e: "save", payload: any): void;
   (e: "cancel"): void;
 }>();
 
@@ -37,7 +39,6 @@ watch(localForm, (val) => emit("update:modelValue", { ...val }), {
 // Handle save from SmartForm
 const handleSave = (form: Record<string, any>, elFormRef?: FormInstance) => {
   emit("save", form);
-  emit("update:visible", false);
 };
 
 // Handle cancel from SmartForm or dialog close
@@ -59,6 +60,7 @@ const handleCancel = () => {
       v-model="localForm"
       :fields="fields"
       :use-el-form="true"
+      :loading="loading"
       @save="handleSave"
       @cancel="handleCancel"
     />

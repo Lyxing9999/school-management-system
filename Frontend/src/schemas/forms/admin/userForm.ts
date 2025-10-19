@@ -3,14 +3,14 @@ import type { Field } from "~/components/types/form";
 import { ElInput, ElSelect, ElOption } from "element-plus";
 import { UserFilled, Lock } from "@element-plus/icons-vue";
 import { UserRole } from "~/api/types/enums/role.enum";
-import type { AdminCreateUser, AdminUpdateUsers } from "~/api/admin/admin.dto";
+import type { AdminCreateUser, AdminUpdateUser } from "~/api/admin/admin.dto";
 export const userFormData: AdminCreateUser = {
   username: "",
   email: "",
   password: "",
   role: UserRole.STUDENT,
 };
-export const userFormDataEdit: AdminUpdateUsers = userFormData;
+export const userFormDataEdit: AdminUpdateUser = userFormData;
 const roleOptionsRef = ref(roleUserOptions);
 export const userFormSchema: Field<AdminCreateUser>[] = [
   {
@@ -73,4 +73,24 @@ export const userFormSchema: Field<AdminCreateUser>[] = [
   },
 ];
 
-export const userFormSchemaEdit: Field<AdminCreateUser>[] = userFormSchema;
+export const userFormSchemaEdit: Field<AdminUpdateUser>[] = userFormSchema.map(
+  (f) => {
+    const field = { ...f };
+
+    if (field.key === "password") {
+      field.componentProps = {
+        ...field.componentProps,
+        placeholder: "Leave blank to keep current password",
+      };
+      field.rules = [];
+    }
+
+    if (field.key === "role") {
+      field.componentProps = {
+        ...field.componentProps,
+        disabled: true,
+      };
+    }
+    return field as Field<AdminUpdateUser>;
+  }
+);

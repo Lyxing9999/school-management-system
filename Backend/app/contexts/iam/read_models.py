@@ -1,6 +1,6 @@
 from pymongo.database import Database
 from app.contexts.shared.enum.roles import UserRole
-from app.contexts.iam.data_transfer.responses import  IAMSelectDataDTO  , IAMReadDataDTO , IAMReadDataDTOList , IAMBaseDTO
+from app.contexts.iam.data_transfer.responses import  IAMReadDataDTO , IAMReadDataDTOList
 from typing import List , Tuple , Union
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin

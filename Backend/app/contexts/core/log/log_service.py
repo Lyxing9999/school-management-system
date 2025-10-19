@@ -1,5 +1,6 @@
 import logging
 import sys
+import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 
@@ -17,15 +18,11 @@ class LogService:
             raise Exception("LogService is a singleton!")
         LogService._instance = self
 
-        # Configure root logger
         self.logger = logging.getLogger("SchoolManagementSystem")
         self.logger.setLevel(logging.INFO)
 
         handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "module": "%(name)s", "message": %(message)s}'
-        )
-        handler.setFormatter(formatter)
+        handler.setFormatter(logging.Formatter("%(message)s"))
         self.logger.addHandler(handler)
 
     def log(
@@ -45,18 +42,19 @@ class LogService:
             "extra": extra or {}
         }
 
-        # Dispatch to proper logging method
+        pretty_log = json.dumps(log_data, indent=2, default=str)
         level_lower = level.lower()
+
         if level_lower == "info":
-            self.logger.info(log_data)
+            self.logger.info(pretty_log)
         elif level_lower in ["warn", "warning"]:
-            self.logger.warning(log_data)
+            self.logger.warning(pretty_log)
         elif level_lower == "error":
-            self.logger.error(log_data)
+            self.logger.error(pretty_log)
         elif level_lower == "debug":
-            self.logger.debug(log_data)
+            self.logger.debug(pretty_log)
         else:
-            self.logger.info(log_data)
+            self.logger.info(pretty_log)
 
     # Convenience methods
     def info(self, message: str, **kwargs):
@@ -73,8 +71,3 @@ class LogService:
 
     def debug(self, message: str, **kwargs):
         self.log(message, level="DEBUG", **kwargs)
-
-# Usage:
-# log = LogService.get_instance()
-# log.info("This is an info message", module="IAM", user_id="123")
-# log.error("This is an error", extra={"payload": {...}})

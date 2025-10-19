@@ -1,31 +1,26 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, constr
 from typing import List, Optional
-
-
+from datetime import date
 
 
 # -------------------------
 # Student Info Schema
 # -------------------------
-class StudentInfoUpdateRequestSchema(BaseModel):
-    student_id: str = Field(..., description="Student ID")
-    full_name: str = Field(..., description="Student Full Name")
-    first_name: Optional[str] = Field(None, min_length=1, description="Student First Name")
-    last_name: Optional[str] = Field(None, min_length=1, description="Student Last Name")
-    nickname: Optional[str] = Field(None, min_length=1, description="Student Nickname")
-    birth_date: Optional[str] = Field(None, description="Student Birth Date in YYYY-MM-DD format")
-    gender: Optional[str] = Field(None, description="Student Gender")
-    grade_level: Optional[int] = Field(None, description="Student Grade Level")
-    classes: Optional[List[str]] = Field(None, description="Student Classes")
-    enrollment_date: Optional[str] = Field(None, description="Student Enrollment Date in YYYY-MM-DD format")
-    address: Optional[str] = Field(None, description="Student Address")
+class StudentInfoUpdateSchema(BaseModel):
+    student_id: constr(min_length=1) = Field(None, description="Student ID")
+    full_name: constr(min_length=1) = Field(None, description="Student Full Name")
     photo_url: Optional[str] = Field(None, description="Student Photo URL")
-    parent_number: Optional[str] = Field(None, description="Parent Phone Number")
+    first_name: Optional[constr(min_length=1)] = Field(None, description="Student First Name")
+    last_name: Optional[constr(min_length=1)] = Field(None, description="Student Last Name")
+    birth_date: Optional[date] = Field(None, description="Student Birth Date")
+    gender: Optional[constr(min_length=1)] = Field(None, description="Student Gender")
+    grade_level: Optional[int] = Field(None, description="Student Grade Level")
+    classes: Optional[List[constr(min_length=1)]] = Field(None, description="Student Classes")
+    enrollment_date: Optional[date] = Field(None, description="Student Enrollment Date")
+    address: Optional[constr(min_length=1)] = Field(None, description="Student Address")
+    parent_number: Optional[constr(min_length=1)] = Field(None, description="Parent Phone Number")
 
 
 # -------------------------
-# Full Student Request Schema
+# Full Student Update Request Schema
 # -------------------------
-class StudentUpdateRequestSchema(BaseModel):
-    user_id: str = Field(..., description="User ID")
-    student_info: StudentInfoUpdateRequestSchema = Field(..., description="Student Info")
