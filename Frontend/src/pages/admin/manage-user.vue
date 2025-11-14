@@ -35,11 +35,11 @@ import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
   useInlineEditService,
-} from "~/schemas/registry/admin/formDynamic";
+} from "~/forms/dynamic/useAdminForms";
 // --------------------
 // Columns & Constants
 // --------------------
-import { userColumns } from "~/schemas/columns/admin/userColumns";
+import { userColumns } from "~/tables/columns/admin/userColumns";
 import {
   roleOptions,
   roleStaffOptions,
@@ -64,7 +64,7 @@ import { Role } from "~/api/types/enums/role.enum";
 import type {
   CreateRegistryItem,
   EditRegistryItem,
-} from "~/schemas/types/admin";
+} from "~/from/types/admin";
 import { adminService } from "~/api/admin";
 
 /* ----------------------------- types ----------------------------- */

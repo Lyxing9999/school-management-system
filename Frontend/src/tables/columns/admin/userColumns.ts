@@ -1,7 +1,7 @@
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import { ElInput, ElDatePicker, ElTag, ElRate } from "element-plus";
 import { h } from "vue";
-import type { AdminGetUserData } from "~/api/admin/admin.dto";
+import type { AdminGetUserData } from "~/api/admin/user/dto";
 
 export const userColumns: ColumnConfig<AdminGetUserData>[] = [
   {

@@ -2,14 +2,14 @@
 definePageMeta({
   layout: "academic",
 });
-import { classColumns } from "~/schemas/columns/academic/classColumns";
+import { classColumns } from "~/tables/columns/academic/classColumns";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import type { AcademicGetClassData } from "~/api/academic/academic.dto";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 
-import { useDynamicCreateFormReactive } from "~/schemas/registry/academic/AcademicFormDynamic";
+import { useDynamicCreateFormReactive } from "~/tables/registry/academic/AcademicFormDynamic";
 const classes = ref<AcademicGetClassData[]>([]);
 
 const selectedFormCreate = ref<CreateMode>("CLASS");

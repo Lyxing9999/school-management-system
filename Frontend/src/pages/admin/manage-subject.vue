@@ -7,11 +7,11 @@ definePageMeta({ layout: "admin" });
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
-import { subjectColumns } from "~/schemas/columns/admin/subjectColumns";
+import { subjectColumns } from "~/tables/columns/admin/subjectColumns";
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
-} from "~/schemas/registry/admin/formDynamic";
+} from "~/tables/registry/admin/formDynamic";
 import type { BaseSubject } from "~/api/types/subject.dto";
 import type {
   AdminCreateSubject,
