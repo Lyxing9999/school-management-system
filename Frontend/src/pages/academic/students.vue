@@ -14,7 +14,7 @@ import BaseButton from "~/components/Base/BaseButton.vue";
 import { usePaginatedFetch } from "~/composables/pagination/usePaginatedFetch";
 import { useInlineEdit } from "~/composables/inline-edit/useInlineEdit";
 
-import { userColumns } from "~/schemas/columns/admin/userColumns";
+import { userColumns } from "~/tables/columns/admin/userColumns";
 
 // --------------------
 // Schemas & Registry
@@ -29,8 +29,8 @@ import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
   useInlineEditService,
-} from "~/schemas/registry/academic/AcademicFormDynamic";
-import { academicService } from "~/schemas/registry/academic/AcademicFormRegistry";
+} from "~/tables/registry/academic/AcademicFormDynamic";
+import { academicService } from "~/tables/registry/academic/AcademicFormRegistry";
 
 const editFormDataKey = ref("");
 const selectedFormCreate = ref("STUDENT");

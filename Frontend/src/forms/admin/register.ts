@@ -6,8 +6,13 @@ import {
   subjectForm,
 } from "~/forms/admin";
 
+import type {
+  FormRegistryCreate,
+  FormRegistryEdit,
+} from "~/forms/types/formRegistry";
+
 // -------------------- CREATE FORMS --------------------
-export const formRegistryCreate = {
+export const formRegistryCreate: FormRegistryCreate = {
   USER: {
     service: () => userForm.useServiceFormUser(),
     schema: userForm.userFormSchema,
@@ -28,15 +33,11 @@ export const formRegistryCreate = {
     schema: subjectForm.subjectFormSchema,
     formData: () => ({ ...subjectForm.getSubjectFormData() }), // fresh object
   },
-  STUDENT: {
-    service: () => studentForm.useServiceFormStudentInfo(),
-    schema: studentForm.studentInfoFormSchema,
-    formData: () => ({ ...studentForm.getStudentInfoFormData() }), // fresh object
-  },
+  STUDENT: undefined,
 };
 
 // -------------------- EDIT FORMS --------------------
-export const formRegistryEdit = {
+export const formRegistryEdit: FormRegistryEdit = {
   USER: {
     service: () => userForm.useServiceFormUser(),
     schema: userForm.userFormSchemaEdit,

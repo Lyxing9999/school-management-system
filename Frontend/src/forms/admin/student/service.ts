@@ -1,19 +1,14 @@
 import { adminService } from "~/api/admin";
 import type { UseFormService } from "~/forms/types";
-import type { AdminCreateUser, AdminUpdateUser } from "~/api/admin/user/dto";
 
+import type { AdminUpdateStudentInfo } from "~/api/admin/student/dto";
 export function useServiceFormStudentInfo(): UseFormService<
-  AdminCreateUser,
-  AdminUpdateUser
+  any,
+  AdminUpdateStudentInfo
 > {
   const adminApiService = adminService();
 
   return {
-    create: (data) => adminApiService.user.createUser(data),
-    update: (id, data) => adminApiService.user.updateUser(id, data),
-    delete: async (id) => {
-      await adminApiService.user.deleteUser(id);
-      return true;
-    },
+    update: (id, data) => adminApiService.student.updateStudentInfo(id, data),
   };
 }

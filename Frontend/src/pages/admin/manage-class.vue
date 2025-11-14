@@ -1,7 +1,7 @@
 <!-- Page Component -->
 <script lang="ts" setup>
 import { ref, onMounted } from "vue";
-import { classColumns } from "~/schemas/columns/academic/classColumns";
+import { classColumns } from "~/tables/columns/academic/classColumns";
 // --------------------
 // Base Components
 // --------------------
@@ -28,7 +28,7 @@ import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
   useInlineEditService,
-} from "~/schemas/registry/admin/formDynamic";
+} from "~/tables/registry/admin/formDynamic";
 const selectedFormCreate = ref("CLASS");
 // Fetch classes
 const fetchClasses = async () => {
