@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import type { UserBaseDataDTO } from "~/api/types/userBase";
+import type { UserBaseDataDTO } from "~/api/types/user.dto";
 
 export const useAuthStore = defineStore("auth", () => {
   const token = ref<string | null>(null);

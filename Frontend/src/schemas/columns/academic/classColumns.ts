@@ -9,7 +9,7 @@ import {
   ElInputTag,
 } from "element-plus";
 import type { ColumnConfig } from "~/components/types/tableEdit";
-import type { BaseClassDataDTO } from "~/api/types/baseClass";
+import type { BaseClassDataDTO } from "~/api/types/class.dto";
 
 // Reactive student options for remote search
 export const studentSelectOptions = ref<{ label: string; value: string }[]>([]);
@@ -46,7 +46,7 @@ export const classColumns: ColumnConfig<BaseClassDataDTO>[] = [
     label: "Class Name",
     autoSave: true,
     component: ElInput,
-    minWidth: "150px", // flexible, grows/shrinks with screen
+    minWidth: "200px", // flexible, grows/shrinks with screen
   },
   {
     field: "grade",
@@ -61,11 +61,13 @@ export const classColumns: ColumnConfig<BaseClassDataDTO>[] = [
   {
     field: "max_students",
     label: "Max Students",
+    autoSave: true,
     component: ElInputNumber,
     width: "100px", // fixed
     align: "center",
     componentProps: { size: "small", style: "width: 100px" },
     customClass: "text-center",
+    debounceMs: 2000,
   },
   {
     field: "academic_year",
@@ -101,24 +103,9 @@ export const classColumns: ColumnConfig<BaseClassDataDTO>[] = [
     field: "students",
     label: "Students",
     component: ElSelect,
-    minWidth: "180px", // flexible
-    componentProps: {
-      placeholder: "Select students",
-      multiple: true,
-      filterable: true,
-      remote: true,
-      remoteMethod: async (query: string) => {
-        loading.value = true;
-        await new Promise((r) => setTimeout(r, 300));
-        studentSelectOptions.value = [
-          { label: `Student ${query} 1`, value: `${query}-1` },
-          { label: `Student ${query} 2`, value: `${query}-2` },
-        ];
-        loading.value = false;
-      },
-      loading,
-    },
-    childComponent: ElOption,
+    useSlots: true,
+    slotName: "studentSlot",
+    minWidth: "200px",
   },
   {
     field: "status",

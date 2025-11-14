@@ -1,25 +1,34 @@
-from flask import jsonify
+from flask import Response as FlaskResponse, jsonify
 from typing import Optional, Union, Dict, Any
-from flask.wrappers import Response as FlaskResponse
-from app.contexts.core.error.app_base_exception import ErrorCategory , ErrorSeverity
+from app.contexts.core.error.app_base_exception import ErrorCategory, ErrorSeverity
 from enum import Enum
 from werkzeug.exceptions import HTTPException
+import json
 
 def serialize_for_json(obj):
-    import json
     return json.loads(json.dumps(obj, default=str))
 
 
 class Response:
 
     @staticmethod
-    def success_response( data: Optional[Any] = None, message: str = "", status_code: int = 200, success: bool = True, metadata: Optional[Dict[str, Any]] = None) -> FlaskResponse:
-        response = {"success": success,"message": message,"data": data,}
+    def success_response(
+        data: Optional[Any] = None,
+        message: str = "",
+        status_code: int = 200,
+        success: bool = True,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> FlaskResponse:
+        response = {
+            "success": success,
+            "message": message,
+            "data": data,
+        }
         if metadata:
             response["metadata"] = metadata
-        resp = jsonify(response)
-        resp.status_code = status_code
-        return resp
+
+        json_response = json.dumps(serialize_for_json(response))
+        return FlaskResponse(json_response, status=status_code, mimetype="application/json")
 
     @staticmethod
     def generate_hint_from_field_errors(field_errors: Dict[str, Any]) -> str:

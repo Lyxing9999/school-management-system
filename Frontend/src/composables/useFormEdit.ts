@@ -83,6 +83,8 @@ export function useFormEdit<I extends object, O extends I = I>(
 
       if (!data || Object.keys(data).length === 0) {
         resetFormData(defaultData.value);
+        formData.value = defaultData.value;
+        reactiveInitialData.value = defaultData.value;
         return;
       }
 

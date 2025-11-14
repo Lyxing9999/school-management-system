@@ -7,7 +7,7 @@ from flask_cors import CORS
 from app.contexts.infra.http.errors import register_error_handlers 
 oauth = OAuth()
 
-def create_app() -> Flask:
+def create_app():
     app = Flask(__name__)
     app.config.from_object(settings)
 
@@ -28,17 +28,16 @@ def create_app() -> Flask:
         client_kwargs={'scope': 'openid email profile'},
     )
 
-
-    
     # Blueprints
     from .uploads.students import upload_bp
     from .contexts.iam.routes import iam_bp
     from .contexts.academic.routes import academic_bp
-    from .contexts.admin.routes import admin_bp
+    from .contexts.admin.routes import admin_bp, register_routes
     # from .contexts.hr.routes import hr_bp
     app.register_blueprint(upload_bp, url_prefix='/uploads')
     app.register_blueprint(iam_bp, url_prefix='/api/iam')
     app.register_blueprint(academic_bp, url_prefix='/api/academic')
+    register_routes()
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     # app.register_blueprint(hr_bp, url_prefix='/api/hr')
 

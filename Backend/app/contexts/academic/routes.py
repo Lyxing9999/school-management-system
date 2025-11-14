@@ -6,7 +6,7 @@ from flask import Blueprint ,request
 # from app.contexts.common.base_response_dto import BaseResponseDTO
 # from app.contexts.academic_dept.data_transfer.requests import ClassCreateSchema
 from app.contexts.shared.model_converter import pydantic_converter
-from app.contexts.shared.decorators.wrap_response import wrap_response
+from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.infra.database.db import get_db
 from app.contexts.common.base_response_dto import BaseResponseDTO
 from app.contexts.academic.services import AcademicService

@@ -197,3 +197,20 @@ class UserNotSavedException(AppBaseException):
             hint="Verify the user ID or create the user if missing",
             recoverable=True
         )
+
+
+    
+
+
+
+class UserDeletedException(AppBaseException):
+    def __init__(self, user_id: str):
+        super().__init__(
+            message=f"User with ID '{user_id}' is deleted",
+            severity=ErrorSeverity.HIGH,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="The requested user is deleted.",
+            details={"user_id": user_id},
+            hint="Verify the user ID or create the user if missing",
+            recoverable=True
+        )

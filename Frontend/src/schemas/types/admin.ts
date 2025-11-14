@@ -7,10 +7,14 @@ import type {
   AdminGetUserData,
   AdminGetStaffData,
   AdminCreateClass,
+  AdminCreateSubject,
+  AdminUpdateSubject,
+  AdminUpdateClass,
 } from "~/api/admin/admin.dto";
 import type { UseFormService } from "~/services/types";
 import type { Field } from "~/components/types/form";
-import type { BaseClassDataDTO } from "~/api/types/baseClass";
+import type { BaseClassDataDTO } from "~/api/types/class.dto";
+import type { BaseSubject } from "~/api/types/subject.dto";
 // Registry item types
 export type FormRegistryCreateItem<C extends object> = {
   service: UseFormService<C, any, any, any, any, any>;
@@ -30,13 +34,15 @@ export type RoleCreateMap = {
   STAFF: AdminCreateStaff;
   CLASS: AdminCreateClass;
   STUDENT: AdminStudentInfoUpdate;
+  SUBJECT: AdminCreateSubject;
 };
 
 export type RoleEditMap = {
   USER: AdminUpdateUser;
   STAFF: AdminUpdateStaff;
   STUDENT: AdminStudentInfoUpdate;
-  CLASS: BaseClassDataDTO;
+  CLASS: AdminUpdateClass;
+  SUBJECT: AdminUpdateSubject;
 };
 
 // Dynamic registry
@@ -54,6 +60,7 @@ export type CreateFormMap = {
   STAFF: AdminCreateStaff;
   STUDENT: AdminStudentInfoUpdate;
   CLASS: AdminCreateClass;
+  SUBJECT: AdminCreateSubject;
 };
 
 export type GetFormMap = {
@@ -61,10 +68,11 @@ export type GetFormMap = {
   STAFF: AdminGetStaffData;
   STUDENT: AdminStudentInfoUpdate;
   CLASS: BaseClassDataDTO;
+  SUBJECT: BaseSubject;
 };
 
 // Edit mode types
-export type EditMode = "USER" | "STAFF" | "STUDENT" | "CLASS";
+export type EditMode = "USER" | "STAFF" | "STUDENT" | "CLASS" | "SUBJECT";
 
 export type EditFormType<T extends EditMode> = T extends "USER"
   ? AdminUpdateUser
@@ -74,6 +82,8 @@ export type EditFormType<T extends EditMode> = T extends "USER"
   ? AdminStudentInfoUpdate
   : T extends "CLASS"
   ? BaseClassDataDTO
+  : T extends "SUBJECT"
+  ? AdminUpdateSubject
   : never;
 
 export type GetEditFormType<T extends EditMode> = T extends "USER"
@@ -84,4 +94,6 @@ export type GetEditFormType<T extends EditMode> = T extends "USER"
   ? AdminStudentInfoUpdate
   : T extends "CLASS"
   ? BaseClassDataDTO
+  : T extends "SUBJECT"
+  ? BaseSubject
   : never;

@@ -4,26 +4,17 @@ definePageMeta({
 });
 import { classColumns } from "~/schemas/columns/academic/classColumns";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
-import type { AcademicBaseClassDataDTO } from "~/api/academic/academic.dto";
+import type { AcademicGetClassData } from "~/api/academic/academic.dto";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
-import {
-  useClassFormSchema,
-  initialClassData,
-} from "~/schemas/forms/academic/classForm";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
-import { useFormCreate } from "~/composables/useFormCreate";
-import type { AdminCreateClass } from "~/api/admin/admin.dto";
 
-const classes = ref<AcademicBaseClassDataDTO[]>([]);
+import { useDynamicCreateFormReactive } from "~/schemas/registry/academic/AcademicFormDynamic";
+const classes = ref<AcademicGetClassData[]>([]);
 
-const { $academicService } = useNuxtApp();
-const serviceWrapper = {
-  create: async (payload: AcademicBaseClassDataDTO) =>
-    await $academicService.createClass(payload),
-};
+const selectedFormCreate = ref<CreateMode>("CLASS");
 function fetchClasses() {
-  $academicService.getClasses().then((data: AcademicBaseClassDataDTO[]) => {
+  $academicService.getClasses().then((data: AcademicGetClassData[]) => {
     classes.value = data ?? [];
   });
 }
@@ -31,16 +22,18 @@ function fetchClasses() {
 onMounted(async () => {
   fetchClasses();
 });
-const { formDialogVisible, formData, loading, openForm, saveForm, cancelForm } =
-  useFormCreate<AdminCreateClass, AcademicBaseClassDataDTO>(
-    serviceWrapper.create,
-    initialClassData,
-    
-  );
+const {
+  formDialogVisible,
+  schema: classFormSchema,
+  formData,
+  loading,
+  openForm,
+  saveForm,
+  cancelForm,
+} = useDynamicCreateFormReactive(selectedFormCreate);
 const openFormDialog = () => {
   openForm();
 };
-const classFormSchema = useClassFormSchema();
 </script>
 
 <template>

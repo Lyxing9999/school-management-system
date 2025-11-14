@@ -1,0 +1,80 @@
+###########################################
+# 0️⃣ File Variables
+###########################################
+@baseUrl = http://localhost:5001/api
+@contentType = application/json
+@adminUser = admin@gmail.com
+@adminPass = 12345678
+
+###########################################
+# 1️⃣ Admin Login (Get Token)
+###########################################
+### @login
+POST {{baseUrl}}/iam/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminUser}}",
+  "password": "{{adminPass}}"
+}
+
+###
+# ✅ After running, the token will be in:
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4Y2NmYjgxZjI5NzExNTY4NmUyNzc0NiIsInJvbGUiOiJhZG1pbiIsInVzZXJuYW1lIjoiYWRtaW4iLCJlbWFpbCI6ImFkbWluQGdtYWlsLmNvbSIsImV4cCI6MTc2Mjk1MDgwN30.T2QlPYsuLHs-1vxI8b2XyJHHCvIZ6e9ue3WUQUZFFiQ
+
+###########################################
+# 2️⃣ Debug / Print Token
+###########################################
+### @printToken
+GET {{baseUrl}}/admin/users
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###########################################
+# 3️⃣ Create New Student
+###########################################
+### @createStudent
+POST {{baseUrl}}/admin/users
+Authorization: Bearer {{token}}
+Accept: application/json
+Content-Type: {{contentType}}
+
+{
+  "email": "student4sd002@test.com",
+  "username": "Student4sd002",
+  "password": "12345678",
+  "role": "student"
+}
+
+###
+# ✅ Extract the created user's ID:
+@userId = 69140f7a05a4d258aa0832a8
+
+###########################################
+# 4️⃣ Get Students List
+###########################################
+### @getStudents
+GET {{baseUrl}}/admin/users?role=student&page=1&page_size=10
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###########################################
+# 5️⃣ Update Student
+###########################################
+### @updateStudent
+PATCH {{baseUrl}}/admin/users/{{userId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+Content-Type: {{contentType}}
+
+{
+  "username": "UpdatedStudent002"
+}
+
+###########################################
+# 6️⃣ Delete Student
+###########################################
+### @deleteStudent
+DELETE {{baseUrl}}/admin/users/{{userId}}
+Authorization: Bearer {{token}}
+Accept: application/json

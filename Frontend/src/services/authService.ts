@@ -2,15 +2,15 @@ import { jwtDecode } from "jwt-decode";
 import { useMessage } from "~/composables/common/useMessage";
 import { useRouter } from "nuxt/app";
 import { useAuthStore } from "~/stores/authStore";
-import { AuthApi } from "~/api/auth/auth.api";
+import { AuthApi } from "~/api/auth/api";
 import { useApiUtils } from "~/utils/useApiUtils";
 import { Role } from "~/api/types/enums/role.enum";
 import type {
   UserRegisterForm,
   UserLoginForm,
   AuthDataDTO,
-} from "~/api/auth/auth.dto";
-import type { UserBaseDataDTO } from "~/api/types/userBase";
+} from "~/api/auth/dto";
+import type { UserBaseDataDTO } from "~/api/types/user.dto";
 
 export class AuthService {
   private router = useRouter();
@@ -31,7 +31,7 @@ export class AuthService {
     if (!this.validateCredentials(form)) return null;
 
     const { data } = await this.safeApiCall<AuthDataDTO>(
-      this.authApi.registerUser(form),
+      () => this.authApi.registerUser(form),
       {
         showSuccessNotification: true,
         showErrorNotification: true,
@@ -46,7 +46,7 @@ export class AuthService {
     if (!this.validateCredentials(form)) return null;
 
     const { data } = await this.safeApiCall<AuthDataDTO>(
-      this.authApi.login(form),
+      () => this.authApi.login(form),
       {
         showErrorNotification: true,
         showSuccessNotification: true,

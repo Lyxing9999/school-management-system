@@ -1,11 +1,10 @@
 from flask import Blueprint ,request
 from app.contexts.shared.model_converter import pydantic_converter
 from app.contexts.iam.services import IAMService
-from app.contexts.shared.decorators.wrap_response import wrap_response
+from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.infra.database.db import get_db
 from app.contexts.iam.data_transfer.requests import  IAMUpdateSchema , IAMLoginSchema
 from app.contexts.iam.data_transfer.responses import IAMResponseDataDTO , IAMUpdateDataDTO
-from app.contexts.common.base_response_dto import BaseResponseDTO
 iam_bp = Blueprint('iam_bp', __name__)
 
 

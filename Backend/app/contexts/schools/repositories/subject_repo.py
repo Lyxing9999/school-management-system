@@ -14,7 +14,6 @@ class SubjectRepository(MongoErrorMixin):
     def save(self, subject_agg: SchoolSubject) -> ObjectId:
         try:
             result = self.collection.insert_one(subject_agg)
-            self._log("save", f"Subject ID: {result.inserted_id}")
             return result.inserted_id
         except Exception as e:
             self._handle_mongo_error("insert", e)

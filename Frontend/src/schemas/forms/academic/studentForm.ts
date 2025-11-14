@@ -1,6 +1,6 @@
 import { roleUserOptions } from "~/utils/constants/roles";
 import type { Field } from "~/components/types/form";
-import { ElInput, ElSelect, ElOption } from "element-plus";
+import { ElInput, ElSelect, ElOption, ElRate } from "element-plus";
 import { UserFilled, Lock } from "@element-plus/icons-vue";
 import type {
   AcademicCreateStudentData,

@@ -3,6 +3,9 @@ import type { Field } from "~/components/types/form";
 import type {
   AcademicStudentInfoUpdate,
   AcademicCreateStudentData,
+  AcademicUpdateStudentData,
+  AcademicGetStudentResponse,
+  AcademicStudentInfoResponse,
 } from "~/api/academic/academic.dto";
 
 // Registry item types
@@ -11,8 +14,14 @@ export type FormRegistryEditItem<U extends object> = {
   schema: Field<U>[];
   formData: () => U;
 };
+export type FormRegistryCreateItem<C extends object> = {
+  service: UseFormService<C, any, any, any, any, any>;
+  schema?: Field<C>[];
+  formData?: () => C;
+};
 
 export type RoleEditMap = {
+  USER: AcademicUpdateStudentData;
   STUDENT: AcademicStudentInfoUpdate;
 };
 export type RoleCreateMap = {
@@ -27,8 +36,14 @@ export type CreateRegistryItem = {
   [K in keyof RoleCreateMap]: FormRegistryEditItem<RoleCreateMap[K]>;
 };
 
-// Edit mode types
-export type EditMode = "STUDENT";
+export type CreateFormMap = {
+  USER: AcademicCreateStudentData;
+  STUDENT: AcademicStudentInfoUpdate;
+  SUBJECT: AcademicCreateSubject;
+};
 
-export type EditFormType<T extends EditMode> = AcademicStudentInfoUpdate;
-export type GetEditFormType<T extends EditMode> = AcademicStudentInfoUpdate;
+export type GetFormMap = {
+  USER: AcademicGetStudentResponse;
+  STUDENT: AcademicStudentInfoResponse;
+  SUBJECT: BaseSubject;
+};
