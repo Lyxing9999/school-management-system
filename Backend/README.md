@@ -1,6 +1,6 @@
-# 🏛️ Backend Architecture: School Management System
+# Backend Architecture: School Management System
 
-## 🌟 Overview
+## Overview
 
 This backend is built using **Flask** and strictly follows a **Domain-Driven Design (DDD)-like architecture**. Each domain or "bounded context" is isolated into its own folder containing all necessary components (models, services, routes, tests).
 
@@ -40,7 +40,7 @@ app/
 
 ---
 
-## 🔄 Backend Request Flow
+##  Backend Request Flow
 
 This flow illustrates the path a request takes from the API layer down to the database and back, enforcing the rule that **Routes only talk to Services, and Services only talk to Models/Repositories.**
 
@@ -59,33 +59,27 @@ This flow illustrates the path a request takes from the API layer down to the da
 
 ```mermaid
 graph TD
-    subgraph "Frontend"
-        A[Vue Component] -->|Calls API| B[Flask Route (.routes.py)]
+    subgraph Frontend
+        A[Vue Component] -->|Calls API| B[Flask Route routes.py]
     end
 
-    subgraph "Backend (Flask)"
-        B -->|1. Calls Service| C[Service Layer (.services.py)]
-        C -->|2. Business Logic & Validation| D[Model/Repository (.models.py)]
-        D -->|3. CRUD Operations| E[Database]
-        E -->|4. Data Response| D
+    subgraph Backend (Flask)
+        B -->|1 Calls Service| C[Service Layer services.py]
+        C -->|2 Business Logic & Validation| D[Model Repository models.py]
+        D -->|3 CRUD Operations| E[Database]
+        E -->|4 Data Response| D
         D --> C
-        C -->|5. Final Result| B
+        C -->|5 Final Result| B
     end
 
-    subgraph "Response"
+    subgraph Response
         B -->|HTTP Response| A
     end
-
-    style A fill:#D4E6F1,stroke:#3498DB
-    style B fill:#F9E79F,stroke:#F1C40F
-    style C fill:#D5F5E3,stroke:#2ECC71
-    style D fill:#FADBD8,stroke:#E74C3C
-    style E fill:#F5F5F5,stroke:#BDC3C7
 ````
 
 -----
 
-## 🏗️ Adding a New Context / Module
+##  Adding a New Context / Module
 
 To add a new, fully self-contained domain (e.g., **`library`**):
 
@@ -109,7 +103,7 @@ To add a new, fully self-contained domain (e.g., **`library`**):
 
 -----
 
-## 🧪 Testing Structure Recommendation
+##  Testing Structure Recommendation
 
 Tests are kept local to their context for isolation and faster execution.
 
@@ -135,7 +129,7 @@ app/contexts/<context>/tests/
 
 ```
 
-## 🌟 Overview
+## Overview
 
 This backend is built using **Flask** and strictly follows a **Domain-Driven Design (DDD)-like architecture**...
 
