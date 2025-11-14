@@ -129,7 +129,3 @@ app/contexts/<context>/tests/
 
 ```
 
-## Overview
-
-This backend is built using **Flask** and strictly follows a **Domain-Driven Design (DDD)-like architecture**...
-![Demo School](./Backend/app/uploads/files/demo_school.png)
