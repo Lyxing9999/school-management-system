@@ -10,13 +10,14 @@
 # =========================
 render.yaml
 docker-compose.yaml
-docker-compose.yml
+# docker-compose.yml
 
 # =========================
 # ✅ Logs
 # =========================
 logs/
 *.log
+*.log.*
 
 # =========================
 # ✅ System & Editor Files
@@ -27,6 +28,61 @@ logs/
 .vscode/
 
 # =========================
-# ✅ Node Modules (Global Safety)
+# ✅ Node Modules
 # =========================
 node_modules/
+
+# =========================
+# ✅ Nuxt / Frontend Build Outputs
+# =========================
+.output/
+.data/
+.nuxt/
+.nitro/
+.cache/
+dist/
+
+# =========================
+# ✅ Python Bytecode & Cache
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# =========================
+# ✅ Python Virtual Environments
+# =========================
+venv/
+env/
+.venv/
+instance/
+
+# =========================
+# ✅ Python Packaging / Build
+# =========================
+*.egg-info/
+build/
+dist/
+
+# =========================
+# ✅ Flask / Python Logs
+# =========================
+*.log
+
+# =========================
+# ✅ Test / Coverage
+# =========================
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# =========================
+# ✅ MongoDB / DB Dumps
+# =========================
+dump/
