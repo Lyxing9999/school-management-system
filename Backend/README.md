@@ -1,142 +1,168 @@
-# 🏛️ Backend Architecture: School Management System
+# School Management System – Backend
 
-## 🌟 Overview
-
-This backend is built using **Flask** and strictly follows a **Domain-Driven Design (DDD)-like architecture**. Each domain or "bounded context" is isolated into its own folder containing all necessary components (models, services, routes, tests).
-
-This architectural approach ensures:
-* **Separation of Concerns:** Business logic is isolated from database access and HTTP handling.
-* **Scalability & Modularity:** New features can be added in their own context without affecting existing domains.
-* **Maintainability:** Clear file structure simplifies debugging and onboarding new developers.
+A modular and scalable backend for a School Management System, built with **Flask**, **MongoDB**, and a clean **Service → Route → Response** architecture.  
+The goal is to create a maintainable, production-ready backend with strong separation of concerns.
 
 ---
 
-## 📂 Folder Structure
+## 🚧 Development Status
 
-The core of the architecture resides within the `app/contexts/` directory, reflecting the separation of domains:
+**Backend Progress: ~30% Completed**
 
+- ✅ Admin module (CRUD, user management)
+- ✅ Authentication skeleton
+- ✅ Database models (Pydantic + MongoDB)
+- ✅ IAM module
+- 🔄 Teacher module – IN PROGRESS
+- 🔄 School module – IN PROGRESS
+- 🔄 Academic module – IN PROGRESS
+- ⏳ Student module – NOT STARTED
+
+---
+
+## 🔧 Tech Stack
+
+- **Flask** (Blueprint modular architecture)
+- **MongoDB** (PyMongo)
+- **Pydantic** for validation
+- **Layered Architecture**
+  - Routes → handle HTTP + validate DTOs
+  - Services → business logic
+  - Repositories → database access
+  - Models → define pure OOP domain objects and business rules (no DB access)
+- **Docker** support
+- CORS, JWT-ready
+- Future-proof permission system
+
+---
+
+## 📁 Project Structure
 ```
-
 app/
 ├─ contexts/
-│  ├─ admin/                \# Admin-specific operations (User management, system config)
-│  │  ├─ models.py          \# Domain models (database schemas)
-│  │  ├─ services.py        \# Core business logic
-│  │  ├─ routes.py          \# Flask routes / API endpoints
-│  │  ├─ read\_models.py     \# Models optimized for read-only queries (reporting)
-│  │  ├─ data\_transfer/     \# DTOs (Request/Response schemas)
-│  │  ├─ error/             \# Context-specific exceptions (e.g., UserNotFoundError)
-│  │  └─ tests/             \# Unit and integration tests for this context
-│  ├─ academic/             \# Curriculum, grading, term management
-│  ├─ schools/              \# School registration, class creation
-│  └─ ... (other contexts: student, teacher, auth, iam, etc.)
-├─ uploads/                 \# Dedicated file storage handling (isolated from services)
-├─ **init**.py              \# Flask app factory / initialization
-├─ run.py                   \# App entry point (e.g., python run.py)
-├─ requirements.txt         \# Python dependencies
-└─ Dockerfile / Procfile    \# Deployment configurations
+│  ├─ admin/          ✅ DONE
+│  │  ├─ routes.py
+│  │  ├─ services.py
+│  │  ├─ models.py
+│  │  ├─ repository.py
+│  │  ├─ read_models.py
+│  │  ├─ data_transfer/
+│  │  ├─ error/
+│  │  └─ tests/
+│  ├─ teacher/        🔄 IN PROGRESS
+│  ├─ student/        ⏳ NOT STARTED
+│  ├─ academic/       🔄 IN PROGRESS
+│  ├─ school/         🔄 IN PROGRESS
+│  ├─ iam/            ✅ DONE
+│  └─ core/
+│     ├─ security/
+│     └─ placeholder/
+├─ uploads/
+├─ __init__.py
+run.py
+requirements.txt
+Dockerfile
+```
 
-````
+### Why This Structure Works
+
+- Each context is fully isolated
+- Routes only handle HTTP
+- Services contain business logic
+- Models define domain objects (pure OOP, business rules)
+- Easy to add new contexts with no breaking changes
 
 ---
 
-## 🔄 Backend Request Flow
+## ✨ Features (Current & Planned)
 
-This flow illustrates the path a request takes from the API layer down to the database and back, enforcing the rule that **Routes only talk to Services, and Services only talk to Models/Repositories.**
+✔ Admin/Teacher/Student roles  
+✔ Modular Blueprints  
+✔ Class & Schedule management  
+✔ Grading workflow  
+✔ Attendance tracking  
+✔ Telegram bot integration ready  
+✔ Dynamic permissions (future-ready)  
 
-### Flow Explanation
+---
 
-| Layer | File / Folder | Responsibility |
-| :--- | :--- | :--- |
-| **Routes** | `routes.py` | Receives HTTP requests, validates input data (via DTOs), and calls the appropriate Service method. **No business logic here.** |
-| **Service** | `services.py` | Contains the **business logic**. Orchestrates complex operations, enforces rules, and handles multi-step transactions. |
-| **Model / Repo** | `models.py` | Handles direct **database access** (CRUD operations) and data schema definitions. |
-| **Read Models** | `read_models.py` | Used for querying and reporting where the domain models might be inefficient (CQRS-like approach). |
-| **DTOs** | `data_transfer/` | Defines and validates the structure of data for both API **requests** and **responses**. |
-| **Errors** | `error/` | Provides custom, domain-specific exceptions for granular error handling and messaging. |
+## 🚀 Running the Backend
 
-### Diagram: Backend Flow
+### Local Development
+```bash
+pip install -r requirements.txt
+python run.py
+```
 
-```mermaid
-graph TD
-    subgraph "Frontend"
-        A[Vue Component] -->|Calls API| B[Flask Route (.routes.py)]
-    end
+### Docker
+```bash
+docker build -t school-backend .
+docker run -p 5000:5000 --env-file .env school-backend
+```
 
-    subgraph "Backend (Flask)"
-        B -->|1. Calls Service| C[Service Layer (.services.py)]
-        C -->|2. Business Logic & Validation| D[Model/Repository (.models.py)]
-        D -->|3. CRUD Operations| E[Database]
-        E -->|4. Data Response| D
-        D --> C
-        C -->|5. Final Result| B
-    end
+Or with Compose:
+```bash
+docker-compose up --build
+```
 
-    subgraph "Response"
-        B -->|HTTP Response| A
-    end
+Backend runs at: **http://localhost:5001**
 
-    style A fill:#D4E6F1,stroke:#3498DB
-    style B fill:#F9E79F,stroke:#F1C40F
-    style C fill:#D5F5E3,stroke:#2ECC71
-    style D fill:#FADBD8,stroke:#E74C3C
-    style E fill:#F5F5F5,stroke:#BDC3C7
-````
+---
 
------
+## ⚙️ Environment Variables
 
-## 🏗️ Adding a New Context / Module
+Create a `.env` file:
+```bash
+FLASK_ENV=development
+MONGO_URI=mongodb://localhost:27017/school_db
+SECRET_KEY=your-secret-key
+```
 
-To add a new, fully self-contained domain (e.g., **`library`**):
+---
 
-1.  **Create the Context Folder:**
+## 📡 Example API Endpoints
+```
+GET  /api/admin/users
+POST /api/admin/create-user
+PUT  /api/teacher/grade
+GET  /api/academic/classes
+```
 
-    ```bash
-    mkdir -p app/contexts/library/{data_transfer,error,tests}
-    ```
+Use **Postman** or **Thunder Client** for testing.
 
-2.  **Add Core Files:** Create the standard files inside the `library` context:
+---
 
-      * `models.py`, `services.py`, `routes.py`, `read_models.py`, `__init__.py`
+## 🧪 Tests
 
-3.  **Implement Logic:**
-
-      * Define database schema in `models.py`.
-      * Implement core use cases (e.g., `checkout_book`) in `services.py`.
-      * Define API endpoints (e.g., `/api/library/books`) in `routes.py`.
-
-4.  **Register Blueprint:** In the main application initialization file (`app/__init__.py`), register the new blueprint so Flask recognizes the routes.
-
------
-
-## 🧪 Testing Structure Recommendation
-
-Tests are kept local to their context for isolation and faster execution.
-
+Each context has its own tests:
 ```
 app/contexts/<context>/tests/
-├─ test_models.py       # Focuses on ORM/database interactions (integration)
-├─ test_services.py     # Focuses on business logic and orchestration (unit)
-├─ test_routes.py       # Focuses on API input/output and status codes (integration)
-└─ __init__.py
 ```
 
------
+---
 
-##  Benefits of This Architecture
+## 📘 Developer Notes
 
-| Principle | Benefit |
-| :--- | :--- |
-| **Separation of Concerns** | Ensures business logic is testable and independent of Flask routing details. |
-| **Modularity** | Each context is self-contained and reusable, minimizing side effects when changes are made. |
-| **Scalability** | Allows large teams to work in parallel on different domains with minimal conflict. |
-| **Testability** | Context-local tests ensure a high coverage and simplify continuous integration. |
-| **Maintainability** | Consistent file structure and context-specific error handling simplify debugging and code reviews. |
+This backend follows:
 
-```
+- **Clean Architecture**
+- No business logic in routes
+- No raw DB logic in routes
+- Services are the "brain"
+- Pydantic for strong typing
+- Context-based modularity
 
-## 🌟 Overview
+---
 
-This backend is built using **Flask** and strictly follows a **Domain-Driven Design (DDD)-like architecture**...
+## ⚠️ Common Issues
 
-![Demo School](app/uploads/files/demo_school.png)
+**MongoDB connection error:**
+- Check your `.env`
+- Make sure MongoDB is running
+
+**Port already in use:**
+- Change port in `run.py`
+- Or kill the conflicting process
+
+---
+
