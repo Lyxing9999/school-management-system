@@ -60,12 +60,12 @@ This flow illustrates the path a request takes from the API layer down to the da
 ```mermaid
 graph TD
     subgraph Frontend
-        A[Vue Component] -->|Calls API| B[Flask Route routes.py]
+        A[Vue Component] -->|Calls API| B[Admin Route routes.py]
     end
 
-    subgraph Backend (Flask)
-        B -->|1 Calls Service| C[Service Layer services.py]
-        C -->|2 Business Logic & Validation| D[Model Repository models.py]
+    subgraph Backend
+        B -->|1 Calls Service| C[Admin Service Layer services.py]
+        C -->|2 Business Logic & Validation| D[Admin Models models.py]
         D -->|3 CRUD Operations| E[Database]
         E -->|4 Data Response| D
         D --> C
@@ -132,5 +132,4 @@ app/contexts/<context>/tests/
 ## Overview
 
 This backend is built using **Flask** and strictly follows a **Domain-Driven Design (DDD)-like architecture**...
-
-![Demo School](app/uploads/files/demo_school.png)
+![Demo School](./Backend/app/uploads/files/demo_school.png)
