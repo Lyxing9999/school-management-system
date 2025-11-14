@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.contexts.shared.enum.roles import SystemRole
 from pydantic import BaseModel
 from bson import ObjectId
@@ -10,20 +10,16 @@ class IAMLoginSchema(BaseModel):
     password: str 
 
 
- 
 # -------------------------
 # Update
 # -------------------------
 class IAMUpdateSchema(BaseModel):
-    username: str | None = None
+    username: str | None =  None
     email: str | None = None
     password: str | None = None
     model_config = {
          "enum_values_as_str": True,
     }
-
-
-
 
 
 

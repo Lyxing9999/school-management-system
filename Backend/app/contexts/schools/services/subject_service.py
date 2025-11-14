@@ -7,7 +7,7 @@ from app.contexts.schools.read_models.subject_read_model import SubjectReadModel
 from app.contexts.schools.data_transfer.requests.subject_requests import SubjectCreateSchema, SubjectUpdateSchema
 from app.contexts.schools.data_transfer.responses.subject_responses import SubjectBaseDataDTO
 from app.contexts.core.log.log_service import LogService
-from app.contexts.schools.error.school_exceptions import SubjectCreateException, SubjectValueException
+from app.contexts.schools.error.subject_exceptions import SubjectCreateException, SubjectValueException
 
 
 class SubjectService:
@@ -31,13 +31,13 @@ class SubjectService:
     # -------------------------
     # CRUD
     # -------------------------
-    def find_all_subjects_dto(self) -> List[dict]:
+    def find_all_subjects_dto(self) -> list[dict]:
         subjects = self._subject_read_model.get_subjects()
         return [SchoolSubject.to_domain(s).to_dto().model_dump() for s in subjects]
 
     def find_subject_by_id_dto(self, subject_id: str | ObjectId) -> dict:
         subject_obj = self._subject_read_model.find_by_id(ObjectId(subject_id) if isinstance(subject_id, str) else subject_id)
-        return SchoolSubject.to_domain(subject_obj).to_dto().model_dump()
+        return SchoolSubject.to_domain(subject_obj).to_dto()
 
     def create_subject(self, payload: SubjectCreateSchema, created_by: ObjectId) -> SubjectBaseDataDTO:
         domain_subject = SchoolSubject.from_create_schema(payload, created_by)

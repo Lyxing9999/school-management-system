@@ -9,7 +9,7 @@ import type {
   AcademicStudentInfoResponse,
   AcademicStudentData,
 } from "~/api/academic/academic.dto";
-import type { BaseStudentInfo } from "~/api/types/baseStudentInfo";
+import type { BaseStudentInfo } from "~/api/types/student.dto";
 import { AcademicService } from "~/services/academicService";
 import { AcademicApi } from "~/api/academic/academic.api";
 

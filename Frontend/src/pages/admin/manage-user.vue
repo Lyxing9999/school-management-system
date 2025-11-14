@@ -26,10 +26,7 @@ import { useInlineEdit } from "~/composables/inline-edit/useInlineEdit";
 // --------------------
 // Schemas & Registry
 // --------------------
-import {
-  formRegistryCreate,
-  formRegistryEdit,
-} from "~/schemas/registry/AdminFormRegistry";
+import { formRegistryCreate, formRegistryEdit } from "~/forms/admin/register";
 
 // --------------------
 // use dynamic form
@@ -38,7 +35,7 @@ import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
   useInlineEditService,
-} from "~/schemas/registry/formDynamic";
+} from "~/schemas/registry/admin/formDynamic";
 // --------------------
 // Columns & Constants
 // --------------------
@@ -53,22 +50,23 @@ import {
 // API & Types
 // --------------------
 import type {
-  AdminCreateStaff,
   AdminCreateUser,
   AdminGetUserData,
-  AdminUpdateStaffData,
   AdminUpdateUser,
-} from "~/api/admin/admin.dto";
+} from "~/api/admin/user/dto";
+import type { AdminCreateStaff, AdminUpdateStaff } from "~/api/admin/staff/dto";
+
 import { Role } from "~/api/types/enums/role.enum";
 
 // --------------------
 // Services
 // --------------------
-import { serviceFormUser } from "~/services/formServices/adminFormService";
 import type {
   CreateRegistryItem,
   EditRegistryItem,
 } from "~/schemas/types/admin";
+import { adminService } from "~/api/admin";
+
 /* ----------------------------- types ----------------------------- */
 type CreateMode = "USER" | "STAFF";
 type EditMode = "USER" | "STAFF" | "STUDENT";
@@ -78,32 +76,37 @@ const selectedRoles = ref<Role[]>([Role.STUDENT]);
 const selectedFormCreate = ref<CreateMode>("USER");
 const selectedFormEdit = ref<EditMode>("USER");
 const editFormDataKey = ref("");
+const createDialogKey = ref(0);
 
 /* ---------------------------- create form -------------------------- */
 const {
   formDialogVisible: createFormVisible,
   formData: createFormData,
-  openForm: openCreateForm,
+
   schema: createFormSchema,
   saveForm: saveCreateForm,
   cancelForm: cancelCreateForm,
+  openForm: openCreateForm,
   loading: createFormLoading,
+  resetFormData,
 } = useDynamicCreateFormReactive(selectedFormCreate);
 
 const handleOpenCreateForm = async () => {
   selectedFormCreate.value = isStaffMode.value ? "STAFF" : "USER";
-  await nextTick();
-  openCreateForm();
+  await openCreateForm();
 };
-const handleSaveCreateForm = (
-  payload: Partial<AdminCreateUser> | Partial<AdminCreateStaff>
-) => {
+const handleSaveCreateForm = (payload: Partial<any>) => {
   saveCreateForm(payload);
 };
 const handleCancelCreateForm = () => {
   cancelCreateForm();
 };
-
+watch(
+  () => selectedFormCreate.value,
+  () => {
+    resetFormData(); // automatically uses the latest getDefaultData()
+  }
+);
 /* ---------------------------- edit form -------------------------- */
 const {
   formDialogVisible: editFormVisible,
@@ -116,13 +119,13 @@ const {
 } = useDynamicEditFormReactive(selectedFormEdit);
 
 const handleOpenEditForm = async (row: AdminGetUserData) => {
-  editFormDataKey.value = row.id?.toString() ?? "new";
   selectedFormEdit.value =
     row.role === "student"
       ? "STUDENT"
       : row.role === "academic" || row.role === "teacher"
       ? "STAFF"
       : "USER";
+  editFormDataKey.value = row.id?.toString() ?? "new";
   editFormData.value = {};
   await nextTick();
   await openEditForm(row.id);
@@ -150,22 +153,23 @@ const {
   [],
   useInlineEditService("USER")
 );
-
+const adminApiService = adminService();
 /* ---------------------------- pagination ------------------------- */
 const fetchUsers = async (
-  rolesArray: Role[],
+  rolesArray: Role[] | Ref<Role[]>,
   page: number,
   pageSize: number
 ) => {
-  const res = await serviceFormUser.page!({
-    roles: rolesArray,
-    page,
-    pageSize,
-  });
-  setData(res?.items ?? []);
+  const roles = Array.isArray(rolesArray) ? rolesArray : rolesArray.value;
+  const res = await adminApiService.user.getUserPage(roles, page, pageSize);
+
+  const items = res?.users ?? [];
+  const total = res?.total ?? 0;
+  setData(items);
+
   return {
-    items: res?.items ?? [],
-    total: res?.total ?? 0,
+    items,
+    total,
   };
 };
 const {
@@ -262,12 +266,11 @@ function handleAutoSaveWrapper(
     console.error(err);
   });
 }
-const createFormDataTyped = computed(
-  () => createFormData.value as CreateRegistryItem
-);
-const editFormDataTyped = computed(
-  () => editFormData.value as EditRegistryItem
-);
+
+const editFormDataTyped = computed({
+  get: () => editFormData.value,
+  set: (value) => (editFormData.value = value),
+});
 </script>
 
 <template>
@@ -320,7 +323,7 @@ const editFormDataTyped = computed(
         :data="data"
         :columns="userColumns"
         :loading="fetchLoading"
-        :smart-props="{ inlineEditLoading }"
+        :smart-props="{ loading: inlineEditLoading }"
         @save="handleSaveWrapper"
         @cancel="cancel"
         @auto-save="handleAutoSaveWrapper"
@@ -372,7 +375,7 @@ const editFormDataTyped = computed(
     <SmartFormDialog
       :key="selectedFormCreate"
       v-model:visible="createFormVisible"
-      v-model="createFormDataTyped"
+      v-model="createFormData"
       :fields="createFormSchema"
       :title="`Add ${isStaffMode ? 'Staff' : 'User'}`"
       :loading="createFormLoading"

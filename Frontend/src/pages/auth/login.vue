@@ -5,8 +5,8 @@ import schoolLogo from "~/assets/image/school-logo.jpg";
 import googleIcon from "~/assets/icons/svg/google.svg";
 import { AuthService } from "~/services/authService";
 import { useNuxtApp } from "nuxt/app";
-import type { UserLoginForm } from "~/api/auth/auth.dto";
-import { AuthApi } from "~/api/auth/auth.api";
+import type { UserLoginForm } from "~/api/auth/dto";
+import { AuthApi } from "~/api/auth/api";
 import type { AxiosInstance } from "axios";
 
 const hover = ref(false);

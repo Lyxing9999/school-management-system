@@ -1,6 +1,6 @@
 import { roleUserOptions } from "~/utils/constants/roles";
 import type { Field } from "~/components/types/form";
-import { ElInput, ElSelect, ElOption } from "element-plus";
+import { ElInput, ElSelect, ElOption, ElRate } from "element-plus";
 import { UserFilled, Lock } from "@element-plus/icons-vue";
 import { UserRole } from "~/api/types/enums/role.enum";
 import type { AdminCreateUser, AdminUpdateUser } from "~/api/admin/admin.dto";
@@ -42,6 +42,14 @@ export const userFormSchema: Field<AdminCreateUser>[] = [
         trigger: "blur",
       },
     ],
+  },
+  {
+    key: "rate",
+    labelWidth: "100px",
+    label: "Rate",
+    labelPosition: "left",
+    component: ElRate,
+    componentProps: {},
   },
   {
     key: "password",

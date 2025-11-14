@@ -18,7 +18,7 @@ class SubjectReadModel(MongoErrorMixin):
         self._log_service.log(msg, level="INFO", module="SubjectReadModel", extra=extra or {})
             
        
-    def get_subject(self) -> List[dict]:
+    def get_subjects(self) -> List[dict]:
         try:
             cursor = self.collection.find()
             return list(cursor)

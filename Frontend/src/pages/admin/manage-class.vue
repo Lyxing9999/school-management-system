@@ -2,7 +2,6 @@
 <script lang="ts" setup>
 import { ref, onMounted } from "vue";
 import { classColumns } from "~/schemas/columns/academic/classColumns";
-import { serviceClass } from "~/services/formServices/adminFormService";
 // --------------------
 // Base Components
 // --------------------
@@ -11,25 +10,47 @@ import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
+
+// --------------------
+// Services
+// --------------------
+import { serviceClass } from "~/services/formServices/adminFormService";
+import { serviceSubject } from "~/services/formServices/adminFormService";
 // --------------------
 // Type Components
 // --------------------
-import type { BaseClassDataDTO } from "~/api/types/baseClass";
+import type { BaseClassDataDTO } from "~/api/types/class.dto";
 
-import { useInlineEditService } from "~/schemas/registry/formDynamic";
 import { useInlineEdit } from "~/composables/inline-edit/useInlineEdit";
 import type { AdminUpdateClass } from "~/api/admin/admin.dto";
 const classes = ref<BaseClassDataDTO[]>([]);
-
+import {
+  useDynamicCreateFormReactive,
+  useDynamicEditFormReactive,
+  useInlineEditService,
+} from "~/schemas/registry/admin/formDynamic";
+const selectedFormCreate = ref("CLASS");
 // Fetch classes
 const fetchClasses = async () => {
-  const res = await serviceClass.all!({});
+  const res = await serviceClass.all!();
   classes.value = res;
 };
 
 onMounted(() => {
   fetchClasses();
 });
+const {
+  formDialogVisible,
+  schema: classFormSchema,
+  formData,
+  loading,
+  openForm,
+  saveForm,
+  cancelForm,
+} = useDynamicCreateFormReactive(selectedFormCreate);
+const openFormDialog = () => {
+  openForm();
+};
 
 const {
   save,
@@ -74,7 +95,7 @@ onMounted(() => {
         type="primary"
         size="large"
         class="shrink-0 flex items-center gap-2"
-        @click="openCreateClassModal"
+        @click="openFormDialog"
       >
         <el-icon><Plus /></el-icon>
         Add Class
@@ -99,10 +120,22 @@ onMounted(() => {
           />
         </template>
 
+        <template #studentSlot="{ row, field }">
+          <span>{{ row[field] }}</span>
+        </template>
         <template #subjectSlot="{ row, field }">
-          <span>No subjects assigned</span>
+          <span>{{ row[field] }}</span>
         </template>
       </SmartTable>
     </template>
   </ErrorBoundary>
+  <SmartFormDialog
+    v-model:visible="formDialogVisible"
+    v-model="formData"
+    :fields="classFormSchema"
+    title="Create Class"
+    :loading="loading"
+    @save="saveForm"
+    @cancel="cancelForm"
+  />
 </template>

@@ -7,11 +7,12 @@ from typing import List , Tuple , Union , Optional
 from app.contexts.iam.read_models import IAMReadModel
 from app.contexts.staff.read_models import StaffReadModel
 class AdminReadModel(MongoErrorMixin):
-    def __init__(self, db: Database , collection_users: str = "users" , collection_staff: str = "staff" , collection_classes: str = "classes" ):
+    def __init__(self, db: Database , collection_users: str = "users" , collection_staff: str = "staff" , collection_classes: str = "classes", collection_subjects: str = "subjects" ):
         self.db = db
         self.collection_users = db[collection_users]
         self.collection_staff = db[collection_staff]
         self.collection_classes = db[collection_classes]
+        self.collection_subjects = db[collection_subjects]
         self.mongo_converter = mongo_converter
         self._iam_read_model: Optional[IAMReadModel] = None
         self._staff_read_model: Optional[StaffReadModel] = None
@@ -48,6 +49,7 @@ class AdminReadModel(MongoErrorMixin):
         try:
             # Prepare role filter
             role_filter = roles if isinstance(roles, str) else {"$in": roles}
+            print("this is role filter ", role_filter)
             query = {"deleted": {"$ne": True}, "role": role_filter}
             projection = {"password": 0}  # Exclude password
 

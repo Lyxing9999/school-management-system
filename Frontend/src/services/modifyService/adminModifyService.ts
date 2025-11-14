@@ -7,7 +7,7 @@ import type {
 } from "~/api/admin/admin.dto";
 import { AdminService } from "~/services/adminService";
 import { AdminApi } from "~/api/admin/admin.api";
-import type { BaseClassDataDTO } from "~/api/types/baseClass";
+import type { BaseClassDataDTO } from "~/api/types/class.dto";
 
 const getAdminService = () => {
   const { $api } = useNuxtApp();

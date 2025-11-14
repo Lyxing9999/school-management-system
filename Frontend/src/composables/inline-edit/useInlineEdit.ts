@@ -9,16 +9,25 @@ export interface UseInlineEditService<T> {
 }
 
 export function toInlineEditUpdateService<T>(
-  service: UseFormService<any, Partial<T>, any, Record<string, any>, any, any>
+  service: () => UseFormService<
+    any,
+    Partial<T>,
+    any,
+    Record<string, any>,
+    any,
+    any
+  >
 ): UseInlineEditService<T> {
   return {
     update: async (id: string, payload: Partial<T>) => {
-      if (!service.update) throw new Error("Update method not implemented");
-      return await service.update(id, payload);
+      const s = service(); // call it when you actually need it
+      if (!s.update) throw new Error("Update method not implemented");
+      return await s.update(id, payload);
     },
     delete: async (id: string) => {
-      if (!service.delete) throw new Error("Delete method not implemented");
-      return await service.delete(id);
+      const s = service(); // call it when you actually need it
+      if (!s.delete) throw new Error("Delete method not implemented");
+      return await s.delete(id);
     },
   };
 }
@@ -74,9 +83,9 @@ export function useInlineEdit<
         [field]: currentValue,
       } as Partial<TUpdate>;
       const updated = await service.update(row.id.toString(), payload);
-
       if (!updated) {
         row[key] = originalRows.value[rowKey]?.[key] ?? currentValue;
+        ElMessage.error("Failed to update");
         return;
       }
 
@@ -88,6 +97,8 @@ export function useInlineEdit<
       revertedFields.value[rowKey] = revertedFields.value[rowKey] || new Set();
       revertedFields.value[rowKey].delete(key);
       originalRows.value[rowKey] = { ...row };
+    } catch (err) {
+      row[key] = originalRows.value[rowKey]?.[key] ?? currentValue;
     } finally {
       loading.value[rowKey] = false;
     }
@@ -153,9 +164,7 @@ export function useInlineEdit<
       originalRows.value[rowKey] = { ...row };
       previousValues.value[rowKey] = {} as Record<keyof TGet, any[]>;
       Object.keys(row).forEach((field) => {
-        previousValues.value[rowKey][field as keyof TGet] = [
-          (row as any)[field],
-        ];
+        previousValues.value[rowKey][field as keyof TGet] = [];
       });
     });
   };

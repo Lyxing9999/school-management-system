@@ -11,7 +11,7 @@ import type {
   AcademicStudentInfoData,
   AcademicCreateClassData,
 } from "~/api/academic/academic.dto";
-import type { BaseStudentInfo } from "~/api/types/baseStudentInfo";
+import type { BaseStudentInfo } from "~/api/types/student.dto";
 export class AcademicService {
   private safeApiCall = useApiUtils().safeApiCall;
   constructor(private academicApi: AcademicApi) {}
@@ -44,6 +44,7 @@ export class AcademicService {
     const { data } = await this.safeApiCall<AcademicUpdateStudentData>(
       this.academicApi.updateStudent(user_id, payload),
       {
+        showErrorNotification: true,
         showSuccessNotification: true,
       }
     );

@@ -18,25 +18,7 @@ class StaffReadModel(MongoErrorMixin):
             self._handle_mongo_error("get_staff_by_id", e)
             return {}
 
-
-    def list_teacher_names(self) -> list[dict]:
-        """
-        Return all active teachers with minimal info for dropdowns or lists.
-        Fields: {user_id, staff_name}
-        """
-        try:
-            cursor = self.collection.find(
-                {"role": "teacher", "deleted": False}, 
-                {"_id": 0, "user_id": 1, "staff_name": 1}
-            ).sort("staff_name", ASCENDING)
-            return list(cursor)
-        except Exception as e:
-            self._handle_mongo_error("list_teacher_names", e)
-            return []
-
-
-
-    def get_staff_name_select(self, search_text: str = "") -> list[dict]:
+    def get_staff_name_select(self, search_text: str = "", role: str = "teacher") -> list[dict]:
         """
         Return staff for select dropdown.
         Optional: search by partial staff_name.
@@ -47,7 +29,8 @@ class StaffReadModel(MongoErrorMixin):
             if search_text:
                 # case-insensitive regex search
                 query["staff_name"] = {"$regex": search_text, "$options": "i"}
-            
+            if role:
+                query["role"] = role
             projection = {"_id": 1, "user_id": 1, "staff_name": 1}
 
             # Sort by staff_name ascending for nicer UX

@@ -14,7 +14,7 @@ export const useApiUtils = () => {
   };
 
   const safeApiCall = async <T>(
-    promise: Promise<ApiResponse<T>>,
+    fn: () => Promise<ApiResponse<T>>,
     options: SafeApiCallOptions = {}
   ): Promise<{ data: T | null; errors: Record<string, string> }> => {
     const { showSuccessNotification = false, showErrorNotification = false } =
@@ -23,7 +23,7 @@ export const useApiUtils = () => {
     let fieldErrors: Record<string, string> = {};
 
     try {
-      const apiRes = await promise;
+      const apiRes = await fn();
       if (!apiRes) return { data: null, errors: fieldErrors };
 
       if (!apiRes.success) {

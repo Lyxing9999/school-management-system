@@ -19,35 +19,38 @@ import { userColumns } from "~/schemas/columns/admin/userColumns";
 // --------------------
 // Schemas & Registry
 // --------------------
-import {
-  academicFormRegistry,
-  formRegistryEdit,
-  formRegistryCreate,
-  inlineEditService,
-  useEditForm,
-  useCreateForm,
-} from "~/schemas/registry/AcademicFormRegistry";
-import { useFormCreate } from "~/composables/useFormCreate";
-import { useFormEdit } from "~/composables/useFormEdit";
 // --- wrapper for fetching students ---
 import type {
   AcademicCreateStudentData,
   AcademicStudentData,
   AcademicUpdateStudentData,
 } from "~/api/academic/academic.dto";
+import {
+  useDynamicCreateFormReactive,
+  useDynamicEditFormReactive,
+  useInlineEditService,
+} from "~/schemas/registry/academic/AcademicFormDynamic";
+import { academicService } from "~/schemas/registry/academic/AcademicFormRegistry";
 
 const editFormDataKey = ref("");
+const selectedFormCreate = ref("STUDENT");
+const selectedFormEdit = ref("STUDENT");
+
+/* ---------------------------- inline edit ------------------------ */
 const {
   data,
   save,
   cancel,
-  autoSave,
   remove: removeUser,
+  loading: inlineEditLoading,
   setData,
+  autoSave,
   getPreviousValue,
   revertField,
-  loading: inlineEditLoading,
-} = useInlineEdit<AcademicStudentData>([], inlineEditService.value);
+} = useInlineEdit<AcademicStudentData, AcademicUpdateStudentData>(
+  [],
+  useInlineEditService("USER")
+);
 
 /* ---------------------------- pagination ------------------------- */
 const fetchStudents = async (
@@ -55,7 +58,7 @@ const fetchStudents = async (
   page: number,
   pageSize: number
 ) => {
-  const res = await academicFormRegistry.studentIAM.list!({ page, pageSize });
+  const res = await academicService.studentIAM.page!({ page, pageSize });
   setData(res.items);
   return {
     items: res.items,
@@ -79,7 +82,7 @@ const {
   schema: createFormSchema,
   saveForm: saveCreateForm,
   cancelForm: cancelCreateForm,
-} = useCreateForm();
+} = useDynamicCreateFormReactive("STUDENT");
 const handleOpenCreateForm = () => {
   openCreateForm();
 };
@@ -101,7 +104,7 @@ const {
   formData: editFormData,
   saveForm: saveEditForm,
   cancelForm: cancelEditForm,
-} = useEditForm();
+} = useDynamicEditFormReactive("STUDENT");
 
 const handleOpenEditForm = async (row: AcademicStudentData) => {
   editFormDataKey.value = row.id?.toString() ?? "new";
@@ -201,7 +204,3 @@ onMounted(() => {
     </ErrorBoundary>
   </div>
 </template>
-
-<style scoped>
-/* Optional styling */
-</style>

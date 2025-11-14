@@ -6,8 +6,8 @@ class StaffCreateSchema(BaseModel):
     staff_id: str
     staff_name: str
     role: SystemRole = SystemRole.TEACHER 
+    user_id: str | None = None
     phone_number: str | None = None
-    user_id: Optional[str] = None
     address: str | None = None
     created_by: str | None = None
     model_config = {
@@ -17,7 +17,6 @@ class StaffCreateSchema(BaseModel):
 
 
 class StaffUpdateSchema(BaseModel):
-    user_id: str | None = None
     staff_id: str | None = None
     staff_name: str | None = None
     role: SystemRole | None = None

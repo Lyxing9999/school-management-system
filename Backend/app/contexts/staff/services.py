@@ -50,6 +50,7 @@ class StaffService:
     # -------------------------
     def create_staff(self, payload: StaffCreateSchema, created_by: str, user_id: str | None = None) -> Staff:
         created_by = mongo_converter.convert_to_object_id(created_by)
+        user_id = mongo_converter.convert_to_object_id(user_id)
         staff_obj = self._staff_factory.create_staff(payload, created_by, user_id)
         self._staff_repo.save(StaffMapper.to_persistence_dict(staff_obj))
         self._log("create_staff", staff_id=staff_obj.staff_id, extra={"created_by": str(created_by)})
@@ -57,6 +58,7 @@ class StaffService:
 
     def create_staff_dto(self, payload: StaffCreateSchema, created_by: str, user_id: str | None = None) -> StaffBaseDataDTO:
         created_by = mongo_converter.convert_to_object_id(created_by)
+        user_id = mongo_converter.convert_to_object_id(user_id)
         staff_obj = self.create_staff(payload, created_by, user_id)
         return StaffMapper.to_dto(staff_obj)
 
@@ -110,3 +112,9 @@ class StaffService:
         except StaffPermissionException as e:
             self._log("permission_denied", staff_id=str(staff_obj.id), extra={"permission": permission})
             raise
+
+    # -------------------------
+    # Staff name select
+    # -------------------------
+    def get_staff_name_select(self, search_text: str = "", role: str = "teacher") -> list[dict]:
+        return self._staff_read_model.get_staff_name_select(search_text, role)

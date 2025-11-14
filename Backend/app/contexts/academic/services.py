@@ -19,7 +19,7 @@ from app.contexts.academic.data_transfer.requests import (
 from app.contexts.shared.enum.roles import SystemRole
 from app.contexts.schools.services.class_service import ClassService
 from app.contexts.academic.read_models import academic_read_model
-from app.contexts.admin.services import AdminService
+from app.contexts.admin.services.admin_facade_service import AdminFacadeService
 from app.contexts.admin.data_transfer.responses import IAMBaseDataDTO
 from app.contexts.iam.services import IAMService
 from app.contexts.student.services import StudentService
@@ -42,9 +42,9 @@ class AcademicService:
         return self._class_service
 
     @property
-    def admin_service(self) -> AdminService:
+    def admin_service(self) -> AdminFacadeService:
         if self._admin_service is None:
-            self._admin_service = AdminService(self._db)
+            self._admin_service = AdminFacadeService(self._db)
         return self._admin_service
 
     @property

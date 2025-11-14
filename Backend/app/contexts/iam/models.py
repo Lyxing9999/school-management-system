@@ -8,7 +8,7 @@ from app.contexts.auth.services import get_auth_service
 from app.contexts.shared.enum.roles import SystemRole
 from app.contexts.iam.error.iam_exceptions import InvalidRoleException
 from app.contexts.iam.data_transfer.responses import IAMBaseDataDTO
-
+from app.contexts.iam.error.iam_exceptions import UserDeletedException
 
 # -------------------------
 # Domain Model
@@ -80,6 +80,8 @@ class IAM:
         return auth_service.verify_password(password, self._password)
 
     def update_info(self, email: str | None = None, username: str | None = None, password: str | None = None):
+        if self.is_deleted():
+            raise UserDeletedException(self.id)
         updated = False
         if email is not None:
             self._email = email

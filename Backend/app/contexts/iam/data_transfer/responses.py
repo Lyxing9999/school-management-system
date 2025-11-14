@@ -9,7 +9,7 @@ from datetime import datetime
 class IAMBaseDataDTO(BaseModel):
     id: str | None = None
     email: str | None
-    role: SystemRole
+    role: SystemRole | None = None
     username: str | None = None
     created_by: str | None = None
     created_at: datetime | None = None
@@ -36,10 +36,8 @@ class IAMResponseDataDTO(BaseModel):
 # -------------------------
 # Update DTO
 # -------------------------
-class IAMUpdateDataDTO(BaseModel):
-    username: str | None = None
-    email: str | None = None
-    model_config = {"extra": "allow"}
+class IAMUpdateDataDTO(IAMBaseDataDTO):
+    pass
 
 # -------------------------
 # Read DTO

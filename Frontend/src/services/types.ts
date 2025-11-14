@@ -1,36 +1,34 @@
+// Generic paginated response
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
 }
+
+// Generic action response
 export interface ActionResponse<T = any> {
   data: T;
   success: boolean;
   message?: string;
 }
-export interface UseFormService<
-  C, // Create type
-  U, // Update type
-  D = boolean, // Delete return type
-  R = any, // Detail type
-  P = any, // Paginated list type
-  F = any, // Filter type
-  L = P // Full list type, default same as P
-> {
-  create?: (data: C) => Promise<any>;
-  update: (id: string, data: U) => Promise<any>;
-  delete?: (id: string) => Promise<D>;
-  getDetail?: (id: string) => Promise<R>;
-  // paginated list
+
+// -------------------------
+// List / Pagination service
+// -------------------------
+export interface UseListService<P = any, F = any, L = P> {
   page?: (filter: F) => Promise<PaginatedResponse<P>>;
   all?: () => Promise<L[]>;
 }
 
 // -------------------------
-// UseModifyService generic interface
+// Search service
 // -------------------------
-// TAssign = payload type for assign action
-// TUnassign = payload type for unassign/remove action
-// TResponse = returned DTO type
+export interface UseSearchService<P = any, S = any> {
+  search?: (query: S) => Promise<P[]>;
+}
+
+// -------------------------
+// Assign / Modify service
+// -------------------------
 export interface UseModifyService<
   TAssign,
   TUnassign = TAssign,

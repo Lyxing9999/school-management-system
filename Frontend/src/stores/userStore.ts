@@ -3,7 +3,7 @@ import { UserStoreError } from "~/errors/UserStoreError";
 import { unflatten } from "~/utils/unflatten";
 import { convertDatesToISOString } from "~/utils/convertDatesToISOString";
 import type { AxiosInstance } from "axios";
-import type { UserBaseDataDTO } from "~/api/types/userBase";
+import type { UserBaseDataDTO } from "~/api/types/user.dto";
 
 export const useUserStore = defineStore("user", () => {
   const $api = useNuxtApp().$api as AxiosInstance;

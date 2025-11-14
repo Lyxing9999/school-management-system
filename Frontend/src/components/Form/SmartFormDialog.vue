@@ -1,50 +1,59 @@
-<script setup lang="ts" generic="I extends object">
-import { reactive, watch } from "vue";
-import type { FormInstance } from "element-plus";
+<script setup lang="ts" generic="I extends Record<string, any>">
+import { reactive, toRaw, watch } from "vue";
+import type { FormInstance, FormProps } from "element-plus";
 import type { Field } from "../types/form";
-import { ElDialog } from "element-plus";
 import SmartForm from "~/components/Form/SmartForm.vue";
+import { ElDialog } from "element-plus";
 
+// -------------------- Props --------------------
 const props = defineProps<{
-  modelValue: Partial<I>; // form data
-  visible: boolean;
-  title?: string;
-  fields: Field[];
-  width?: string;
-  loading?: boolean;
+  modelValue: Partial<I>; // form data from parent (reactive)
+  visible: boolean; // dialog visibility
+  title?: string; // optional dialog title
+  fields: Field<I>[]; // form schema fields
+  elFormRef?: FormInstance; // optional Element Plus form ref
+  widthDialog?: string; // dialog width
+  loading?: boolean; // loading state
+  formProps?: Partial<FormProps>; // extra form props
 }>();
 
+// -------------------- Emits --------------------
 const emit = defineEmits<{
-  (e: "update:modelValue", value: any): void;
+  (e: "update:modelValue", value: Partial<I>): void;
   (e: "update:visible", value: boolean): void;
-  (e: "save", payload: any): void;
+  (e: "save", payload: Partial<I>): void;
   (e: "cancel"): void;
 }>();
 
-// Local copy of form to pass into SmartForm
-const localForm = reactive({ ...props.modelValue });
+// -------------------- Reactive Form --------------------
 
-// Watch parent modelValue to update local form
-watch(
-  () => props.modelValue,
-  (val) => Object.assign(localForm, val),
-  { deep: true }
-);
-
-// Watch local form to sync back if needed
-watch(localForm, (val) => emit("update:modelValue", { ...val }), {
-  deep: true,
+const localForm = reactive<Record<string, any>>({});
+props.fields.forEach((f) => {
+  if (f.key) localForm[f.key] = props.modelValue?.[f.key] ?? "";
+  if (f.row)
+    f.row.forEach((r) => {
+      if (r.key) localForm[r.key] = props.modelValue?.[r.key] ?? "";
+    });
 });
 
-// Handle save from SmartForm
-const handleSave = (form: Record<string, any>, elFormRef?: FormInstance) => {
-  emit("save", form);
-};
+// Sync local → parent
+watch(
+  localForm,
+  (val) => {
+    emit("update:modelValue", toRaw(val));
+  },
+  {
+    deep: true,
+  }
+);
 
-// Handle cancel from SmartForm or dialog close
+// -------------------- Handlers --------------------
 const handleCancel = () => {
   emit("cancel");
   emit("update:visible", false);
+};
+const handleSave = (payload: Partial<I>) => {
+  emit("save", payload);
 };
 </script>
 
@@ -52,7 +61,7 @@ const handleCancel = () => {
   <ElDialog
     :model-value="visible"
     :title="title || 'Form'"
-    :width="width || '800px'"
+    :width="widthDialog || '800px'"
     class="smart-dialog"
     @close="handleCancel"
   >
@@ -60,6 +69,12 @@ const handleCancel = () => {
       v-model="localForm"
       :fields="fields"
       :use-el-form="true"
+      :el-form-ref="elFormRef"
+      :form-props="{
+        statusIcon: true,
+        inlineMessage: true,
+        ...props.formProps,
+      }"
       :loading="loading"
       @save="handleSave"
       @cancel="handleCancel"
@@ -69,18 +84,10 @@ const handleCancel = () => {
 
 <style scoped>
 :deep(.el-dialog) {
-  max-width: 1000px; /* prevent overly wide dialog */
+  max-width: 1000px;
   border-radius: 16px;
-}
-:deep(.smart-dialog) {
-  margin: 0 auto;
 }
 :deep(.el-dialog__body) {
   padding: 20px 30px;
-}
-
-:deep(.smart-form) {
-  max-width: 100%;
-  margin: 0 auto;
 }
 </style>
