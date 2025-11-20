@@ -22,11 +22,11 @@ export interface AdminUpdateStaff {
   address?: string;
 }
 
-export interface AdminGetStaffSelectData {
+export interface AdminGetStaffNameData {
   id: string;
   staff_id: string;
   staff_name: string;
 }
 
 export type AdminGetStaffResponse = ApiResponse<StaffBaseDataDTO>;
-export type AdminGetStaffSelectResponse = ApiResponse<AdminGetStaffSelectData>;
+export type AdminGetStaffSelectResponse = ApiResponse<AdminGetStaffNameData>;

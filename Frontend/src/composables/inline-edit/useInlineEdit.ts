@@ -1,7 +1,7 @@
 import { ref, computed, type ComputedRef } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { getKey } from "~/utils/aliasMapper";
-import type { UseFormService } from "~/services/types";
+import type { UseFormService } from "~/forms/types";
 
 export interface UseInlineEditService<T> {
   update: (id: string, payload: Partial<T>) => Promise<T>;
@@ -9,23 +9,16 @@ export interface UseInlineEditService<T> {
 }
 
 export function toInlineEditUpdateService<T>(
-  service: () => UseFormService<
-    any,
-    Partial<T>,
-    any,
-    Record<string, any>,
-    any,
-    any
-  >
+  service: () => UseFormService<any, Partial<T>, any, T>
 ): UseInlineEditService<T> {
   return {
     update: async (id: string, payload: Partial<T>) => {
-      const s = service(); // call it when you actually need it
+      const s = service();
       if (!s.update) throw new Error("Update method not implemented");
       return await s.update(id, payload);
     },
     delete: async (id: string) => {
-      const s = service(); // call it when you actually need it
+      const s = service();
       if (!s.delete) throw new Error("Delete method not implemented");
       return await s.delete(id);
     },
@@ -37,12 +30,13 @@ export function useInlineEdit<
   TUpdate extends object
 >(
   initialData: TGet[] = [],
-  inlineEditService: ComputedRef<UseInlineEditService<TUpdate>>
+  inlineEditService: { value: UseInlineEditService<TUpdate> } // ComputedRef unwrap for clarity
 ) {
   const service = inlineEditService.value;
 
   const data = ref<TGet[]>([...initialData]);
   const loading = ref<Record<string | number, boolean>>({});
+  const deleteLoading = ref<Record<string | number, boolean>>({});
   const originalRows = ref<Record<string | number, TGet>>({});
   const previousValues = ref<
     Record<string | number, Partial<Record<keyof TGet, any[]>>>
@@ -82,21 +76,28 @@ export function useInlineEdit<
       const payload: Partial<TUpdate> = {
         [field]: currentValue,
       } as Partial<TUpdate>;
+
+      // updated is typed as TUpdate (because toInlineEditUpdateService guarantees it)
       const updated = await service.update(row.id.toString(), payload);
+
       if (!updated) {
         row[key] = originalRows.value[rowKey]?.[key] ?? currentValue;
         ElMessage.error("Failed to update");
         return;
       }
 
-      // Merge updated values
+      // Merge updated values (cast updated -> Partial<TGet>)
       const index = data.value.findIndex((r) => r.id === row.id);
-      if (index !== -1)
-        data.value[index] = { ...data.value[index], ...updated };
+      if (index !== -1) {
+        data.value[index] = {
+          ...data.value[index],
+          ...(updated as unknown as Partial<TGet>), // safe, minimal cast
+        };
+      }
 
       revertedFields.value[rowKey] = revertedFields.value[rowKey] || new Set();
       revertedFields.value[rowKey].delete(key);
-      originalRows.value[rowKey] = { ...row };
+      originalRows.value[rowKey] = { ...(data.value[index] ?? row) } as TGet; // assert stored original
     } catch (err) {
       row[key] = originalRows.value[rowKey]?.[key] ?? currentValue;
     } finally {
@@ -151,7 +152,7 @@ export function useInlineEdit<
     const rowKey = getKey(row.id);
     const stack = previousValues.value[rowKey]?.[field];
     if (stack && stack.length) {
-      row[field] = stack.pop();
+      row[field] = stack.pop() as any;
       revertedFields.value[rowKey] = revertedFields.value[rowKey] || new Set();
       revertedFields.value[rowKey].add(field);
     }
@@ -161,7 +162,7 @@ export function useInlineEdit<
     data.value = [...newData];
     newData.forEach((row) => {
       const rowKey = getKey(row.id);
-      originalRows.value[rowKey] = { ...row };
+      originalRows.value[rowKey] = { ...row } as TGet; // assert
       previousValues.value[rowKey] = {} as Record<keyof TGet, any[]>;
       Object.keys(row).forEach((field) => {
         previousValues.value[rowKey][field as keyof TGet] = [];

@@ -4,9 +4,9 @@ import { reactive } from "vue";
 
 // Create form: fresh object
 export const getUserFormData = (): AdminCreateUser => ({
-  username: "student",
-  email: "student@gmail.com",
-  password: "123456",
+  username: "",
+  email: "",
+  password: "",
   role: UserRole.STUDENT,
 });
 

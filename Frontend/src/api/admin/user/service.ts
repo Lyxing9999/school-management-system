@@ -13,30 +13,25 @@ export class UserService {
   constructor(private userApi: UserApi) {}
 
   async getUserPage(roles: Role | Role[], page: number, pageSize: number) {
-    const { data } = await this.safeApiCall<AdminGetPageUserData>(() =>
-      this.userApi.getUserPage(roles, page, pageSize)
+    const { data } = await this.safeApiCall<AdminGetPageUserData>(
+      () => this.userApi.getUserPage(roles, page, pageSize),
+      {
+        showSuccessNotification: false,
+      }
     );
     return data!;
   }
 
   async createUser(userData: AdminCreateUser) {
-    const { data } = await this.safeApiCall<AdminGetUserData>(
-      () => this.userApi.createUser(userData),
-      {
-        showSuccessNotification: true,
-        showErrorNotification: true,
-      }
+    const { data } = await this.safeApiCall<AdminGetUserData>(() =>
+      this.userApi.createUser(userData)
     );
     return data!;
   }
 
   async updateUser(id: string, userData: AdminUpdateUser) {
-    const { data } = await this.safeApiCall<AdminGetUserData>(
-      () => this.userApi.updateUser(id, userData),
-      {
-        showSuccessNotification: true,
-        showErrorNotification: true,
-      }
+    const { data } = await this.safeApiCall<AdminGetUserData>(() =>
+      this.userApi.updateUser(id, userData)
     );
     return data!;
   }

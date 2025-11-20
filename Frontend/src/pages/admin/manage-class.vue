@@ -14,25 +14,28 @@ import BaseButton from "~/components/Base/BaseButton.vue";
 // --------------------
 // Services
 // --------------------
-import { serviceClass } from "~/services/formServices/adminFormService";
-import { serviceSubject } from "~/services/formServices/adminFormService";
+import { adminService } from "~/api/admin";
+const adminApiService = adminService();
 // --------------------
 // Type Components
 // --------------------
-import type { BaseClassDataDTO } from "~/api/types/class.dto";
+import type { ClassBaseDataDTO } from "~/api/types/class.dto";
 
 import { useInlineEdit } from "~/composables/inline-edit/useInlineEdit";
-import type { AdminUpdateClass } from "~/api/admin/admin.dto";
-const classes = ref<BaseClassDataDTO[]>([]);
+import type { AdminUpdateClass } from "~/api/admin/class/dto";
+const classes = ref<ClassBaseDataDTO[]>([]);
+// --------------------
+// use dynamic form
+// --------------------
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
   useInlineEditService,
-} from "~/tables/registry/admin/formDynamic";
+} from "~/forms/dynamic/useAdminForms";
 const selectedFormCreate = ref("CLASS");
 // Fetch classes
 const fetchClasses = async () => {
-  const res = await serviceClass.all!();
+  const res = await adminApiService.class.getAllClasses!();
   classes.value = res;
 };
 
@@ -47,7 +50,7 @@ const {
   openForm,
   saveForm,
   cancelForm,
-} = useDynamicCreateFormReactive(selectedFormCreate);
+} = useDynamicCreateFormReactive(selectedFormCreate.value);
 const openFormDialog = () => {
   openForm();
 };
@@ -58,13 +61,15 @@ const {
   remove,
   autoSave,
   data,
+  loading: inlineEditLoading,
   setData,
   getPreviousValue,
   revertField,
-} = useInlineEdit<BaseClassDataDTO, AdminUpdateClass>(
+} = useInlineEdit<ClassBaseDataDTO, AdminUpdateClass>(
   [],
   useInlineEditService("CLASS")
 );
+
 definePageMeta({
   layout: "admin",
 });
@@ -77,9 +82,7 @@ onMounted(() => {
 <template>
   <div
     class="bg-gradient-to-r from-gray-50 to-white rounded-2xl px-10 py-6 mb-8"
-    style="
-      box-shadow: 0 4px 12px rgba(123, 63, 160, 0.2); /* subtle primary color shadow */
-    "
+    style="box-shadow: 0 4px 12px rgba(123, 63, 160, 0.2)"
   >
     <div class="flex items-center justify-between">
       <div>
@@ -113,6 +116,7 @@ onMounted(() => {
       >
         <template #operation="{ row }">
           <ActionButtons
+            :loading="inlineEditLoading[row.id] ?? false"
             :rowId="row.id"
             :role="row.role"
             @detail="handleOpenEditForm(row)"

@@ -80,9 +80,9 @@ export function useInlineEditService<T extends keyof typeof formRegistryEdit>(
   }
 
   type FormData = NonNullable<FormDataOfEdit<T>>;
-  type Service = ServiceOfEdit<T> extends () => infer S ? S : never;
 
-  const service = () => registryItem.service() as Service;
+  const service = () =>
+    registryItem.service() as UseFormService<any, Partial<FormData>>;
 
   return computed(() => toInlineEditUpdateService<FormData>(service));
 }

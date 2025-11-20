@@ -8,19 +8,30 @@ import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import { subjectColumns } from "~/tables/columns/admin/subjectColumns";
+
+// --------------------
+// use dynamic form
+// --------------------
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
-} from "~/tables/registry/admin/formDynamic";
-import type { BaseSubject } from "~/api/types/subject.dto";
+  useInlineEditService,
+} from "~/forms/dynamic/useAdminForms";
+
 import type {
   AdminCreateSubject,
   AdminUpdateSubject,
-} from "~/api/admin/admin.dto";
-import { serviceSubject } from "~/services/formServices/adminFormService";
+} from "~/api/admin/subject/dto";
+
+import type { SubjectBaseDataDTO } from "~/api/types/subject.dto";
+// --------------------
+// Services
+// --------------------
+import { adminService } from "~/api/admin";
+const adminApiService = adminService();
 
 // State
-const subjects = ref<BaseSubject[]>([]);
+const subjects = ref<SubjectBaseDataDTO[]>([]);
 const loading = ref(false);
 const editFormDataKey = ref("");
 
@@ -50,7 +61,7 @@ const {
 const fetchSubjects = async () => {
   loading.value = true;
   try {
-    subjects.value = (await serviceSubject.all?.()) ?? [];
+    subjects.value = (await adminApiService.subject.getSubjects?.()) ?? [];
   } finally {
     loading.value = false;
   }
@@ -68,7 +79,7 @@ const handleSaveCreate = async (payload: Partial<AdminCreateSubject>) => {
   fetchSubjects();
 };
 
-const handleEdit = async (row: BaseSubject) => {
+const handleEdit = async (row: SubjectBaseDataDTO) => {
   editFormDataKey.value = row.id?.toString() ?? "new";
   editData.value = {};
   await nextTick();

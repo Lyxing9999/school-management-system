@@ -3,7 +3,7 @@ import type {
   AdminCreateStaff,
   AdminGetStaffResponse,
   AdminUpdateStaff,
-  AdminGetTeacherSelectResponse,
+  AdminGetStaffSelectResponse,
 } from "./dto";
 
 export class StaffApi {
@@ -14,9 +14,9 @@ export class StaffApi {
 
   async getStaffNameSelect(
     search = "",
-    role = "teacher"
-  ): Promise<AdminGetTeacherSelectResponse> {
-    const res = await this.$api.get<AdminGetTeacherSelectResponse>(
+    role = ""
+  ): Promise<AdminGetStaffSelectResponse> {
+    const res = await this.$api.get<AdminGetStaffSelectResponse>(
       `${this.baseURL}/name-select`,
       { params: { search, role } }
     );
@@ -54,13 +54,6 @@ export class StaffApi {
   async getStaffDetail(id: string): Promise<AdminGetStaffResponse> {
     const res = await this.$api.get<AdminGetStaffResponse>(
       `${this.baseURL}/${id}`
-    );
-    return res.data;
-  }
-
-  async getTeacherSelect(): Promise<AdminGetTeacherSelectResponse> {
-    const res = await this.$api.get<AdminGetTeacherSelectResponse>(
-      `${this.baseURL}/academic-select`
     );
     return res.data;
   }

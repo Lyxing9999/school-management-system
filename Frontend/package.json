@@ -31,7 +31,7 @@
     "bson": "^6.10.4",
     "dayjs": "^1.11.13",
     "echarts": "^5.6.0",
-    "element-plus": "^2.10.3",
+    "element-plus": "^2.11.8",
     "jwt-decode": "^4.0.0",
     "lodash-es": "^4.17.21",
     "mitt": "^3.0.1",

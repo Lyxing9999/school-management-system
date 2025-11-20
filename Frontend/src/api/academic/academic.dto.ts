@@ -1,7 +1,7 @@
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 import type { UserBaseDataDTO } from "~/api/types/user.dto";
-import type { BaseStudentInfo } from "~/api/types/student.dto";
-import type { BaseClassDataDTO } from "~/api/types/class.dto";
+import type { StudentInfoBaseDataDTO } from "~/api/types/student.dto";
+import type { ClassBaseDataDTO } from "~/api/types/class.dto";
 import { Role } from "~/api/types/enums/role.enum";
 
 /* -------------------------------------------------------------------------- */
@@ -14,7 +14,7 @@ export type AcademicApiResponse<T> = ApiResponse<T>;
 /* -------------------------------------------------------------------------- */
 export interface AcademicStudentData extends UserBaseDataDTO {}
 
-export interface AcademicStudentInfoData extends BaseStudentInfo {}
+export interface AcademicStudentInfoData extends StudentInfoBaseDataDTO {}
 
 export interface AcademicCreateStudentData {
   username?: string;
@@ -51,7 +51,7 @@ export type AcademicGetTeacherSelectResponseList = AcademicApiResponse<
   AcademicGetTeacherSelect[]
 >;
 
-export type AcademicGetClassData = AcademicApiResponse<BaseClassDataDTO[]>;
+export type AcademicGetClassData = AcademicApiResponse<ClassBaseDataDTO[]>;
 
 export type AcademicGetClassesResponse = AcademicApiResponse<
   AcademicGetClassData[]
@@ -71,10 +71,9 @@ export type AcademicGetStudentResponse =
 export type AcademicGetStudentPageResponse =
   AcademicApiResponse<AcademicGetStudentsPageData>;
 
-export type AcademicStudentInfoCreate = BaseStudentInfo["student_info"];
+export type AcademicStudentInfoCreate = StudentInfoBaseDataDTO;
 
-export type AcademicStudentInfoUpdate = Partial<
-  BaseStudentInfo["student_info"]
->;
+export type AcademicStudentInfoUpdate = Partial<StudentInfoBaseDataDTO>;
 
-export type AcademicStudentInfoResponse = AcademicApiResponse<BaseStudentInfo>;
+export type AcademicStudentInfoResponse =
+  AcademicApiResponse<StudentInfoBaseDataDTO>;

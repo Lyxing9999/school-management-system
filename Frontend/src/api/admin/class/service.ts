@@ -19,8 +19,11 @@ export class ClassService {
   }
 
   async getAllClasses() {
-    const { data } = await this.safeApiCall<AdminGetClassData[]>(() =>
-      this.classApi.getAllClasses()
+    const { data } = await this.safeApiCall<AdminGetClassData[]>(
+      () => this.classApi.getAllClasses(),
+      {
+        showSuccessNotification: false,
+      }
     );
     return data!;
   }

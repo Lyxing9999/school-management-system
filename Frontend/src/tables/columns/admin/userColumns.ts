@@ -1,5 +1,5 @@
 import type { ColumnConfig } from "~/components/types/tableEdit";
-import { ElInput, ElDatePicker, ElTag, ElRate } from "element-plus";
+import { ElInput, ElDatePicker, ElTag } from "element-plus";
 import { h } from "vue";
 import type { AdminGetUserData } from "~/api/admin/user/dto";
 
@@ -21,7 +21,7 @@ export const userColumns: ColumnConfig<AdminGetUserData>[] = [
         message: "Only letters allowed (no numbers, no spaces)",
       },
     ],
-    component: ElRate,
+    component: ElInput,
     componentProps: { placeholder: "Enter username" },
   },
   {

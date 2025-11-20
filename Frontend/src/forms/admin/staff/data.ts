@@ -2,7 +2,7 @@ import { StaffRole } from "~/api/types/enums/role.enum";
 import type { AdminCreateStaff, AdminUpdateStaff } from "~/api/admin/staff/dto";
 import { reactive } from "vue";
 export const getStaffFormData = (): AdminCreateStaff => ({
-  email: "@gmail.com",
+  email: "",
   password: "",
   role: StaffRole.TEACHER,
   staff_id: "",

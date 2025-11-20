@@ -61,10 +61,7 @@ import { Role } from "~/api/types/enums/role.enum";
 // --------------------
 // Services
 // --------------------
-import type {
-  CreateRegistryItem,
-  EditRegistryItem,
-} from "~/from/types/admin";
+
 import { adminService } from "~/api/admin";
 
 /* ----------------------------- types ----------------------------- */
@@ -76,7 +73,6 @@ const selectedRoles = ref<Role[]>([Role.STUDENT]);
 const selectedFormCreate = ref<CreateMode>("USER");
 const selectedFormEdit = ref<EditMode>("USER");
 const editFormDataKey = ref("");
-const createDialogKey = ref(0);
 
 /* ---------------------------- create form -------------------------- */
 const {
@@ -323,7 +319,6 @@ const editFormDataTyped = computed({
         :data="data"
         :columns="userColumns"
         :loading="fetchLoading"
-        :smart-props="{ loading: inlineEditLoading }"
         @save="handleSaveWrapper"
         @cancel="cancel"
         @auto-save="handleAutoSaveWrapper"

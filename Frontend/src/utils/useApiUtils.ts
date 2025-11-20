@@ -17,7 +17,7 @@ export const useApiUtils = () => {
     fn: () => Promise<ApiResponse<T>>,
     options: SafeApiCallOptions = {}
   ): Promise<{ data: T | null; errors: Record<string, string> }> => {
-    const { showSuccessNotification = false, showErrorNotification = false } =
+    const { showSuccessNotification = true, showErrorNotification = true } =
       options;
 
     let fieldErrors: Record<string, string> = {};

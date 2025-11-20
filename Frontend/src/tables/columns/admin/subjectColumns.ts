@@ -5,10 +5,10 @@ import { h } from "vue";
 import type {
   AdminCreateSubject,
   AdminUpdateSubject,
-} from "~/api/admin/admin.dto";
-import type { BaseSubject } from "~/api/types/subject.dto";
+} from "~/api/admin/subject/dto";
+import type { SubjectBaseDataDTO } from "~/api/types/subject.dto";
 // ------------------ Subject Table Columns ------------------
-export const subjectColumns: ColumnConfig<BaseSubject>[] = [
+export const subjectColumns: ColumnConfig<SubjectBaseDataDTO>[] = [
   {
     field: "name",
     label: "Subject Name",

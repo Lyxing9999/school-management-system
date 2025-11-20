@@ -11,8 +11,11 @@ export class SubjectService {
   constructor(private subjectApi: SubjectApi) {}
 
   async getSubjects() {
-    const { data } = await this.safeApiCall<AdminGetSubjectsData>(() =>
-      this.subjectApi.getSubjects()
+    const { data } = await this.safeApiCall<AdminGetSubjectsData>(
+      () => this.subjectApi.getSubjects(),
+      {
+        showSuccessNotification: false,
+      }
     );
     return data!;
   }
@@ -25,8 +28,11 @@ export class SubjectService {
   }
 
   async createSubject(subjectData: AdminCreateSubject) {
-    const { data } = await this.safeApiCall<AdminGetSubjectsData>(() =>
-      this.subjectApi.createSubject(subjectData)
+    const { data } = await this.safeApiCall<AdminGetSubjectsData>(
+      () => this.subjectApi.createSubject(subjectData),
+      {
+        showSuccessNotification: false,
+      }
     );
     return data!;
   }
