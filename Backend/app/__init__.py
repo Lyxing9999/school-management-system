@@ -30,7 +30,7 @@ def create_app():
 
     # Blueprints
     from .uploads.students import upload_bp
-    from .contexts.iam.routes import iam_bp
+    from .contexts.iam.routes.iam_route import iam_bp
     from .contexts.academic.routes import academic_bp
     from .contexts.admin.routes import admin_bp, register_routes
     # from .contexts.hr.routes import hr_bp

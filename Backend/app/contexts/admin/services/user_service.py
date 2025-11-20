@@ -1,13 +1,11 @@
 from pymongo.database import Database
 from bson import ObjectId
 from typing import List, Tuple, Union, Optional
-from app.contexts.shared.model_converter import mongo_converter
-from app.contexts.iam.models import IAMFactory , IAMMapper 
-from app.contexts.iam.data_transfer.responses import IAMBaseDataDTO
-from app.contexts.iam.services import IAMService
-from app.contexts.shared.model_converter import mongo_converter
-from app.contexts.admin.read_models import AdminReadModel
-from app.contexts.admin.data_transfer.requests import (
+from app.contexts.iam.domain.iam import  IAM
+from app.contexts.iam.services.iam_service import IAMService
+from app.contexts.iam.factory.iam_factory import IAMFactory
+from app.contexts.admin.read_models.admin_read_model import AdminReadModel
+from app.contexts.admin.data_transfer.request import (
     AdminCreateUserSchema,
     AdminUpdateUserSchema,
 )
@@ -35,8 +33,6 @@ class UserAdminService:
             self._admin_read_model = AdminReadModel(self.db)
         return self._admin_read_model
 
-
-
         
     @property
     def iam_factory(self) -> IAMFactory:
@@ -45,8 +41,8 @@ class UserAdminService:
         return self._iam_factory
 
     @log_operation(level="INFO")
-    def admin_create_user(self, payload: AdminCreateUserSchema, created_by: str | ObjectId) -> IAMBaseDataDTO:
-        payload.created_by = self._convert_id(created_by)
+    def admin_create_user(self, payload: AdminCreateUserSchema, created_by: str | ObjectId) -> IAM:
+        payload.created_by = created_by
         iam_model = self.iam_factory.create_user(
             email=payload.email,
             password=payload.password,
@@ -54,28 +50,23 @@ class UserAdminService:
             role=payload.role,
             created_by=payload.created_by
         )
-        iam_model = self.iam_service.save_domain(iam_model)
-        return IAMMapper.to_dto(iam_model)
+        return self.iam_service.save_domain(iam_model)
+
 
 
     @log_operation(level="INFO")
-    def admin_update_user(
-        self, user_id: str | ObjectId, payload: AdminUpdateUserSchema
-    ) -> IAMBaseDataDTO:
-        return self.iam_service.update_info(self._convert_id(user_id), payload, update_by_admin=True)
+    def admin_update_user(self, user_id: str | ObjectId, payload: AdminUpdateUserSchema) -> IAM:
+        return self.iam_service.update_info(user_id, payload, update_by_admin=True)
 
-    def admin_soft_delete_user(self, user_id: str | ObjectId) -> IAMBaseDataDTO:
-        return self.iam_service.soft_delete(self._convert_id(user_id))
+    def admin_soft_delete_user(self, user_id: str | ObjectId) -> IAM:
+        return self.iam_service.soft_delete(user_id)
 
     def admin_hard_delete_user(self, user_id: str | ObjectId) -> bool:
-        return self.iam_service.hard_delete(self._convert_id(user_id))
+        return self.iam_service.hard_delete(user_id)
 
     @log_operation(level="INFO")
-    def admin_get_users(
-        self, role: Union[str, list[str]], page: int, page_size: int
-    ) -> Tuple[List[IAMBaseDataDTO], int]:
+    def admin_get_users(self, role: Union[str, list[str]], page: int, page_size: int) -> Tuple[List[dict], int]:
         cursor, total = self.admin_read_model.get_page_by_role(
             role, page=page, page_size=page_size
         )
-        users = mongo_converter.cursor_to_dto(cursor, IAMBaseDataDTO)
-        return users, total
+        return cursor, total

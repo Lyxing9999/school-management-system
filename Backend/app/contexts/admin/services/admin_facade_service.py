@@ -4,10 +4,12 @@ from app.contexts.admin.services.staff_service import StaffAdminService
 from app.contexts.admin.services.student_service import StudentAdminService
 from app.contexts.admin.services.class_service import ClassAdminService
 from app.contexts.admin.services.subject_service import SubjectAdminService
-from app.contexts.admin.error.admin_exceptions import EmailAlreadyExistsException
-from app.contexts.iam.data_transfer.responses import IAMBaseDataDTO
+from app.contexts.admin.error.admin_exception import EmailAlreadyExistsException
+from app.contexts.iam.data_transfer.response import IAMBaseDataDTO
+from app.contexts.iam.domain.iam import IAM
 from app.contexts.staff.models import Staff
 from app.contexts.staff.data_transfer.requests import StaffCreateSchema
+from typing import Tuple
 
 class AdminFacadeService:
     def __init__(self, db: Database):
@@ -19,15 +21,19 @@ class AdminFacadeService:
 
 
     def _rollback(self, user: IAMBaseDataDTO | None, staff: Staff | None):
-        """Rollback created user/staff on failure."""
-        if staff:
-            self.staff_service.admin_hard_delete_staff(staff.id)
-        if user:
-            self.user_service.admin_hard_delete_user(user.id)
+        try:
+            if staff:
+                self.staff_service.admin_hard_delete_staff(staff.id)
+        except Exception as e:
+            pass
+        try:
+            if user:
+                self.user_service.admin_hard_delete_user(user.id)
+        except Exception as e:
+            pass
 
 
-
-    def admin_create_staff_workflow(self, payload, created_by):
+    def admin_create_staff_workflow(self, payload, created_by) -> Tuple[IAM, Staff]:
         """
         Full workflow: create a user + linked staff record.
         """
@@ -37,7 +43,7 @@ class AdminFacadeService:
             user = self.user_service.admin_create_user(payload=payload, created_by=created_by)
             staff_payload = StaffCreateSchema(
                 staff_id=payload.staff_id,      
-                staff_name=payload.username,    
+                staff_name=payload.staff_name,    
                 role=payload.role,
                 phone_number=getattr(payload, "phone_number", None),
                 address=getattr(payload, "address", None),

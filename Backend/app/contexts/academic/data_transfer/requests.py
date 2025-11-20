@@ -3,7 +3,7 @@
 from pydantic import BaseModel, Field
 from typing import List
 from datetime import datetime
-from app.contexts.iam.data_transfer.requests import IAMUpdateSchema
+from app.contexts.iam.data_transfer.request import IAMUpdateSchema
 from app.contexts.shared.enum.roles import SystemRole
 from app.contexts.student.data_transfer.requests import StudentInfoUpdateSchema
 

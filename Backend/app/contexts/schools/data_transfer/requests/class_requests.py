@@ -1,5 +1,4 @@
 
-from app.place_holder import PlaceholderModel
 from pydantic import BaseModel, Field
 from bson.objectid import ObjectId
 from typing import List
@@ -59,7 +58,7 @@ class SchoolClassUpdateSchema(BaseModel):
 
 
 
-class ClassUpdateRequestSchema(PlaceholderModel):
+class ClassUpdateRequestSchema(BaseModel):
     pass
 
 
@@ -68,10 +67,10 @@ class ClassUpdateRequestSchema(PlaceholderModel):
 # -------------------------
 # Assign Teacher
 # -------------------------
-class ClassAssignTeacherRequestSchema(PlaceholderModel):
+class ClassAssignTeacherRequestSchema(BaseModel):
     pass
 
-class ClassRemoveTeacherRequestSchema(PlaceholderModel):
+class ClassRemoveTeacherRequestSchema(BaseModel):
     pass
 
 
@@ -80,10 +79,10 @@ class ClassRemoveTeacherRequestSchema(PlaceholderModel):
 # Student
 # -------------------------
 
-class ClassAddStudentRequestSchema(PlaceholderModel):
+class ClassAddStudentRequestSchema(BaseModel):
     pass
 
-class ClassRemoveStudentRequestSchema(PlaceholderModel):
+class ClassRemoveStudentRequestSchema(BaseModel):
     pass
  
 
@@ -92,10 +91,10 @@ class ClassRemoveStudentRequestSchema(PlaceholderModel):
 # -------------------------
 # Subject
 # -------------------------
-class ClassAssignSubjectRequestSchema(PlaceholderModel):
+class ClassAssignSubjectRequestSchema(BaseModel):
     pass
 
-class ClassRemoveSubjectRequestSchema(PlaceholderModel):
+class ClassRemoveSubjectRequestSchema(BaseModel):
     pass
 
 
@@ -106,5 +105,5 @@ class ClassRemoveSubjectRequestSchema(PlaceholderModel):
 
 
 
-class ClassDeleteRequestSchema(PlaceholderModel):
+class ClassDeleteRequestSchema(BaseModel):
     pass

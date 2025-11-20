@@ -2,7 +2,7 @@ from flask import request, g
 from app.contexts.admin.routes import admin_bp
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import pydantic_converter
-from app.contexts.admin.data_transfer.requests import AdminUpdateInfoStudentSchema
+from app.contexts.admin.data_transfer.request import AdminUpdateInfoStudentSchema
 from app.uploads.students import save_file, delete_file
 
 @admin_bp.route("/student/<student_id>", methods=["GET"])

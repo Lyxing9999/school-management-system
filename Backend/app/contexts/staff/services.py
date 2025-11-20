@@ -31,12 +31,15 @@ class StaffService:
         msg = f"StaffService::{operation}" + (f" [staff_id={staff_id}]" if staff_id else "")  # construct message
         self._log_service.log(msg, level=level, module="StaffService", user_id=staff_id, extra=extra or {})  # send to logger
 
+    def convert_id(self, id: str | ObjectId) -> ObjectId:
+        return mongo_converter.convert_to_object_id(id)
+
+
     # -------------------------
     # Domain helpers
     # -------------------------
     def get_to_staff_domain(self, staff_id: str | ObjectId) -> Staff:
-        staff_id_obj = mongo_converter.convert_to_object_id(staff_id)
-        raw_staff = self._staff_read_model.get_staff_by_id(staff_id_obj)
+        raw_staff = self._staff_read_model.get_staff_by_id(self.convert_id(staff_id))
         if not raw_staff:
             raise StaffNotFoundException(staff_id)
         return StaffMapper.to_domain(raw_staff)
@@ -49,40 +52,31 @@ class StaffService:
     # CRUD operations
     # -------------------------
     def create_staff(self, payload: StaffCreateSchema, created_by: str, user_id: str | None = None) -> Staff:
-        created_by = mongo_converter.convert_to_object_id(created_by)
-        user_id = mongo_converter.convert_to_object_id(user_id)
-        staff_obj = self._staff_factory.create_staff(payload, created_by, user_id)
+        staff_obj = self._staff_factory.create_staff(payload, self.convert_id(created_by), self.convert_id(user_id))
         self._staff_repo.save(StaffMapper.to_persistence_dict(staff_obj))
         self._log("create_staff", staff_id=staff_obj.staff_id, extra={"created_by": str(created_by)})
         return staff_obj
 
-    def create_staff_dto(self, payload: StaffCreateSchema, created_by: str, user_id: str | None = None) -> StaffBaseDataDTO:
-        created_by = mongo_converter.convert_to_object_id(created_by)
-        user_id = mongo_converter.convert_to_object_id(user_id)
-        staff_obj = self.create_staff(payload, created_by, user_id)
-        return StaffMapper.to_dto(staff_obj)
 
-    def update_staff(self, staff_id: str | ObjectId, payload: StaffUpdateSchema | dict) -> StaffBaseDataDTO:
-        staff_id_obj = mongo_converter.convert_to_object_id(staff_id)
-        staff_obj = self.get_to_staff_domain(staff_id_obj)
-        staff_obj.update_staff_patch(payload, self._staff_repo)
-        self._staff_repo.update(staff_id_obj, StaffMapper.to_persistence_dict(staff_obj))
-        return StaffMapper.to_dto(staff_obj)
-
-    def soft_staff_delete(self, staff_id: str | ObjectId, deleted_by: str) -> StaffBaseDataDTO:
+    def update_staff(self, staff_id: str | ObjectId, payload: StaffUpdateSchema | dict) -> Staff:
         staff_obj = self.get_to_staff_domain(staff_id)
-        deleted_by_obj = mongo_converter.convert_to_object_id(deleted_by)
-        staff_obj.soft_delete(deleted_by_obj)
+        staff_obj.update_staff_patch(payload, self._staff_repo)
+        self._staff_repo.update(staff_obj.id, StaffMapper.to_persistence_dict(staff_obj))
+        return staff_obj
 
-        modified_count = self._staff_repo.soft_delete(mongo_converter.convert_to_object_id(staff_id), deleted_by_obj)
+    def soft_staff_delete(self, staff_id: str | ObjectId, deleted_by: str) -> Staff:
+        staff_obj = self.get_to_staff_domain(staff_id)
+        staff_obj.soft_delete(self.convert_id(deleted_by))
+
+        modified_count = self._staff_repo.soft_delete(staff_id, self.convert_id(deleted_by))
         if modified_count == 0:
             raise StaffNoChangeAppException("Staff already deleted in DB")
 
-        self._log("soft_delete", staff_id=str(staff_obj.id), extra={"deleted_by": str(deleted_by_obj)})
-        return StaffMapper.to_dto(staff_obj)
+        self._log("soft_delete", staff_id=str(staff_obj.id), extra={"deleted_by": str(deleted_by)})
+        return staff_obj
 
     def hard_staff_delete(self, staff_id: str | ObjectId) -> bool:
-        count = self._staff_repo.delete(mongo_converter.convert_to_object_id(staff_id))
+        count = self._staff_repo.delete(self.convert_id(staff_id))
         if count == 0:
             raise StaffNotFoundException(f"Staff {staff_id} not found or already deleted")
         self._log("hard_delete", staff_id=str(staff_id))
@@ -91,19 +85,19 @@ class StaffService:
     # -------------------------
     # Permission management
     # -------------------------
-    def grant_permission(self, staff_id: str | ObjectId, permission: str) -> StaffBaseDataDTO:
+    def grant_permission(self, staff_id: str | ObjectId, permission: str) -> Staff:
         staff_obj = self.get_to_staff_domain(staff_id)
         staff_obj.grant_permission(permission)
         self._staff_repo.update(staff_obj.id, StaffMapper.to_persistence_dict(staff_obj))
         self._log("grant_permission", staff_id=str(staff_obj.id), extra={"permission": permission})
-        return StaffMapper.to_dto(staff_obj)
+        return staff_obj
 
-    def revoke_permission(self, staff_id: str | ObjectId, permission: str) -> StaffBaseDataDTO:
+    def revoke_permission(self, staff_id: str | ObjectId, permission: str) -> Staff:
         staff_obj = self.get_to_staff_domain(staff_id)
         staff_obj.revoke_permission(permission)
         self._staff_repo.update(staff_obj.id, StaffMapper.to_persistence_dict(staff_obj))
         self._log("revoke_permission", staff_id=str(staff_obj.id), extra={"permission": permission})
-        return StaffMapper.to_dto(staff_obj)
+        return staff_obj
 
     def check_permission(self, staff_id: str | ObjectId, permission: str):
         staff_obj = self.get_to_staff_domain(staff_id)

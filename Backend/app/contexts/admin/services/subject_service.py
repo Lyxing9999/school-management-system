@@ -1,5 +1,5 @@
-from typing import List, Tuple, Union, Optional
-from app.contexts.admin.data_transfer.requests import (
+from typing import List, Optional
+from app.contexts.admin.data_transfer.request import (
     AdminCreateSubjectSchema,
     AdminUpdateSubjectSchema
 )

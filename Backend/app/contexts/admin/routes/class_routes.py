@@ -4,7 +4,7 @@ from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import pydantic_converter
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.core.security.auth_utils import get_current_user_id
-from app.contexts.admin.data_transfer.requests import AdminCreateClassSchema, AdminUpdateClassSchema
+from app.contexts.admin.data_transfer.request import AdminCreateClassSchema, AdminUpdateClassSchema
 
 @admin_bp.route("/classes", methods=["POST"])
 @role_required(["admin"])

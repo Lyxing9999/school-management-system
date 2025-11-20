@@ -20,8 +20,8 @@ from app.contexts.shared.enum.roles import SystemRole
 from app.contexts.schools.services.class_service import ClassService
 from app.contexts.academic.read_models import academic_read_model
 from app.contexts.admin.services.admin_facade_service import AdminFacadeService
-from app.contexts.admin.data_transfer.responses import IAMBaseDataDTO
-from app.contexts.iam.services import IAMService
+from app.contexts.admin.data_transfer.response import IAMBaseDataDTO
+from app.contexts.iam.services.iam_service import IAMService
 from app.contexts.student.services import StudentService
 from app.contexts.core.log.log_service import LogService
 from time import time 

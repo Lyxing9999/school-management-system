@@ -1,16 +1,13 @@
-
-
 from pymongo.database import Database
 from bson import ObjectId
-from typing import List, Tuple, Union, Optional
-
-from app.contexts.iam.services import IAMService
+from typing import List, Optional
+from app.contexts.shared.model_converter import  mongo_converter
 from app.contexts.schools.services.class_service import ClassService
-from app.contexts.admin.read_models import AdminReadModel
-from app.contexts.admin.data_transfer.requests import (
+from app.contexts.admin.data_transfer.request import (
     AdminCreateClassSchema,
     AdminUpdateClassSchema,
 )
+
 from app.contexts.core.log.log_service import LogService
 from app.contexts.schools.models.school_class import SchoolClassBaseDataDTO
 class ClassAdminService:
@@ -19,6 +16,13 @@ class ClassAdminService:
         self._class_service: Optional[ClassService] = None
         self._log_service: Optional[LogService] = None
         self.class_collection = self.db["classes"]
+
+
+    @property
+    def class_service(self) -> ClassService:
+        if self._class_service is None:
+            self._class_service = ClassService(self.db)
+        return self._class_service
 
     def _convert_id(self, id: str | ObjectId) -> ObjectId:
         return mongo_converter.convert_ids(id)

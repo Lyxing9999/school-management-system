@@ -4,7 +4,7 @@ from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
 from pymongo.database import Database
 from bson import ObjectId
 from typing import List , Tuple , Union , Optional
-from app.contexts.iam.read_models import IAMReadModel
+from app.contexts.iam.read_models.iam_read_model import IAMReadModel
 from app.contexts.staff.read_models import StaffReadModel
 class AdminReadModel(MongoErrorMixin):
     def __init__(self, db: Database , collection_users: str = "users" , collection_staff: str = "staff" , collection_classes: str = "classes", collection_subjects: str = "subjects" ):
@@ -49,7 +49,6 @@ class AdminReadModel(MongoErrorMixin):
         try:
             # Prepare role filter
             role_filter = roles if isinstance(roles, str) else {"$in": roles}
-            print("this is role filter ", role_filter)
             query = {"deleted": {"$ne": True}, "role": role_filter}
             projection = {"password": 0}  # Exclude password
 

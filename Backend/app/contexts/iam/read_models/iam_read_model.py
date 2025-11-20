@@ -1,15 +1,11 @@
 from pymongo.database import Database
-from app.contexts.shared.enum.roles import UserRole
-from app.contexts.iam.data_transfer.responses import  IAMReadDataDTO , IAMReadDataDTOList
 from typing import List , Tuple , Union
-from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
 from app.contexts.core.log.log_service import LogService
 from bson import ObjectId
 class IAMReadModel(MongoErrorMixin):
     def __init__(self, db: Database, collection_name: str = "users"):
         self.collection = db[collection_name]
-        self.mongo_converter = mongo_converter
         self.logger = LogService.get_instance() 
     def _log_operation(self, operation: str, info: str, detail: str = "", query: dict | None = None, result_count: int | None = None):
         self.logger.info(f"{operation} - {info} - {detail}")
@@ -60,20 +56,6 @@ class IAMReadModel(MongoErrorMixin):
         except Exception as e:
             self._handle_mongo_error("get_by_username", e)
 
-    def get_all_users(self) -> IAMReadDataDTOList:
-        try:
-            query = {"deleted": {"$ne": True}}
-            cursor = self.collection.find(query)
-            users = self.mongo_converter.cursor_to_dto(cursor, IAMReadDataDTO)
-            self._log_operation(
-                "get_all_users",
-                "Get all users",
-                query=query,
-                result_count=len(users)
-            )
-            return IAMReadDataDTOList(users)
-        except Exception as e:
-            self._handle_mongo_error("get_all_users", e)
 
     def get_page_by_role(
         self,

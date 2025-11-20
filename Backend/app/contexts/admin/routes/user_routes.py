@@ -4,12 +4,13 @@ from app.contexts.core.security.auth_utils import get_current_user_id
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.model_converter import pydantic_converter
-from app.contexts.admin.data_transfer.requests import AdminCreateUserSchema, AdminUpdateUserSchema
-from app.contexts.admin.data_transfer.responses import (
-    AdminCreateUserDataDTO, AdminUpdateUserDataDTO, PaginatedUsersDataDTO
+from app.contexts.admin.data_transfer.request import AdminCreateUserSchema, AdminUpdateUserSchema
+from app.contexts.admin.data_transfer.response import (
+    PaginatedUsersDataDTO,
+    AdminDeleteUserDTO,
 )
 from app.contexts.common.base_response_dto import BaseResponseDTO
-
+from app.contexts.iam.mapper.iam_mapper import IAMMapper 
 
 @admin_bp.route("/users", methods=["GET"])
 @role_required(["admin"])
@@ -18,10 +19,10 @@ def admin_get_users_paginated():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 5))
     roles = request.args.getlist("role[]") or request.args.getlist("role")
-    users_list, total = g.admin_facade.user_service.admin_get_users(
+    cursor, total = g.admin_facade.user_service.admin_get_users(
         roles, page=page, page_size=page_size
     )
-    
+    users_list = [IAMMapper.to_dto(IAMMapper.to_domain(user)) for user in cursor]
     return PaginatedUsersDataDTO(
         users=users_list,
         total=total,
@@ -40,8 +41,7 @@ def admin_create_user():
     user_response_dto = g.admin_facade.user_service.admin_create_user(
         user_schema, created_by=admin_id
     )
-    return AdminCreateUserDataDTO(**user_response_dto.model_dump())
-    
+    return IAMMapper.to_dto(user_response_dto)
 
 @admin_bp.route('/users/<user_id>', methods=['PATCH'])
 @role_required(["admin"])
@@ -49,20 +49,19 @@ def admin_create_user():
 def admin_update_user(user_id):
     user_schema = pydantic_converter.convert_to_model(request.json, AdminUpdateUserSchema)
     user_update_dto = g.admin_facade.user_service.admin_update_user(user_id, user_schema)
-    return AdminUpdateUserDataDTO(**user_update_dto.model_dump())
+    return IAMMapper.to_dto(user_update_dto)
 
 
 @admin_bp.route('/users/<user_id>', methods=['DELETE'])
 @role_required(["admin"])
 @wrap_response
 def admin_soft_delete_user(user_id):
-    g.admin_facade.user_service.admin_soft_delete_user(user_id)
-    return BaseResponseDTO(
-        data="User deleted successfully",
-        message="User deleted successfully",
-        success=True
+    deleted_user = g.admin_facade.user_service.admin_soft_delete_user(user_id)
+    return AdminDeleteUserDTO(
+        id=str(deleted_user.id),
+        deleted_at=deleted_user.deleted_at,
+        deleted_by=deleted_user.deleted_by
     )
-
 
 @admin_bp.route('/users/<user_id>/hard', methods=['DELETE'])
 @role_required(["admin"])

@@ -89,7 +89,7 @@ class Staff:
         """Update the timestamp whenever modification occurs."""
         self.updated_at = datetime.utcnow()
 
-    def update_staff_patch(self, payload: StaffUpdateRequestSchema | dict, staff_repo) -> dict:
+    def update_staff_patch(self, payload: StaffUpdateSchema | dict, staff_repo) -> dict:
         """
         Partial update (PATCH) — returns a dict of only fields that actually changed.
         Supports both dict or Pydantic model as input.
@@ -166,7 +166,7 @@ class StaffFactory:
 
     def create_staff(
         self,
-        payload: StaffCreateRequestSchema,
+        payload: StaffCreateSchema,
         created_by: ObjectId,
         user_id: Optional[ObjectId] = None,
     ) -> Staff:

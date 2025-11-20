@@ -1,8 +1,7 @@
 from pydantic import BaseModel, Field
 from app.contexts.shared.enum.roles import SystemRole, UserRole , StaffRole
-from app.place_holder import PlaceholderModel
 from typing import Optional , List
-from app.contexts.iam.data_transfer.requests import IAMUpdateSchema
+from app.contexts.iam.data_transfer.request import IAMUpdateSchema
 from app.contexts.staff.data_transfer.requests import StaffUpdateSchema
 from app.contexts.student.data_transfer.requests import StudentInfoUpdateSchema
 from app.contexts.schools.data_transfer.requests.class_requests import SchoolClassUpdateSchema

@@ -1,7 +1,7 @@
 from pymongo.database import Database
-from typing import List, Tuple, Union, Optional
+from typing import List, Optional
 from app.contexts.student.services import StudentService
-from app.contexts.admin.data_transfer.requests import (
+from app.contexts.admin.data_transfer.request import (
     AdminUpdateInfoStudentSchema,
 
 )

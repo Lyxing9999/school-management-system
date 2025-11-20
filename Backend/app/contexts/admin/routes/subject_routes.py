@@ -4,7 +4,7 @@ from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import pydantic_converter
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.core.security.auth_utils import get_current_user_id
-from app.contexts.admin.data_transfer.requests import (
+from app.contexts.admin.data_transfer.request import (
     AdminCreateSubjectSchema, AdminUpdateSubjectSchema
 )
 
@@ -12,7 +12,7 @@ from app.contexts.admin.data_transfer.requests import (
 @role_required(["admin"])
 @wrap_response
 def admin_get_subjects():
-    return g.admin_facade.admin_get_subjects()
+    return g.admin_facade.subject_service.admin_get_subjects()
 
 @admin_bp.route("/subject", methods=["POST"])
 @role_required(["admin"])
@@ -20,17 +20,17 @@ def admin_get_subjects():
 def admin_add_subject():
     payload = pydantic_converter.convert_to_model(request.json, AdminCreateSubjectSchema)
     admin_id = get_current_user_id()
-    return g.admin_facade.admin_create_subject(payload, created_by=admin_id)
+    return g.admin_facade.subject_service.admin_create_subject(payload, created_by=admin_id)
 
 @admin_bp.route("/subject/<subject_id>", methods=["PATCH"])
 @role_required(["admin"])
 @wrap_response
 def admin_update_subject(subject_id: str):
     payload = pydantic_converter.convert_to_model(request.json, AdminUpdateSubjectSchema)
-    return g.admin_facade.admin_update_subject(subject_id, payload)
+    return g.admin_facade.subject_service.admin_update_subject(subject_id, payload)
 
 @admin_bp.route("/subject/<subject_id>", methods=["DELETE"])
 @role_required(["admin"])
 @wrap_response
 def admin_delete_subject(subject_id: str):
-    return g.admin_facade.admin_delete_subject(subject_id)
+    return g.admin_facade.subject_service.admin_delete_subject(subject_id)

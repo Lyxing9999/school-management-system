@@ -1,8 +1,7 @@
 from pydantic import BaseModel 
-
 from datetime import datetime
 from app.contexts.shared.enum.roles import SystemRole
-from app.contexts.iam.data_transfer.responses import IAMBaseDataDTO , IAMUpdateDataDTO
+from app.contexts.iam.data_transfer.response import IAMBaseDataDTO , IAMUpdateDataDTO
 from app.contexts.staff.data_transfer.responses import StaffReadDataDTO
 from app.contexts.shared.enum.roles import StaffRole
 from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
@@ -34,6 +33,12 @@ class AdminDeleteUserDTO(BaseModel):
         "extra": "allow"
     }
 
+class AdminHardDeleteUserDTO(BaseModel):
+    id: str
+    deleted: bool
+    model_config = {
+        "extra": "allow"
+    }
 # =====================================================
 # SECTION 2: STAFF MANAGEMENT
 # =====================================================
