@@ -5,6 +5,8 @@ from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.infra.database.db import get_db
 from app.contexts.iam.data_transfer.request import  IAMUpdateSchema , IAMLoginSchema
 from app.contexts.iam.data_transfer.response import IAMResponseDataDTO , IAMUpdateDataDTO
+from app.contexts.iam.domain.iam import IAM
+from app.contexts.iam.mapper.iam_mapper import IAMMapper
 iam_bp = Blueprint('iam_bp', __name__)
 
 
@@ -31,7 +33,7 @@ def update_user_profile():
     user_service = IAMService(get_db())
     current_user_id = request.user_id 
     update_schema: IAMUpdateSchema = pydantic_converter.convert_to_model(request.json, IAMUpdateSchema)
-    updated_user: IAMUpdateDataDTO = user_service.update_info(current_user_id, update_schema , update_by_admin=False)
-    return updated_user
+    iam_domain: IAM = user_service.update_info(current_user_id, update_schema , update_by_admin=False)
+    return IAMMapper.to_dto(iam_domain)
 
 

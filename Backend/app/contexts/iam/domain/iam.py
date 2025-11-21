@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from bson import ObjectId
 from enum import Enum
-from app.contexts.auth.services import get_auth_service
-
 from app.contexts.shared.enum.roles import SystemRole
 from app.contexts.iam.error.iam_exception import InvalidRoleException
 from app.contexts.iam.error.iam_exception import UserDeletedException

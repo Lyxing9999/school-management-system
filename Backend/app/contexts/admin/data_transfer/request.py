@@ -4,8 +4,8 @@ from typing import Optional , List
 from app.contexts.iam.data_transfer.request import IAMUpdateSchema
 from app.contexts.staff.data_transfer.requests import StaffUpdateSchema
 from app.contexts.student.data_transfer.requests import StudentInfoUpdateSchema
-from app.contexts.schools.data_transfer.requests.class_requests import SchoolClassUpdateSchema
-from app.contexts.schools.data_transfer.requests.subject_requests import SubjectCreateSchema, SubjectUpdateSchema
+# from app.contexts.schools.data_transfer.requests.class_requests import SchoolClassUpdateSchema
+# from app.contexts.schools.data_transfer.requests.subject_requests import SubjectCreateSchema, SubjectUpdateSchema
 
 
 
@@ -69,14 +69,14 @@ class AdminCreateClassSchema(BaseModel):
         "extra": "allow"
     }
 
-class AdminUpdateClassSchema(SchoolClassUpdateSchema):
-    pass
+# class AdminUpdateClassSchema(SchoolClassUpdateSchema):
+#     pass
 
 # =====================================================
 # SECTION 5: SCHOOL MANAGEMENT Subject
 # =====================================================
-class AdminCreateSubjectSchema(SubjectCreateSchema):
-    pass
+# class AdminCreateSubjectSchema(SubjectCreateSchema):
+#     pass
 
-class AdminUpdateSubjectSchema(SubjectUpdateSchema):
-    pass
+# class AdminUpdateSubjectSchema(SubjectUpdateSchema):
+#     pass

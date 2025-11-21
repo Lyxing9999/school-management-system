@@ -22,7 +22,5 @@ class AuthService:
         return create_access_token(data=payload, expire_delta=timedelta(hours=1))
 
 
-
-
 def get_auth_service() -> AuthService:
     return AuthService()

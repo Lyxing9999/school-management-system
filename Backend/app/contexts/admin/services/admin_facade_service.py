@@ -2,8 +2,8 @@ from pymongo.database import Database
 from app.contexts.admin.services.user_service import UserAdminService
 from app.contexts.admin.services.staff_service import StaffAdminService
 from app.contexts.admin.services.student_service import StudentAdminService
-from app.contexts.admin.services.class_service import ClassAdminService
-from app.contexts.admin.services.subject_service import SubjectAdminService
+# from app.contexts.admin.services.class_service import ClassAdminService
+# from app.contexts.admin.services.subject_service import SubjectAdminService
 from app.contexts.admin.error.admin_exception import EmailAlreadyExistsException
 from app.contexts.iam.data_transfer.response import IAMBaseDataDTO
 from app.contexts.iam.domain.iam import IAM
@@ -16,8 +16,8 @@ class AdminFacadeService:
         self.user_service = UserAdminService(db)
         self.staff_service = StaffAdminService(db)
         self.student_service = StudentAdminService(db)
-        self.class_service = ClassAdminService(db)
-        self.subject_service = SubjectAdminService(db)
+        # self.class_service = ClassAdminService(db)
+        # self.subject_service = SubjectAdminService(db)
 
 
     def _rollback(self, user: IAMBaseDataDTO | None, staff: Staff | None):

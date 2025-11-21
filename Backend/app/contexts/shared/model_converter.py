@@ -1,4 +1,3 @@
-
 from pydantic import ValidationError as PydanticValidationError
 from typing import TypeVar, Dict, Any , Union, Type, List
 from pydantic import BaseModel
@@ -22,7 +21,6 @@ class Context(str, Enum):
     FLOAT = "float"
     NONE = "none"
     SINGLE = "single"
-
 
 
 class ModelConverterUtils():
@@ -71,10 +69,6 @@ class ModelConverterUtils():
                 logger.error(f"Unexpected error converting list item: {app_exc}", extra={"data": data})
                 raise app_exc
         return results
-
-    
-
-
 
 
 class AdvancedMongoConverter:
@@ -158,11 +152,8 @@ class AdvancedMongoConverter:
             raise handle_exception(e)
 
 
-
-
-
 pydantic_converter = ModelConverterUtils()
-mongo_converter = AdvancedMongoConverter()
+mongo_converter = AdvancedMongoConverter  
 
 __all__ = [
     "pydantic_converter",
