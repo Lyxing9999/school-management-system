@@ -11,4 +11,4 @@ def load_admin_facade():
 
 
 def register_routes():
-    from . import user_routes, staff_route, class_routes, student_routes, subject_routes
+    from . import user_routes, staff_route, class_routes, subject_routes, schedule_routes

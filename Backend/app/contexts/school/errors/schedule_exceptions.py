@@ -48,3 +48,32 @@ class StartTimeAfterEndTimeException(AppBaseException):
             context={"start_time": str(start_time), "end_time": str(end_time)},
             hint="Adjust start_time and end_time to avoid overlap."
         )
+
+
+class ScheduleNotFoundException(AppBaseException):
+    def __init__(self, oid):
+        super().__init__(
+            message=f"Schedule not found for ID: {oid}",
+            error_code="SCHEDULE_NOT_FOUND",
+            status_code=404,
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.NOT_FOUND,
+            user_message="The schedule was not found.",
+            recoverable=True,
+            context={"schedule_id": str(oid)},
+            hint="Verify the schedule ID and try again."
+        )
+
+class ScheduleUpdateFailedException(AppBaseException):
+    def __init__(self, oid):
+        super().__init__(
+            message=f"Schedule update failed for ID: {oid}",
+            error_code="SCHEDULE_UPDATE_FAILED",
+            status_code=500,
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="The schedule update failed.",
+            recoverable=True,
+            context={"schedule_id": str(oid)},
+            hint="Verify the schedule ID and try again."
+        )

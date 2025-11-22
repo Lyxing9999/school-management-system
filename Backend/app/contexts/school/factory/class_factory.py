@@ -1,9 +1,7 @@
-# app/contexts/school/factory/class_factory.py
-
 from __future__ import annotations
 from typing import Iterable
 from bson import ObjectId
-
+from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.school.domain.class_section import ClassSection
 from app.contexts.school.errors.class_exceptions import (
     ClassNameAlreadyExistsException,
@@ -32,6 +30,12 @@ class ClassFactory:
         self.class_read_model = class_read_model
         self.teacher_read_model = teacher_read_model
 
+    def _normalize_id(self, id_: str | ObjectId) -> ObjectId:
+        """
+        Convert incoming id to ObjectId using shared converter.
+        """
+        return mongo_converter.convert_to_object_id(id_)
+    
     def create_class(
         self,
         name: str,
@@ -39,20 +43,21 @@ class ClassFactory:
         subject_ids: Iterable[str | ObjectId] | None = None,
         max_students: int | None = None,
     ) -> ClassSection:
-        # 1. Validate name uniqueness
+
         if self.class_read_model.get_by_name(name):
             raise ClassNameAlreadyExistsException(name)
+        
+        teacher_obj_id: ObjectId | None = (
+            self._normalize_id(teacher_id)
+            if teacher_id is not None
+            else None
+        )
 
-        # 2. Normalize IDs
-        teacher_obj_id: ObjectId | None = None
-        if teacher_id is not None:
-            teacher_obj_id = teacher_id if isinstance(teacher_id, ObjectId) else ObjectId(teacher_id)
-
-        normalized_subject_ids: list[ObjectId] = []
-        for sid in subject_ids or []:
-            normalized_subject_ids.append(sid if isinstance(sid, ObjectId) else ObjectId(sid))
-
-        # 3. Optional: check teacher load
+        normalized_subject_ids: list[ObjectId] = [
+            self._normalize_id(sid)
+            for sid in (subject_ids or [])
+        ]
+        
         if teacher_obj_id is not None:
             max_load = self.teacher_read_model.get_max_class_load(teacher_obj_id)
             if max_load is not None:
@@ -60,7 +65,6 @@ class ClassFactory:
                 if current_load >= max_load:
                     raise TeacherOverClassLoadException(teacher_obj_id, max_load)
 
-        # 4. Create domain object
         return ClassSection(
             name=name,
             teacher_id=teacher_obj_id,

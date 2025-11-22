@@ -19,8 +19,7 @@ class UserAdminService:
         self.user_collection = self.db["users"]
 
 
-    def _convert_id(self, id: str | ObjectId) -> ObjectId:
-        return mongo_converter.convert_ids(id)
+
 
     @property
     def iam_service(self) -> IAMService:

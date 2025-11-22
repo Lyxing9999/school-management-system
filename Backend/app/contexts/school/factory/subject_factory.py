@@ -7,7 +7,6 @@ from app.contexts.school.errors.subject_exceptions import (
     SubjectNameAlreadyExistsException,
 )
 
-
 class SubjectFactory:
     """
     Factory for creating Subject entities with basic validation.
@@ -26,6 +25,9 @@ class SubjectFactory:
         """
         self.subject_read_model = subject_read_model
 
+    def _normalize_id(self, id_: str | ObjectId) -> ObjectId:
+        return mongo_converter.convert_to_object_id(id_)
+    
     def create_subject(
         self,
         name: str,

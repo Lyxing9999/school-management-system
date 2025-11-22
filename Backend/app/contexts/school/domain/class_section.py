@@ -1,4 +1,3 @@
-# app/contexts/school/domain/class_section.py
 from __future__ import annotations
 from datetime import datetime
 from typing import Iterable

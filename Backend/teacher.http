@@ -1,0 +1,170 @@
+### ============================================================
+### 5. AUTH – TEACHER & STUDENT LOGIN
+### ============================================================
+# Use these to get JWT tokens for teacher & student.
+# Then copy the token into the Authorization headers below.
+
+### 5.1 Login as TEACHER
+
+POST http://localhost:5001/api/iam/login
+Content-Type: application/json
+
+{
+  "email": "Teacher12@gamil.com",
+  "password": "12345678"
+}
+
+### 5.2 Login as STUDENT
+
+POST http://localhost:5001/api/iam/login
+Content-Type: application/json
+
+{
+  "email": "student168@gmail.com",
+  "password": "12345678"
+}
+
+
+
+### ============================================================
+### 6. TEACHER ROUTES (/api/teacher)
+### ============================================================
+# Replace BEARER_TOKEN_TEACHER below with the token from 5.1.
+# Replace CLASS_ID_HERE, STUDENT_ID_HERE, SUBJECT_ID_HERE, etc.
+# with real ObjectId strings from your DB responses.
+
+### 6.1 Get my classes (Teacher)
+
+GET http://localhost:5001/api/teacher/me/classes
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZDhjZDVhNzVjNGY1YTNjZjQxMjlkNSIsInJvbGUiOiJ0ZWFjaGVyIiwidXNlcm5hbWUiOiJUZWFjaGVyMTIiLCJlbWFpbCI6IlRlYWNoZXIxMkBnYW1pbC5jb20iLCJleHAiOjE3NjM3OTExMTR9.Re-qfAPqGn-SydReoU7NQtuFbhKLUa2mJ9UGaG36D74
+
+
+
+### 6.2 Mark attendance for a student in my class
+
+POST http://localhost:5001/api/teacher/attendance
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZDhjZDVhNzVjNGY1YTNjZjQxMjlkNSIsInJvbGUiOiJ0ZWFjaGVyIiwidXNlcm5hbWUiOiJUZWFjaGVyMTIiLCJlbWFpbCI6IlRlYWNoZXIxMkBnYW1pbC5jb20iLCJleHAiOjE3NjM3OTExMTR9.Re-qfAPqGn-SydReoU7NQtuFbhKLUa2mJ9UGaG36D74
+Content-Type: application/json
+
+{
+  "student_id": "692143674e365ad27c3949b0",
+  "class_id": "692143674e365ad27c3949b1",
+  "status": "present",        
+  "record_date": "2025-01-10"   
+}
+
+
+
+### 6.3 Change attendance status (by attendance id)
+
+PATCH http://localhost:5001/api/teacher/attendance/ATTENDANCE_ID_HERE/status
+Authorization: Bearer BEARER_TOKEN_TEACHER
+Content-Type: application/json
+
+{
+  "status": "absent"
+}
+
+
+
+### 6.4 List attendance for a class (teacher view)
+
+GET http://localhost:5001/api/teacher/classes/CLASS_ID_HERE/attendance
+Authorization: Bearer BEARER_TOKEN_TEACHER
+
+
+
+### 6.5 Add grade for a student
+
+POST http://localhost:5001/api/teacher/grades
+Authorization: Bearer BEARER_TOKEN_TEACHER
+Content-Type: application/json
+
+{
+  "student_id": "STUDENT_ID_HERE",
+  "subject_id": "SUBJECT_ID_HERE",
+  "class_id": "CLASS_ID_HERE",     // optional if your logic allows
+  "score": 87.5,
+  "type": "exam",                  // "exam" | "assignment"
+  "term": "2025-S1"                // optional, e.g. "2025-S1"
+}
+
+
+
+### 6.6 Update grade score
+
+PATCH http://localhost:5001/api/teacher/grades/GRADE_ID_HERE/score
+Authorization: Bearer BEARER_TOKEN_TEACHER
+Content-Type: application/json
+
+{
+  "score": 92.0
+}
+
+
+
+### 6.7 Change grade type
+
+PATCH http://localhost:5001/api/teacher/grades/GRADE_ID_HERE/type
+Authorization: Bearer BEARER_TOKEN_TEACHER
+Content-Type: application/json
+
+{
+  "type": "assignment"   // "exam" | "assignment"
+}
+
+
+
+### 6.8 List grades for a class
+
+GET http://localhost:5001/api/teacher/classes/CLASS_ID_HERE/grades
+Authorization: Bearer BEARER_TOKEN_TEACHER
+
+
+
+### ============================================================
+### 7. STUDENT ROUTES (/api/student)
+### ============================================================
+# Replace BEARER_TOKEN_STUDENT below with the token from 5.2.
+
+### 7.1 Get my classes (Student)
+
+GET http://localhost:5001/api/student/me/classes
+Authorization: Bearer BEARER_TOKEN_STUDENT
+
+
+
+### 7.2 Get my attendance (optionally filtered by class)
+
+# Without filter (all classes)
+
+GET http://localhost:5001/api/student/me/attendance
+Authorization: Bearer BEARER_TOKEN_STUDENT
+
+###
+# With specific class filter
+
+GET http://localhost:5001/api/student/me/attendance?class_id=CLASS_ID_HERE
+Authorization: Bearer BEARER_TOKEN_STUDENT
+
+
+
+### 7.3 Get my grades (optionally filtered by term)
+
+# All grades
+
+GET http://localhost:5001/api/student/me/grades
+Authorization: Bearer BEARER_TOKEN_STUDENT
+
+###
+# Grades for specific term (e.g. 2025-S1)
+
+GET http://localhost:5001/api/student/me/grades?term=2025-S1
+Authorization: Bearer BEARER_TOKEN_STUDENT
+
+
+
+### 7.4 Get my schedule
+
+GET http://localhost:5001/api/student/me/schedule
+Authorization: Bearer BEARER_TOKEN_STUDENT

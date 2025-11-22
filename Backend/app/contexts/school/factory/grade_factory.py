@@ -1,14 +1,13 @@
-# app/contexts/school/factory/grade_factory.py
-
 from __future__ import annotations
 from bson import ObjectId
-
+from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.school.domain.grade import GradeRecord, GradeType
 from app.contexts.school.errors.grade_exceptions import (
     NotSubjectTeacherException,
     StudentNotEnrolledForSubjectException,
 )
-
+from app.contexts.school.errors.class_exceptions import ClassNotFoundException
+from app.contexts.school.errors.subject_exceptions import SubjectNotFoundException
 
 class GradeFactory:
     """
@@ -38,6 +37,10 @@ class GradeFactory:
         self.enrollment_read_model = enrollment_read_model
         self.teacher_assignment_read_model = teacher_assignment_read_model
 
+    def _normalize_id(self, id_: str | ObjectId) -> ObjectId:
+        return mongo_converter.convert_to_object_id(id_)
+
+
     def create_grade(
         self,
         student_id: str | ObjectId,
@@ -49,22 +52,22 @@ class GradeFactory:
         term: str | None = None,
     ) -> GradeRecord:
         # Normalize IDs
-        student_obj_id = student_id if isinstance(student_id, ObjectId) else ObjectId(student_id)
-        subject_obj_id = subject_id if isinstance(subject_id, ObjectId) else ObjectId(subject_id)
-        teacher_obj_id = teacher_id if isinstance(teacher_id, ObjectId) else ObjectId(teacher_id)
+        student_obj_id = self._normalize_id(student_id)
+        subject_obj_id = self._normalize_id(subject_id)
+        teacher_obj_id = self._normalize_id(teacher_id)
         class_obj_id: ObjectId | None = None
         if class_id is not None:
-            class_obj_id = class_id if isinstance(class_id, ObjectId) else ObjectId(class_id)
+            class_obj_id = self._normalize_id(class_id)
 
         # 1. Optional: verify subject/class exist
         subject_doc = self.subject_read_model.get_by_id(subject_obj_id)
         if not subject_doc:
-            raise ValueError(f"Subject {subject_obj_id} not found")
+            raise SubjectNotFoundException(subject_obj_id)
 
         if class_obj_id is not None:
             class_doc = self.class_read_model.get_by_id(class_obj_id)
             if not class_doc:
-                raise ValueError(f"Class {class_obj_id} not found")
+                raise ClassNotFoundException(class_obj_id)
 
         # 2. Check teacher can grade this subject/class
         if class_obj_id is not None:

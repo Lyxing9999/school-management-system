@@ -122,3 +122,18 @@ class StudentNotEnrolledForSubjectException(AppBaseException):
             },
             hint="Enroll the student in the subject before assigning grades."
         )
+
+
+class GradeNotFoundException(AppBaseException):
+    def __init__(self, grade_id: str):
+        super().__init__(
+            message=f"Grade {grade_id} not found.",
+            error_code="GRADE_NOT_FOUND",
+            status_code=404,
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="The requested grade does not exist.",
+            recoverable=True,
+            context={"grade_id": grade_id},
+            hint="Check the grade ID or create the grade before using it."
+        )

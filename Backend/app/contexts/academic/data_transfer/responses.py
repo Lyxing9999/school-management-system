@@ -5,7 +5,7 @@ from typing import List
 
 from app.contexts.admin.data_transfer.response import IAMBaseDataDTO
 from app.contexts.admin.data_transfer.response import PaginatedUsersDataDTO
-from app.contexts.student.data_transfer.responses import StudentInfoReadDataDTO
+
 from datetime import datetime
 
 # -------------------------

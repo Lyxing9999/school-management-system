@@ -7,7 +7,7 @@ from app.contexts.school.errors.grade_exceptions import (
     NotSubjectTeacherException,
     StudentNotEnrolledForSubjectException,
 )
-
+from app.contexts.school.errors.subject_exceptions import SubjectNotFoundException
 # ---- Fake read models (unique to this file) -----------------------
 
 
@@ -181,6 +181,7 @@ def test_create_grade_success_without_class_id_skips_teacher_and_enrollment_chec
     assert class_read.calls == []
     assert enrollment_read.calls == []
     assert teacher_assignment_read.calls == []
+
 def test_create_grade_raises_if_subject_not_found():
     (
         factory,
@@ -199,7 +200,7 @@ def test_create_grade_raises_if_subject_not_found():
         student_enrolled=True,
     )
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SubjectNotFoundException) as exc:
         factory.create_grade(
             student_id=student_id,
             subject_id=subject_id,
@@ -209,8 +210,7 @@ def test_create_grade_raises_if_subject_not_found():
             class_id=class_id,
         )
 
-    assert "Subject" in str(exc.value)
-
+    assert "SUBJECT_NOT_FOUND" in exc.value.error_code
 
 def test_create_grade_raises_if_teacher_cannot_grade():
     (

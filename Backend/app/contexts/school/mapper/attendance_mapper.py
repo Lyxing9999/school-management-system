@@ -6,7 +6,6 @@ from app.contexts.school.domain.attendance import (
     AttendanceStatus,
 )
 
-
 class AttendanceMapper:
     """
     Handles conversion between AttendanceRecord domain model and MongoDB dict.

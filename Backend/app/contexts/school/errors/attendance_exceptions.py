@@ -73,3 +73,18 @@ class AttendanceDateInFutureException(AttendanceError):
             received_value=received_date,
             hint="Use the current date or a past date for marking attendance."
         )
+
+class AttendanceNotFoundException(AppBaseException):
+    def __init__(self, attendance_id: str):
+        super().__init__(
+            message=f"Attendance {attendance_id} not found.",
+            error_code="ATTENDANCE_NOT_FOUND",
+            status_code=404,
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="The requested attendance does not exist.",
+            recoverable=True,
+            context={"attendance_id": attendance_id},
+            hint="Check the attendance ID or create the attendance before using it."
+        )
+    

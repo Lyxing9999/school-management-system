@@ -1,26 +1,78 @@
-from pydantic import BaseModel, Field, constr
-from typing import List, Optional
+from __future__ import annotations
 from datetime import date
+from typing import Optional, Literal
+
+from pydantic import BaseModel, Field, ConfigDict
 
 
-# -------------------------
-# Student Info Schema
-# -------------------------
-class StudentInfoUpdateSchema(BaseModel):
-    student_id: constr(min_length=1) = Field(None, description="Student ID")
-    full_name: constr(min_length=1) = Field(None, description="Student Full Name")
-    photo_url: Optional[str] = Field(None, description="Student Photo URL")
-    first_name: Optional[constr(min_length=1)] = Field(None, description="Student First Name")
-    last_name: Optional[constr(min_length=1)] = Field(None, description="Student Last Name")
-    birth_date: Optional[date] = Field(None, description="Student Birth Date")
-    gender: Optional[constr(min_length=1)] = Field(None, description="Student Gender")
-    grade_level: Optional[int] = Field(None, description="Student Grade Level")
-    classes: Optional[List[constr(min_length=1)]] = Field(None, description="Student Classes")
-    enrollment_date: Optional[date] = Field(None, description="Student Enrollment Date")
-    address: Optional[constr(min_length=1)] = Field(None, description="Student Address")
-    parent_number: Optional[constr(min_length=1)] = Field(None, description="Parent Phone Number")
+class StudentAttendanceFilterSchema(BaseModel):
+    """
+    Used for: GET /student/me/attendance
+    Query/body filter for student's own attendance.
+    """
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="ignore",
+    )
+
+    class_id: Optional[str] = Field(
+        None,
+        description="Filter by class id (optional)",
+    )
+    status: Optional[Literal["present", "absent", "excused"]] = Field(
+        None,
+        description="Optional status filter",
+    )
+    from_date: Optional[date] = Field(
+        None,
+        description="Start date (inclusive) for range filter",
+    )
+    to_date: Optional[date] = Field(
+        None,
+        description="End date (inclusive) for range filter",
+    )
 
 
-# -------------------------
-# Full Student Update Request Schema
-# -------------------------
+class StudentGradesFilterSchema(BaseModel):
+    """
+    Used for: GET /student/me/grades
+    """
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="ignore",
+    )
+
+    class_id: Optional[str] = Field(
+        None,
+        description="Filter by class id (optional)",
+    )
+    subject_id: Optional[str] = Field(
+        None,
+        description="Filter by subject id (optional)",
+    )
+    term: Optional[str] = Field(
+        None,
+        description="Filter by term, e.g. '2025-S1' (optional)",
+    )
+
+
+class StudentScheduleFilterSchema(BaseModel):
+    """
+    Used for: GET /student/me/schedule
+    """
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="ignore",
+    )
+
+    day_of_week: Optional[int] = Field(
+        None,
+        ge=1,
+        le=7,
+        description="1=Monday, 7=Sunday (optional)",
+    )
+    class_id: Optional[str] = Field(
+        None,
+        description="Filter by specific class (optional)",
+    )
+

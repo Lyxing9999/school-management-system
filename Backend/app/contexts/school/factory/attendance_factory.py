@@ -8,6 +8,8 @@ from app.contexts.school.errors.attendance_exceptions import (
     StudentNotEnrolledInClassException,
     AttendanceAlreadyMarkedException,
 )
+from app.contexts.school.errors.class_exceptions import ClassNotFoundException 
+from app.contexts.shared.model_converter import mongo_converter
 
 
 class AttendanceFactory:
@@ -33,6 +35,14 @@ class AttendanceFactory:
         self.enrollment_read_model = enrollment_read_model
         self.attendance_read_model = attendance_read_model
 
+    # ------------ internal helpers ------------
+
+    def _normalize_id(self, id_: str | ObjectId) -> ObjectId:
+        """
+        Convert incoming id to ObjectId using shared converter.
+        """
+        return mongo_converter.convert_to_object_id(id_)
+    
     def create_record(
         self,
         student_id: str | ObjectId,
@@ -42,25 +52,21 @@ class AttendanceFactory:
         record_date: date_type | None = None,
     ) -> AttendanceRecord:
         # Normalize IDs
-        student_obj_id = student_id if isinstance(student_id, ObjectId) else ObjectId(student_id)
-        class_obj_id = class_id if isinstance(class_id, ObjectId) else ObjectId(class_id)
-        teacher_obj_id = teacher_id if isinstance(teacher_id, ObjectId) else ObjectId(teacher_id)
+        student_obj_id = self._normalize_id(student_id)
+        class_obj_id = self._normalize_id(class_id)
+        teacher_obj_id = self._normalize_id(teacher_id)
 
-        # 1. Validate teacher is assigned to class
         class_doc = self.class_read_model.get_by_id(class_obj_id)
         if not class_doc:
-            # You can create a ClassNotFoundException if you want
-            raise ValueError(f"Class {class_obj_id} not found")
+            raise ClassNotFoundException(class_obj_id)
 
         if class_doc.get("teacher_id") != teacher_obj_id:
             raise NotClassTeacherException(teacher_obj_id, class_obj_id)
 
-        # 2. Validate student is enrolled in class
         if not self.enrollment_read_model.is_student_enrolled(student_obj_id, class_obj_id):
             raise StudentNotEnrolledInClassException(student_obj_id, class_obj_id)
 
-        # 3. Prevent duplicate attendance for same day
-        date_to_use = record_date or None  # domain will default to today if None
+        date_to_use = record_date or None
         existing = self.attendance_read_model.get_by_student_class_date(
             student_id=student_obj_id,
             class_id=class_obj_id,
@@ -69,7 +75,6 @@ class AttendanceFactory:
         if existing:
             raise AttendanceAlreadyMarkedException(student_obj_id, class_obj_id, date_to_use)
 
-        # 4. Create domain model
         return AttendanceRecord(
             student_id=student_obj_id,
             class_id=class_obj_id,

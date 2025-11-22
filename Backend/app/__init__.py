@@ -34,12 +34,21 @@ def create_app():
     # TODO: enable academic routes when module is ready
     # from .contexts.academic.routes import academic_bp
     from .contexts.admin.routes import admin_bp, register_routes
+    from .contexts.student.routes import student_bp, register_routes as register_student_routes
+    from .contexts.teacher.routes import teacher_bp, register_routes as register_teacher_routes
+    
     # from .contexts.hr.routes import hr_bp
     app.register_blueprint(upload_bp, url_prefix='/uploads')
     app.register_blueprint(iam_bp, url_prefix='/api/iam')
     # app.register_blueprint(academic_bp, url_prefix='/api/academic')
     register_routes()
+    register_student_routes()
+    register_teacher_routes()
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    
+    app.register_blueprint(student_bp, url_prefix='/api/student')
+    
+    app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
     # app.register_blueprint(hr_bp, url_prefix='/api/hr')
 
     # Swagger UI

@@ -113,3 +113,17 @@ class TeacherOverClassLoadException(AppBaseException):
             context={"teacher_id": teacher_id, "max_load": max_load},
             hint="Assign a different teacher or increase max class load if allowed."
         )
+
+
+class ClassNotFoundException(AppBaseException):
+    def __init__(self, class_id: ObjectId):
+        super().__init__(
+            message=f"Class {class_id} not found.",
+            error_code="CLASS_NOT_FOUND",
+            status_code=404,
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            details={"class_id": str(class_id)},
+            user_message="The requested class does not exist.",
+            recoverable=True,
+        )

@@ -1,30 +1,103 @@
-# app/contexts/school/repository/class_repository.py
+from __future__ import annotations
+from abc import ABC, abstractmethod
+from typing import Optional
 
-from typing import Optional, Iterable
-from pymongo.database import Database
 from bson import ObjectId
+from pymongo.collection import Collection
 
 from app.contexts.school.domain.class_section import ClassSection
 from app.contexts.school.mapper.class_mapper import ClassSectionMapper
-from app.contexts.shared.model_converter import mongo_converter
 
 
-class ClassRepository:
-    def __init__(self, db: Database):
-        self.collection = db.class_sections
-        self.mapper = ClassSectionMapper()
+class IClassSectionRepository(ABC):
+    """Interface for ClassSection repositories."""
 
-    def save(self, cls: ClassSection) -> ClassSection:
-        doc = self.mapper.to_persistence(cls)
-        self.collection.update_one({"_id": doc["_id"]}, {"$set": doc}, upsert=True)
-        return cls
+    @abstractmethod
+    def insert(self, section: ClassSection) -> ClassSection:
+        ...
 
-    def find_by_id(self, class_id: str | ObjectId) -> Optional[ClassSection]:
-        object_id = mongo_converter.convert_to_object_id(class_id)
-        doc = self.collection.find_one({"_id": object_id, "deleted": False})
-        return self.mapper.to_domain(doc) if doc else None
+    @abstractmethod
+    def update(self, section: ClassSection) -> Optional[ClassSection]:
+        """
+        Update an existing ClassSection.
+        Returns:
+            The updated ClassSection if a document was matched,
+            or None if no document with that id exists.
+        """
+        ...
 
-    def find_by_teacher(self, teacher_id: ObjectId) -> Iterable[ClassSection]:
-        cursor = self.collection.find({"teacher_id": teacher_id, "deleted": False})
-        for doc in cursor:
-            yield self.mapper.to_domain(doc)
+    @abstractmethod
+    def find_by_id(self, id: ObjectId) -> Optional[ClassSection]:
+        ...
+
+    @abstractmethod
+    def find_by_name(self, name: str) -> Optional[ClassSection]:
+        ...
+
+    @abstractmethod
+    def soft_delete(self, id: ObjectId) -> bool:
+        ...
+
+
+
+
+class MongoClassSectionRepository(IClassSectionRepository):
+    """
+    MongoDB implementation of IClassSectionRepository.
+
+    - Uses ClassSectionMapper to go domain <-> Mongo dict
+    - Respects `deleted` flag for soft delete
+    """
+
+    def __init__(
+        self,
+        collection: Collection,
+        mapper: ClassSectionMapper | None = None,
+    ):
+        self.collection = collection
+        self.mapper = mapper or ClassSectionMapper()
+
+    # ---------- Write methods ----------
+
+    def insert(self, section: ClassSection) -> ClassSection:
+        payload = self.mapper.to_persistence(section)
+        self.collection.insert_one(payload)
+        return section
+
+    def update(self, section: ClassSection) -> Optional[ClassSection]:
+        payload = self.mapper.to_persistence(section)
+        _id = payload.pop("_id")
+
+        result = self.collection.update_one(
+            {"_id": _id, "deleted": {"$ne": True}},
+            {"$set": payload},
+        )
+        if result.matched_count == 0:
+            return None
+        return section
+
+    def soft_delete(self, id: ObjectId) -> bool:
+        result = self.collection.update_one(
+            {"_id": id},
+            {"$set": {"deleted": True}},
+        )
+        return result.matched_count == 1
+
+    # ---------- Read methods ----------
+
+    def find_by_id(self, id: ObjectId) -> Optional[ClassSection]:
+        doc = self.collection.find_one(
+            {"_id": id, "deleted": {"$ne": True}}
+        )
+        if not doc:
+            return None
+        return self.mapper.to_domain(doc)
+
+    def find_by_name(self, name: str) -> Optional[ClassSection]:
+        doc = self.collection.find_one(
+            {"name": name, "deleted": {"$ne": True}}
+        )
+        if not doc:
+            return None
+        return self.mapper.to_domain(doc)
+

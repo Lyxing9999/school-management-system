@@ -77,8 +77,8 @@ def test_create_class_normalizes_teacher_and_subject_ids_from_strings():
 
     cls = factory.create_class(
         name="Grade 2B",
-        teacher_id=str(teacher_id),              # pass as string
-        subject_ids=[str(subj1), subj2],         # mix string + ObjectId
+        teacher_id=str(teacher_id),          
+        subject_ids=[str(subj1), subj2],       
         max_students=35,
     )
 

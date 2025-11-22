@@ -5,7 +5,7 @@ from typing import List
 from datetime import datetime
 from app.contexts.iam.data_transfer.request import IAMUpdateSchema
 from app.contexts.shared.enum.roles import SystemRole
-from app.contexts.student.data_transfer.requests import StudentInfoUpdateSchema
+
 
 from typing import Optional
 class AcademicCreateClassSchema(BaseModel):

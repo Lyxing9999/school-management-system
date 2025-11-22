@@ -85,8 +85,8 @@ def test_create_record_success():
 def test_create_record_raises_when_not_class_teacher():
     student_id = ObjectId()
     class_id = ObjectId()
-    teacher_id = ObjectId()          # teacher trying to mark
-    different_teacher = ObjectId()   # ❌ actual class teacher
+    teacher_id = ObjectId()         
+    different_teacher = ObjectId()   
 
     class_doc = {
         "_id": class_id,
@@ -116,12 +116,12 @@ def test_create_record_raises_when_student_not_enrolled():
 
     class_doc = {
         "_id": class_id,
-        "teacher_id": teacher_id,  # teacher is correct
+        "teacher_id": teacher_id,  
     }
 
     factory = AttendanceFactory(
         class_read_model=FakeClassReadModel(class_doc),
-        enrollment_read_model=FakeEnrollmentReadModel(enrolled=False),  # ❌ not enrolled
+        enrollment_read_model=FakeEnrollmentReadModel(enrolled=False), 
         attendance_read_model=FakeAttendanceReadModel(already_exists=False),
     )
 

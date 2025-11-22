@@ -1,8 +1,5 @@
 from app.contexts.core.error import AppBaseException, ErrorSeverity, ErrorCategory
-
-
-from app.contexts.core.error import AppBaseException, ErrorSeverity, ErrorCategory
-
+from bson import ObjectId
 
 class SubjectError(AppBaseException):
     """Base class for all Subject domain errors."""
@@ -71,4 +68,18 @@ class SubjectNameAlreadyExistsException(SubjectError):
             severity=ErrorSeverity.LOW,
             received_value=received_value,
             hint="Choose a unique subject name that does not exist in the system."
+        )
+
+class SubjectNotFoundException(SubjectError):
+    """Raised when a subject is not found in the system."""
+    def __init__(self, subject_id: ObjectId):
+        super().__init__(
+            message=f"Subject {subject_id} not found.",
+            error_code="SUBJECT_NOT_FOUND",
+            status_code=404,
+            severity=ErrorSeverity.LOW,
+            details={"subject_id": str(subject_id)},
+            user_message="The requested subject does not exist.",
+            recoverable=True,
+            hint="Check the subject ID or create the subject before using it."
         )

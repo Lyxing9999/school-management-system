@@ -1,19 +1,92 @@
-from app.contexts.core.error import MongoErrorMixin
-from app.contexts.schools.models.subject import SchoolSubject
-from app.contexts.core.log.log_service import LogService
+from __future__ import annotations
+from abc import ABC, abstractmethod
+from typing import Optional
+
 from bson import ObjectId
-from pymongo.database import Database
+from pymongo.collection import Collection
+
+from app.contexts.school.domain.subject import Subject
+from app.contexts.school.mapper.subject_mapper import SubjectMapper
 
 
+class ISubjectRepository(ABC):
+    """Interface for Subject repositories."""
+
+    @abstractmethod
+    def insert(self, subject: Subject) -> Subject:
+        ...
+
+    @abstractmethod
+    def update(self, subject: Subject) -> Optional[Subject]:
+        ...
+
+    @abstractmethod
+    def find_by_id(self, id: ObjectId) -> Optional[Subject]:
+        ...
+
+    @abstractmethod
+    def find_by_code(self, code: str) -> Optional[Subject]:
+        ...
+
+    @abstractmethod
+    def find_by_name(self, name: str) -> Optional[Subject]:
+        ...
+
+    @abstractmethod
+    def list_all(self, active_only: bool = False) -> list[Subject]:
+        ...
 
 
-class SubjectRepository(MongoErrorMixin):
-    def __init__(self, db: Database, collection_name: str = "subjects"):
-        self.collection = db[collection_name]
+class MongoSubjectRepository(ISubjectRepository):
+    """MongoDB implementation of ISubjectRepository."""
 
-    def save(self, subject_agg: SchoolSubject) -> ObjectId:
-        try:
-            result = self.collection.insert_one(subject_agg)
-            return result.inserted_id
-        except Exception as e:
-            self._handle_mongo_error("insert", e)
+    def __init__(
+        self,
+        collection: Collection,
+        mapper: SubjectMapper | None = None,
+    ):
+        self.collection = collection
+        self.mapper = mapper or SubjectMapper()
+
+    def insert(self, subject: Subject) -> Subject:
+        payload = self.mapper.to_persistence(subject)
+        self.collection.insert_one(payload)
+        return subject
+
+    def update(self, subject: Subject) -> Optional[Subject]:
+        payload = self.mapper.to_persistence(subject)
+        _id = payload.pop("_id")
+
+        result = self.collection.update_one(
+            {"_id": _id},
+            {"$set": payload},
+        )
+        if result.matched_count == 0:
+            return None
+        return subject
+
+    def find_by_id(self, id: ObjectId) -> Optional[Subject]:
+        doc = self.collection.find_one({"_id": id})
+        if not doc:
+            return None
+        return self.mapper.to_domain(doc)
+
+    def find_by_code(self, code: str) -> Optional[Subject]:
+        doc = self.collection.find_one({"code": code})
+        if not doc:
+            return None
+        return self.mapper.to_domain(doc)
+
+    def find_by_name(self, name: str) -> Optional[Subject]:
+        doc = self.collection.find_one({"name": name})
+        if not doc:
+            return None
+        return self.mapper.to_domain(doc)
+
+    def list_all(self, active_only: bool = False) -> list[Subject]:
+        query: dict = {}
+        if active_only:
+            query["is_active"] = True
+
+        cursor = self.collection.find(query)
+        return [self.mapper.to_domain(doc) for doc in cursor]

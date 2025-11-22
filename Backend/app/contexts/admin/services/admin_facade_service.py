@@ -1,25 +1,27 @@
 from pymongo.database import Database
 from app.contexts.admin.services.user_service import UserAdminService
 from app.contexts.admin.services.staff_service import StaffAdminService
-from app.contexts.admin.services.student_service import StudentAdminService
-# from app.contexts.admin.services.class_service import ClassAdminService
-# from app.contexts.admin.services.subject_service import SubjectAdminService
+from app.contexts.admin.services.class_service import ClassAdminService
+from app.contexts.admin.services.subject_service import SubjectAdminService
 from app.contexts.admin.error.admin_exception import EmailAlreadyExistsException
 from app.contexts.iam.data_transfer.response import IAMBaseDataDTO
 from app.contexts.iam.domain.iam import IAM
 from app.contexts.staff.models import Staff
 from app.contexts.staff.data_transfer.requests import StaffCreateSchema
+from app.contexts.admin.services.schedule_service import ScheduleAdminService
 from typing import Tuple
 
 class AdminFacadeService:
     def __init__(self, db: Database):
         self.user_service = UserAdminService(db)
         self.staff_service = StaffAdminService(db)
-        self.student_service = StudentAdminService(db)
-        # self.class_service = ClassAdminService(db)
-        # self.subject_service = SubjectAdminService(db)
+        self.class_service = ClassAdminService(db)
+        self.subject_service = SubjectAdminService(db)
+        self.schedule_service = ScheduleAdminService(db)
 
 
+
+    # ---------- helper methods ----------
     def _rollback(self, user: IAMBaseDataDTO | None, staff: Staff | None):
         try:
             if staff:
@@ -65,11 +67,3 @@ class AdminFacadeService:
             self._rollback(user, staff)
             raise
 
-    def admin_assign_student_to_class(self, student_id, class_id):
-        """
-        Example cross-service workflow: assign student to a class.
-        """
-        student = self.student_service.admin_get_student_by_user_id(student_id)
-        updated_class = self.class_service.admin_assign_student(class_id, student)
-
-        return updated_class

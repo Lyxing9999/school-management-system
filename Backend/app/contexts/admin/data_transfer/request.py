@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field
-from app.contexts.shared.enum.roles import SystemRole, UserRole , StaffRole
+from __future__ import annotations
+from pydantic import BaseModel, Field, field_validator, ConfigDict
+from app.contexts.shared.enum.roles import SystemRole, StaffRole
 from typing import Optional , List
 from app.contexts.iam.data_transfer.request import IAMUpdateSchema
 from app.contexts.staff.data_transfer.requests import StaffUpdateSchema
-from app.contexts.student.data_transfer.requests import StudentInfoUpdateSchema
+from app.contexts.school.domain.schedule import DayOfWeek
 # from app.contexts.schools.data_transfer.requests.class_requests import SchoolClassUpdateSchema
 # from app.contexts.schools.data_transfer.requests.subject_requests import SubjectCreateSchema, SubjectUpdateSchema
 
@@ -46,37 +47,67 @@ class AdminCreateStaffSchema(BaseModel):
 class AdminUpdateStaffSchema(StaffUpdateSchema):
     pass
 
-# =====================================================
-# SECTION 3: STUDENT MANAGEMENT
-# =====================================================
-class AdminUpdateInfoStudentSchema(StudentInfoUpdateSchema):
-    pass
+
 
 
 # =====================================================
 # SECTION 4: SCHOOL MANAGEMENT Class
 # =====================================================
 class AdminCreateClassSchema(BaseModel):
-    name: str
-    max_students: int
-    grade: int
-    status: bool
-    class_room: Optional[str] = None
-    homeroom_teacher: Optional[str] = None
-    subjects: Optional[List[str]] = None
-    students: Optional[List[str]] = None
-    model_config = {
-        "extra": "allow"
-    }
+    name: str = Field(..., min_length=1)
+    teacher_id: Optional[str] = None
+    subject_ids: Optional[List[str]] = None
+    max_students: Optional[int] = Field(default=None, ge=1)
 
-# class AdminUpdateClassSchema(SchoolClassUpdateSchema):
-#     pass
+    @field_validator("name")
+    def strip_name(cls, v: str) -> str:
+        return v.strip()
+
+
+class AdminAssignTeacherToClassSchema(BaseModel):
+    teacher_id: str = Field(..., min_length=1)
+
+
+class AdminEnrollStudentToClassSchema(BaseModel):
+    student_id: str = Field(..., min_length=1)
+
+
+class AdminCreateSubjectSchema(BaseModel):
+    name: str = Field(..., min_length=1)
+    code: str = Field(..., min_length=1)
+    description: Optional[str] = None
+    allowed_grade_levels: Optional[List[int]] = None
+
+    @field_validator("name", "code")
+    def strip_fields(cls, v: str) -> str:
+        return v.strip()
+
 
 # =====================================================
-# SECTION 5: SCHOOL MANAGEMENT Subject
+# SECTION 3: SCHOOL MANAGEMENT Schedule
 # =====================================================
-# class AdminCreateSubjectSchema(SubjectCreateSchema):
-#     pass
+class AdminCreateScheduleSlotSchema(BaseModel):
+    """
+    Request body for admin creating a schedule slot.
+    """
+    model_config = ConfigDict(from_attributes=True)
 
-# class AdminUpdateSubjectSchema(SubjectUpdateSchema):
-#     pass
+    class_id: str = Field(..., description="ClassSection ObjectId as string")
+    teacher_id: str = Field(..., description="Teacher IAM/Staff ObjectId as string")
+    day_of_week: DayOfWeek | int = Field(..., description="1=Mon .. 7=Sun")
+    start_time: time
+    end_time: time
+    room: Optional[str] = None
+
+
+class AdminUpdateScheduleSlotSchema(BaseModel):
+    """
+    Request body for admin updating an existing schedule slot.
+    All fields required for simplicity; you can make them Optional if partial updates.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    day_of_week: DayOfWeek | int
+    start_time: time
+    end_time: time
+    room: Optional[str] = None
