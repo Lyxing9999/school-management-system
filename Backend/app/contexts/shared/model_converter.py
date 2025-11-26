@@ -88,7 +88,7 @@ class AdvancedMongoConverter:
                 new_list = []
                 for item in v:
                     if isinstance(item, ObjectId):
-                        new_list.append(str(item))  # convert ObjectId to string
+                        new_list.append(str(item))  
                     elif isinstance(item, dict):
                         new_list.append(AdvancedMongoConverter.convert_ids(item))  # recursive dict
                     else:

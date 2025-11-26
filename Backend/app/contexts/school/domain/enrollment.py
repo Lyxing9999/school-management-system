@@ -64,6 +64,7 @@ class Enrollment:
         self._status = EnrollmentStatus.DROPPED
         self.dropped_at = datetime.utcnow()
         self._touch()
+        
     def mark_completed(self) -> None:
         if self._status == EnrollmentStatus.DROPPED:
             raise EnrollmentAlreadyDroppedException(self.id)

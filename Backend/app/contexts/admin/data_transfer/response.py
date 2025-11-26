@@ -1,16 +1,18 @@
-from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+
 from app.contexts.iam.data_transfer.response import IAMBaseDataDTO , IAMUpdateDataDTO
 from app.contexts.staff.data_transfer.responses import StaffReadDataDTO
 from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from typing import List, Optional
-
+import datetime as dt
 # =====================================================
 # SECTION 1: USER MANAGEMENT (IAM)
 # =====================================================
+class PaginatedUserItemDTO(IAMBaseDataDTO):
+    created_by_name: str
+    
 class PaginatedUsersDataDTO(BaseModel):
-    users: List[IAMBaseDataDTO]
+    users: List[PaginatedUserItemDTO]
     total: int
     page: int
     page_size: int
@@ -25,7 +27,7 @@ class AdminUpdateUserDataDTO(IAMUpdateDataDTO):
 
 class AdminDeleteUserDTO(BaseModel):   
     id: str
-    deleted_at: datetime
+    deleted_at: dt.datetime
     deleted_by: str | None
     model_config = {
         "extra": "allow"
@@ -47,12 +49,18 @@ class AdminCreateStaffDataDTO(StaffBaseDataDTO):
 class AdminUpdateStaffDataDTO(StaffBaseDataDTO):
     pass
 class AdminStaffNameSelectDTO(BaseModel):
-    id: str
+    user_id: str
     staff_name: str
     model_config = {
-        "extra": "ignore"
+        "extra": "ignore",
     }
 
+class AdminTeacherSelectDTO(AdminStaffNameSelectDTO):
+    pass
+
+class AdminTeacherListDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    items: List[AdminTeacherSelectDTO]
 
 
 
@@ -75,8 +83,8 @@ class AdminClassDataDTO(BaseModel):
     student_ids: List[str]
     subject_ids: List[str]
     max_students: Optional[int]
-    created_at: datetime
-    updated_at: datetime
+    created_at: dt.datetime
+    updated_at: dt.datetime
     deleted: bool
 
 class AdminClassListDTO(BaseModel):
@@ -93,8 +101,8 @@ class AdminSubjectDataDTO(BaseModel):
     description: Optional[str]
     allowed_grade_levels: List[int]
     is_active: bool
-    created_at: datetime
-    updated_at: datetime
+    created_at: dt.datetime
+    updated_at: dt.datetime
 
 class AdminSubjectListDTO(BaseModel):
     items: List[AdminSubjectDataDTO]
@@ -110,14 +118,31 @@ class AdminScheduleSlotDataDTO(BaseModel):
     class_id: str
     teacher_id: str
     day_of_week: int
-    start_time: time
-    end_time: time
+    start_time: dt.time             
+    end_time: dt.time 
     room: str | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: dt.datetime | None = None
+    updated_at: dt.datetime | None = None
 
 
 class AdminScheduleListDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     items: List[AdminScheduleSlotDataDTO]
+
+
+# =====================================================
+# Student Management
+# =====================================================
+
+class AdminStudentNameSelectDTO(BaseModel):
+    id: str
+    username: str
+    model_config = {
+        "extra": "ignore"
+    }
+
+
+class AdminStudentNameSelectListDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    items: List[AdminStudentNameSelectDTO]

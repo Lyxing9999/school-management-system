@@ -13,18 +13,12 @@ class StaffAdminService:
     def __init__(self, db: Database):
         self.db = db
         self._staff_service: Optional[StaffService] = None
-        self._staff_mapper: Optional[StaffMapper] = None
-        self.staff_collection = self.db["staff"]
     @property
     def staff_service(self) -> StaffService:
         if self._staff_service is None:
             self._staff_service = StaffService(self.db)
         return self._staff_service
-    @property
-    def staff_mapper(self) -> StaffMapper:
-        if self._staff_mapper is None:
-            self._staff_mapper = StaffMapper()
-        return self._staff_mapper
+
 
     def admin_create_staff( self, payload: AdminCreateStaffSchema, created_by: str, user_id: str | ObjectId ) -> Staff:
         return self.staff_service.create_staff(payload, created_by, user_id)
@@ -36,3 +30,6 @@ class StaffAdminService:
         return self.staff_service.hard_staff_delete(staff_id)
     def admin_get_staff_by_id(self, staff_id: str) -> Staff:
         return self.staff_service.get_to_staff_domain(staff_id)
+
+    def admin_get_teacher_select(self, role: str= "teacher") -> list[Staff]:
+        return self.staff_service.get_staff_name_select(role)

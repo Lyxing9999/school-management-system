@@ -98,15 +98,6 @@ def test_change_status_updates_status_and_timestamp():
     assert record.updated_at > old_updated_at
 
 
-import pytest
-from datetime import datetime, timedelta, date
-from bson import ObjectId
-
-from app.contexts.school.domain.attendance import AttendanceRecord, AttendanceStatus
-from app.contexts.school.errors.attendance_exceptions import (
-    InvalidAttendanceStatusException,
-    AttendanceDateInFutureException,
-)
 
 
 def test_attendance_init_with_enum_status():

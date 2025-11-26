@@ -3,6 +3,7 @@ from datetime import datetime, date as date_type
 from bson import ObjectId
 from pymongo.database import Database
 from pymongo.collection import Collection
+from typing import List
 
 
 class AttendanceReadModel:
@@ -36,3 +37,26 @@ class AttendanceReadModel:
                 "date": record_date,
             }
         )
+
+    def list_by_student(self, student_id: ObjectId) -> List[dict]:
+        return list(self.collection.find({"student_id": student_id}))
+    
+    def list_teacher_attendance(self, teacher_id: ObjectId) -> List[dict]:
+        return list(self.collection.find({"teacher_id": teacher_id}))
+
+    def list_class_attendance(self, class_id: ObjectId) -> List[dict]:
+        return list(self.collection.find({"class_id": class_id}))
+
+    def list_student_attendances(
+        self,
+        student_id: ObjectId,
+        class_id: Optional[ObjectId] = None,
+    ) -> List[dict]:
+
+        query: dict = {
+            "student_id": student_id,
+        }
+        if class_id is not None:
+            query["class_id"] = class_id
+
+        return list(self.collection.find(query))

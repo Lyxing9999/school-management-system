@@ -61,11 +61,14 @@ class ScheduleSlot:
         new_day_of_week: DayOfWeek,
         new_start: time,
         new_end: time,
+        new_room: str | None = None,
     ) -> None:
         self.day_of_week = self._validate_day(new_day_of_week)
         self.start_time = self._validate_time(new_start)
         self.end_time = self._validate_time(new_end)
         self._validate_start_before_end()
+        if new_room is not None:
+            self.room = new_room
         self._touch()
 
     def overlaps(self, other: "ScheduleSlot") -> bool:

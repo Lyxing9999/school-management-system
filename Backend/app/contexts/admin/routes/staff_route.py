@@ -2,14 +2,14 @@ from flask import request, g
 from app.contexts.admin.routes import admin_bp
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.auth.jwt_utils import role_required
-from app.contexts.shared.model_converter import pydantic_converter
+from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
 from app.contexts.core.security.auth_utils import get_current_user_id
 from app.contexts.admin.data_transfer.request import (
     AdminCreateStaffSchema, AdminUpdateStaffSchema
 )
 from app.contexts.iam.mapper.iam_mapper import IAMMapper
 from app.contexts.staff.models import StaffMapper
-from app.contexts.admin.data_transfer.response import AdminCreateStaffDataDTO
+from app.contexts.admin.data_transfer.response import AdminCreateStaffDataDTO, AdminTeacherListDTO, AdminTeacherSelectDTO
 
 @admin_bp.route("/staff", methods=["POST"])
 @role_required(["admin"])
@@ -29,7 +29,7 @@ def admin_add_staff():
 @wrap_response
 def admin_update_staff(user_id: str):
     payload = pydantic_converter.convert_to_model(request.json, AdminUpdateStaffSchema)
-    staff = g.admin_facade.admin_update_staff(user_id, payload)
+    staff = g.admin_facade.staff_service.admin_update_staff(user_id, payload)
     return StaffMapper.to_dto(staff)
 
 
@@ -38,15 +38,18 @@ def admin_update_staff(user_id: str):
 @role_required(["admin"])
 @wrap_response
 def admin_get_staff_by_id(staff_id: str):
-    staff = g.admin_facade.admin_get_staff_by_id(staff_id)
+    staff = g.admin_facade.staff_service.admin_get_staff_by_id(staff_id)
     return StaffMapper.to_dto(staff)
 
 
 
-@admin_bp.route("/staff/name-select", methods=["GET"])
+@admin_bp.route("/staff/teacher-select", methods=["GET"])
 @role_required(["admin"])
 @wrap_response
-def admin_get_staff_name_select():
-    search_text = request.args.get("search", "")
-    role = request.args.get("role", "teacher")
-    return g.admin_facade.admin_get_staff_name_select(search_text, role)
+def admin_get_teacher_select():
+    teacher_list = g.admin_facade.staff_service.admin_get_teacher_select()
+    print(teacher_list)
+    teacher_dto = mongo_converter.list_to_dto(teacher_list, AdminTeacherSelectDTO)
+    return AdminTeacherListDTO(items=teacher_dto)
+
+

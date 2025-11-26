@@ -24,7 +24,6 @@ class IAMService:
 
     def __init__(self, db: Database):
         self.db = db
-        self.mongo_converter = mongo_converter 
         self._iam_repository = IAMRepository(db) 
         self._iam_read_model = IAMReadModel(db) 
         self._auth_service = AuthService()  # auth helper (hash, token)
@@ -37,6 +36,28 @@ class IAMService:
     def _log(self, operation: str, user_id: str | None = None, extra: dict | None = None, level: str = "INFO"):
         msg = f"IAMService::{operation}" + (f" [user_id={user_id}]" if user_id else "")  # construct message
         self._log_service.log(msg, level=level, module="IAMService", user_id=user_id, extra=extra or {})  # send to logger
+
+    @property
+    def iam_read_model(self) -> IAMReadModel:
+        return self._iam_read_model
+    
+    @property
+    def iam_repository(self) -> IAMRepository:
+        return self._iam_repository
+    
+    @property
+    def iam_mapper(self) -> IAMMapper:
+        return self._iam_mapper
+    
+    @property
+    def auth_service(self) -> AuthService:
+        return self._auth_service
+    
+    @property
+    def log_service(self) -> LogService:
+        return self._log_service
+    
+
 
     # -------------------------
     # Validate unique username/email
@@ -61,7 +82,7 @@ class IAMService:
     def get_user_to_domain(self, user_id: str | ObjectId) -> IAM:
         start = time()  # start timer
         user_id_obj = mongo_converter.convert_to_object_id(user_id)  # convert to ObjectId
-        raw_user = self._iam_read_model.get_by_id(user_id_obj)  # get raw dict
+        raw_user = self.iam_read_model.get_by_id(user_id_obj)  # get raw dict
         duration_ms = (time() - start) * 1000  # measure duration
         self._log("get_user_to_domain", user_id=str(user_id), extra={"duration_ms": duration_ms})  # log operation
         if not raw_user: raise NotFoundUserException(user_id)  # raise if missing
@@ -72,17 +93,17 @@ class IAMService:
     # -------------------------
     def login(self, email: str, password: str) -> IAMResponseDataDTO:
         start = time()  # start timer
-        raw_user = self._iam_read_model.get_by_email(email)  # query by email
+        raw_user = self.iam_read_model.get_by_email(email)  # query by email
         if not raw_user:
             raise NotFoundUserException(email)  # raise if not found
-        iam_model = self._iam_mapper.to_domain(raw_user)  # map to domain
+        iam_model = self.iam_mapper.to_domain(raw_user)  # map to domain
         if iam_model.is_deleted():
             raise UserDeletedException(email)  # deleted check
-        if not iam_model.check_password(password, self._auth_service):  # password check
+        if not iam_model.check_password(password, self.auth_service):  # password check
             self._log("login_failed", extra={"email": email}, level="WARNING")  # log failed attempt
             raise InvalidPasswordException(password)
-        safe_dict = self._iam_mapper.to_safe_dict(iam_model)  # prepare safe dict
-        token = self._auth_service.create_access_token(safe_dict)  # generate token
+        safe_dict = self.iam_mapper.to_safe_dict(iam_model)  # prepare safe dict
+        token = self.auth_service.create_access_token(safe_dict)  # generate token
         duration_ms = (time() - start) * 1000  # log duration
         self._log("login", user_id=str(iam_model.id), extra={"duration_ms": duration_ms, "email": email})
         return IAMResponseDataDTO(user=IAMBaseDataDTO(**safe_dict), access_token=token)  # return response
@@ -94,16 +115,16 @@ class IAMService:
         start = time()  # start timer
         iam_model = self.get_user_to_domain(user_id)  # fetch domain model
         if update_schema.password is not None:
-            iam_model.password = self._auth_service.hash_password(update_schema.password)
+            iam_model.password = self.auth_service.hash_password(update_schema.password)
         self._validate_unique_fields(
             username=update_schema.username,
             email=update_schema.email,
             exclude_user_id=mongo_converter.convert_to_object_id(iam_model.id)
         )
         iam_model.update_info(email=update_schema.email, username=update_schema.username)
-        modified_count = self._iam_repository.update(
+        modified_count = self.iam_repository.update(
             mongo_converter.convert_to_object_id(iam_model.id),
-            self._iam_mapper.to_persistence(iam_model)
+            self.iam_mapper.to_persistence(iam_model)
         )
         if modified_count == 0:
             raise NoChangeAppException()  
@@ -119,7 +140,7 @@ class IAMService:
         iam_model = self.get_user_to_domain(user_id)  # fetch domain
         deleted_by_obj = mongo_converter.convert_to_object_id(deleted_by) if deleted_by else None  # optional deleted_by
         iam_model.soft_delete(deleted_by_obj)  # update domain
-        modified_count = self._iam_repository.soft_delete(mongo_converter.convert_to_object_id(iam_model.id), deleted_by_obj)  # persist
+        modified_count = self.iam_repository.soft_delete(mongo_converter.convert_to_object_id(iam_model.id), deleted_by_obj)  # persist
         if modified_count == 0:
             raise NoChangeAppException("User already deleted in DB")  # check result
         duration_ms = (time() - start) * 1000
@@ -131,7 +152,7 @@ class IAMService:
     # -------------------------
     def hard_delete(self, user_id: str | ObjectId) -> bool:
         start = time()
-        deleted_count = self._iam_repository.hard_delete(mongo_converter.convert_to_object_id(user_id))  # delete
+        deleted_count = self.iam_repository.hard_delete(mongo_converter.convert_to_object_id(user_id))  # delete
         duration_ms = (time() - start) * 1000
         self._log("hard_delete", user_id=str(user_id), extra={"duration_ms": duration_ms})  # log
         return deleted_count > 0  # return boolean
@@ -146,6 +167,6 @@ class IAMService:
             email=iam_model.email,
             exclude_user_id=iam_model.id
         )
-        saved_id = self._iam_repository.save(self._iam_mapper.to_persistence(iam_model))
+        saved_id = self.iam_repository.save(self.iam_mapper.to_persistence(iam_model))
         iam_model.id = saved_id
         return iam_model

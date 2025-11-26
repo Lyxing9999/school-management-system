@@ -11,8 +11,12 @@ from app.contexts.admin.data_transfer.request import (
     AdminCreateScheduleSlotSchema,
     AdminUpdateScheduleSlotSchema,
 )
+from app.contexts.admin.data_transfer.response import (AdminScheduleSlotDataDTO)
+
 from app.contexts.shared.decorators.logging_decorator import log_operation
 from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
+
+from app.contexts.shared.model_converter import mongo_converter
 
 class ScheduleAdminService:
     """
@@ -69,14 +73,14 @@ class ScheduleAdminService:
 
     # ---------- Queries ----------
 
-    def admin_list_schedule_for_class(
+    def admin_list_class_schedules(
         self,
         class_id: str | ObjectId,
-    ) -> List[ScheduleSlot]:
-        return self.schedule_read_model.list_schedule_for_class(class_id=class_id)
+    ) -> List[AdminScheduleSlotDataDTO]:
+        return mongo_converter.list_to_dto(self.schedule_read_model.list_class_schedules(class_id=class_id), AdminScheduleSlotDataDTO)
 
-    def admin_list_schedule_for_teacher(
+    def admin_list_teacher_schedules(
         self,
         teacher_id: str | ObjectId,
-    ) -> List[ScheduleSlot]:
-        return self.schedule_read_model.list_schedule_for_teacher(teacher_id=teacher_id)
+    ) -> List[AdminScheduleSlotDataDTO]:
+        return mongo_converter.list_to_dto(self.schedule_read_model.list_teacher_schedules(teacher_id=teacher_id), AdminScheduleSlotDataDTO)

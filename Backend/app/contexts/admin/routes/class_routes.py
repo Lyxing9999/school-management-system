@@ -94,7 +94,7 @@ def admin_unenroll_student_from_class(class_id: str, student_id: str):
     return SchoolAdminMapper.class_to_dto(section)
 
 
-@admin_bp.route("/classes/<class_id>", methods=["DELETE"])
+@admin_bp.route("/classes/<class_id>/soft-delete", methods=["DELETE"])
 @role_required(["admin"])
 @wrap_response
 def admin_soft_delete_class(class_id: str):

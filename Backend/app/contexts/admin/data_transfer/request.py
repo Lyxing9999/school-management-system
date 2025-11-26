@@ -1,10 +1,10 @@
-from __future__ import annotations
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from app.contexts.shared.enum.roles import SystemRole, StaffRole
 from typing import Optional , List
 from app.contexts.iam.data_transfer.request import IAMUpdateSchema
 from app.contexts.staff.data_transfer.requests import StaffUpdateSchema
 from app.contexts.school.domain.schedule import DayOfWeek
+import datetime
 # from app.contexts.schools.data_transfer.requests.class_requests import SchoolClassUpdateSchema
 # from app.contexts.schools.data_transfer.requests.subject_requests import SubjectCreateSchema, SubjectUpdateSchema
 
@@ -63,6 +63,13 @@ class AdminCreateClassSchema(BaseModel):
     def strip_name(cls, v: str) -> str:
         return v.strip()
 
+    @field_validator("teacher_id", mode="before")
+    def empty_string_to_none(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
 
 class AdminAssignTeacherToClassSchema(BaseModel):
     teacher_id: str = Field(..., min_length=1)
@@ -71,6 +78,9 @@ class AdminAssignTeacherToClassSchema(BaseModel):
 class AdminEnrollStudentToClassSchema(BaseModel):
     student_id: str = Field(..., min_length=1)
 
+# =====================================================
+# SECTION 5: SCHOOL MANAGEMENT Subject
+# =====================================================
 
 class AdminCreateSubjectSchema(BaseModel):
     name: str = Field(..., min_length=1)
@@ -84,7 +94,7 @@ class AdminCreateSubjectSchema(BaseModel):
 
 
 # =====================================================
-# SECTION 3: SCHOOL MANAGEMENT Schedule
+# SECTION 6: SCHOOL MANAGEMENT Schedule
 # =====================================================
 class AdminCreateScheduleSlotSchema(BaseModel):
     """
@@ -95,8 +105,8 @@ class AdminCreateScheduleSlotSchema(BaseModel):
     class_id: str = Field(..., description="ClassSection ObjectId as string")
     teacher_id: str = Field(..., description="Teacher IAM/Staff ObjectId as string")
     day_of_week: DayOfWeek | int = Field(..., description="1=Mon .. 7=Sun")
-    start_time: time
-    end_time: time
+    start_time: datetime.time
+    end_time: datetime.time
     room: Optional[str] = None
 
 
@@ -108,6 +118,6 @@ class AdminUpdateScheduleSlotSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     day_of_week: DayOfWeek | int
-    start_time: time
-    end_time: time
+    start_time: datetime.time
+    end_time: datetime.time
     room: Optional[str] = None

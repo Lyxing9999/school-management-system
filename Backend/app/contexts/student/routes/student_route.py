@@ -28,11 +28,14 @@ def get_my_classes():
 def get_my_attendance():
     student_id = get_current_user_id()
     class_id = request.args.get("class_id")
-    items = g.student_service.list_my_attendance(
+    items = g.student_service.get_my_attendance(
         student_id=student_id,
         class_id=class_id,
     )
     return StudentAttendanceListDTO(items=items)
+
+
+
 
 
 @student_bp.route("/me/grades", methods=["GET"])
@@ -41,7 +44,7 @@ def get_my_attendance():
 def get_my_grades():
     student_id = get_current_user_id()
     term = request.args.get("term")
-    items = g.student_service.list_my_grades(
+    items = g.student_service.get_my_grades(
         student_id=student_id,
         term=term,
     )

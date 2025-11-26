@@ -57,13 +57,33 @@ class ClassReadModel:
         return [doc for doc in cursor]
 
 
-    def list_by_teacher(self, teacher_id: str | ObjectId) -> List[Dict]:
+    def list_teacher_classes(self, teacher_id: str | ObjectId) -> List[Dict]:
         """
         Return all non-deleted class documents where the given teacher is assigned.
         """
         oid = self._normalize_id(teacher_id)
-        cursor = self.collection.find({
-            "teacher_ids": {"$in": [oid]},
+        return list(self.collection.find({
+            "teacher_id": oid,
             "deleted": {"$ne": True}
-        })
-        return [doc for doc in cursor]
+        }))
+        
+    def list_student_classes(self, student_id: str | ObjectId) -> List[Dict]:
+        """
+        Return all non-deleted class documents where the given student is enrolled.
+        """
+        oid = self._normalize_id(student_id)
+        return list(self.collection.find({
+            "student_ids": oid,
+            "deleted": {"$ne": True}
+        }))
+    
+    def list_students_in_class(self, class_id: str | ObjectId) -> List[Dict]:
+        """
+        Return all non-deleted student documents enrolled in the given class.
+        """
+        oid = self._normalize_id(class_id)
+        return list(self.collection.find_one({
+            "_id" : oid,
+            "deleted": {"$ne": True}
+        })['student_ids'])
+

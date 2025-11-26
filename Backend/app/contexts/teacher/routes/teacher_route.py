@@ -5,7 +5,9 @@ from app.contexts.teacher.routes import teacher_bp
 from app.contexts.core.security.auth_utils import get_current_user_id
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
-from app.contexts.shared.model_converter import pydantic_converter
+from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
+
+from app.contexts.school.data_transfer.responses import ClassSectionDTO
 
 from app.contexts.teacher.data_transfer.requests import (
     TeacherMarkAttendanceRequest,
@@ -21,6 +23,7 @@ from app.contexts.teacher.data_transfer.responses import (
 )
 
 
+
 # ---------- Classes ----------
 
 @teacher_bp.route("/me/classes", methods=["GET"])
@@ -28,8 +31,9 @@ from app.contexts.teacher.data_transfer.responses import (
 @wrap_response
 def get_my_classes():
     teacher_id = get_current_user_id()
-    classes = g.teacher_service.get_my_classes(teacher_id)
-    return TeacherClassListDTO(items=classes)
+    classes = g.teacher_service.list_my_classes(teacher_id)
+    classes_dto = mongo_converter.list_to_dto(classes, ClassSectionDTO)
+    return TeacherClassListDTO(items=classes_dto)
 
 
 # ---------- Attendance ----------

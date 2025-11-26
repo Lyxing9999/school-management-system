@@ -214,7 +214,7 @@ def test_remove_subject_success():
 def test_remove_subject_invalid_type_raises():
     section = ClassSection(name="A1")
     with pytest.raises(InvalidSubjectIdError):
-        section.remove_subject("not-object-id")  # type: ignore
+        section.remove_subject("not-object-id")  
 
 
 def test_remove_subject_not_present_no_error():

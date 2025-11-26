@@ -4,7 +4,7 @@ import logging
 from pymongo.database import Database
 from typing import List
 from app.contexts.staff.repositories import StaffRepository
-from app.contexts.staff.read_models import StaffReadModel
+from app.contexts.staff.read_model import StaffReadModel
 from app.contexts.staff.data_transfer.requests import StaffCreateSchema, StaffUpdateSchema
 from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from app.contexts.staff.models import Staff, StaffFactory, StaffMapper
@@ -110,5 +110,5 @@ class StaffService:
     # -------------------------
     # Staff name select
     # -------------------------
-    def get_staff_name_select(self, search_text: str = "", role: str = "teacher") -> list[dict]:
-        return self._staff_read_model.get_staff_name_select(search_text, role)
+    def get_staff_name_select(self, role: str = "teacher") -> list[dict]:
+        return self._staff_read_model.get_staff_name_select(role)

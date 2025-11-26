@@ -1,5 +1,3 @@
-# app/contexts/school/read_models/subject_read_model.py
-
 from __future__ import annotations
 from typing import Optional
 from bson import ObjectId
@@ -33,3 +31,7 @@ class SubjectReadModel:
         return self.collection.find_one(
             {"name": name, "is_deleted": {"$ne": True}}
         )
+
+    def list_all(self) -> list[dict]:
+        return list(self.collection.find({"is_deleted": {"$ne": True}}))
+    

@@ -1,13 +1,10 @@
-# app/contexts/teacher/services/teacher_service.py
 from __future__ import annotations
 from typing import List
 from bson import ObjectId
 from pymongo.database import Database
 
 from app.contexts.school.services.school_service import SchoolService
-from app.contexts.school.read_models.class_read_model import ClassReadModel
-from app.contexts.school.read_models.attendance_read_model import AttendanceReadModel
-from app.contexts.school.read_models.grade_read_model import GradeReadModel
+
 
 from app.contexts.teacher.data_transfer.requests import (
     TeacherMarkAttendanceRequest,
@@ -24,7 +21,9 @@ from app.contexts.school.data_transfer.responses import (
     AttendanceDTO,
     GradeDTO,
 )
+from app.contexts.teacher.read_models.teacher_read_models import TeacherReadModel
 
+from app.contexts.shared.model_converter import mongo_converter
 
 class TeacherService:
     """
@@ -34,21 +33,18 @@ class TeacherService:
 
     def __init__(self, db: Database):
         self.school_service = SchoolService(db)
-        # read models for teacher-specific queries
-        self.class_read = ClassReadModel(db)
-        self.attendance_read = AttendanceReadModel(db)
-        self.grade_read = GradeReadModel(db)
+        self._teacher_read = TeacherReadModel(db)
+
+    @property
+    def teacher_read(self) -> TeacherReadModel:
+        return self._teacher_read
 
     # ---------- Classes ----------
 
-    def get_my_classes(self, teacher_id: str | ObjectId) -> list[ClassSectionDTO]:
-        docs = self.class_read.list_by_teacher(teacher_id)
-        # docs are raw dicts; you may want a tiny mapper or just adapt:
-        result: list[ClassSectionDTO] = []
-        for d in docs:
-            section = self.school_service.class_repo.mapper.to_domain(d)
-            result.append(class_section_to_dto(section))
-        return result
+    def list_my_classes(self, teacher_id: str | ObjectId) -> list[dict]:
+        return self.teacher_read.list_my_classes(teacher_id)
+        
+
 
     # ---------- Attendance ----------
 
@@ -86,13 +82,8 @@ class TeacherService:
         teacher_id: str | ObjectId,
         class_id: str | ObjectId,
     ) -> list[AttendanceDTO]:
-        # you *could* enforce that class.teacher_id == teacher_id using read-model here
-        docs = self.attendance_read.list_by_class(class_id)
-        records: list[AttendanceDTO] = []
-        for d in docs:
-            record = self.school_service.attendance_repo.mapper.to_domain(d)
-            records.append(attendance_to_dto(record))
-        return records
+        docs = self.teacher_read.list_class_attendance(class_id)
+        return mongo_converter.list_to_dto(docs, AttendanceDTO)
 
     # ---------- Grades ----------
 
@@ -151,3 +142,5 @@ class TeacherService:
             g = self.school_service.grade_repo.mapper.to_domain(d)
             grades.append(grade_to_dto(g))
         return grades
+
+

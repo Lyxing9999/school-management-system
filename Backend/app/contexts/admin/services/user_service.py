@@ -1,6 +1,6 @@
 from pymongo.database import Database
 from bson import ObjectId
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Optional , Dict , Any
 from app.contexts.iam.domain.iam import  IAM
 from app.contexts.iam.services.iam_service import IAMService
 from app.contexts.iam.factory.iam_factory import IAMFactory
@@ -10,6 +10,8 @@ from app.contexts.admin.data_transfer.request import (
     AdminUpdateUserSchema,
 )
 from app.contexts.shared.decorators.logging_decorator import log_operation
+
+
 class UserAdminService:
     def __init__(self, db: Database):
         self.db = db
@@ -17,7 +19,6 @@ class UserAdminService:
         self._admin_read_model: Optional[AdminReadModel] = None
         self._iam_factory: Optional[IAMFactory] = None
         self.user_collection = self.db["users"]
-
 
 
 
@@ -53,6 +54,11 @@ class UserAdminService:
 
 
 
+
+    def admin_get_student_name_select(self) -> List[Dict[str, Any]]:
+        return self.admin_read_model.get_student_name_select()
+
+
     @log_operation(level="INFO")
     def admin_update_user(self, user_id: str | ObjectId, payload: AdminUpdateUserSchema) -> IAM:
         return self.iam_service.update_info(user_id, payload, update_by_admin=True)
@@ -68,4 +74,5 @@ class UserAdminService:
         cursor, total = self.admin_read_model.get_page_by_role(
             role, page=page, page_size=page_size
         )
+        
         return cursor, total

@@ -96,11 +96,11 @@ def admin_delete_schedule_slot(slot_id: str):
 @admin_bp.route("/schedule/classes/<class_id>", methods=["GET"])
 @role_required(["admin"])
 @wrap_response
-def admin_list_schedule_for_class(class_id: str):
+def admin_list_class_schedules(class_id: str):
     """
     List all schedule slots for a given class.
     """
-    slots = g.admin_facade.schedule_service.admin_list_schedule_for_class(
+    slots = g.admin_facade.schedule_service.admin_list_class_schedules(
         class_id=class_id,
     )
     return SchoolAdminMapper.schedule_list_to_dto(slots)
@@ -112,12 +112,14 @@ def admin_list_schedule_for_class(class_id: str):
 @admin_bp.route("/schedule/teachers/<teacher_id>", methods=["GET"])
 @role_required(["admin"])
 @wrap_response
-def admin_list_schedule_for_teacher(teacher_id: str):
+def admin_list_teacher_schedules(teacher_id: str):
     """
     List all schedule slots for a given teacher.
     Useful for admin overview / conflict debugging.
     """
-    slots = g.admin_facade.schedule_service.admin_list_schedule_for_teacher(
+   
+    slots = g.admin_facade.schedule_service.admin_list_teacher_schedules(
         teacher_id=teacher_id,
     )
+
     return SchoolAdminMapper.schedule_list_to_dto(slots)

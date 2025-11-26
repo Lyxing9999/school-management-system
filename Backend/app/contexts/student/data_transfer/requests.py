@@ -24,7 +24,7 @@ class StudentAttendanceFilterSchema(BaseModel):
         description="Optional status filter",
     )
     from_date: Optional[date] = Field(
-        None,
+        None, 
         description="Start date (inclusive) for range filter",
     )
     to_date: Optional[date] = Field(

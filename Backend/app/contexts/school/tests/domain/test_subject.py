@@ -17,13 +17,13 @@ def test_subject_init_valid():
         name="  Mathematics  ",
         code="  math101 ",
         description="Basic math",
-        allowed_grade_levels=[1, 3, 2, 3],  # duplicates + unsorted
+        allowed_grade_levels=[1, 3, 2, 3],  
         is_active=True,
     )
 
     assert isinstance(subj.id, ObjectId)
     assert subj.name == "Mathematics"
-    assert subj.code == "MATH101"  # uppercased + stripped
+    assert subj.code == "MATH101"  
     assert subj.description == "Basic math"
     # normalized: unique + sorted
     assert subj.allowed_grade_levels == (1, 2, 3)

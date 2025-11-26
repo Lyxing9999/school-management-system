@@ -379,6 +379,7 @@ class SchoolService:
         new_day_of_week: DayOfWeek | int,
         new_start_time: time,
         new_end_time: time,
+        new_room: str | None = None,
     ) -> ScheduleSlot:
         """
         Admin use case:
@@ -393,6 +394,7 @@ class SchoolService:
             new_day_of_week=new_day_of_week,
             new_start=new_start_time,
             new_end=new_end_time,
+            new_room=new_room
         )
         updated = self.schedule_repo.update(slot)
         if updated is None:
@@ -403,38 +405,3 @@ class SchoolService:
         oid = mongo_converter.convert_to_object_id(slot_id)
         return self.schedule_repo.delete(oid)
 
-
-    # ============================================================
-    # Queries – simple examples (can be moved to read_models later)
-    # ============================================================
-
-    def list_grades_for_student(
-        self, student_id: str | ObjectId
-    ) -> List[GradeRecord]:
-        return self.grade_repo.list_by_student(student_id)
-
-    def list_attendance_for_student_in_class(
-        self,
-        student_id: str | ObjectId,
-        class_id: str | ObjectId,
-    ) -> List[AttendanceRecord]:
-        student_oid = mongo_converter.convert_to_object_id(student_id)
-        class_oid = mongo_converter.convert_to_object_id(class_id)
-        return self.attendance_repo.list_by_student_and_class(
-            student_oid, class_oid
-        )
-
-
-    def get_schedule_for_class(
-        self,
-        class_id: str | ObjectId,
-    ) -> List[ScheduleSlot]:
-        class_oid = mongo_converter.convert_to_object_id(class_id)
-        return self.schedule_repo.list_by_class(class_oid)
-
-    def get_schedule_for_teacher(
-        self,
-        teacher_id: str | ObjectId,
-    ) -> List[ScheduleSlot]:
-        teacher_oid = mongo_converter.convert_to_object_id(teacher_id)
-        return self.schedule_repo.list_by_teacher(teacher_oid)

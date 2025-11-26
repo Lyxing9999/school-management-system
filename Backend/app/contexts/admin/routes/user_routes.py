@@ -8,9 +8,14 @@ from app.contexts.admin.data_transfer.request import AdminCreateUserSchema, Admi
 from app.contexts.admin.data_transfer.response import (
     PaginatedUsersDataDTO,
     AdminDeleteUserDTO,
+    AdminStudentNameSelectDTO,
+AdminStudentNameSelectListDTO   
 )
 from app.contexts.common.base_response_dto import BaseResponseDTO
 from app.contexts.iam.mapper.iam_mapper import IAMMapper 
+from app.contexts.admin.data_transfer.response import PaginatedUserItemDTO
+
+from app.contexts.shared.model_converter import mongo_converter
 
 @admin_bp.route("/users", methods=["GET"])
 @role_required(["admin"])
@@ -22,9 +27,9 @@ def admin_get_users_paginated():
     cursor, total = g.admin_facade.user_service.admin_get_users(
         roles, page=page, page_size=page_size
     )
-    users_list = [IAMMapper.to_dto(IAMMapper.to_domain(user)) for user in cursor]
+    cursor = mongo_converter.list_to_dto(cursor, PaginatedUserItemDTO)
     return PaginatedUsersDataDTO(
-        users=users_list,
+        users=cursor,
         total=total,
         page=page,
         page_size=page_size,
@@ -73,3 +78,12 @@ def admin_hard_delete_user(user_id):
         message="User hard deleted successfully",
         success=True
     )
+
+@admin_bp.route('/users/student-select', methods=['GET'])
+@role_required(["admin"])
+@wrap_response
+def admin_get_student_name_select():
+    students = g.admin_facade.user_service.admin_get_student_name_select()
+    students = mongo_converter.list_to_dto(students, AdminStudentNameSelectDTO)
+    return AdminStudentNameSelectListDTO(items=students)
+

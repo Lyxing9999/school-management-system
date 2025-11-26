@@ -148,7 +148,7 @@ def test_create_record_raises_when_already_marked():
     factory = AttendanceFactory(
         class_read_model=FakeClassReadModel(class_doc),
         enrollment_read_model=FakeEnrollmentReadModel(enrolled=True),
-        attendance_read_model=FakeAttendanceReadModel(already_exists=True),  # ❌ already marked
+        attendance_read_model=FakeAttendanceReadModel(already_exists=True),  
     )
 
     with pytest.raises(AttendanceAlreadyMarkedException):
