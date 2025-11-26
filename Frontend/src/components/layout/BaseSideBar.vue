@@ -28,6 +28,11 @@ const menus: Record<RoleKey, MenuItem[]> = {
       icon: "Document",
       route: ROUTES.ADMIN.MANAGE_SUBJECTS,
     },
+    {
+      title: "Manage Schedules",
+      icon: "Document",
+      route: ROUTES.ADMIN.MANAGE_SCHEDULES,
+    },
     { title: "Notifications", icon: "Bell", route: ROUTES.ADMIN.NOTIFICATIONS },
     {
       title: "System Events",

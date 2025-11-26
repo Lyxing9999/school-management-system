@@ -142,7 +142,9 @@ function handleChange(value: any) {
       <el-icon><Edit /></el-icon>
     </span>
   </div>
-
+  <template v-else-if="!component">
+    <span>{{ row[props.field] ?? "—" }}</span>
+  </template>
   <div v-else>
     <component
       :is="component"

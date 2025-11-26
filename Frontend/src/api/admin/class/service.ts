@@ -1,26 +1,21 @@
-import { useApiUtils } from "~/utils/useApiUtils";
 import type {
-  AdminCreateClass,
-  AdminAssignStudent,
-  AdminAssignTeacher,
+  AdminCreateClassDTO,
+  AdminClassDataDTO,
+  AdminClassListDTO,
 } from "./dto";
-import type { AdminGetClassData } from "~/api/admin/class/dto";
-import { ClassApi } from "../class/api";
+import { useApiUtils } from "~/utils/useApiUtils";
+import { ClassApi } from "./api";
 
 export class ClassService {
   private safeApiCall = useApiUtils().safeApiCall;
   constructor(private classApi: ClassApi) {}
 
-  async getClassById(id: string) {
-    const { data } = await this.safeApiCall<AdminGetClassData>(() =>
-      this.classApi.getClassById(id)
-    );
-    return data!;
-  }
-
-  async getAllClasses() {
-    const { data } = await this.safeApiCall<AdminGetClassData[]>(
-      () => this.classApi.getAllClasses(),
+  // ============
+  // QUERY
+  // ============
+  async getClasses() {
+    const { data } = await this.safeApiCall<AdminClassListDTO>(
+      () => this.classApi.getClasses(),
       {
         showSuccessNotification: false,
       }
@@ -28,52 +23,52 @@ export class ClassService {
     return data!;
   }
 
-  async createClass(classData: AdminCreateClass) {
-    const { data } = await this.safeApiCall<AdminGetClassData>(() =>
-      this.classApi.createClass(classData)
+  async getClass(classId: string) {
+    const { data } = await this.safeApiCall<AdminClassDataDTO>(
+      () => this.classApi.getClass(classId),
+      {
+        showSuccessNotification: false,
+      }
     );
     return data!;
   }
 
-  async updateClass(id: string, classData: AdminCreateClass) {
-    const { data } = await this.safeApiCall<AdminGetClassData>(() =>
-      this.classApi.updateClass(id, classData)
+  // ============
+  // COMMANDS
+  // ============
+
+  async createClass(data: AdminCreateClassDTO) {
+    const { data: classData } = await this.safeApiCall<AdminClassDataDTO>(() =>
+      this.classApi.createClass(data)
     );
-    return data!;
+    return classData!;
   }
 
-  async softDeleteClass(id: string) {
-    const { data } = await this.safeApiCall<AdminGetClassData>(() =>
-      this.classApi.softDeleteClass(id)
+  async softDeleteClass(classId: string) {
+    const { data: classData } = await this.safeApiCall<AdminClassDataDTO>(() =>
+      this.classApi.softDeleteClass(classId)
     );
-    return data!;
+    return classData!;
   }
 
-  async assignStudent(id: string, studentData: AdminAssignStudent) {
-    const { data } = await this.safeApiCall<AdminGetClassData>(() =>
-      this.classApi.assignStudent(id, studentData)
+  async assignClassTeacher(classID: string, teacherId: string) {
+    const { data: classData } = await this.safeApiCall<AdminClassDataDTO>(() =>
+      this.classApi.assignClassTeacher(classID, teacherId)
     );
-    return data!;
+    return classData!;
   }
 
-  async removeStudent(id: string, studentData: AdminAssignStudent) {
-    const { data } = await this.safeApiCall<AdminGetClassData>(() =>
-      this.classApi.removeStudent(id, studentData)
+  async enrollStudent(classID: string, studentId: string) {
+    const { data: classData } = await this.safeApiCall<AdminClassDataDTO>(() =>
+      this.classApi.enrollStudent(classID, studentId)
     );
-    return data!;
+    return classData!;
   }
 
-  async assignTeacher(id: string, teacherData: AdminAssignTeacher) {
-    const { data } = await this.safeApiCall<AdminGetClassData>(() =>
-      this.classApi.assignTeacher(id, teacherData)
+  async unenrollStudent(classID: string, studentID: string) {
+    const { data: classData } = await this.safeApiCall<AdminClassDataDTO>(() =>
+      this.classApi.unenrollStudent(classID, studentID)
     );
-    return data!;
-  }
-
-  async unassignTeacher(id: string) {
-    const { data } = await this.safeApiCall<AdminGetClassData>(() =>
-      this.classApi.unassignTeacher(id)
-    );
-    return data!;
+    return classData!;
   }
 }

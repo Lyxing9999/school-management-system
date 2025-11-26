@@ -1,15 +1,18 @@
-// ~/api/admin/index.ts
+//api
 import { UserApi } from "./user/api";
 import { StaffApi } from "./staff/api";
 import { StudentApi } from "./student/api";
 import { ClassApi } from "./class/api";
 import { SubjectApi } from "./subject/api";
+import { ScheduleSlotApi } from "./schedule/api";
 
+//service
 import { UserService } from "./user/service";
 import { StaffService } from "./staff/service";
 import { StudentService } from "./student/service";
 import { ClassService } from "./class/service";
 import { SubjectService } from "./subject/service";
+import { ScheduleSlotService } from "./schedule/service";
 
 /**
  * Lazy singleton pattern
@@ -26,6 +29,7 @@ function createAdminService() {
     student: new StudentApi($api),
     class: new ClassApi($api),
     subject: new SubjectApi($api),
+    scheduleSlot: new ScheduleSlotApi($api),
   };
 
   return {
@@ -34,6 +38,7 @@ function createAdminService() {
     student: new StudentService(adminApi.student),
     class: new ClassService(adminApi.class),
     subject: new SubjectService(adminApi.subject),
+    scheduleSlot: new ScheduleSlotService(adminApi.scheduleSlot),
   };
 }
 

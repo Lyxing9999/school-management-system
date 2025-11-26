@@ -1,9 +1,11 @@
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import { ElInput, ElDatePicker, ElTag } from "element-plus";
 import { h } from "vue";
-import type { AdminGetUserData } from "~/api/admin/user/dto";
+import type {
+  AdminGetUserItemData,
+} from "~/api/admin/user/dto";
 
-export const userColumns: ColumnConfig<AdminGetUserData>[] = [
+export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
   {
     field: "username",
     label: "Username",
@@ -48,7 +50,7 @@ export const userColumns: ColumnConfig<AdminGetUserData>[] = [
     label: "Role",
     width: "120px",
     align: "center",
-    render: (row: AdminGetUserData, field: keyof AdminGetUserData) => {
+    render: (row: AdminGetUserItemData, field: keyof AdminGetUserItemData) => {
       const role = row[field];
       let type: "success" | "danger" | "warning" = "success";
       if (role === "admin") type = "danger";
@@ -57,14 +59,14 @@ export const userColumns: ColumnConfig<AdminGetUserData>[] = [
     },
   },
   {
-    field: "created_by",
+    field: "created_by_name",
     label: "Created By",
     inlineEditActive: true,
     controls: false,
     controlsSlot: false,
     minWidth: "140px", // flexible
     align: "center",
-    render: (row: AdminGetUserData, field: keyof AdminGetUserData) =>
+    render: (row: AdminGetUserItemData, field: keyof AdminGetUserItemData) =>
       h("span", { style: { color: "#999" } }, row[field]),
   },
   {

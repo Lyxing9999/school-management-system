@@ -8,79 +8,94 @@ const roleOptionsRef = ref(roleUserOptions);
 export const userFormSchema: Field<AdminCreateUser>[] = [
   {
     key: "username",
-    formItemProps: { labelWidth: "100px", labelPosition: "left" },
     label: "Username",
-
     component: ElInput,
+    formItemProps: {
+      prop: "username",
+      label: "Username",
+      rules: [
+        {
+          required: true,
+          message: "Username required",
+          trigger: ["blur", "change"],
+        },
+      ],
+    },
     componentProps: {
+      clearable: true,
       placeholder: "Enter username",
-      suffixIcon: UserFilled,
     },
   },
   {
     key: "email",
+    label: "Email",
+    component: ElInput,
     formItemProps: {
-      labelWidth: "100px",
-      labelPosition: "left",
+      prop: "email",
+      label: "Email",
       rules: [
         {
-          validator: (rule, value, callback) => {
-            if (!value) return callback(new Error("Email required"));
-            if (!value.includes("@"))
-              return callback(new Error("Must contain @"));
-            if (!value.endsWith(".com"))
-              return callback(new Error("Must end with .com"));
-            callback(); // valid
-          },
-          trigger: "change", // live validation
+          required: true,
+          message: "Email required",
+          trigger: ["blur", "change"],
+        },
+        {
+          type: "email",
+          message: "Invalid email format",
+          trigger: ["blur", "change"],
         },
       ],
     },
-    label: "Email",
-    component: ElInput,
     componentProps: {
+      clearable: true,
       placeholder: "Enter email",
     },
   },
   {
     key: "password",
+    label: "Password",
+    component: ElInput,
     formItemProps: {
-      labelWidth: "100px",
-      labelPosition: "left",
+      prop: "password",
+      label: "Password",
       rules: [
         {
-          validator: (rule, value, callback) => {
-            if (!value) return callback(new Error("Password required"));
-            if (value.length < 6)
-              return callback(
-                new Error("Password must be at least 6 characters")
-              );
-            callback(); // valid
-          },
-          trigger: "change", // live validation
+          required: true,
+          message: "Password required",
+          trigger: ["blur", "change"],
         },
       ],
     },
-    label: "Password",
-    component: ElInput,
     componentProps: {
-      placeholder: "Enter password",
       type: "password",
-      suffixIcon: Lock,
+      showPassword: true,
+      placeholder: "Enter password",
     },
   },
   {
     key: "role",
-    formItemProps: { labelWidth: "100px", labelPosition: "left" },
     label: "Role",
     component: ElSelect,
+    childComponent: ElOption,
+    formItemProps: {
+      prop: "role",
+      label: "Role",
+      rules: [
+        {
+          required: true,
+          message: "Role required",
+          trigger: ["change"],
+        },
+      ],
+    },
     componentProps: {
       placeholder: "Select role",
-      style: "width: 150px",
+      clearable: true,
     },
-    childComponent: ElOption,
     childComponentProps: {
-      options: roleOptionsRef,
+      options: () => roleOptionsRef.value, // [{value, label}...]
+      valueKey: "value",
+      labelKey: "label",
     },
   },
 ];

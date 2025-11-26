@@ -1,51 +1,33 @@
+// ~/api/admin/class/dto.ts
 import type { ApiResponse } from "~/api/types/common/api-response.type";
-import type { ClassBaseDataDTO } from "~/api/types/class.dto";
+import type { ClassSectionDTO } from "~/api/types/school.dto";
 
-export interface AdminGetClassData extends ClassBaseDataDTO {}
+/* ================================
+ * CLASS MANAGEMENT (Admin)
+ * ================================ */
 
-export interface AdminCreateClass {
+/**
+ * Payload for creating a class
+ * Python: AdminCreateClassSchema
+ */
+export interface AdminCreateClassDTO {
   name: string;
-  grade: number;
-  max_students: number;
-  academic_year?: string;
-  code?: string;
-  status?: boolean;
+  teacher_id?: string | null;
+  subject_ids?: string[] | null;
+  max_students?: number | null;
 }
 
-export interface AdminUpdateClass {
-  name?: string;
-  owner_id?: string;
-  max_students?: number;
-  grade?: number;
-  status?: boolean;
-  code?: string;
-  class_room?: string | null;
-  academic_year?: string;
-  homeroom_teacher?: string | null;
-  subjects?: string[] | null;
-  students?: string[] | null;
+export interface AdminClassDataDTO extends ClassSectionDTO {}
+/**
+ * List wrapper
+ * Python: AdminClassListDTO
+ */
+export interface AdminClassListDTO {
+  items: AdminClassDataDTO[];
 }
 
-export interface AdminAssignTeacher {
-  teacher_id: string;
-}
-export interface AdminUnassignTeacher {
-  teacher_id: string;
-}
-export interface AdminAssignStudent {
-  student_id: string;
-}
-export interface AdminUnassignStudent {
-  student_id: string;
-}
-
-export interface AdminFindTeacherSelect {
-  id: string;
-  staff_name: string;
-}
-export type AdminGetTeacherSelectResponse = ApiResponse<
-  AdminFindTeacherSelect[]
->;
-
-export type AdminGetClassResponse = ApiResponse<AdminGetClassData>;
-export type AdminGetAllClassesResponse = ApiResponse<AdminGetClassData[]>;
+/**
+ * Wrapped responses
+ */
+export type AdminGetClassResponse = ApiResponse<AdminClassDataDTO>;
+export type AdminGetClassListResponse = ApiResponse<AdminClassListDTO>;

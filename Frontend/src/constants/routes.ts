@@ -4,6 +4,7 @@ export const ROUTES = {
     MANAGE_USERS: "/admin/manage-user",
     MANAGE_CLASSES: "/admin/manage-class",
     MANAGE_SUBJECTS: "/admin/manage-subject",
+    MANAGE_SCHEDULES: "/admin/manage-schedule",
     NOTIFICATIONS: "/admin/notifications",
     SYSTEM_EVENTS: "/admin/events",
     SETTINGS: "/admin/settings",

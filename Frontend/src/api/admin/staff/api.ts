@@ -4,6 +4,7 @@ import type {
   AdminGetStaffResponse,
   AdminUpdateStaff,
   AdminGetStaffSelectResponse,
+  AdminTeacherSelectListResponse,
 } from "./dto";
 
 export class StaffApi {
@@ -12,13 +13,16 @@ export class StaffApi {
     private baseURL = "/api/admin/staff"
   ) {}
 
-  async getStaffNameSelect(
-    search = "",
-    role = ""
-  ): Promise<AdminGetStaffSelectResponse> {
+  async getStaffNameSelect(): Promise<AdminGetStaffSelectResponse> {
     const res = await this.$api.get<AdminGetStaffSelectResponse>(
-      `${this.baseURL}/name-select`,
-      { params: { search, role } }
+      `${this.baseURL}/name-select`
+    );
+    return res.data;
+  }
+
+  async getTeacherSelect(): Promise<AdminTeacherSelectListResponse> {
+    const res = await this.$api.get<AdminTeacherSelectListResponse>(
+      `${this.baseURL}/teacher-select`
     );
     return res.data;
   }

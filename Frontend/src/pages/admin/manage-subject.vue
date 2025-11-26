@@ -1,173 +1,336 @@
 <script setup lang="ts">
-import { ref, nextTick } from "vue";
-import { ElMessage } from "element-plus";
+import { ref, computed, onMounted } from "vue";
 
-definePageMeta({ layout: "admin" });
+definePageMeta({
+  layout: "admin",
+});
 
-import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
+// --------------------
+// Base Components
+// --------------------
+import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
+import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
-import { subjectColumns } from "~/tables/columns/admin/subjectColumns";
+
+// Element Plus
+import { ElInput, ElOption, ElSelect, ElSwitch } from "element-plus";
 
 // --------------------
-// use dynamic form
-// --------------------
-import {
-  useDynamicCreateFormReactive,
-  useDynamicEditFormReactive,
-  useInlineEditService,
-} from "~/forms/dynamic/useAdminForms";
-
-import type {
-  AdminCreateSubject,
-  AdminUpdateSubject,
-} from "~/api/admin/subject/dto";
-
-import type { SubjectBaseDataDTO } from "~/api/types/subject.dto";
-// --------------------
-// Services
+// Services & Types
 // --------------------
 import { adminService } from "~/api/admin";
-const adminApiService = adminService();
+import type {
+  AdminSubjectDataDTO,
+  AdminSubjectListDTO,
+  AdminCreateSubjectDTO,
+} from "~/api/admin/subject/dto";
+import type { Field } from "~/components/types/form";
 
-// State
-const subjects = ref<SubjectBaseDataDTO[]>([]);
-const loading = ref(false);
-const editFormDataKey = ref("");
+const adminApi = adminService();
 
-// Create Form
-const {
-  formDialogVisible: createVisible,
-  formData: createData,
-  schema: createSchema,
-  openForm: openCreate,
-  saveForm: saveCreate,
-  cancelForm: cancelCreate,
-  loading: createLoading,
-} = useDynamicCreateFormReactive(ref("SUBJECT"));
+/* ---------------------- table state ---------------------- */
 
-// Edit Form
-const {
-  formDialogVisible: editVisible,
-  formData: editData,
-  schema: editSchema,
-  openForm: openEdit,
-  saveForm: saveEdit,
-  cancelForm: cancelEdit,
-  loading: editLoading,
-} = useDynamicEditFormReactive(ref("SUBJECT"));
+const subjects = ref<AdminSubjectDataDTO[]>([]);
+const tableLoading = ref(false);
 
-// Fetch Data
-const fetchSubjects = async () => {
-  loading.value = true;
+const activeFilter = ref<"all" | "active" | "inactive">("all");
+
+const filteredSubjects = computed(() => {
+  if (activeFilter.value === "all") return subjects.value;
+  if (activeFilter.value === "active") {
+    return subjects.value.filter((s) => s.is_active);
+  }
+  return subjects.value.filter((s) => !s.is_active);
+});
+
+/* ---------------------- grade options ---------------------- */
+
+const gradeOptions = ref(
+  Array.from({ length: 12 }, (_, i) => ({
+    value: i + 1,
+    label: `Grade ${i + 1}`,
+  }))
+);
+
+/* ---------------------- columns ---------------------- */
+
+const subjectColumns = computed(
+  () =>
+    [
+      {
+        label: "Name",
+        field: "name",
+        align: "left",
+        minWidth: "100px",
+      },
+      {
+        label: "Code",
+        field: "code",
+        minWidth: "100px",
+      },
+      {
+        label: "Description",
+        field: "description",
+        minWidth: "100px",
+      },
+      {
+        label: "Allowed Grades",
+        field: "allowed_grade_levels",
+        minWidth: "100px",
+      },
+      {
+        label: "Status",
+        field: "active",
+        align: "center",
+        component: ElSwitch,
+        componentProps: {
+          disabled: true,
+        },
+        width: "120px",
+        inlineEditActive: true,
+      },
+      {
+        label: "Actions",
+        slotName: "operation",
+        operation: true,
+        fixed: "right",
+        width: "150",
+        align: "center",
+      },
+    ] as const
+);
+
+/* ---------------------- form fields (SmartFormDialog) ---------------------- */
+
+const subjectFormFields = computed<Field<AdminCreateSubjectDTO>[]>(() => [
+  {
+    key: "name",
+    label: "Name",
+    component: ElInput,
+    formItemProps: {
+      prop: "name",
+      label: "Name",
+      rules: [
+        {
+          required: true,
+          message: "Name is required",
+          trigger: ["blur", "change"],
+        },
+      ],
+    },
+    componentProps: {
+      placeholder: "Subject name (e.g. Mathematics)",
+      clearable: true,
+    },
+  },
+  {
+    key: "code",
+    label: "Code",
+    component: ElInput,
+    formItemProps: {
+      prop: "code",
+      label: "Code",
+      rules: [
+        {
+          required: true,
+          message: "Code is required",
+          trigger: ["blur", "change"],
+        },
+      ],
+    },
+    componentProps: {
+      placeholder: "Unique subject code (e.g. MATH101)",
+      clearable: true,
+    },
+  },
+  {
+    key: "description",
+    label: "Description",
+    component: ElInput,
+    formItemProps: {
+      prop: "description",
+      label: "Description",
+    },
+    componentProps: {
+      type: "textarea",
+      placeholder: "Short description",
+      rows: 3,
+    },
+  },
+  {
+    key: "allowed_grade_levels",
+    label: "Allowed Grade Levels",
+    component: ElSelect,
+    childComponent: ElOption,
+    formItemProps: {
+      prop: "allowed_grade_levels",
+      label: "Allowed Grade Levels",
+    },
+    componentProps: {
+      multiple: true,
+      filterable: true,
+      clearable: true,
+      placeholder: "Select grade levels",
+    },
+    childComponentProps: {
+      options: () => gradeOptions.value,
+      valueKey: "value",
+      labelKey: "label",
+    },
+  },
+]);
+
+const createDialogWidth = computed(() => "40%");
+
+/* ---------------------- create form state (local) ---------------------- */
+
+const createDialogVisible = ref(false);
+const createFormLoading = ref(false);
+
+const createFormData = ref<Partial<AdminCreateSubjectDTO>>({
+  name: "",
+  code: "",
+  description: "",
+  allowed_grade_levels: [],
+});
+
+const openCreateDialog = () => {
+  createFormData.value = {
+    name: "",
+    code: "",
+    description: "",
+    allowed_grade_levels: [],
+  };
+  createDialogVisible.value = true;
+};
+
+const handleCancelCreateForm = () => {
+  createDialogVisible.value = false;
+};
+
+/**
+ * This gets the payload emitted from SmartFormDialog,
+ * but we also have v-model="createFormData", so they are in sync.
+ */
+const handleSaveCreateForm = async (
+  payload: Partial<AdminCreateSubjectDTO>
+) => {
+  createFormLoading.value = true;
   try {
-    subjects.value = (await adminApiService.subject.getSubjects?.()) ?? [];
+    // merge payload into createFormData just to be safe
+    Object.assign(createFormData.value, payload);
+
+    const body: AdminCreateSubjectDTO = {
+      name: createFormData.value.name ?? "",
+      code: createFormData.value.code ?? "",
+      description: createFormData.value.description ?? "",
+      allowed_grade_levels: createFormData.value.allowed_grade_levels ?? [],
+    };
+
+    await adminApi.subject.createSubject(body);
+
+    await fetchSubjects();
+    createDialogVisible.value = false;
+  } catch (err) {
+    console.error("Failed to create subject:", err);
   } finally {
-    loading.value = false;
+    createFormLoading.value = false;
   }
 };
 
-// Handlers
-const handleCreate = async () => {
-  await nextTick();
-  openCreate();
-};
+/* ---------------------- actions: fetch + toggle ---------------------- */
 
-const handleSaveCreate = async (payload: Partial<AdminCreateSubject>) => {
-  await saveCreate(payload);
-  ElMessage.success("Subject created successfully");
+async function fetchSubjects() {
+  tableLoading.value = true;
+  try {
+    const res: AdminSubjectListDTO | undefined =
+      await adminApi.subject.getSubjects();
+    subjects.value = res?.items ?? [];
+  } catch (err) {
+    console.error("Failed to fetch subjects", err);
+  } finally {
+    tableLoading.value = false;
+  }
+}
+
+async function toggleSubjectActive(row: AdminSubjectDataDTO) {
+  try {
+    if (row.is_active) {
+      await adminApi.subject.deactivateSubject(row.id);
+    } else {
+      await adminApi.subject.activateSubject(row.id);
+    }
+    await fetchSubjects();
+  } catch (err) {
+    console.error("Failed to toggle subject active state", err);
+  }
+}
+
+/* ---------------------- lifecycle ---------------------- */
+
+onMounted(() => {
   fetchSubjects();
-};
-
-const handleEdit = async (row: SubjectBaseDataDTO) => {
-  editFormDataKey.value = row.id?.toString() ?? "new";
-  editData.value = {};
-  await nextTick();
-  await openEdit(row.id);
-  editVisible.value = true;
-};
-
-const handleSaveEdit = async (payload: Partial<AdminUpdateSubject>) => {
-  await saveEdit(payload);
-  ElMessage.success("Subject updated successfully");
-  fetchSubjects();
-};
-
-// Initialize
-fetchSubjects();
+});
 </script>
 
 <template>
-  <div class="subject-page">
-    <div class="page-header">
-      <h1 class="page-title">Subjects</h1>
-      <BaseButton type="primary" @click="handleCreate">
+  <el-row class="m-2" justify="space-between">
+    <el-col :span="12">
+      <BaseButton type="default" :loading="tableLoading" @click="fetchSubjects">
+        Refresh
+      </BaseButton>
+
+      <BaseButton type="primary" class="ml-2" @click="openCreateDialog">
         Add Subject
       </BaseButton>
-    </div>
+    </el-col>
 
-    <div class="table-container">
-      <SmartTable
-        :data="subjects"
-        :columns="subjectColumns"
-        :loading="loading"
-        row-key="id"
-        @edit="handleEdit"
-      />
-    </div>
+    <el-col :span="12" class="text-right">
+      <el-radio-group v-model="activeFilter">
+        <el-radio-button label="all">All</el-radio-button>
+        <el-radio-button label="active">Active</el-radio-button>
+        <el-radio-button label="inactive">Inactive</el-radio-button>
+      </el-radio-group>
+    </el-col>
+  </el-row>
 
+  <ErrorBoundary>
+    <SmartTable
+      :data="filteredSubjects"
+      :columns="subjectColumns"
+      :loading="tableLoading"
+    >
+      <template #operation="{ row }">
+        <BaseButton
+          size="small"
+          :type="row.is_active ? 'danger' : 'success'"
+          @click="toggleSubjectActive(row)"
+        >
+          {{ row.is_active ? "Deactivate" : "Activate" }}
+        </BaseButton>
+      </template>
+    </SmartTable>
+  </ErrorBoundary>
+
+  <!-- CREATE DIALOG -->
+  <ErrorBoundary>
     <SmartFormDialog
-      v-model:visible="createVisible"
-      v-model="createData"
-      :fields="createSchema"
-      :loading="createLoading"
+      v-model:visible="createDialogVisible"
+      v-model="createFormData"
+      :fields="subjectFormFields"
       title="Add Subject"
-      width="50%"
-      use-el-form
-      @save="handleSaveCreate"
-      @cancel="cancelCreate"
+      :loading="createFormLoading"
+      @save="handleSaveCreateForm"
+      @cancel="handleCancelCreateForm"
+      :useElForm="true"
+      :width="createDialogWidth"
     />
-
-    <SmartFormDialog
-      :key="`edit-${editFormDataKey}`"
-      v-model:visible="editVisible"
-      v-model="editData"
-      :fields="editSchema"
-      :loading="editLoading"
-      title="Edit Subject"
-      width="50%"
-      use-el-form
-      @save="handleSaveEdit"
-      @cancel="cancelEdit"
-    />
-  </div>
+  </ErrorBoundary>
 </template>
 
 <style scoped>
-.subject-page {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-}
-
-.table-container {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+:deep(.el-input-group__append) {
+  padding: 0 10px;
 }
 </style>

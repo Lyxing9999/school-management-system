@@ -1,8 +1,8 @@
 import { useApiUtils } from "~/utils/useApiUtils";
 import type {
-  AdminCreateSubject,
-  AdminUpdateSubject,
-  AdminGetSubjectsData,
+  AdminSubjectListDTO,
+  AdminSubjectDataDTO,
+  AdminCreateSubjectDTO,
 } from "./dto";
 import { SubjectApi } from "../subject/api";
 
@@ -11,7 +11,7 @@ export class SubjectService {
   constructor(private subjectApi: SubjectApi) {}
 
   async getSubjects() {
-    const { data } = await this.safeApiCall<AdminGetSubjectsData>(
+    const { data } = await this.safeApiCall<AdminSubjectListDTO>(
       () => this.subjectApi.getSubjects(),
       {
         showSuccessNotification: false,
@@ -20,33 +20,33 @@ export class SubjectService {
     return data!;
   }
 
-  async getSubjectById(id: string) {
-    const { data } = await this.safeApiCall<AdminGetSubjectsData>(() =>
-      this.subjectApi.getSubjectById(id)
+  async getSubject(id: string) {
+    const { data } = await this.safeApiCall<AdminSubjectDataDTO>(() =>
+      this.subjectApi.getSubject(id)
     );
     return data!;
   }
 
-  async createSubject(subjectData: AdminCreateSubject) {
-    const { data } = await this.safeApiCall<AdminGetSubjectsData>(
+  async createSubject(subjectData: AdminCreateSubjectDTO) {
+    const { data } = await this.safeApiCall<AdminSubjectDataDTO>(
       () => this.subjectApi.createSubject(subjectData),
       {
-        showSuccessNotification: false,
+        showSuccessNotification: true,
       }
     );
     return data!;
   }
 
-  async updateSubject(id: string, subjectData: AdminUpdateSubject) {
-    const { data } = await this.safeApiCall<AdminGetSubjectsData>(() =>
-      this.subjectApi.updateSubject(id, subjectData)
+  async activateSubject(id: string) {
+    const { data } = await this.safeApiCall<AdminSubjectDataDTO>(() =>
+      this.subjectApi.activateSubject(id)
     );
     return data!;
   }
 
-  async deleteSubject(id: string) {
-    const { data } = await this.safeApiCall<AdminGetSubjectsData>(() =>
-      this.subjectApi.deleteSubject(id)
+  async deactivateSubject(id: string) {
+    const { data } = await this.safeApiCall<AdminSubjectDataDTO>(() =>
+      this.subjectApi.deactivateSubject(id)
     );
     return data!;
   }

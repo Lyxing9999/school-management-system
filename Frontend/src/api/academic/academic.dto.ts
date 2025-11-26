@@ -1,7 +1,7 @@
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 import type { UserBaseDataDTO } from "~/api/types/user.dto";
 import type { StudentInfoBaseDataDTO } from "~/api/types/student.dto";
-import type { ClassBaseDataDTO } from "~/api/types/class.dto";
+import type { ClassBaseDataDTO } from "~/api/types/school.dto";
 import { Role } from "~/api/types/enums/role.enum";
 
 /* -------------------------------------------------------------------------- */

@@ -1,24 +1,21 @@
+=
 <script
   lang="ts"
   setup
   generic="T extends Record<string, any> = Record<string, any>"
 >
-import { defineProps, defineEmits, unref, type UnwrapRef, watch } from "vue";
-import { ElFormItem, ElInput, ElUpload } from "element-plus";
+import { watch, nextTick } from "vue";
+import { ElFormItem, ElInput, ElUpload, type FormInstance } from "element-plus";
 import DisplayOnlyField from "~/components/Form/DisplayOnlyField.vue";
 import type { Field } from "../types/form";
 import type { UploadUserFile } from "element-plus";
 
 const props = defineProps<{
   field: Field<T>;
-  form: UnwrapRef<Partial<T>>;
+  form: Partial<T>;
+  elFormRef?: FormInstance | null;
   fileList: Record<string, UploadUserFile[]>;
   useElForm: boolean;
-  onUploadChange?: (
-    key: string,
-    files: UploadUserFile[] | UploadUserFile | string
-  ) => void;
-  onUploadRemove?: (key: string, file: UploadUserFile) => void;
 }>();
 
 const emit = defineEmits<{
@@ -26,25 +23,24 @@ const emit = defineEmits<{
   (e: "updateField", key: keyof T, value: any): void;
 }>();
 
-// Extract options for select/child components
 const getOptionsForField = (field: Field<T>) => {
   let rawOptions: { value: any; label: string }[] = [];
-  const options = unref(field.childComponentProps?.options) as
-    | { value: any; label: string }[]
-    | (() => { value: any; label: string }[])
-    | undefined;
+  const src = field.childComponentProps?.options;
 
-  if (typeof options === "function") {
-    const result = options();
+  if (!src) return rawOptions;
+
+  if (typeof src === "function") {
+    const result = src();
     rawOptions = Array.isArray(result) ? result : [];
-  } else if (Array.isArray(options)) {
-    rawOptions = options;
+  } else if (Array.isArray(src)) {
+    rawOptions = src;
+  } else if (isRef(src) && Array.isArray(src.value)) {
+    rawOptions = src.value;
   }
 
   return rawOptions;
 };
 
-// Watch full form changes
 watch(
   () => props.form,
   (val) => {
@@ -52,6 +48,14 @@ watch(
   },
   { deep: true }
 );
+
+const handleInput = async () => {
+  if (!props.useElForm || !props.field.key) return;
+  const formInstance = props.elFormRef as FormInstance | null;
+  if (!formInstance) return;
+  await nextTick();
+  formInstance.validateField(props.field.key as string);
+};
 </script>
 
 <template>
@@ -61,7 +65,6 @@ watch(
     v-bind="field.formItemProps"
     class="mb-4"
   >
-    <!-- Label with icon -->
     <template #label>
       <div style="display: flex; align-items: center; gap: 4px">
         <el-icon v-if="field.iconComponent">
@@ -71,30 +74,31 @@ watch(
       </div>
     </template>
 
-    <!-- Display-only field -->
     <template v-if="field.displayOnly">
       <DisplayOnlyField
         :value="props.form[props.field.key as keyof typeof props.form]"
       />
     </template>
 
-    <!-- File upload field -->
     <ElUpload
       v-else-if="field.component === ElUpload"
       :file-list="fileList[field.key as string]"
       list-type="picture-card"
       :auto-upload="false"
-      @change="(files) => props.onUploadChange?.(String(field.key), files)"
-      @remove="(file) => props.onUploadRemove?.(String(field.key), file)"
+      @change="(files) => $emit('upload-change', String(field.key), files)"
+      @remove="(file) => $emit('upload-remove', String(field.key), file)"
       v-bind="field.componentProps"
     />
 
-    <!-- Input / Select / custom component -->
     <component
       v-else
       v-model="props.form[field.key as keyof typeof props.form]"
       :is="field.component || ElInput"
       v-bind="field.componentProps"
+      @input="handleInput"
+      @change="handleInput"
+      @blur="handleInput"
+      @update:modelValue="handleInput"
     >
       <component
         v-for="opt in getOptionsForField(field)"

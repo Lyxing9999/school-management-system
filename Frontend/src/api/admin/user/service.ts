@@ -4,6 +4,7 @@ import type {
   AdminUpdateUser,
   AdminGetUserData,
   AdminGetPageUserData,
+  AdminStudentListNameSelectDTO,
 } from "./dto";
 import { UserApi } from "../user/api";
 import { Role } from "~/api/types/enums/role.enum";
@@ -18,6 +19,12 @@ export class UserService {
       {
         showSuccessNotification: false,
       }
+    );
+    return data!;
+  }
+  async getStudentNameSelect() {
+    const { data } = await this.safeApiCall<AdminStudentListNameSelectDTO>(() =>
+      this.userApi.getStudentNameSelect()
     );
     return data!;
   }
@@ -36,11 +43,25 @@ export class UserService {
     return data!;
   }
 
-  async deleteUser(id: string) {
-    const { data } = await this.safeApiCall(() => this.userApi.deleteUser(id), {
-      showSuccessNotification: true,
-      showErrorNotification: true,
-    });
+  async softDeleteUser(id: string) {
+    const { data } = await this.safeApiCall(
+      () => this.userApi.softDeleteUser(id),
+      {
+        showSuccessNotification: true,
+        showErrorNotification: true,
+      }
+    );
+    return data!;
+  }
+
+  async hardDeleteUser(id: string) {
+    const { data } = await this.safeApiCall(
+      () => this.userApi.hardDeleteUser(id),
+      {
+        showSuccessNotification: true,
+        showErrorNotification: true,
+      }
+    );
     return data!;
   }
 }

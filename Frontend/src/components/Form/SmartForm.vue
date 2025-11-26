@@ -1,16 +1,14 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
 import { reactive, ref, watch, onMounted, type UnwrapRef } from "vue";
 import type { Field } from "../types/form";
-import { ElUpload } from "element-plus";
+import { ElUpload, type UploadUserFile, type FormInstance } from "element-plus";
 import FormRow from "./FormRow.vue";
 import FormField from "./FormField.vue";
-import type { UploadUserFile } from "element-plus";
 
 const props = defineProps<{
   modelValue: Partial<T>;
   fields: Field<T>[];
   useElForm: boolean;
-  elFormRef?: any;
   formProps?: Record<string, any>;
   loading?: boolean;
 }>();
@@ -21,12 +19,10 @@ const emit = defineEmits<{
   (e: "update:modelValue", form: Partial<T>): void;
 }>();
 
-// -------------------- Reactive form & file list --------------------
 const form = reactive({ ...props.modelValue }) as UnwrapRef<Partial<T>>;
 const fileList = ref<Record<string, UploadUserFile[]>>({});
 
-// -------------------- Watchers --------------------
-// Parent -> local
+// Parent → local
 watch(
   () => props.modelValue,
   (val) => {
@@ -35,10 +31,9 @@ watch(
   { deep: true }
 );
 
-// Local -> parent
+// Local → parent
 watch(form, (val) => emit("update:modelValue", { ...val }), { deep: true });
 
-// -------------------- Helpers --------------------
 const setFormValue = <K extends keyof T>(key: K, value: any) => {
   (form as Record<string, any>)[key as string] = value;
 };
@@ -69,7 +64,6 @@ const getFileUrl = (file?: UploadUserFile) => {
   return file.url ?? (file.raw ? URL.createObjectURL(file.raw) : undefined);
 };
 
-// -------------------- Upload handlers --------------------
 const handleUploadChange = (
   key: string,
   files: UploadUserFile[] | UploadUserFile | string
@@ -83,17 +77,16 @@ const handleUploadChange = (
 
   fileList.value[key] = normalizedFiles;
   const lastFile = normalizedFiles[normalizedFiles.length - 1];
-  setFormValue(key, lastFile?.raw || lastFile?.url || null);
+  setFormValue(key as any, lastFile?.raw || lastFile?.url || null);
 };
 
 const handleUploadRemove = (key: string, file: UploadUserFile) => {
-  setFormValue(key, null);
+  setFormValue(key as any, null);
   fileList.value[key] = (fileList.value[key] || []).filter(
     (f) => f.uid !== file.uid
   );
 };
 
-// -------------------- Init --------------------
 onMounted(() => {
   props.fields.forEach((field) => {
     const fieldsToCheck = field.row ?? [field];
@@ -106,14 +99,25 @@ onMounted(() => {
     });
   });
 });
+
+const elFormRef = ref<FormInstance | null>(null);
+
 const handleSave = () => {
-  emit("save", form);
+  console.log(elFormRef.value);
+  if (!elFormRef.value) return;
+  elFormRef.value.validate((valid) => {
+    if (valid) {
+      console.log("ths");
+      emit("save", form as T);
+    }
+  });
 };
 </script>
 
 <template>
-  <component
-    :is="useElForm ? 'el-form' : 'div'"
+  <!-- When using Element Plus form -->
+  <el-form
+    v-if="useElForm"
     :model="form"
     ref="elFormRef"
     v-bind="props.formProps"
@@ -126,9 +130,10 @@ const handleSave = () => {
         :form="form"
         :file-list="fileList"
         :use-el-form="useElForm"
-        @upload-change="handleUploadChange"
+        :el-form-ref="elFormRef"
         @upload-remove="handleUploadRemove"
       />
+
       <!-- Single field -->
       <FormField
         v-else
@@ -136,6 +141,7 @@ const handleSave = () => {
         :form="form"
         :file-list="fileList"
         :use-el-form="useElForm"
+        :el-form-ref="elFormRef"
         @upload-change="handleUploadChange"
         @upload-remove="handleUploadRemove"
       />
@@ -147,5 +153,38 @@ const handleSave = () => {
         Save
       </BaseButton>
     </div>
-  </component>
+  </el-form>
+
+  <!-- Plain div mode (no Element Plus validation) -->
+  <div v-else>
+    <template v-for="(field, index) in props.fields" :key="index">
+      <FormRow
+        v-if="field.row"
+        :rowFields="field.row"
+        :form="form"
+        :file-list="fileList"
+        :use-el-form="false"
+        :el-form-ref="undefined"
+        @upload-change="handleUploadChange"
+        @upload-remove="handleUploadRemove"
+      />
+      <FormField
+        v-else
+        :field="field"
+        :form="form"
+        :file-list="fileList"
+        :use-el-form="false"
+        :el-form-ref="undefined"
+        @upload-change="handleUploadChange"
+        @upload-remove="handleUploadRemove"
+      />
+    </template>
+
+    <div class="flex justify-end gap-2 mt-4">
+      <BaseButton type="default" @click="emit('cancel')">Cancel</BaseButton>
+      <BaseButton type="info" :loading="props.loading" @click="handleSave">
+        Save
+      </BaseButton>
+    </div>
+  </div>
 </template>

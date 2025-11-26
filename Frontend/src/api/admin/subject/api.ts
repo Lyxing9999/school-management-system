@@ -1,47 +1,54 @@
 import type { AxiosInstance } from "axios";
 import type {
-  AdminCreateSubject,
-  AdminUpdateSubject,
-  AdminSubjectResponse,
+  AdminCreateSubjectDTO,
+  AdminGetSubjectListResponse,
+  AdminGetSubjectResponse
 } from "./dto";
 
 export class SubjectApi {
   constructor(
     private $api: AxiosInstance,
-    private baseURL = "/api/admin/subject"
+    private baseURL = "/api/admin/subjects"
   ) {}
 
-  async getSubjects(): Promise<AdminSubjectResponse> {
-    const res = await this.$api.get<AdminSubjectResponse>(this.baseURL);
+  // ============
+  // QUERY
+  // ============
+  async getSubjects(): Promise<AdminGetSubjectListResponse> {
+    const res = await this.$api.get<AdminGetSubjectListResponse>(this.baseURL);
     return res.data;
   }
 
-  async getSubjectById(id: string): Promise<AdminSubjectResponse> {
-    const res = await this.$api.get<AdminSubjectResponse>(
+  async getSubject(id: string): Promise<AdminGetSubjectResponse> {
+    const res = await this.$api.get<AdminGetSubjectResponse>(
       `${this.baseURL}/${id}`
     );
     return res.data;
   }
 
-  async createSubject(data: AdminCreateSubject): Promise<AdminSubjectResponse> {
-    const res = await this.$api.post<AdminSubjectResponse>(this.baseURL, data);
-    return res.data;
-  }
-
-  async updateSubject(
-    id: string,
-    data: AdminUpdateSubject
-  ): Promise<AdminSubjectResponse> {
-    const res = await this.$api.patch<AdminSubjectResponse>(
-      `${this.baseURL}/${id}`,
+  // ============
+  // COMMANDS
+  // ============
+  async createSubject(
+    data: AdminCreateSubjectDTO
+  ): Promise<AdminGetSubjectResponse> {
+    const res = await this.$api.post<AdminGetSubjectResponse>(
+      this.baseURL,
       data
     );
     return res.data;
   }
 
-  async deleteSubject(id: string): Promise<AdminSubjectResponse> {
-    const res = await this.$api.delete<AdminSubjectResponse>(
-      `${this.baseURL}/${id}`
+  async activateSubject(subjectId: string): Promise<AdminGetSubjectResponse> {
+    const res = await this.$api.patch<AdminGetSubjectResponse>(
+      `${this.baseURL}/${subjectId}/activate`
+    );
+    return res.data;
+  }
+
+  async deactivateSubject(subjectId: string): Promise<AdminGetSubjectResponse> {
+    const res = await this.$api.patch<AdminGetSubjectResponse>(
+      `${this.baseURL}/${subjectId}/deactivate`
     );
     return res.data;
   }

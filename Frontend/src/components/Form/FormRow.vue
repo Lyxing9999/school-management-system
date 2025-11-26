@@ -6,12 +6,14 @@
 import { defineProps, reactive } from "vue";
 import FormField from "./FormField.vue";
 import type { Field } from "../types/form";
+import type { FormInstance } from "element-plus";
 
 const props = defineProps<{
   rowFields: Field<T>[];
   form: Partial<T>;
   fileList: Record<string, any>;
   useElForm: boolean;
+  elFormRef?: FormInstance | null;
 }>();
 
 // Make fileList reactive locally if needed
@@ -40,6 +42,7 @@ function handleUploadRemove(key: string, file: any) {
       <FormField
         :field="subField"
         :form="form"
+        :el-form-ref="props.elFormRef"
         :file-list="localFileList"
         :use-el-form="useElForm"
         @update:modelValue="(val) => Object.assign(form, val)"

@@ -9,7 +9,7 @@ import {
   ElInputTag,
 } from "element-plus";
 import type { ColumnConfig } from "~/components/types/tableEdit";
-import type { BaseClassDataDTO } from "~/api/types/class.dto";
+import type { BaseClassDataDTO } from "~/api/types/school.dto";
 
 // Reactive student options for remote search
 export const studentSelectOptions = ref<{ label: string; value: string }[]>([]);

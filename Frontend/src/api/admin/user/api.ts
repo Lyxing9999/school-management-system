@@ -4,6 +4,7 @@ import type {
   AdminCreateUser,
   AdminGetUserResponse,
   AdminUpdateUser,
+  AdminStudentListNameSelectResponse,
 } from "./dto";
 import { Role } from "~/api/types/enums/role.enum";
 
@@ -26,6 +27,12 @@ export class UserApi {
     });
     return res.data;
   }
+  async getStudentNameSelect(): Promise<AdminStudentListNameSelectResponse> {
+    const res = await this.$api.get<AdminStudentListNameSelectResponse>(
+      `${this.baseURL}/student-select`
+    );
+    return res.data;
+  }
 
   async createUser(userData: AdminCreateUser): Promise<AdminGetUserResponse> {
     const res = await this.$api.post<AdminGetUserResponse>(
@@ -46,9 +53,16 @@ export class UserApi {
     return res.data;
   }
 
-  async deleteUser(id: string): Promise<AdminGetUserResponse> {
+  async softDeleteUser(id: string): Promise<AdminGetUserResponse> {
     const res = await this.$api.delete<AdminGetUserResponse>(
       `${this.baseURL}/${id}`
+    );
+    return res.data;
+  }
+
+  async hardDeleteUser(id: string): Promise<AdminGetUserResponse> {
+    const res = await this.$api.delete<AdminGetUserResponse>(
+      `${this.baseURL}/${id}/hard`
     );
     return res.data;
   }

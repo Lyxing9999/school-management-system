@@ -3,7 +3,7 @@ import { useRoute } from "vue-router";
 import BaseHeader from "~/components/layout/BaseHeader.vue";
 import BaseFooter from "~/components/layout/BaseFooter.vue";
 import BaseSideBar from "~/components/layout/BaseSideBar.vue";
-import schoolLogo from "~/assets/image/school-logo.png";
+import schoolLogo from "~/assets/image/school-logo.jpg";
 
 const route = useRoute();
 </script>

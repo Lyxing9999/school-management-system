@@ -1,17 +1,32 @@
+// ~/api/admin/subject/dto.ts
 import type { ApiResponse } from "~/api/types/common/api-response.type";
-import type { SubjectBaseDataDTO } from "~/api/types/subject.dto";
+import type { SubjectDTO } from "~/api/types/school.dto";
+/* ================================
+ * SUBJECT MANAGEMENT (Admin)
+ * ================================ */
 
-export interface AdminGetSubjectsData extends SubjectBaseDataDTO {}
-
-export interface AdminCreateSubject {
+/**
+ * Payload for creating a subject
+ * Python: AdminCreateSubjectSchema
+ */
+export interface AdminCreateSubjectDTO {
   name: string;
-  teacher_id: string[];
+  code: string;
+  description?: string | null;
+  allowed_grade_levels?: number[] | null;
 }
 
-export interface AdminUpdateSubject {
-  name?: string;
-  teacher_id?: string[];
+export interface AdminSubjectDataDTO extends SubjectDTO {}
+/**
+ * List wrapper
+ * Python: AdminSubjectListDTO
+ */
+export interface AdminSubjectListDTO {
+  items: AdminSubjectDataDTO[];
 }
-export interface AdminGetSubject extends SubjectBaseDataDTO {}
 
-export type AdminSubjectResponse = ApiResponse<AdminGetSubjectsData>;
+/**
+ * Wrapped responses
+ */
+export type AdminGetSubjectResponse = ApiResponse<AdminSubjectDataDTO>;
+export type AdminGetSubjectListResponse = ApiResponse<AdminSubjectListDTO>;

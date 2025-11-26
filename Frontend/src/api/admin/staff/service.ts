@@ -3,7 +3,8 @@ import type {
   AdminCreateStaff,
   AdminUpdateStaff,
   AdminGetStaffData,
-  AdminGetStaffNameData,
+  AdminTeacherSelectListData,
+  AdminStaffNameSelectData,
 } from "./dto";
 import { StaffApi } from "../staff/api";
 
@@ -11,9 +12,16 @@ export class StaffService {
   private safeApiCall = useApiUtils().safeApiCall;
   constructor(private staffApi: StaffApi) {}
 
-  async getStaffNameSelect(search: string, role: string) {
-    const { data } = await this.safeApiCall<AdminGetStaffNameData>(() =>
-      this.staffApi.getStaffNameSelect(search, role)
+  async getTeacherSelect() {
+    const { data } = await this.safeApiCall<AdminTeacherSelectListData>(() =>
+      this.staffApi.getTeacherSelect()
+    );
+
+    return data!;
+  }
+  async getStaffNameSelect() {
+    const { data } = await this.safeApiCall<AdminStaffNameSelectData>(() =>
+      this.staffApi.getStaffNameSelect()
     );
     return data!;
   }

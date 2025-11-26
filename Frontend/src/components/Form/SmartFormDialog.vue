@@ -1,23 +1,21 @@
 <script setup lang="ts" generic="I extends Record<string, any>">
-import { reactive, toRaw, watch } from "vue";
+import { reactive, toRaw, watch, ref } from "vue";
 import type { FormInstance, FormProps } from "element-plus";
 import type { Field } from "../types/form";
 import SmartForm from "~/components/Form/SmartForm.vue";
 import { ElDialog } from "element-plus";
 
-// -------------------- Props --------------------
 const props = defineProps<{
-  modelValue: Partial<I>; // form data from parent (reactive)
-  visible: boolean; // dialog visibility
-  title?: string; // optional dialog title
-  fields: Field<I>[]; // form schema fields
-  elFormRef?: FormInstance; // optional Element Plus form ref
-  widthDialog?: string; // dialog width
-  loading?: boolean; // loading state
-  formProps?: Partial<FormProps>; // extra form props
+  modelValue: Partial<I>;
+  visible: boolean;
+  title?: string;
+  fields: Field<I>[];
+  useElForm?: boolean;
+  widthDialog?: string;
+  loading?: boolean;
+  formProps?: Partial<FormProps>;
 }>();
 
-// -------------------- Emits --------------------
 const emit = defineEmits<{
   (e: "update:modelValue", value: Partial<I>): void;
   (e: "update:visible", value: boolean): void;
@@ -25,8 +23,7 @@ const emit = defineEmits<{
   (e: "cancel"): void;
 }>();
 
-// -------------------- Reactive Form --------------------
-
+// local form state
 const localForm = reactive<Record<string, any>>({});
 props.fields.forEach((f) => {
   if (f.key) localForm[f.key] = props.modelValue?.[f.key] ?? "";
@@ -36,23 +33,21 @@ props.fields.forEach((f) => {
     });
 });
 
-// Sync local → parent
+// sync local → parent
 watch(
   localForm,
   (val) => {
     emit("update:modelValue", toRaw(val));
   },
-  {
-    deep: true,
-  }
+  { deep: true }
 );
 
-// -------------------- Handlers --------------------
 const handleCancel = () => {
   emit("cancel");
   emit("update:visible", false);
 };
-const handleSave = (payload: Partial<I>) => {
+
+const handleSave = async (payload: Partial<I>) => {
   emit("save", payload);
 };
 </script>
@@ -69,7 +64,6 @@ const handleSave = (payload: Partial<I>) => {
       v-model="localForm"
       :fields="fields"
       :use-el-form="true"
-      :el-form-ref="elFormRef"
       :form-props="{
         statusIcon: true,
         inlineMessage: true,
@@ -81,13 +75,3 @@ const handleSave = (payload: Partial<I>) => {
     />
   </ElDialog>
 </template>
-
-<style scoped>
-:deep(.el-dialog) {
-  max-width: 1000px;
-  border-radius: 16px;
-}
-:deep(.el-dialog__body) {
-  padding: 20px 30px;
-}
-</style>
