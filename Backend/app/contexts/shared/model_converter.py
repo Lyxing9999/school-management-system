@@ -136,8 +136,10 @@ class AdvancedMongoConverter:
             raise handle_exception(e)
 
     @classmethod
-    def convert_to_object_id(cls, value: Union[str, ObjectId]) -> ObjectId:
+    def convert_to_object_id(cls, value: Union[str, ObjectId, None]) -> ObjectId | None:
         try:
+            if(value is None):
+                return None
             if isinstance(value, ObjectId):
                 return value
             if not isinstance(value, str):

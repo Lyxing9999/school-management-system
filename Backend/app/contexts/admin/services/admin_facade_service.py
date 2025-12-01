@@ -6,7 +6,7 @@ from app.contexts.admin.services.subject_service import SubjectAdminService
 from app.contexts.admin.error.admin_exception import EmailAlreadyExistsException
 from app.contexts.iam.data_transfer.response import IAMBaseDataDTO
 from app.contexts.iam.domain.iam import IAM
-from app.contexts.staff.models import Staff
+from app.contexts.staff.domain import Staff
 from app.contexts.staff.data_transfer.requests import StaffCreateSchema
 from app.contexts.admin.services.schedule_service import ScheduleAdminService
 from typing import Tuple

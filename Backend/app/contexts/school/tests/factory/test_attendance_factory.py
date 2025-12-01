@@ -24,14 +24,14 @@ class FakeClassReadModel:
         return self.class_doc
 
 
-class FakeEnrollmentReadModel:
-    def __init__(self, enrolled: bool):
-        self.enrolled = enrolled
-        self.calls = []
+# class FakeEnrollmentReadModel:
+#     def __init__(self, enrolled: bool):
+#         self.enrolled = enrolled
+#         self.calls = []
 
-    def is_student_enrolled(self, student_id: ObjectId, class_id: ObjectId) -> bool:
-        self.calls.append((student_id, class_id))
-        return self.enrolled
+    # def is_student_enrolled(self, student_id: ObjectId, class_id: ObjectId) -> bool:
+    #     self.calls.append((student_id, class_id))
+    #     return self.enrolled
 
 
 class FakeAttendanceReadModel:
@@ -63,7 +63,7 @@ def test_create_record_success():
 
     factory = AttendanceFactory(
         class_read_model=FakeClassReadModel(class_doc),
-        enrollment_read_model=FakeEnrollmentReadModel(enrolled=True),
+        # enrollment_read_model=FakeEnrollmentReadModel(enrolled=True),
         attendance_read_model=FakeAttendanceReadModel(already_exists=False),
     )
 
@@ -95,7 +95,7 @@ def test_create_record_raises_when_not_class_teacher():
 
     factory = AttendanceFactory(
         class_read_model=FakeClassReadModel(class_doc),
-        enrollment_read_model=FakeEnrollmentReadModel(enrolled=True),
+        # enrollment_read_model=FakeEnrollmentReadModel(enrolled=True),
         attendance_read_model=FakeAttendanceReadModel(already_exists=False),
     )
 
@@ -121,7 +121,7 @@ def test_create_record_raises_when_student_not_enrolled():
 
     factory = AttendanceFactory(
         class_read_model=FakeClassReadModel(class_doc),
-        enrollment_read_model=FakeEnrollmentReadModel(enrolled=False), 
+        # enrollment_read_model=FakeEnrollmentReadModel(enrolled=False), 
         attendance_read_model=FakeAttendanceReadModel(already_exists=False),
     )
 
@@ -147,7 +147,7 @@ def test_create_record_raises_when_already_marked():
 
     factory = AttendanceFactory(
         class_read_model=FakeClassReadModel(class_doc),
-        enrollment_read_model=FakeEnrollmentReadModel(enrolled=True),
+        # enrollment_read_model=FakeEnrollmentReadModel(enrolled=True),
         attendance_read_model=FakeAttendanceReadModel(already_exists=True),  
     )
 

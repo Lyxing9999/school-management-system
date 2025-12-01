@@ -16,7 +16,7 @@ from app.contexts.admin.mapper.school_admin_mapper import SchoolAdminMapper
 @role_required(["admin"])
 @wrap_response
 def admin_list_subject():
-    subject_list = g.admin_facade.subject_service.admin_list_subject()
+    subject_list = g.admin.subject_service.admin_list_subject()
     return SchoolAdminMapper.subject_list_to_dto(subject_list)
     
 
@@ -24,7 +24,7 @@ def admin_list_subject():
 @role_required(["admin"])
 @wrap_response
 def admin_get_subject(subject_id: str):
-    subject_dict: dict = g.admin_facade.subject_service.admin_get_subject(subject_id)
+    subject_dict: dict = g.admin.subject_service.admin_get_subject(subject_id)
     return SchoolAdminMapper.subject_doc_to_dto(subject_dict)
 
 
@@ -34,7 +34,7 @@ def admin_get_subject(subject_id: str):
 def admin_create_subject():
     payload = pydantic_converter.convert_to_model(request.json, AdminCreateSubjectSchema)
     admin_id = get_current_user_id()  
-    subject = g.admin_facade.subject_service.admin_create_subject(
+    subject = g.admin.subject_service.admin_create_subject(
         payload=payload, 
         created_by=admin_id
     )
@@ -45,7 +45,7 @@ def admin_create_subject():
 @role_required(["admin"])
 @wrap_response
 def admin_deactivate_subject(subject_id: str):
-    subject = g.admin_facade.subject_service.admin_deactivate_subject(subject_id)
+    subject = g.admin.subject_service.admin_deactivate_subject(subject_id)
     return SchoolAdminMapper.subject_to_dto(subject)
 
 
@@ -53,5 +53,5 @@ def admin_deactivate_subject(subject_id: str):
 @role_required(["admin"])
 @wrap_response
 def admin_activate_subject(subject_id: str):
-    subject = g.admin_facade.subject_service.admin_activate_subject(subject_id)
+    subject = g.admin.subject_service.admin_activate_subject(subject_id)
     return SchoolAdminMapper.subject_to_dto(subject)

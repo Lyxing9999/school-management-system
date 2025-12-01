@@ -1,9 +1,6 @@
-# app/contexts/admin/mapper/school_admin_mapper.py
-
 from __future__ import annotations
 from typing import List
 
-from bson import ObjectId
 
 from app.contexts.school.domain.schedule import ScheduleSlot
 from app.contexts.school.domain.class_section import ClassSection

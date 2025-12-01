@@ -4,7 +4,6 @@ from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.school.domain.grade import GradeRecord, GradeType
 from app.contexts.school.errors.grade_exceptions import (
     NotSubjectTeacherException,
-    StudentNotEnrolledForSubjectException,
 )
 from app.contexts.school.errors.class_exceptions import ClassNotFoundException
 from app.contexts.school.errors.subject_exceptions import SubjectNotFoundException
@@ -23,7 +22,7 @@ class GradeFactory:
         self,
         class_read_model,
         subject_read_model,
-        enrollment_read_model,
+        # enrollment_read_model,
         teacher_assignment_read_model,
     ):
         """
@@ -34,7 +33,7 @@ class GradeFactory:
         """
         self.class_read_model = class_read_model
         self.subject_read_model = subject_read_model
-        self.enrollment_read_model = enrollment_read_model
+        # self.enrollment_read_model = enrollment_read_model
         self.teacher_assignment_read_model = teacher_assignment_read_model
 
     def _normalize_id(self, id_: str | ObjectId) -> ObjectId:
@@ -70,27 +69,21 @@ class GradeFactory:
                 raise ClassNotFoundException(class_obj_id)
 
         # 2. Check teacher can grade this subject/class
-        if class_obj_id is not None:
-            if not self.teacher_assignment_read_model.can_teacher_grade(
-                teacher_obj_id,
-                class_obj_id,
-                subject_obj_id,
-            ):
-                raise NotSubjectTeacherException(teacher_obj_id, subject_obj_id, class_obj_id)
 
         # 3. Check student enrollment (if class is specified)
-        if class_obj_id is not None:
-            if not self.enrollment_read_model.is_student_enrolled(student_obj_id, class_obj_id):
-                raise StudentNotEnrolledForSubjectException(
-                    student_obj_id, subject_obj_id, class_obj_id
-                )
+        # TODO: skip it for now 
+        # if class_obj_id is not None:
+        #     if not self.enrollment_read_model.is_student_enrolled(student_obj_id, class_obj_id):
+        #         raise StudentNotEnrolledForSubjectException(
+        #             student_obj_id, subject_obj_id, class_obj_id
+        #         )
 
         # 4. Create domain model (GradeRecord will validate score and type)
         return GradeRecord(
             student_id=student_obj_id,
             subject_id=subject_obj_id,
             score=score,
-            type=type,
+            type=type, 
             class_id=class_obj_id,
             teacher_id=teacher_obj_id,
             term=term,

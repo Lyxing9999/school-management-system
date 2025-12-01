@@ -57,4 +57,5 @@ def get_my_grades():
 def get_my_schedule():
     student_id = get_current_user_id()
     items = g.student_service.get_my_schedule(student_id)
+    print(items)
     return StudentScheduleListDTO(items=items)

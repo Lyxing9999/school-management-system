@@ -112,8 +112,12 @@ class AdminSubjectListDTO(BaseModel):
 # SECTION 6: SCHEDULE MANAGEMENT
 # =====================================================
 class AdminScheduleSlotDataDTO(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={
+            dt.time: lambda t: t.strftime("%H:%M"),
+        },
+    )
     id: str
     class_id: str
     teacher_id: str
@@ -121,8 +125,10 @@ class AdminScheduleSlotDataDTO(BaseModel):
     start_time: dt.time             
     end_time: dt.time 
     room: str | None = None
-    created_at: dt.datetime | None = None
-    updated_at: dt.datetime | None = None
+    teacher_name: str | None = None
+    class_name: str | None = None
+    created_at: dt.datetime
+    updated_at: dt.datetime
 
 
 class AdminScheduleListDTO(BaseModel):
@@ -146,3 +152,23 @@ class AdminStudentNameSelectDTO(BaseModel):
 class AdminStudentNameSelectListDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     items: List[AdminStudentNameSelectDTO]
+
+
+
+
+# =====================================================
+# Class Management
+# =====================================================
+
+
+class AdminClassSelectDTO(BaseModel):
+    id: str
+    name: str
+    model_config = {
+        "extra": "ignore",
+    }
+
+class AdminClassSelectListDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    items: List[AdminClassSelectDTO]
+

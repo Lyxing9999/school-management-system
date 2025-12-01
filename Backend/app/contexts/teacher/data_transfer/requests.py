@@ -1,17 +1,18 @@
 # app/contexts/teacher/data_transfer/requests.py
 from __future__ import annotations
-from datetime import date
+from datetime import date as date_type
 from typing import Optional
 from pydantic import BaseModel, field_validator
 from app.contexts.school.domain.attendance import AttendanceStatus
 from app.contexts.school.domain.grade import GradeType
 
 
+
 class TeacherMarkAttendanceRequest(BaseModel):
     student_id: str
     class_id: str
     status: AttendanceStatus | str
-    record_date: Optional[date] = None
+    record_date: Optional[date_type] = None
 
     @field_validator("status", mode="before")
     def normalize_status(cls, v):

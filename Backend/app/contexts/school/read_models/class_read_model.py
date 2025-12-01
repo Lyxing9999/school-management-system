@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Union
 
 from bson import ObjectId
 from pymongo.database import Database
@@ -9,7 +9,7 @@ from app.contexts.shared.model_converter import mongo_converter
 
 class ClassReadModel:
     """
-    Read-side helper for ClassSection data.
+    Read-side helper for Class data.
 
     Returned objects are plain dicts (Mongo docs), not domain aggregates.
     Used by factories and query/use-case code that only needs to *read*.
@@ -56,34 +56,97 @@ class ClassReadModel:
         cursor = self.collection.find({"deleted": {"$ne": True}})
         return [doc for doc in cursor]
 
-
     def list_teacher_classes(self, teacher_id: str | ObjectId) -> List[Dict]:
         """
         Return all non-deleted class documents where the given teacher is assigned.
         """
         oid = self._normalize_id(teacher_id)
-        return list(self.collection.find({
-            "teacher_id": oid,
-            "deleted": {"$ne": True}
-        }))
-        
+        return list(self.collection.find(
+            {
+                "teacher_id": oid,
+                "deleted": {"$ne": True},
+            }
+        ))
+
     def list_student_classes(self, student_id: str | ObjectId) -> List[Dict]:
         """
         Return all non-deleted class documents where the given student is enrolled.
         """
         oid = self._normalize_id(student_id)
-        return list(self.collection.find({
-            "student_ids": oid,
-            "deleted": {"$ne": True}
-        }))
-    
-    def list_students_in_class(self, class_id: str | ObjectId) -> List[Dict]:
+        return list(self.collection.find(
+            {
+                "student_ids": oid,
+                "deleted": {"$ne": True},
+            }
+        ))
+
+    def list_student_ids_in_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
         """
-        Return all non-deleted student documents enrolled in the given class.
+        Return the list of student_ids (ObjectId) enrolled in the given class.
         """
         oid = self._normalize_id(class_id)
-        return list(self.collection.find_one({
-            "_id" : oid,
-            "deleted": {"$ne": True}
-        })['student_ids'])
+        doc = self.collection.find_one(
+            {"_id": oid, "deleted": {"$ne": True}},
+            {"student_ids": 1},
+        )
+        if not doc:
+            return []
+        student_ids = doc.get("student_ids") or []
+        return [self._normalize_id(sid) for sid in student_ids]
 
+    def list_subject_ids_in_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
+        """
+        Return the list of subject_ids (ObjectId) in the given class.
+        """
+        oid = self._normalize_id(class_id)
+        doc = self.collection.find_one(
+            {"_id": oid, "deleted": {"$ne": True}},
+            {"subject_ids": 1},
+        )
+        if not doc:
+            return []
+        subject_ids = doc.get("subject_ids") or []
+        return [self._normalize_id(sid) for sid in subject_ids]
+
+
+
+    def list_name_class(self) -> List[Dict]:
+        """
+        Return all non-deleted class documents as plain dicts.
+        """
+        cursor = self.collection.find({"deleted": {"$ne": True}}, {"name": 1})
+        return [doc for doc in cursor]
+
+
+
+    def get_class_name_by_id(self, class_id: Union[str, ObjectId]) -> Optional[str]:
+        """
+        Return the name of the given class, or None if not found.
+        """
+        oid = self._normalize_id(class_id)
+        doc = self.collection.find_one(
+            {"_id": oid, "deleted": {"$ne": True}},
+            {"name": 1},
+        )
+        if not doc:
+            return None
+        return doc.get("name")
+
+    def list_class_names_by_ids(self, class_ids: List[ObjectId]) -> Dict[ObjectId, str]:
+        """
+        Given a list of class_ids, return a mapping {class_id: name}.
+        Only returns entries for classes that exist and are not deleted.
+        """
+        if not class_ids:
+            return {}
+        cursor = self.collection.find(
+            {"_id": {"$in": class_ids}, "deleted": {"$ne": True}},
+            {"_id": 1, "name": 1},
+        )
+        result: Dict[ObjectId, str] = {}
+        for doc in cursor:
+            cid = doc.get("_id")
+            name = doc.get("name")
+            if cid is not None and name is not None:
+                result[cid] = name
+        return result

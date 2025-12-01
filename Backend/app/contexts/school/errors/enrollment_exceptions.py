@@ -6,31 +6,7 @@ from app.contexts.core.error.app_base_exception import (
 from typing import Any, Dict
 
 
-class EnrollmentException(AppBaseException):
-    """Base exception for all enrollment-related errors."""
-
-    def __init__(
-        self,
-        message: str,
-        error_code: str = "ENROLLMENT_ERROR",
-        status_code: int = 400,
-        details: Dict[str, Any] | None = None,
-        **kwargs,
-    ):
-        severity = kwargs.pop("severity", ErrorSeverity.MEDIUM)
-
-        super().__init__(
-            message=message,
-            error_code=error_code,
-            category=ErrorCategory.BUSINESS_LOGIC,
-            severity=severity,
-            status_code=status_code,
-            details=details,
-            **kwargs,
-        )
-
-
-class InvalidEnrollmentStatusException(EnrollmentException):
+class InvalidEnrollmentStatusException(AppBaseException):
     """Raised when an invalid status value is passed."""
 
     def __init__(self, received_value: Any):
@@ -45,7 +21,7 @@ class InvalidEnrollmentStatusException(EnrollmentException):
         )
 
 
-class EnrollmentAlreadyCompletedException(EnrollmentException):
+class EnrollmentAlreadyCompletedException(AppBaseException):
     """Cannot modify a completed enrollment."""
 
     def __init__(self, enrollment_id: Any):
@@ -59,7 +35,7 @@ class EnrollmentAlreadyCompletedException(EnrollmentException):
         )
 
 
-class EnrollmentAlreadyDroppedException(EnrollmentException):
+class EnrollmentAlreadyDroppedException(AppBaseException):
     """Cannot drop an already dropped enrollment."""
 
     def __init__(self, enrollment_id: Any):

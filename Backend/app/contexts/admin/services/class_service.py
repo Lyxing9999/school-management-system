@@ -11,7 +11,7 @@ from app.contexts.school.domain.class_section import ClassSection
 from app.contexts.school.read_models.class_read_model import ClassReadModel
 from app.contexts.admin.data_transfer.request import AdminCreateClassSchema
 from app.contexts.shared.decorators.logging_decorator import log_operation
-
+from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 
 class ClassAdminService:
     """
@@ -25,7 +25,7 @@ class ClassAdminService:
     def __init__(self, db: Database):
         self.school_service = SchoolService(db)
         self.class_read_model = ClassReadModel(db)
-
+        self.admin_read_model = AdminReadModel(db)
     # ---------- Commands ----------
 
     @log_operation(level="INFO")
@@ -99,3 +99,10 @@ class ClassAdminService:
         Later you can add pagination/filtering here.
         """
         return self.class_read_model.list_all()
+
+    def admin_list_classes_select(self) -> List[dict]:
+        """
+        Read-only: list all non-deleted classes.
+        Later you can add pagination/filtering here.
+        """
+        return self.adm.admin_list_class_select()

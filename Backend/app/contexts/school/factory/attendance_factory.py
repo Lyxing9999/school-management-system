@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import date as date_type
+from datetime import date as date_type, datetime
 from bson import ObjectId
 
 from app.contexts.school.domain.attendance import AttendanceRecord, AttendanceStatus
@@ -22,7 +22,7 @@ class AttendanceFactory:
     - Prevent duplicate attendance for same class + student + date
     """
 
-    def __init__(self, class_read_model, enrollment_read_model, attendance_read_model):
+    def __init__(self, class_read_model, attendance_read_model):
         """
         :param class_read_model: provides:
             - get_by_id(class_id) -> dict | None
@@ -32,7 +32,7 @@ class AttendanceFactory:
             - get_by_student_class_date(student_id, class_id, date) -> dict | None
         """
         self.class_read_model = class_read_model
-        self.enrollment_read_model = enrollment_read_model
+        # self.enrollment_read_model = enrollment_read_model
         self.attendance_read_model = attendance_read_model
 
     # ------------ internal helpers ------------
@@ -42,7 +42,8 @@ class AttendanceFactory:
         Convert incoming id to ObjectId using shared converter.
         """
         return mongo_converter.convert_to_object_id(id_)
-    
+
+
     def create_record(
         self,
         student_id: str | ObjectId,
@@ -63,10 +64,12 @@ class AttendanceFactory:
         if class_doc.get("teacher_id") != teacher_obj_id:
             raise NotClassTeacherException(teacher_obj_id, class_obj_id)
 
-        if not self.enrollment_read_model.is_student_enrolled(student_obj_id, class_obj_id):
-            raise StudentNotEnrolledInClassException(student_obj_id, class_obj_id)
+        # if not self.enrollment_read_model.is_student_enrolled(student_obj_id, class_obj_id):
+        #     raise StudentNotEnrolledInClassException(student_obj_id, class_obj_id)
 
-        date_to_use = record_date or None
+        # Domain-level default: if no date is provided, use "today"
+        date_to_use = record_date or datetime.utcnow()
+
         existing = self.attendance_read_model.get_by_student_class_date(
             student_id=student_obj_id,
             class_id=class_obj_id,
@@ -74,7 +77,6 @@ class AttendanceFactory:
         )
         if existing:
             raise AttendanceAlreadyMarkedException(student_obj_id, class_obj_id, date_to_use)
-
         return AttendanceRecord(
             student_id=student_obj_id,
             class_id=class_obj_id,

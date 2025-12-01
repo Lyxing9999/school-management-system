@@ -5,7 +5,7 @@ from app.contexts.admin.routes import admin_bp
 from app.contexts.core.security.auth_utils import get_current_user_id
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
-from app.contexts.shared.model_converter import pydantic_converter
+from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
 
 from app.contexts.admin.data_transfer.request import (
     AdminCreateScheduleSlotSchema,
@@ -13,6 +13,7 @@ from app.contexts.admin.data_transfer.request import (
 )
 from app.contexts.admin.data_transfer.response import (
     AdminScheduleSlotDataDTO,
+    AdminScheduleListDTO,
 )
 from app.contexts.admin.mapper.school_admin_mapper import SchoolAdminMapper
 
@@ -34,7 +35,7 @@ def admin_create_schedule_slot():
     )
     admin_id = get_current_user_id()
 
-    slot = g.admin_facade.schedule_service.admin_create_schedule_slot(
+    slot = g.admin.schedule_service.admin_create_schedule_slot(
         payload=payload,
         created_by=admin_id,
     )
@@ -60,7 +61,7 @@ def admin_update_schedule_slot(slot_id: str):
     )
     admin_id = get_current_user_id()
 
-    slot = g.admin_facade.schedule_service.admin_update_schedule_slot(
+    slot = g.admin.schedule_service.admin_update_schedule_slot(
         slot_id=slot_id,
         payload=payload,
         updated_by=admin_id,
@@ -83,7 +84,7 @@ def admin_delete_schedule_slot(slot_id: str):
     """
     admin_id = get_current_user_id()
 
-    g.admin_facade.schedule_service.admin_delete_schedule_slot(
+    g.admin.schedule_service.admin_delete_schedule_slot(
         slot_id=slot_id,
         deleted_by=admin_id,
     )
@@ -100,10 +101,11 @@ def admin_list_class_schedules(class_id: str):
     """
     List all schedule slots for a given class.
     """
-    slots = g.admin_facade.schedule_service.admin_list_class_schedules(
+    slots = g.admin.schedule_service.admin_list_class_schedules(
         class_id=class_id,
     )
-    return SchoolAdminMapper.schedule_list_to_dto(slots)
+    slots_dto = mongo_converter.list_to_dto(slots, AdminScheduleSlotDataDTO)
+    return AdminScheduleListDTO(items=slots_dto)
 
 
 # ---------------------------------------------------------
@@ -117,9 +119,25 @@ def admin_list_teacher_schedules(teacher_id: str):
     List all schedule slots for a given teacher.
     Useful for admin overview / conflict debugging.
     """
-   
-    slots = g.admin_facade.schedule_service.admin_list_teacher_schedules(
+    slots = g.admin.schedule_service.admin_list_teacher_schedules(
         teacher_id=teacher_id,
     )
+    slots_dto = mongo_converter.list_to_dto(slots, AdminScheduleSlotDataDTO)
+    return AdminScheduleListDTO(items=slots_dto)
 
-    return SchoolAdminMapper.schedule_list_to_dto(slots)
+
+
+@admin_bp.route("/schedule/slots/<slot_id>", methods=["GET"])
+@role_required(["admin"])
+@wrap_response
+def admin_get_schedule_by_id(slot_id: str):
+    """
+    List all schedule slots for a given class.
+    """
+    slot = g.admin.schedule_service.admin_get_schedule_by_id(
+        slot_id=slot_id,
+    )
+
+    slot_dto = mongo_converter.doc_to_dto(slot, AdminScheduleSlotDataDTO)
+   
+    return slot_dto

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, List
+from typing import  List
 
 from bson import ObjectId
 from pymongo.database import Database
@@ -11,13 +11,9 @@ from app.contexts.admin.data_transfer.request import (
     AdminCreateScheduleSlotSchema,
     AdminUpdateScheduleSlotSchema,
 )
-from app.contexts.admin.data_transfer.response import (AdminScheduleSlotDataDTO)
-
 from app.contexts.shared.decorators.logging_decorator import log_operation
 from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
-
-from app.contexts.shared.model_converter import mongo_converter
-
+from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 class ScheduleAdminService:
     """
     Admin-facing application service for Schedule management.
@@ -30,7 +26,8 @@ class ScheduleAdminService:
     def __init__(self, db: Database):
         self.school_service = SchoolService(db)
         self.schedule_read_model = ScheduleReadModel(db)
-
+        self.admin_read_model = AdminReadModel(db)
+    
     # ---------- Commands ----------
 
     @log_operation(level="INFO")
@@ -76,11 +73,20 @@ class ScheduleAdminService:
     def admin_list_class_schedules(
         self,
         class_id: str | ObjectId,
-    ) -> List[AdminScheduleSlotDataDTO]:
-        return mongo_converter.list_to_dto(self.schedule_read_model.list_class_schedules(class_id=class_id), AdminScheduleSlotDataDTO)
-
+    ) -> List[dict]:
+        schedules = self.admin_read_model.admin_list_class_schedules(class_id=class_id)
+        print(schedules)
+        return schedules
+        
     def admin_list_teacher_schedules(
         self,
         teacher_id: str | ObjectId,
-    ) -> List[AdminScheduleSlotDataDTO]:
-        return mongo_converter.list_to_dto(self.schedule_read_model.list_teacher_schedules(teacher_id=teacher_id), AdminScheduleSlotDataDTO)
+    ) -> List[dict]:
+        return self.admin_read_model.admin_list_teacher_schedules(teacher_id=teacher_id)
+
+
+    def admin_get_schedule_by_id(
+        self,
+        slot_id: str | ObjectId,
+    ) -> dict:
+        return self.admin_read_model.admin_get_schedule_by_id(slot_id=slot_id)

@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 from bson import ObjectId
 from flask import Flask, g, jsonify, request
 
-from app.contexts.admin.data_transfer.requests import AdminCreateUserSchema, AdminUpdateUserSchema
-from app.contexts.admin.data_transfer.responses import AdminCreateUserDataDTO, AdminUpdateUserDataDTO
+from app.contexts.admin.data_transfer.request import AdminCreateUserSchema, AdminUpdateUserSchema
+from app.contexts.admin.data_transfer.response import AdminCreateUserDataDTO, AdminUpdateUserDataDTO
 from app.contexts.shared.enum.roles import SystemRole
 
 BASE_URL = "/api/admin/users"

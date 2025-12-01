@@ -3,19 +3,7 @@ from app.contexts.core.error import AppBaseException, ErrorSeverity, ErrorCatego
 from bson import ObjectId
 
 
-class ClassSectionError(AppBaseException):
-    """Base class for all ClassSection domain errors."""
-    def __init__(self, message: str, **kwargs):
-        severity = kwargs.pop("severity", ErrorSeverity.MEDIUM)
-        super().__init__(
-            message=message,
-            category=ErrorCategory.BUSINESS_LOGIC,
-            severity=severity,
-            **kwargs
-        )
-
-
-class InvalidClassSectionNameError(ClassSectionError):
+class InvalidClassSectionNameError(AppBaseException):
     """Raised when the class section name is empty or invalid."""
     def __init__(self, received_value: str):
         super().__init__(
@@ -27,7 +15,7 @@ class InvalidClassSectionNameError(ClassSectionError):
         )
 
 
-class StudentCapacityExceededError(ClassSectionError):
+class StudentCapacityExceededError(AppBaseException):
     """Raised when adding a student exceeds max capacity."""
     def __init__(self, class_name: str, max_students: int, current_count: int):
         super().__init__(
@@ -42,7 +30,7 @@ class StudentCapacityExceededError(ClassSectionError):
         )
 
 
-class InvalidMaxStudentsError(ClassSectionError):
+class InvalidMaxStudentsError(AppBaseException):
     """Raised when max_students is <= 0."""
     def __init__(self, received_value: int):
         super().__init__(
@@ -54,7 +42,7 @@ class InvalidMaxStudentsError(ClassSectionError):
         )
 
 
-class DuplicateStudentEnrollmentError(ClassSectionError):
+class DuplicateStudentEnrollmentError(AppBaseException):
     """Raised when a student is already enrolled."""
     def __init__(self, student_id: ObjectId, class_id: ObjectId):
         super().__init__(
@@ -65,7 +53,7 @@ class DuplicateStudentEnrollmentError(ClassSectionError):
         )
 
 
-class InvalidSubjectIdError(ClassSectionError):
+class InvalidSubjectIdError(AppBaseException):
     """Raised when subject_id is not a valid ObjectId."""
     def __init__(self, received_value):
         super().__init__(
@@ -76,7 +64,7 @@ class InvalidSubjectIdError(ClassSectionError):
         )
 
 
-class InvalidTeacherIdError(ClassSectionError):
+class InvalidTeacherIdError(AppBaseException):
     """Raised when teacher_id is not a valid ObjectId."""
     def __init__(self, received_value):
         super().__init__(

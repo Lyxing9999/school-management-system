@@ -1,18 +1,7 @@
 from app.contexts.core.error import AppBaseException, ErrorSeverity, ErrorCategory
 from bson import ObjectId
 
-class SubjectError(AppBaseException):
-    """Base class for all Subject domain errors."""
-    def __init__(self, message: str, **kwargs):
-        severity = kwargs.pop("severity", ErrorSeverity.MEDIUM)
-
-        super().__init__(
-            message=message,
-            category=ErrorCategory.BUSINESS_LOGIC,
-            severity=severity,
-            **kwargs
-        )
-class InvalidSubjectNameError(SubjectError):
+class InvalidSubjectNameError(AppBaseException):
     def __init__(self, received_value: str):
         super().__init__(
             message="Subject name cannot be empty.",
@@ -23,7 +12,7 @@ class InvalidSubjectNameError(SubjectError):
         )
 
 
-class InvalidSubjectCodeError(SubjectError):
+class InvalidSubjectCodeError(AppBaseException):
     def __init__(self, received_value: str):
         super().__init__(
             message="Subject code cannot be empty.",
@@ -34,7 +23,7 @@ class InvalidSubjectCodeError(SubjectError):
         )
 
 
-class InvalidGradeLevelError(SubjectError):
+class InvalidGradeLevelError(AppBaseException):
     def __init__(self, level: int):
         super().__init__(
             message=f"Invalid grade level: {level}.",
@@ -47,7 +36,7 @@ class InvalidGradeLevelError(SubjectError):
 
 
 
-class SubjectCodeAlreadyExistsException(SubjectError):
+class SubjectCodeAlreadyExistsException(AppBaseException):
     """Raised when a subject code already exists in the system."""
     def __init__(self, received_value: str):
         super().__init__(
@@ -59,7 +48,7 @@ class SubjectCodeAlreadyExistsException(SubjectError):
         )
 
 
-class SubjectNameAlreadyExistsException(SubjectError):
+class SubjectNameAlreadyExistsException(AppBaseException):
     """Raised when a subject name already exists in the system."""
     def __init__(self, received_value: str):
         super().__init__(
@@ -70,7 +59,7 @@ class SubjectNameAlreadyExistsException(SubjectError):
             hint="Choose a unique subject name that does not exist in the system."
         )
 
-class SubjectNotFoundException(SubjectError):
+class SubjectNotFoundException(AppBaseException):
     """Raised when a subject is not found in the system."""
     def __init__(self, subject_id: ObjectId):
         super().__init__(

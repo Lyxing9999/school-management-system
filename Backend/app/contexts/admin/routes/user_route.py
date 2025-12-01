@@ -1,3 +1,4 @@
+from __future__ import annotations
 from flask import request, g
 from app.contexts.admin.routes import admin_bp
 from app.contexts.core.security.auth_utils import get_current_user_id
@@ -24,7 +25,7 @@ def admin_get_users_paginated():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 5))
     roles = request.args.getlist("role[]") or request.args.getlist("role")
-    cursor, total = g.admin_facade.user_service.admin_get_users(
+    cursor, total = g.admin.user_service.admin_get_users(
         roles, page=page, page_size=page_size
     )
     cursor = mongo_converter.list_to_dto(cursor, PaginatedUserItemDTO)
@@ -43,7 +44,7 @@ def admin_get_users_paginated():
 def admin_create_user():
     user_schema = pydantic_converter.convert_to_model(request.json, AdminCreateUserSchema)
     admin_id = get_current_user_id()
-    user_response_dto = g.admin_facade.user_service.admin_create_user(
+    user_response_dto = g.admin.user_service.admin_create_user(
         user_schema, created_by=admin_id
     )
     return IAMMapper.to_dto(user_response_dto)
@@ -53,7 +54,7 @@ def admin_create_user():
 @wrap_response
 def admin_update_user(user_id):
     user_schema = pydantic_converter.convert_to_model(request.json, AdminUpdateUserSchema)
-    user_update_dto = g.admin_facade.user_service.admin_update_user(user_id, user_schema)
+    user_update_dto = g.admin.user_service.admin_update_user(user_id, user_schema)
     return IAMMapper.to_dto(user_update_dto)
 
 
@@ -61,7 +62,7 @@ def admin_update_user(user_id):
 @role_required(["admin"])
 @wrap_response
 def admin_soft_delete_user(user_id):
-    deleted_user = g.admin_facade.user_service.admin_soft_delete_user(user_id)
+    deleted_user = g.admin.user_service.admin_soft_delete_user(user_id)
     return AdminDeleteUserDTO(
         id=str(deleted_user.id),
         deleted_at=deleted_user.deleted_at,
@@ -72,7 +73,7 @@ def admin_soft_delete_user(user_id):
 @role_required(["admin"])
 @wrap_response
 def admin_hard_delete_user(user_id):
-    g.admin_facade.user_service.admin_hard_delete_user(user_id)
+    g.admin.user_service.admin_hard_delete_user(user_id)
     return BaseResponseDTO(
         data="User hard deleted successfully",
         message="User hard deleted successfully",
@@ -82,8 +83,8 @@ def admin_hard_delete_user(user_id):
 @admin_bp.route('/users/student-select', methods=['GET'])
 @role_required(["admin"])
 @wrap_response
-def admin_get_student_name_select():
-    students = g.admin_facade.user_service.admin_get_student_name_select()
+def admin_list_student_select():
+    students = g.admin.user_service.admin_list_student_select()
     students = mongo_converter.list_to_dto(students, AdminStudentNameSelectDTO)
     return AdminStudentNameSelectListDTO(items=students)
 

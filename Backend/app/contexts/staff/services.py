@@ -6,8 +6,7 @@ from typing import List
 from app.contexts.staff.repositories import StaffRepository
 from app.contexts.staff.read_model import StaffReadModel
 from app.contexts.staff.data_transfer.requests import StaffCreateSchema, StaffUpdateSchema
-from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
-from app.contexts.staff.models import Staff, StaffFactory, StaffMapper
+from app.contexts.staff.domain import Staff, StaffFactory, StaffMapper
 from app.contexts.staff.error.staff_exceptions import (
     StaffNotFoundException,
     StaffNoChangeAppException,
@@ -39,7 +38,7 @@ class StaffService:
     # Domain helpers
     # -------------------------
     def get_to_staff_domain(self, staff_id: str | ObjectId) -> Staff:
-        raw_staff = self._staff_read_model.get_staff_by_id(self.convert_id(staff_id))
+        raw_staff = self._staff_read_model.get_by_user_id(self.convert_id(staff_id))
         if not raw_staff:
             raise StaffNotFoundException(staff_id)
         return StaffMapper.to_domain(raw_staff)

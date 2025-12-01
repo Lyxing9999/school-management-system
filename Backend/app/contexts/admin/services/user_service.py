@@ -10,35 +10,16 @@ from app.contexts.admin.data_transfer.request import (
     AdminUpdateUserSchema,
 )
 from app.contexts.shared.decorators.logging_decorator import log_operation
-
+from typing import Final
 
 class UserAdminService:
     def __init__(self, db: Database):
         self.db = db
-        self._iam_service: Optional[IAMService] = None
-        self._admin_read_model: Optional[AdminReadModel] = None
-        self._iam_factory: Optional[IAMFactory] = None
-        self.user_collection = self.db["users"]
-
-
-
-    @property
-    def iam_service(self) -> IAMService:
-        if self._iam_service is None:
-            self._iam_service = IAMService(self.db)
-        return self._iam_service
-    @property
-    def admin_read_model(self) -> AdminReadModel:
-        if self._admin_read_model is None:
-            self._admin_read_model = AdminReadModel(self.db)
-        return self._admin_read_model
-
-        
-    @property
-    def iam_factory(self) -> IAMFactory:
-        if self._iam_factory is None:
-            self._iam_factory = IAMFactory(user_read_model=self.admin_read_model.iam_read_model)
-        return self._iam_factory
+        self.iam_service: Final[IAMService] = IAMService(db)
+        self.admin_read_model: Final[AdminReadModel] = AdminReadModel(db)
+        self.iam_factory: Final[IAMFactory] = IAMFactory(
+            user_read_model=self.admin_read_model.iam_read_model
+        )
 
     @log_operation(level="INFO")
     def admin_create_user(self, payload: AdminCreateUserSchema, created_by: str | ObjectId) -> IAM:
@@ -55,8 +36,8 @@ class UserAdminService:
 
 
 
-    def admin_get_student_name_select(self) -> List[Dict[str, Any]]:
-        return self.admin_read_model.get_student_name_select()
+    def admin_list_student_select(self) -> List[Dict[str, Any]]:
+        return self.admin_read_model.admin_list_student_select()
 
 
     @log_operation(level="INFO")

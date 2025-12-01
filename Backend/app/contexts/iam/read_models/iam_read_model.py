@@ -25,12 +25,38 @@ class IAMReadModel(MongoErrorMixin):
             self._staff_read_model = StaffReadModel(self.db)
         return self._staff_read_model
 
-    def get_student_name_select(self) -> List[dict]:
+    def list_usernames_by_role(self, role: str) -> List[dict]:
+        """
+        Return [{ _id, username }] for active users with this role.
+        Used for dropdowns, etc.
+        """
         try:
-            return list(self.collection.find({"role": "student"}, {"_id": 1 , "username": 1} ))
+            cursor = self.collection.find(
+                {"role": role, "deleted": {"$ne": True}},
+                {"username": 1, "_id": 1},
+            )
+            return list(cursor)
         except Exception as e:
-            self._handle_mongo_error("get_student_name_select", e)
+            self._handle_mongo_error("list_usernames_by_role", e)
+            return []
 
+    def list_usernames_by_ids(self, user_ids: List[ObjectId], role: str) -> List[dict]:
+        """
+        Given a list of user ObjectIds, return [{_id, username}, ...] 
+
+        """
+        if not user_ids:
+            return []
+
+        cursor = self.collection.find(
+            {
+                "_id": {"$in": user_ids},
+                "role": role,
+                "deleted": {"$ne": True},
+            },
+            {"username": 1}  
+        )
+        return list(cursor)
 # -------------------------
 # return raw for service
 # -------------------------

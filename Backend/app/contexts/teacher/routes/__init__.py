@@ -11,4 +11,7 @@ def inject_teacher_service():
 
 
 def register_routes():
-    from . import teacher_route
+    from . import grades_route 
+    from . import  selects_route
+    from . import attendance_route
+    from . import classes_route

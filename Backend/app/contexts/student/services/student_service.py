@@ -12,10 +12,11 @@ from app.contexts.school.data_transfer.responses import (
     ClassSectionDTO,
     AttendanceDTO,
     GradeDTO,
-    ScheduleDTO,
-)
-from app.contexts.shared.model_converter import mongo_converter
 
+)
+from app.contexts.student.data_transfer.responses import StudentScheduleDTO
+from app.contexts.shared.model_converter import mongo_converter
+from app.contexts.student.read_models.student_read_model import StudentReadModel
 
 class StudentService:
     """
@@ -31,6 +32,7 @@ class StudentService:
         self.grade_read = GradeReadModel(db)
         self.schedule_read = ScheduleReadModel(db)
         self.class_read = ClassReadModel(db)
+        self.student_read = StudentReadModel(db)
 
     def _oid(self, id_: str | ObjectId) -> ObjectId:
         return mongo_converter.convert_to_object_id(id_)
@@ -74,10 +76,11 @@ class StudentService:
     def get_my_schedule(
         self,
         student_id: str | ObjectId,
-    ) -> list[ScheduleDTO]:
+    ) -> list[StudentScheduleDTO]:
         sid = self._oid(student_id)
-        docs = self.schedule_read.list_student_schedules(sid)
-        return mongo_converter.list_to_dto(docs, ScheduleDTO)
+        docs = self.student_read.list_my_schedule(sid)
+        
+        return mongo_converter.list_to_dto(docs, StudentScheduleDTO)
 
     # ---------------- CLASSES ----------------
 
@@ -87,4 +90,5 @@ class StudentService:
     ) -> list[ClassSectionDTO]:
         sid = self._oid(student_id)
         docs = self.class_read.list_student_classes(sid)
+        
         return mongo_converter.list_to_dto(docs, ClassSectionDTO)

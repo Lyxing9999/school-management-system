@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List
+from typing import List, Union
 from bson import ObjectId
 from pymongo.database import Database
 
@@ -14,15 +14,13 @@ from app.contexts.teacher.data_transfer.requests import (
     TeacherChangeGradeTypeRequest,
 )
 from app.contexts.school.data_transfer.responses import (
-    class_section_to_dto,
     attendance_to_dto,
     grade_to_dto,
-    ClassSectionDTO,
     AttendanceDTO,
     GradeDTO,
 )
 from app.contexts.teacher.read_models.teacher_read_models import TeacherReadModel
-
+from app.contexts.teacher.error.teacher_exceptions import TeacherForbiddenException
 from app.contexts.shared.model_converter import mongo_converter
 
 class TeacherService:
@@ -81,9 +79,9 @@ class TeacherService:
         self,
         teacher_id: str | ObjectId,
         class_id: str | ObjectId,
-    ) -> list[AttendanceDTO]:
-        docs = self.teacher_read.list_class_attendance(class_id)
-        return mongo_converter.list_to_dto(docs, AttendanceDTO)
+    ) -> list[dict]:
+        docs = self.teacher_read.list_class_attendance_for_teacher(class_id)
+        return docs
 
     # ---------- Grades ----------
 
@@ -136,7 +134,7 @@ class TeacherService:
         teacher_id: str | ObjectId,
         class_id: str | ObjectId,
     ) -> list[GradeDTO]:
-        docs = self.grade_read.list_by_class(class_id)
+        docs = self.teacher_read.list_class_grades(class_id)
         grades: list[GradeDTO] = []
         for d in docs:
             g = self.school_service.grade_repo.mapper.to_domain(d)
@@ -144,3 +142,29 @@ class TeacherService:
         return grades
 
 
+
+    def list_class_name_options_in_class(
+        self,
+        teacher_id: str | ObjectId,
+    ) -> list[dict]:
+        return self.teacher_read.list_class_name_options_in_class(teacher_id)
+
+    def list_student_name_options_in_class(
+        self, class_id: Union[str, ObjectId], teacher_id: Union[str, ObjectId]
+    ) -> List[Dict]:
+        cls = self.teacher_read.classes.get_by_id(class_id)
+        if not cls or cls.get("teacher_id") != mongo_converter.convert_to_object_id(teacher_id):
+            raise TeacherForbiddenException()
+
+        return self.teacher_read.list_student_name_options_in_class(class_id)
+
+    def list_subject_name_options_in_class(
+        self,
+        class_id: Union[str, ObjectId],
+        teacher_id: Union[str, ObjectId]
+    ) -> List[Dict]:
+        cls = self.teacher_read.classes.get_by_id(class_id)
+        if not cls or cls.get("teacher_id") != mongo_converter.convert_to_object_id(teacher_id):
+            raise TeacherForbiddenException()
+
+        return self.teacher_read.list_subject_name_options_in_class(class_id)

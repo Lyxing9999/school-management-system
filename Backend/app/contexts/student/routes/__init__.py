@@ -13,7 +13,5 @@ def inject_student_service():
         school_service = SchoolService(get_db())
         g.student_service = StudentService(get_db(), SchoolService)
 
-
-
 def register_routes():
     from . import student_route

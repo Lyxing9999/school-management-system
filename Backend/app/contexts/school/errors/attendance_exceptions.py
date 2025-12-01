@@ -3,19 +3,7 @@ from app.contexts.core.error import AppBaseException, ErrorSeverity, ErrorCatego
 from bson import ObjectId
 
 
-class AttendanceError(AppBaseException):
-    """Base class for Attendance domain exceptions."""
-    def __init__(self, message: str, **kwargs):
-        # Use severity from kwargs if provided, else default to MEDIUM
-        severity = kwargs.pop("severity", ErrorSeverity.MEDIUM)
-        super().__init__(
-            message=message,
-            category=ErrorCategory.BUSINESS_LOGIC,
-            severity=severity,
-            **kwargs
-        )
-
-class NotClassTeacherException(AttendanceError):
+class NotClassTeacherException(AppBaseException):
     """Raised when a teacher attempts to mark attendance for a class they don't teach."""
     def __init__(self, teacher_id: ObjectId, class_id: ObjectId):
         super().__init__(
@@ -27,7 +15,7 @@ class NotClassTeacherException(AttendanceError):
         )
 
 
-class StudentNotEnrolledInClassException(AttendanceError):
+class StudentNotEnrolledInClassException(AppBaseException):
     """Raised when a student is not enrolled in the class they are being marked for."""
     def __init__(self, student_id: ObjectId, class_id: ObjectId):
         super().__init__(
@@ -39,7 +27,7 @@ class StudentNotEnrolledInClassException(AttendanceError):
         )
 
 
-class AttendanceAlreadyMarkedException(AttendanceError):
+class AttendanceAlreadyMarkedException(AppBaseException):
     """Raised when attendance is already marked for the student on the same date."""
     def __init__(self, student_id: ObjectId, class_id: ObjectId, record_date: Optional[str]):
         super().__init__(
@@ -51,7 +39,7 @@ class AttendanceAlreadyMarkedException(AttendanceError):
         )
 
 
-class InvalidAttendanceStatusException(AttendanceError):
+class InvalidAttendanceStatusException(AppBaseException):
     """Raised when attendance status is invalid."""
     def __init__(self, received_value):
         super().__init__(
@@ -63,7 +51,7 @@ class InvalidAttendanceStatusException(AttendanceError):
         )
 
 
-class AttendanceDateInFutureException(AttendanceError):
+class AttendanceDateInFutureException(AppBaseException):
     """Raised when the attendance date is in the future."""
     def __init__(self, received_date):
         super().__init__(
