@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="I extends Record<string, any>">
-import { reactive, toRaw, watch, ref } from "vue";
-import type { FormInstance, FormProps } from "element-plus";
+import { computed } from "vue";
+import type { FormProps } from "element-plus";
 import type { Field } from "../types/form";
 import SmartForm from "~/components/Form/SmartForm.vue";
 import { ElDialog } from "element-plus";
@@ -11,7 +11,7 @@ const props = defineProps<{
   title?: string;
   fields: Field<I>[];
   useElForm?: boolean;
-  widthDialog?: string;
+  width?: string;
   loading?: boolean;
   formProps?: Partial<FormProps>;
 }>();
@@ -23,31 +23,18 @@ const emit = defineEmits<{
   (e: "cancel"): void;
 }>();
 
-// local form state
-const localForm = reactive<Record<string, any>>({});
-props.fields.forEach((f) => {
-  if (f.key) localForm[f.key] = props.modelValue?.[f.key] ?? "";
-  if (f.row)
-    f.row.forEach((r) => {
-      if (r.key) localForm[r.key] = props.modelValue?.[r.key] ?? "";
-    });
+// Bridge `v-model` from parent, but only for passing into SmartForm
+const localForm = computed<Partial<I>>({
+  get: () => props.modelValue,
+  set: (val) => emit("update:modelValue", val),
 });
-
-// sync local → parent
-watch(
-  localForm,
-  (val) => {
-    emit("update:modelValue", toRaw(val));
-  },
-  { deep: true }
-);
 
 const handleCancel = () => {
   emit("cancel");
   emit("update:visible", false);
 };
 
-const handleSave = async (payload: Partial<I>) => {
+const handleSave = (payload: Partial<I>) => {
   emit("save", payload);
 };
 </script>
@@ -56,12 +43,17 @@ const handleSave = async (payload: Partial<I>) => {
   <ElDialog
     :model-value="visible"
     :title="title || 'Form'"
-    :width="widthDialog || '800px'"
+    :width="width || '800px'"
     class="smart-dialog"
     @close="handleCancel"
   >
+    <div v-if="loading" class="p-4">
+      <el-skeleton :rows="3" animated />
+    </div>
+
     <SmartForm
-      v-model="localForm"
+      v-else
+      :model-value="localForm"
       :fields="fields"
       :use-el-form="true"
       :form-props="{

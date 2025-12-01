@@ -3,7 +3,7 @@ import BaseButton from "~/components/Base/BaseButton.vue";
 import { ElTooltip } from "element-plus";
 import { Delete, View } from "@element-plus/icons-vue";
 
-defineProps<{
+const props = defineProps<{
   rowId: number | string;
   loading?: boolean;
   role?: string; // current row role
@@ -13,11 +13,20 @@ defineProps<{
   detailContent?: string;
   deleteContent?: string;
   attributes?: Record<string, unknown>;
+  detailLoading: boolean;
+  deleteLoading: boolean;
+  size?: "small" | "default" | "large" | string;
+}>();
+
+// Optional type for slots
+defineSlots<{
+  extra?: (slotProps: { rowId: number | string }) => any;
 }>();
 </script>
 
 <template>
   <div class="flex items-center gap-2 justify-center">
+    <!-- DETAIL -->
     <ElTooltip
       v-if="
         onDetail &&
@@ -29,10 +38,10 @@ defineProps<{
       <BaseButton
         type="text"
         class="button-detail"
-        size="default"
-        :loading="loading"
+        :size="size || 'default'"
+        :loading="detailLoading"
         v-bind="attributes"
-        :disabled="loading"
+        :disabled="detailLoading || deleteLoading"
         @click="onDetail?.(rowId)"
         aria-label="View Details"
       >
@@ -43,13 +52,14 @@ defineProps<{
       </BaseButton>
     </ElTooltip>
 
+    <!-- DELETE -->
     <ElTooltip v-if="onDelete" :content="deleteContent" placement="top">
       <BaseButton
         type="text"
         class="button-delete"
-        size="default"
-        :loading="loading"
-        :disabled="loading"
+        :size="size || 'default'"
+        :loading="deleteLoading"
+        :disabled="deleteLoading || detailLoading"
         v-bind="attributes"
         @click="onDelete?.(rowId)"
         aria-label="Delete User"
@@ -60,6 +70,9 @@ defineProps<{
         Delete
       </BaseButton>
     </ElTooltip>
+
+    <!-- EXTRA SLOT (for Assign / Unassign / anything) -->
+    <slot name="extra" :row-id="rowId" />
   </div>
 </template>
 

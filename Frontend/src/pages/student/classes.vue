@@ -34,11 +34,6 @@ const loadClasses = async () => {
   }
 };
 
-const handleRowClick = (row: ClassSectionDTO) => {
-  if (!row.id) return;
-  router.push(`/student/classes/${row.id}`);
-};
-
 onMounted(loadClasses);
 </script>
 
@@ -69,7 +64,6 @@ onMounted(loadClasses);
         v-loading="loading"
         style="width: 100%"
         highlight-current-row
-        @row-click="handleRowClick"
       >
         <el-table-column prop="name" label="Class Name" min-width="180" />
         <el-table-column
@@ -83,8 +77,8 @@ onMounted(loadClasses);
           :formatter="(row) => row.student_ids?.length ?? 0"
         />
         <el-table-column
-          prop="id"
-          label="Class ID"
+          prop="name"
+          label="Class name"
           min-width="260"
           show-overflow-tooltip
         />

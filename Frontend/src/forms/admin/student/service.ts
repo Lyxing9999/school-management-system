@@ -1,5 +1,5 @@
 import { adminService } from "~/api/admin";
-import type { UseFormService } from "~/forms/types";
+import type { UseFormService } from "~/forms/types/serviceFormTypes";
 
 import type { AdminUpdateStudentInfo } from "~/api/admin/student/dto";
 export function useServiceFormStudentInfo(): UseFormService<
@@ -10,5 +10,6 @@ export function useServiceFormStudentInfo(): UseFormService<
 
   return {
     update: (id, data) => adminApiService.student.updateStudentInfo(id, data),
+    getDetail: (id) => adminApiService.student.getStudentInfo(id),
   };
 }

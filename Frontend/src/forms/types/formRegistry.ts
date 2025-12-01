@@ -1,16 +1,14 @@
-import type { UseFormService } from "../types";
+import type { UseFormService } from "./serviceFormTypes";
 import type { Field } from "~/components/types/form";
 import type { AdminCreateUser, AdminUpdateUser } from "~/api/admin/user/dto";
 import type { AdminCreateStaff, AdminUpdateStaff } from "~/api/admin/staff/dto";
-import type { AdminCreateClass, AdminUpdateClass } from "~/api/admin/class/dto";
+import type { AdminCreateClassDTO } from "~/api/admin/class/dto";
+import type { AdminCreateSubjectDTO } from "~/api/admin/subject/dto";
 import type {
-  AdminCreateSubject,
-  AdminUpdateSubject,
-} from "~/api/admin/subject/dto";
-import type {
-  AdminCreateStudentInfo,
-  AdminUpdateStudentInfo,
-} from "~/api/admin/student/dto";
+  AdminCreateScheduleSlotDTO,
+  AdminUpdateScheduleSlotDTO,
+} from "~/api/admin/schedule/dto";
+
 export type FormRegistryCreateItem<C, U> = {
   service: () => UseFormService<C, U>;
   schema: Field<C>[];
@@ -26,15 +24,33 @@ export type FormRegistryEditItem<C, U> = {
 export type FormRegistryCreate = {
   USER: FormRegistryCreateItem<AdminCreateUser, AdminUpdateUser>;
   STAFF: FormRegistryCreateItem<AdminCreateStaff, AdminUpdateStaff>;
-  CLASS: FormRegistryCreateItem<AdminCreateClass, AdminUpdateClass>;
-  SUBJECT: FormRegistryCreateItem<AdminCreateSubject, AdminUpdateSubject>;
+  CLASS: FormRegistryCreateItem<AdminCreateClassDTO, AdminUpdateClassDTO>;
+  SUBJECT: FormRegistryCreateItem<AdminCreateSubjectDTO, AdminUpdateSubjectDTO>;
   STUDENT: undefined;
+
+  SCHEDULE_SLOT_BY_CLASS: FormRegistryCreateItem<
+    AdminCreateScheduleSlotDTO,
+    AdminUpdateScheduleSlotDTO
+  >;
+  SCHEDULE_SLOT_BY_TEACHER: FormRegistryCreateItem<
+    AdminCreateScheduleSlotDTO,
+    AdminUpdateScheduleSlotDTO
+  >;
 };
 
 export type FormRegistryEdit = {
   USER: FormRegistryEditItem<AdminCreateUser, AdminUpdateUser>;
   STAFF: FormRegistryEditItem<AdminCreateStaff, AdminUpdateStaff>;
-  CLASS: FormRegistryEditItem<AdminCreateClass, AdminUpdateClass>;
-  SUBJECT: FormRegistryEditItem<AdminCreateSubject, AdminUpdateSubject>;
+  CLASS: FormRegistryEditItem<AdminCreateClassDTO, AdminUpdateClassDTO>;
+  SUBJECT: FormRegistryEditItem<AdminCreateSubjectDTO, AdminUpdateSubjectDTO>;
   STUDENT: FormRegistryEditItem<undefined, AdminUpdateStudentInfo>;
+
+  SCHEDULE_SLOT_BY_CLASS: FormRegistryEditItem<
+    AdminCreateScheduleSlotDTO,
+    AdminUpdateScheduleSlotDTO
+  >;
+  SCHEDULE_SLOT_BY_TEACHER: FormRegistryEditItem<
+    AdminCreateScheduleSlotDTO,
+    AdminUpdateScheduleSlotDTO
+  >;
 };

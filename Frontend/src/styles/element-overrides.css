@@ -1,36 +1,33 @@
 /* ===========================
    Element Plus Global Overrides
    =========================== */
+
 /* Dropdown selected item */
 .el-select-dropdown__item.is-selected {
     color: var(--color-primary-light) !important;
 }
 
-
+/* Normal radio (circle style) */
 .el-radio__input.is-checked .el-radio__inner,
 .el-radio__input.is-focus .el-radio__inner {
     border-color: var(--color-primary-light) !important;
-    /* Outer circle */
     background-color: var(--color-primary-light) !important;
-    /* Inner circle */
 }
 
 .el-radio__input:hover .el-radio__inner {
     border-color: var(--color-primary-light) !important;
 }
 
+/* Table clicked column */
 .el-table__row .el-table__cell.clicked-column {
     background-color: var(--color-primary) !important;
     color: #fff !important;
     font-weight: 500;
 }
 
-
-
 /* Switch handle */
 .el-switch__button {
     background-color: var(--color-light) !important;
-    /* white handle */
 }
 
 .el-switch.is-checked .el-switch__core {
@@ -42,11 +39,6 @@
     background-color: var(--color-primary-light-3) !important;
 }
 
-/* Switch handle (button) */
-.el-switch__button {
-    background-color: var(--color-light) !important;
-}
-
 /* Inner label/text inside handle */
 .el-switch__inner {
     color: var(--color-light) !important;
@@ -56,4 +48,52 @@
 .el-main,
 .smart-table-wrapper {
     overscroll-behavior: contain;
+}
+
+/* ===========================
+   Element Plus Radio Button Overrides
+   for the group: All | Active | Inactive
+   =========================== */
+
+/* 1. Default (inactive) border/text: keep them neutral */
+.el-radio-button .el-radio-button__inner {
+    border-color: var(--el-border-color) !important;
+    color: var(--el-text-color-regular) !important;
+}
+
+/* 2. Optional neutral hover, not primary yet */
+.el-radio-button .el-radio-button__inner:hover {
+    border-color: var(--el-border-color-darker) !important;
+}
+
+/* 3. Active (checked) state: use your primary color */
+.el-radio-button.is-active .el-radio-button__inner {
+    background-color: var(--color-primary-light) !important;
+    border-color: var(--color-primary-light) !important;
+    color: var(--color-light) !important;
+    /* usually white */
+    /* Fix the seam on the left side with previous button */
+    box-shadow: -1px 0 0 0 var(--color-primary-light);
+}
+
+/* 4. Fix border between buttons so there's no double line */
+.el-radio-group .el-radio-button:not(:first-child) .el-radio-button__inner {
+    margin-left: -1px;
+}
+
+/* 5. Ensure first button left border looks correct when active */
+.el-radio-group .el-radio-button:first-child.is-active .el-radio-button__inner {
+    border-left-color: var(--color-primary-light) !important;
+}
+
+/* 6. Focus state (keyboard focus) */
+.el-radio-button.is-focus .el-radio-button__inner {
+    box-shadow: 0 0 0 1px var(--color-primary-light-3);
+}
+
+/* 7. Disabled (optional) */
+.el-radio-button.is-disabled .el-radio-button__inner {
+    border-color: var(--color-primary-light-3);
+    color: var(--color-primary-light-3);
+    background-color: rgba(0, 0, 0, 0.02);
 }

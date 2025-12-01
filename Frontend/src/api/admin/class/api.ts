@@ -3,6 +3,7 @@ import type {
   AdminCreateClassDTO,
   AdminGetClassListResponse,
   AdminGetClassResponse,
+  AdminClassNameSelectListResponse,
 } from "./dto";
 
 export class ClassApi {
@@ -23,6 +24,13 @@ export class ClassApi {
   async getClass(classId: string) {
     const res = await this.$api.get<AdminGetClassResponse>(
       `${this.baseURL}/${classId}`
+    );
+    return res.data;
+  }
+
+  async listClassNameSelect() {
+    const res = await this.$api.get<AdminClassNameSelectListResponse>(
+      `${this.baseURL}/names-select`
     );
     return res.data;
   }

@@ -20,8 +20,8 @@ import BaseButton from "~/components/Base/BaseButton.vue";
 // Composables
 // --------------------
 import { useDialogDynamicWidth } from "~/composables/useDialogDynamicWidth";
-import { usePaginatedFetch } from "~/composables/pagination/usePaginatedFetch";
-import { useInlineEdit } from "~/composables/inline-edit/useInlineEdit";
+import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
+import { useInlineEdit } from "~/composables/useInlineEdit";
 
 // --------------------
 // Schemas & Registry
@@ -49,12 +49,7 @@ import {
 // --------------------
 // API & Types
 // --------------------
-import type {
-  AdminCreateUser,
-  AdminGetUserData,
-  AdminUpdateUser,
-} from "~/api/admin/user/dto";
-import type { AdminCreateStaff, AdminUpdateStaff } from "~/api/admin/staff/dto";
+import type { AdminGetUserData, AdminUpdateUser } from "~/api/admin/user/dto";
 
 import { Role } from "~/api/types/enums/role.enum";
 
@@ -98,7 +93,7 @@ const handleCancelCreateForm = () => {
 watch(
   () => selectedFormCreate.value,
   () => {
-    resetFormData(); // automatically uses the latest getDefaultData()
+    resetFormData();
   }
 );
 /* ---------------------------- edit form -------------------------- */
@@ -111,19 +106,24 @@ const {
   cancelForm: cancelEditForm,
   loading: editFormLoading,
 } = useDynamicEditFormReactive(selectedFormEdit);
-
+const detailLoading = ref<Record<string | number, boolean>>({});
 const handleOpenEditForm = async (row: AdminGetUserData) => {
-  selectedFormEdit.value =
-    row.role === "student"
-      ? "STUDENT"
-      : row.role === "academic" || row.role === "teacher"
-      ? "STAFF"
-      : "USER";
-  editFormDataKey.value = row.id?.toString() ?? "new";
-  editFormData.value = {};
-  await nextTick();
-  await openEditForm(row.id);
-  editFormVisible.value = true;
+  try {
+    detailLoading.value[row.id] = true;
+    selectedFormEdit.value =
+      row.role === "student"
+        ? "STUDENT"
+        : row.role === "academic" || row.role === "teacher"
+        ? "STAFF"
+        : "USER";
+    editFormDataKey.value = row.id?.toString() ?? "new";
+    await nextTick();
+    await openEditForm(row.id);
+  } catch (error) {
+    console.error("Failed to open edit form:", error);
+  } finally {
+    detailLoading.value[row.id] = false;
+  }
 };
 const handleSaveEditForm = (payload: Partial<any>) => {
   saveEditForm(payload);
@@ -131,7 +131,6 @@ const handleSaveEditForm = (payload: Partial<any>) => {
 const handleCancelEditForm = () => {
   cancelEditForm();
 };
-
 /* ---------------------------- inline edit ------------------------ */
 const {
   data,
@@ -205,13 +204,10 @@ const schemaCreate = computed(
 const schemaEdit = computed(
   () => formRegistryEdit[selectedFormEdit.value].schema ?? []
 );
-
-const dynamicWidthCreate = computed(
-  () => useDialogDynamicWidth(schemaCreate.value).value
-);
-const dynamicWidthEdit = computed(
-  () => useDialogDynamicWidth(schemaEdit.value).value
-);
+const createWidthRef = useDialogDynamicWidth(schemaCreate.value);
+const dynamicWidthCreate = computed(() => createWidthRef.value);
+const editWidthRef = useDialogDynamicWidth(schemaEdit.value);
+const dynamicWidthEdit = computed(() => editWidthRef.value);
 /* ----------------------------- create form width ------------------------------ */
 
 const createDialogWidth = computed(() => {
@@ -260,11 +256,6 @@ function handleAutoSaveWrapper(
     console.error(err);
   });
 }
-
-const editFormDataTyped = computed({
-  get: () => editFormData.value,
-  set: (value) => (editFormData.value = value),
-});
 </script>
 
 <template>
@@ -331,7 +322,8 @@ const editFormDataTyped = computed({
             :deleteContent="`Delete ${
               row.role.charAt(0).toUpperCase() + row.role.slice(1)
             }`"
-            :loading="inlineEditLoading[row.id] ?? false"
+            :detailLoading="detailLoading[row.id] ?? false"
+            :deleteLoading="inlineEditLoading[row.id] ?? false"
             @detail="handleOpenEditForm(row)"
             @delete="removeUser(row)"
           />
@@ -380,20 +372,19 @@ const editFormDataTyped = computed({
   </ErrorBoundary>
 
   <!-- EDIT DIALOG -->
-  <ErrorBoundary>
-    <SmartFormDialog
-      :key="`${selectedFormEdit}-${editFormDataKey}`"
-      v-model:visible="editFormVisible"
-      v-model="editFormDataTyped"
-      :fields="editFormSchema"
-      :title="'Edit'"
-      :loading="editFormLoading"
-      @save="handleSaveEditForm"
-      @cancel="handleCancelEditForm"
-      :useElForm="true"
-      :width="editDialogWidth"
-    />
-  </ErrorBoundary>
+
+  <SmartFormDialog
+    :key="`${selectedFormEdit}-${editFormDataKey}`"
+    v-model:visible="editFormVisible"
+    v-model="editFormData"
+    :fields="editFormSchema"
+    :title="'Edit'"
+    :loading="editFormLoading"
+    @save="handleSaveEditForm"
+    @cancel="handleCancelEditForm"
+    :useElForm="true"
+    :width="editDialogWidth"
+  />
 </template>
 
 <style scoped>

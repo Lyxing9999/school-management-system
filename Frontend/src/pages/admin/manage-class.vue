@@ -89,7 +89,7 @@ import StudentSelect from "~/components/Selects/StudentSelect.vue";
 
 /* ---------------------- columns (SmartTable) ---------------------- */
 
-const classColumns = computed<ColumnConfig<AdminClassDataDTO>[]>(() => [
+const classColumns = computed(() => [
   {
     label: "Name",
     field: "name",
@@ -234,20 +234,26 @@ const currentClassForStudents = ref<AdminClassDataDTO | null>(null);
 
 const originalStudentIds = ref<string[]>([]);
 const selectedStudentIds = ref<string[]>([]);
-
+const detailLoading = ref(false);
+const deleteLoading = ref<Record<string | number, boolean>>({});
 async function openManageStudentsDialog(row: AdminClassDataDTO) {
+  detailLoading.value = true;
   currentClassForStudents.value = row;
   originalStudentIds.value = [...(row.student_ids ?? [])];
   selectedStudentIds.value = [...(row.student_ids ?? [])];
+  await nextTick();
 
   manageStudentsVisible.value = true;
+  detailLoading.value = false;
 }
 
 function cancelManageStudents() {
   manageStudentsVisible.value = false;
+  detailLoading.value = false;
 }
-
+const saveStudentsLoading = ref(false);
 async function saveManageStudents() {
+  saveStudentsLoading.value = true;
   const cls = currentClassForStudents.value;
   if (!cls) return;
 
@@ -278,9 +284,11 @@ async function saveManageStudents() {
     ElMessage.success("Students updated");
     manageStudentsVisible.value = false;
     await fetchClasses();
-  } catch (err) {
+  } catch (err: any) {
     console.error("Failed to update students", err);
     ElMessage.error("Failed to update students");
+  } finally {
+    saveStudentsLoading.value = false;
   }
 }
 
@@ -292,7 +300,7 @@ async function fetchClasses() {
     const res: AdminClassListDTO | undefined =
       await adminApi.class.getClasses();
     classes.value = res?.items ?? [];
-  } catch (err) {
+  } catch (err: any) {
     console.error("Failed to fetch classes", err);
   } finally {
     tableLoading.value = false;
@@ -344,6 +352,7 @@ function handleCancelCreateForm() {
 
 async function handleSoftDelete(row: AdminClassDataDTO) {
   try {
+    deleteLoading.value[row.id] = true;
     await ElMessageBox.confirm(
       "Are you sure you want to soft delete this class?",
       "Warning",
@@ -359,6 +368,8 @@ async function handleSoftDelete(row: AdminClassDataDTO) {
   } catch (err: any) {
     if (err === "cancel" || err === "close") return;
     console.error("Soft delete failed", err);
+  } finally {
+    deleteLoading.value[row.id] = false;
   }
 }
 
@@ -403,6 +414,8 @@ onMounted(() => {
           deleteContent="Delete class"
           @detail="openManageStudentsDialog(row)"
           @delete="handleSoftDelete(row)"
+          :deleteLoading="deleteLoading[row.id]"
+          :detailLoading="detailLoading"
         />
       </template>
     </SmartTable>
@@ -442,7 +455,12 @@ onMounted(() => {
 
       <template #footer>
         <BaseButton @click="cancelManageStudents">Cancel</BaseButton>
-        <BaseButton type="primary" class="ml-2" @click="saveManageStudents">
+        <BaseButton
+          type="primary"
+          class="ml-2"
+          :loading="saveStudentsLoading"
+          @click="saveManageStudents"
+        >
           Save
         </BaseButton>
       </template>

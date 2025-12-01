@@ -1,7 +1,7 @@
-import { ref, computed, type ComputedRef } from "vue";
+import { ref } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { getKey } from "~/utils/aliasMapper";
-import type { UseFormService } from "~/forms/types";
+import type { UseFormService } from "~/forms/types/serviceFormTypes";
 
 export interface UseInlineEditService<T> {
   update: (id: string, payload: Partial<T>) => Promise<T>;
@@ -30,13 +30,12 @@ export function useInlineEdit<
   TUpdate extends object
 >(
   initialData: TGet[] = [],
-  inlineEditService: { value: UseInlineEditService<TUpdate> } // ComputedRef unwrap for clarity
+  inlineEditService: { value: UseInlineEditService<TUpdate> }
 ) {
   const service = inlineEditService.value;
 
   const data = ref<TGet[]>([...initialData]);
   const loading = ref<Record<string | number, boolean>>({});
-  const deleteLoading = ref<Record<string | number, boolean>>({});
   const originalRows = ref<Record<string | number, TGet>>({});
   const previousValues = ref<
     Record<string | number, Partial<Record<keyof TGet, any[]>>>

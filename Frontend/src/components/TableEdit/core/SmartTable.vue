@@ -24,17 +24,19 @@ const safeColumns = computed(() =>
 
 const skeletonCount = 5;
 </script>
+
 <template>
-  <div v-if="props.loading">
+  <div v-if="props.loading && (!props.data || props.data.length === 0)">
     <el-skeleton
+      v-for="i in skeletonCount"
+      :key="i"
       :rows="1"
       animated
       class="table-skeleton-row"
-      v-for="i in skeletonCount"
-      :key="i"
     />
   </div>
-  <div v-else-if="props.data && props.data.length > 0">
+
+  <div v-else>
     <el-table
       :data="props.data"
       v-bind="props.smartProps"
@@ -44,13 +46,14 @@ const skeletonCount = 5;
     >
       <EditableColumn
         v-for="(column, colIndex) in safeColumns"
-        v-bind="column"
         :key="colIndex"
+        v-bind="column"
         :align="column.align as 'left' | 'center' | 'right' | undefined"
         :field="column.field as keyof T"
         @save="(row, field) => emit('save', row as T, field as keyof T)"
         @cancel="(row, field) => emit('cancel', row as T, field as keyof T)"
-        @auto-save="(row, field) => emit('auto-save', row as T, field as keyof T)"
+        @auto-save="(row, field) =>
+          emit('auto-save', row as T, field as keyof T)"
       >
         <template v-if="column.useSlots" #[column.slotName]="slotProps">
           <slot :name="column.slotName" v-bind="slotProps" />
@@ -59,6 +62,7 @@ const skeletonCount = 5;
         <template v-if="column.operation" #operation="slotProps">
           <slot name="operation" v-bind="slotProps" />
         </template>
+
         <template v-if="column.controlsSlot" #controlsSlot="slotProps">
           <slot name="controlsSlot" v-bind="slotProps" />
         </template>

@@ -1,28 +1,27 @@
 import type { AxiosInstance } from "axios";
 import type {
-  UserRegisterForm,
+  UserRegister,
   UserLoginForm,
-  UserLoginResponseDTO,
-  UserRegisterResponseDTO,
-} from "~/api/auth/dto";
+  UserLoginResponse,
+  UserRegisterResponse,
+} from "~/api/iam/dto";
 
 export class AuthApi {
   constructor(private $api: AxiosInstance, private baseURL = "/api/iam") {}
 
-  async registerUser(form: UserRegisterForm): Promise<UserRegisterResponseDTO> {
-    const response = await this.$api.post<UserRegisterResponseDTO>(
+  async registerUser(form: UserRegister): Promise<UserRegisterResponse> {
+    const response = await this.$api.post<UserRegisterResponse>(
       `${this.baseURL}/register`,
       form
     );
 
     return response.data;
   }
-  async login(form: UserLoginForm): Promise<UserLoginResponseDTO> {
-    const response = await this.$api.post<UserLoginResponseDTO>(
+  async login(form: UserLoginForm): Promise<UserLoginResponse> {
+    const response = await this.$api.post<UserLoginResponse>(
       `${this.baseURL}/login`,
       form
     );
-    console.log(response);
     return response.data;
   }
 

@@ -27,8 +27,8 @@ export const subjectFormSchema: Field<AdminCreateSubject>[] = [
         return data.map((s: any) => ({ label: s.staff_name, value: s._id }));
       },
       placeholder: "Enter teacher name",
-      multiple: true, // ✅ allow selecting multiple teachers
-      collapseTags: false, // show all selected names instead of "3 selected"
+      multiple: true, 
+      collapseTags: false, 
     },
   },
 ];

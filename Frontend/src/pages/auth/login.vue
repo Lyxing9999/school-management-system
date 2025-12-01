@@ -3,17 +3,12 @@ import { ref, reactive } from "vue";
 import { ElMessage } from "element-plus";
 import schoolLogo from "~/assets/image/school-logo.jpg";
 import googleIcon from "~/assets/icons/svg/google.svg";
-import { AuthService } from "~/services/authService";
-import { useNuxtApp } from "nuxt/app";
-import type { UserLoginForm } from "~/api/auth/dto";
-import { AuthApi } from "~/api/auth/api";
-import type { AxiosInstance } from "axios";
+import { iamService } from "~/api/iam/index";
+import type { UserLoginForm } from "~/api/iam/dto";
 
 const hover = ref(false);
 const hoverGoogle = ref(false);
-const $api = useNuxtApp().$api;
-const authApi = new AuthApi($api as AxiosInstance);
-const authService = new AuthService(authApi);
+const authService = iamService().auth;
 const loading = ref(false);
 
 const form: UserLoginForm = reactive({

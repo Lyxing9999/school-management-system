@@ -3,33 +3,27 @@
   setup
   generic="T extends Record<string, any> = Record<string, any>"
 >
-import { defineProps, reactive } from "vue";
 import FormField from "./FormField.vue";
 import type { Field } from "../types/form";
 import type { FormInstance } from "element-plus";
+import type { UploadUserFile } from "element-plus";
 
-const props = defineProps<{
+defineProps<{
   rowFields: Field<T>[];
-  form: Partial<T>;
-  fileList: Record<string, any>;
+  form: Record<string, any>;
+  fileList: Record<string, UploadUserFile[]>;
   useElForm: boolean;
   elFormRef?: FormInstance | null;
 }>();
 
-// Make fileList reactive locally if needed
-const localFileList = reactive({ ...props.fileList });
-
-// Update localFileList when FormField emits change
-function handleUploadChange(key: string, files: any) {
-  localFileList[key] = Array.isArray(files) ? files : [files];
-}
-
-// Optional: handle file remove
-function handleUploadRemove(key: string, file: any) {
-  if (localFileList[key]) {
-    localFileList[key] = localFileList[key].filter((f: any) => f !== file);
-  }
-}
+const emit = defineEmits<{
+  (
+    e: "upload-change",
+    key: string,
+    files: UploadUserFile[] | UploadUserFile | string
+  ): void;
+  (e: "upload-remove", key: string, file: UploadUserFile): void;
+}>();
 </script>
 
 <template>
@@ -42,13 +36,11 @@ function handleUploadRemove(key: string, file: any) {
       <FormField
         :field="subField"
         :form="form"
-        :el-form-ref="props.elFormRef"
-        :file-list="localFileList"
+        :el-form-ref="elFormRef"
+        :file-list="fileList"
         :use-el-form="useElForm"
-        @update:modelValue="(val) => Object.assign(form, val)"
-        @updateField="(key, value) => (form[key] = value)"
-        @onUploadChange="handleUploadChange"
-        @onUploadRemove="handleUploadRemove"
+        @upload-change="(key, files) => emit('upload-change', key, files)"
+        @upload-remove="(key, file) => emit('upload-remove', key, file)"
       />
     </el-col>
   </el-row>

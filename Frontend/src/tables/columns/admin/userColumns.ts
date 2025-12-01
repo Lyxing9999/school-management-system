@@ -1,9 +1,7 @@
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import { ElInput, ElDatePicker, ElTag } from "element-plus";
 import { h } from "vue";
-import type {
-  AdminGetUserItemData,
-} from "~/api/admin/user/dto";
+import type { AdminGetUserItemData } from "~/api/admin/user/dto";
 
 export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
   {
@@ -13,7 +11,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     controls: false,
     autoSave: true,
     controlsSlot: true,
-    minWidth: "150px", // flexible
+    minWidth: "150px",
     rules: [
       { required: true, message: "Please input username", trigger: "blur" },
       { min: 6, message: "At least 6 characters", trigger: "blur" },

@@ -1,8 +1,8 @@
 import { adminService } from "~/api/admin";
-import type { UseFormService } from "~/forms/types";
+import type { UseFormService } from "~/forms/types/serviceFormTypes";
 import type {
-  AdminCreateSubject,
-  AdminUpdateSubject,
+  AdminCreateSubjectDTO as AdminCreateSubject,
+  AdminUpdateSubjectDTO as AdminUpdateSubject,
 } from "~/api/admin/subject/dto";
 
 export function useServiceFormSubject(): UseFormService<

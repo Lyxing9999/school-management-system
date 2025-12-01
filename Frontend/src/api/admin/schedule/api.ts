@@ -15,6 +15,13 @@ export class ScheduleSlotApi {
   // QUERY
   // ============
 
+  async getScheduleSlotById(id: string) {
+    const res = await this.$api.get<AdminGetScheduleSlotResponse>(
+      `${this.baseURL}/slots/${id}`
+    );
+    return res.data;
+  }
+
   async getClassSchedule(classId: string) {
     const res = await this.$api.get<AdminGetScheduleSlotResponse>(
       `${this.baseURL}/classes/${classId}`

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { ElSelect, ElOption } from "element-plus";
 
 interface Option<T = any> {
@@ -9,14 +9,16 @@ interface Option<T = any> {
 }
 
 const props = defineProps<{
-  modelValue: any; // for v-model
-  fetcher: () => Promise<any[]>; // how to load data
-  labelKey?: string; // prop name in raw item
-  valueKey?: string; // prop name in raw item
+  modelValue: any;
+  fetcher: () => Promise<any[]>;
+  labelKey?: string;
+  valueKey?: string;
   placeholder?: string;
   disabled?: boolean;
   clearable?: boolean;
   multiple?: boolean;
+  // optional key to force refetch when something changes (e.g. classId)
+  reloadKey?: string | number | boolean | null;
 }>();
 
 const emit = defineEmits<{
@@ -25,18 +27,10 @@ const emit = defineEmits<{
 
 const options = ref<Option[]>([]);
 const loading = ref(false);
-const innerValue = ref(props.modelValue);
 
-// keep innerValue and parent v-model synced
-watch(
-  () => props.modelValue,
-  (v) => {
-    innerValue.value = v;
-  }
-);
-
-watch(innerValue, (v) => {
-  emit("update:modelValue", v);
+const innerValue = computed({
+  get: () => props.modelValue,
+  set: (val) => emit("update:modelValue", val),
 });
 
 const loadOptions = async () => {
@@ -51,6 +45,7 @@ const loadOptions = async () => {
       value: item[valueKey],
       raw: item,
     }));
+    console.log(options.value);
   } catch (e) {
     console.error("RemoteSelect fetch error:", e);
   } finally {
@@ -59,6 +54,16 @@ const loadOptions = async () => {
 };
 
 onMounted(loadOptions);
+
+// refetch when reloadKey changes (e.g. when classId changes)
+watch(
+  () => props.reloadKey,
+  () => {
+    loadOptions();
+    // optional: reset selected value when data source changed
+    // innerValue.value = props.multiple ? [] : null;
+  }
+);
 </script>
 
 <template>

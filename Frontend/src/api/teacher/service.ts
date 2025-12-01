@@ -1,5 +1,5 @@
 // ~/api/teacher/service.ts
-import { useApiUtils } from "~/utils/useApiUtils";
+import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
 import { TeacherApi } from "./api";
 import type {
   TeacherClassListDTO,
@@ -10,11 +10,15 @@ import type {
   TeacherAddGradeDTO,
   TeacherUpdateGradeScoreDTO,
   TeacherChangeGradeTypeDTO,
+  TeacherStudentSelectNameListDTO,
+  TeacherSubjectSelectNameListDTO,
+  TeacherClassSelectNameListDTO,
+  TeacherStudentNameListDTO,
 } from "./dto";
 import type { AttendanceDTO, GradeDTO } from "~/api/types/school.dto";
 
 export class TeacherService {
-  private safeApiCall = useApiUtils().safeApiCall;
+  private callApi = useApiUtils().callApi;
 
   constructor(private teacherApi: TeacherApi) {}
 
@@ -22,9 +26,42 @@ export class TeacherService {
   // Classes
   // ----------
 
-  async getMyClasses() {
-    const { data } = await this.safeApiCall<TeacherClassListDTO>(() =>
-      this.teacherApi.getMyClasses()
+  async listMyClasses(options?: ApiCallOptions) {
+    const data = await this.callApi<TeacherClassListDTO>(
+      () => this.teacherApi.listMyClasses(),
+      options
+    );
+    return data!;
+  }
+
+  async listClassNameSelect(options?: ApiCallOptions) {
+    const data = await this.callApi<TeacherClassSelectNameListDTO>(
+      () => this.teacherApi.listClassNameSelect(),
+      options
+    );
+    return data!;
+  }
+
+  async listStudentsInClass(classId: string, options?: ApiCallOptions) {
+    const data = await this.callApi<TeacherStudentSelectNameListDTO>(
+      () => this.teacherApi.listStudentsInClass(classId),
+      options
+    );
+    return data!;
+  }
+
+  async listSubjectsInClass(classId: string, options?: ApiCallOptions) {
+    const data = await this.callApi<TeacherSubjectSelectNameListDTO>(
+      () => this.teacherApi.listSubjectsInClass(classId),
+      options
+    );
+    return data!;
+  }
+
+  async listStudentNamesInClass(classId: string, options?: ApiCallOptions) {
+    const data = await this.callApi<TeacherStudentNameListDTO>(
+      () => this.teacherApi.listStudentNamesInClass(classId),
+      options
     );
     return data!;
   }
@@ -33,26 +70,33 @@ export class TeacherService {
   // Attendance
   // ----------
 
-  async markAttendance(payload: TeacherMarkAttendanceDTO) {
-    const { data } = await this.safeApiCall<AttendanceDTO>(() =>
-      this.teacherApi.markAttendance(payload)
+  async markAttendance(
+    payload: TeacherMarkAttendanceDTO,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<AttendanceDTO>(
+      () => this.teacherApi.markAttendance(payload),
+      options
     );
     return data!;
   }
 
   async changeAttendanceStatus(
     attendanceId: string,
-    payload: TeacherChangeAttendanceStatusDTO
+    payload: TeacherChangeAttendanceStatusDTO,
+    options?: ApiCallOptions
   ) {
-    const { data } = await this.safeApiCall<AttendanceDTO>(() =>
-      this.teacherApi.changeAttendanceStatus(attendanceId, payload)
+    const data = await this.callApi<AttendanceDTO>(
+      () => this.teacherApi.changeAttendanceStatus(attendanceId, payload),
+      options
     );
     return data!;
   }
 
-  async listAttendanceForClass(classId: string) {
-    const { data } = await this.safeApiCall<TeacherAttendanceListDTO>(() =>
-      this.teacherApi.listAttendanceForClass(classId)
+  async listAttendanceForClass(classId: string, options?: ApiCallOptions) {
+    const data = await this.callApi<TeacherAttendanceListDTO>(
+      () => this.teacherApi.listAttendanceForClass(classId),
+      options
     );
     return data!;
   }
@@ -61,30 +105,42 @@ export class TeacherService {
   // Grades
   // ----------
 
-  async addGrade(payload: TeacherAddGradeDTO) {
-    const { data } = await this.safeApiCall<GradeDTO>(() =>
-      this.teacherApi.addGrade(payload)
+  async addGrade(payload: TeacherAddGradeDTO, options?: ApiCallOptions) {
+    const data = await this.callApi<GradeDTO>(
+      () => this.teacherApi.addGrade(payload),
+      options
     );
     return data!;
   }
 
-  async updateGradeScore(gradeId: string, payload: TeacherUpdateGradeScoreDTO) {
-    const { data } = await this.safeApiCall<GradeDTO>(() =>
-      this.teacherApi.updateGradeScore(gradeId, payload)
+  async updateGradeScore(
+    gradeId: string,
+    payload: TeacherUpdateGradeScoreDTO,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<GradeDTO>(
+      () => this.teacherApi.updateGradeScore(gradeId, payload),
+      options
     );
     return data!;
   }
 
-  async changeGradeType(gradeId: string, payload: TeacherChangeGradeTypeDTO) {
-    const { data } = await this.safeApiCall<GradeDTO>(() =>
-      this.teacherApi.changeGradeType(gradeId, payload)
+  async changeGradeType(
+    gradeId: string,
+    payload: TeacherChangeGradeTypeDTO,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<GradeDTO>(
+      () => this.teacherApi.changeGradeType(gradeId, payload),
+      options
     );
     return data!;
   }
 
-  async listGradesForClass(classId: string) {
-    const { data } = await this.safeApiCall<TeacherGradeListDTO>(() =>
-      this.teacherApi.listGradesForClass(classId)
+  async listGradesForClass(classId: string, options?: ApiCallOptions) {
+    const data = await this.callApi<TeacherGradeListDTO>(
+      () => this.teacherApi.listGradesForClass(classId),
+      options
     );
     return data!;
   }

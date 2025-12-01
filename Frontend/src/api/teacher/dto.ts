@@ -9,6 +9,52 @@ import type {
 } from "~/api/types/school.dto";
 
 /**
+ * Python: TeacherStudentNameSelectDTO
+ */
+export interface TeacherStudentNameSelectDTO {
+  id: string;
+  name: string;
+}
+
+export interface TeacherStudentNameDTO {
+  id: string;
+  name: string;
+}
+
+export interface TeacherStudentNameListDTO {
+  items: TeacherStudentNameDTO[];
+}
+
+/**
+ * Python: TeacherStudentSelectNameListDTO
+ */
+export interface TeacherStudentSelectNameListDTO {
+  items: TeacherStudentNameSelectDTO[];
+}
+
+/**
+ * Python: TeacherSubjectNameSelectDTO
+ */
+export interface TeacherSubjectNameSelectDTO {
+  id: string;
+  name: string;
+}
+
+/**
+ * Python: TeacherSubjectSelectNameListDTO
+ */
+export interface TeacherSubjectSelectNameListDTO {
+  items: TeacherSubjectNameSelectDTO[];
+}
+
+/**
+ * Python: TeacherClassSelectNameListDTO
+ */
+export interface TeacherClassSelectNameListDTO {
+  items: TeacherClassListDTO[];
+}
+
+/**
  * Python: TeacherClassListDTO
  */
 export interface TeacherClassListDTO {
@@ -74,3 +120,14 @@ export type TeacherChangeGradeTypeResponse = ApiResponse<GradeDTO>;
 export type TeacherListClassAttendanceResponse =
   ApiResponse<TeacherAttendanceListDTO>;
 export type TeacherListClassGradesResponse = ApiResponse<TeacherGradeListDTO>;
+
+export type TeacherSubjectsSelectNameListResponse =
+  ApiResponse<TeacherSubjectSelectNameListDTO>;
+export type TeacherStudentsSelectNameListResponse =
+  ApiResponse<TeacherStudentSelectNameListDTO>;
+
+export type TeacherClassSelectNameListResponse =
+  ApiResponse<TeacherClassSelectNameListDTO>;
+
+export type TeacherStudentNameListResponse =
+  ApiResponse<TeacherStudentNameListDTO>;

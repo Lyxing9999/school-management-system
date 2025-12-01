@@ -1,4 +1,5 @@
-import { useApiUtils } from "~/utils/useApiUtils";
+// ~/api/staff/service.ts
+import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
 import type {
   AdminCreateStaff,
   AdminUpdateStaff,
@@ -9,40 +10,52 @@ import type {
 import { StaffApi } from "../staff/api";
 
 export class StaffService {
-  private safeApiCall = useApiUtils().safeApiCall;
+  private callApi = useApiUtils().callApi;
+
   constructor(private staffApi: StaffApi) {}
 
-  async getTeacherSelect() {
-    const { data } = await this.safeApiCall<AdminTeacherSelectListData>(() =>
-      this.staffApi.getTeacherSelect()
-    );
-
-    return data!;
-  }
-  async getStaffNameSelect() {
-    const { data } = await this.safeApiCall<AdminStaffNameSelectData>(() =>
-      this.staffApi.getStaffNameSelect()
+  // Queries
+  async getTeacherSelect(options?: ApiCallOptions) {
+    const data = await this.callApi<AdminTeacherSelectListData>(
+      () => this.staffApi.getTeacherSelect(),
+      options
     );
     return data!;
   }
 
-  async createStaff(staffData: AdminCreateStaff) {
-    const { data } = await this.safeApiCall<AdminGetStaffData>(() =>
-      this.staffApi.createStaff(staffData)
+  async getStaffNameSelect(options?: ApiCallOptions) {
+    const data = await this.callApi<AdminStaffNameSelectData>(
+      () => this.staffApi.getStaffNameSelect(),
+      options
     );
     return data!;
   }
 
-  async updateStaff(id: string, staffData: AdminUpdateStaff) {
-    const { data } = await this.safeApiCall<AdminGetStaffData>(() =>
-      this.staffApi.updateStaff(id, staffData)
+  async getStaffDetail(id: string, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminGetStaffData>(
+      () => this.staffApi.getStaffDetail(id),
+      options
     );
     return data!;
   }
 
-  async getStaffDetail(id: string) {
-    const { data } = await this.safeApiCall<AdminGetStaffData>(() =>
-      this.staffApi.getStaffDetail(id)
+  // Commands
+  async createStaff(staffData: AdminCreateStaff, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminGetStaffData>(
+      () => this.staffApi.createStaff(staffData),
+      { showSuccess: true, ...(options ?? {}) }
+    );
+    return data!;
+  }
+
+  async updateStaff(
+    id: string,
+    staffData: AdminUpdateStaff,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<AdminGetStaffData>(
+      () => this.staffApi.updateStaff(id, staffData),
+      { showSuccess: true, ...(options ?? {}) }
     );
     return data!;
   }

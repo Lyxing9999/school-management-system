@@ -54,7 +54,10 @@ export interface AdminUpdateScheduleSlotDTO {
  * - created_at: datetime
  * - updated_at: datetime
  */
-export interface AdminScheduleSlotDataDTO extends ScheduleDTO {}
+export interface AdminScheduleSlotDataDTO extends ScheduleDTO {
+  class_name: string;
+  teacher_name: string;
+}
 
 /**
  * List wrapper

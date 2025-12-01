@@ -1,10 +1,9 @@
-=
 <script
   lang="ts"
   setup
   generic="T extends Record<string, any> = Record<string, any>"
 >
-import { watch, nextTick } from "vue";
+import { nextTick } from "vue";
 import { ElFormItem, ElInput, ElUpload, type FormInstance } from "element-plus";
 import DisplayOnlyField from "~/components/Form/DisplayOnlyField.vue";
 import type { Field } from "../types/form";
@@ -12,15 +11,19 @@ import type { UploadUserFile } from "element-plus";
 
 const props = defineProps<{
   field: Field<T>;
-  form: Partial<T>;
+  form: Record<string, any>;
   elFormRef?: FormInstance | null;
   fileList: Record<string, UploadUserFile[]>;
   useElForm: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: "update:modelValue", value: Partial<T>): void;
-  (e: "updateField", key: keyof T, value: any): void;
+  (
+    e: "upload-change",
+    key: string,
+    files: UploadUserFile[] | UploadUserFile | string
+  ): void;
+  (e: "upload-remove", key: string, file: UploadUserFile): void;
 }>();
 
 const getOptionsForField = (field: Field<T>) => {
@@ -40,14 +43,6 @@ const getOptionsForField = (field: Field<T>) => {
 
   return rawOptions;
 };
-
-watch(
-  () => props.form,
-  (val) => {
-    emit("update:modelValue", JSON.parse(JSON.stringify(val)));
-  },
-  { deep: true }
-);
 
 const handleInput = async () => {
   if (!props.useElForm || !props.field.key) return;
@@ -75,9 +70,7 @@ const handleInput = async () => {
     </template>
 
     <template v-if="field.displayOnly">
-      <DisplayOnlyField
-        :value="props.form[props.field.key as keyof typeof props.form]"
-      />
+      <DisplayOnlyField :value="form[field.key as string]" />
     </template>
 
     <ElUpload
@@ -85,14 +78,14 @@ const handleInput = async () => {
       :file-list="fileList[field.key as string]"
       list-type="picture-card"
       :auto-upload="false"
-      @change="(files) => $emit('upload-change', String(field.key), files)"
-      @remove="(file) => $emit('upload-remove', String(field.key), file)"
+      @change="(files) => emit('upload-change', String(field.key), files)"
+      @remove="(file) => emit('upload-remove', String(field.key), file)"
       v-bind="field.componentProps"
     />
 
     <component
       v-else
-      v-model="props.form[field.key as keyof typeof props.form]"
+      v-model="form[field.key as string]"
       :is="field.component || ElInput"
       v-bind="field.componentProps"
       @input="handleInput"

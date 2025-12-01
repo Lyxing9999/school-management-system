@@ -1,4 +1,5 @@
-import { useApiUtils } from "~/utils/useApiUtils";
+// ~/api/schedule-slot/service.ts
+import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
 import type {
   AdminCreateScheduleSlotDTO,
   AdminScheduleSlotDataDTO,
@@ -7,45 +8,68 @@ import type {
 import { ScheduleSlotApi } from "./api";
 
 export class ScheduleSlotService {
-  private safeApiCall = useApiUtils().safeApiCall;
+  private callApi = useApiUtils().callApi;
 
   constructor(private scheduleSlotApi: ScheduleSlotApi) {}
 
   // ============
   // QUERY METHODS
   // ============
-  async getClassSchedule(classId: string) {
-    const { data } = await this.safeApiCall<AdminScheduleSlotDataDTO>(() =>
-      this.scheduleSlotApi.getClassSchedule(classId)
+
+  async getClassSchedule(classId: string, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminScheduleSlotDataDTO>(
+      () => this.scheduleSlotApi.getClassSchedule(classId),
+      options
     );
     return data!;
   }
 
-  async getTeacherSchedule(teacherId: string) {
-    const { data } = await this.safeApiCall<AdminScheduleSlotDataDTO>(() =>
-      this.scheduleSlotApi.getTeacherSchedule(teacherId)
+  async getTeacherSchedule(teacherId: string, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminScheduleSlotDataDTO>(
+      () => this.scheduleSlotApi.getTeacherSchedule(teacherId),
+      options
     );
     return data!;
   }
-  async createScheduleSlot(data: AdminCreateScheduleSlotDTO) {
-    const { data: scheduleSlotData } =
-      await this.safeApiCall<AdminScheduleSlotDataDTO>(() =>
-        this.scheduleSlotApi.createScheduleSlot(data)
-      );
+  async getScheduleSlotById(id: string, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminScheduleSlotDataDTO>(
+      () => this.scheduleSlotApi.getScheduleSlotById(id),
+      options
+    );
+    return data!;
+  }
+  // ============
+  // COMMANDS
+  // ============
+
+  async createScheduleSlot(
+    payload: AdminCreateScheduleSlotDTO,
+    options?: ApiCallOptions
+  ) {
+    const scheduleSlotData = await this.callApi<AdminScheduleSlotDataDTO>(
+      () => this.scheduleSlotApi.createScheduleSlot(payload),
+      { showSuccess: true, ...(options ?? {}) }
+    );
     return scheduleSlotData!;
   }
-  async updateScheduleSlot(slotId: string, data: AdminUpdateScheduleSlotDTO) {
-    const { data: scheduleSlotData } =
-      await this.safeApiCall<AdminScheduleSlotDataDTO>(() =>
-        this.scheduleSlotApi.updateScheduleSlot(slotId, data)
-      );
+
+  async updateScheduleSlot(
+    slotId: string,
+    payload: AdminUpdateScheduleSlotDTO,
+    options?: ApiCallOptions
+  ) {
+    const scheduleSlotData = await this.callApi<AdminScheduleSlotDataDTO>(
+      () => this.scheduleSlotApi.updateScheduleSlot(slotId, payload),
+      { showSuccess: true, ...(options ?? {}) }
+    );
     return scheduleSlotData!;
   }
-  async deleteScheduleSlot(slotId: string) {
-    const { data: scheduleSlotData } =
-      await this.safeApiCall<AdminScheduleSlotDataDTO>(() =>
-        this.scheduleSlotApi.deleteScheduleSlot(slotId)
-      );
+
+  async deleteScheduleSlot(slotId: string, options?: ApiCallOptions) {
+    const scheduleSlotData = await this.callApi<AdminScheduleSlotDataDTO>(
+      () => this.scheduleSlotApi.deleteScheduleSlot(slotId),
+      { showSuccess: true, ...(options ?? {}) }
+    );
     return scheduleSlotData!;
   }
 }

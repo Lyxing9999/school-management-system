@@ -1,4 +1,5 @@
-import { useApiUtils } from "~/utils/useApiUtils";
+// ~/api/user/service.ts
+import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
 import type {
   AdminCreateUser,
   AdminUpdateUser,
@@ -10,57 +11,63 @@ import { UserApi } from "../user/api";
 import { Role } from "~/api/types/enums/role.enum";
 
 export class UserService {
-  private safeApiCall = useApiUtils().safeApiCall;
+  private callApi = useApiUtils().callApi;
+
   constructor(private userApi: UserApi) {}
 
-  async getUserPage(roles: Role | Role[], page: number, pageSize: number) {
-    const { data } = await this.safeApiCall<AdminGetPageUserData>(
+  async getUserPage(
+    roles: Role | Role[],
+    page: number,
+    pageSize: number,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<AdminGetPageUserData>(
       () => this.userApi.getUserPage(roles, page, pageSize),
-      {
-        showSuccessNotification: false,
-      }
-    );
-    return data!;
-  }
-  async getStudentNameSelect() {
-    const { data } = await this.safeApiCall<AdminStudentListNameSelectDTO>(() =>
-      this.userApi.getStudentNameSelect()
+      { showSuccess: false, ...(options ?? {}) }
     );
     return data!;
   }
 
-  async createUser(userData: AdminCreateUser) {
-    const { data } = await this.safeApiCall<AdminGetUserData>(() =>
-      this.userApi.createUser(userData)
+  async listStudentNamesSelect(options?: ApiCallOptions) {
+    const data = await this.callApi<AdminStudentListNameSelectDTO>(
+      () => this.userApi.listStudentNamesSelect(),
+      options
     );
     return data!;
   }
 
-  async updateUser(id: string, userData: AdminUpdateUser) {
-    const { data } = await this.safeApiCall<AdminGetUserData>(() =>
-      this.userApi.updateUser(id, userData)
+  async createUser(userData: AdminCreateUser, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminGetUserData>(
+      () => this.userApi.createUser(userData),
+      options
     );
     return data!;
   }
 
-  async softDeleteUser(id: string) {
-    const { data } = await this.safeApiCall(
+  async updateUser(
+    id: string,
+    userData: AdminUpdateUser,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<AdminGetUserData>(
+      () => this.userApi.updateUser(id, userData),
+      options
+    );
+    return data!;
+  }
+
+  async softDeleteUser(id: string, options?: ApiCallOptions) {
+    const data = await this.callApi<any>(
       () => this.userApi.softDeleteUser(id),
-      {
-        showSuccessNotification: true,
-        showErrorNotification: true,
-      }
+      { showSuccess: true, showError: true, ...(options ?? {}) }
     );
     return data!;
   }
 
-  async hardDeleteUser(id: string) {
-    const { data } = await this.safeApiCall(
+  async hardDeleteUser(id: string, options?: ApiCallOptions) {
+    const data = await this.callApi<any>(
       () => this.userApi.hardDeleteUser(id),
-      {
-        showSuccessNotification: true,
-        showErrorNotification: true,
-      }
+      { showSuccess: true, showError: true, ...(options ?? {}) }
     );
     return data!;
   }

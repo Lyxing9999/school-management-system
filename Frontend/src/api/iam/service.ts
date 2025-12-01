@@ -2,14 +2,10 @@ import { jwtDecode } from "jwt-decode";
 import { useMessage } from "~/composables/common/useMessage";
 import { useRouter } from "nuxt/app";
 import { useAuthStore } from "~/stores/authStore";
-import { AuthApi } from "~/api/auth/api";
+import { AuthApi } from "~/api/iam/api";
 import { useApiUtils } from "~/utils/useApiUtils";
 import { Role } from "~/api/types/enums/role.enum";
-import type {
-  UserRegisterForm,
-  UserLoginForm,
-  AuthDataDTO,
-} from "~/api/auth/dto";
+import type { UserRegister, UserLoginForm, AuthData } from "~/api/iam/dto";
 import type { UserBaseDataDTO } from "~/api/types/user.dto";
 
 export class AuthService {
@@ -19,7 +15,7 @@ export class AuthService {
   private message = useMessage();
   constructor(private authApi: AuthApi) {}
 
-  private validateCredentials(form: UserRegisterForm | UserLoginForm): boolean {
+  private validateCredentials(form: UserRegister | UserLoginForm): boolean {
     if (!form.email || !form.password) {
       this.message.showWarning("Please fill in all fields");
       return false;
@@ -27,10 +23,10 @@ export class AuthService {
     return true;
   }
 
-  async register(form: UserRegisterForm): Promise<AuthDataDTO | null> {
+  async register(form: UserRegister): Promise<AuthData | null> {
     if (!this.validateCredentials(form)) return null;
 
-    const { data } = await this.safeApiCall<AuthDataDTO>(
+    const { data } = await this.safeApiCall<AuthData>(
       () => this.authApi.registerUser(form),
       {
         showSuccessNotification: true,
@@ -45,7 +41,7 @@ export class AuthService {
   async login(form: UserLoginForm): Promise<void | null> {
     if (!this.validateCredentials(form)) return null;
 
-    const { data } = await this.safeApiCall<AuthDataDTO>(
+    const { data } = await this.safeApiCall<AuthData>(
       () => this.authApi.login(form),
       {
         showErrorNotification: true,

@@ -27,7 +27,7 @@ export class UserApi {
     });
     return res.data;
   }
-  async getStudentNameSelect(): Promise<AdminStudentListNameSelectResponse> {
+  async listStudentNamesSelect(): Promise<AdminStudentListNameSelectResponse> {
     const res = await this.$api.get<AdminStudentListNameSelectResponse>(
       `${this.baseURL}/student-select`
     );

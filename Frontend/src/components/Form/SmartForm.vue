@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { reactive, ref, watch, onMounted, type UnwrapRef } from "vue";
+import { reactive, ref, watch, onMounted } from "vue";
 import type { Field } from "../types/form";
 import { ElUpload, type UploadUserFile, type FormInstance } from "element-plus";
 import FormRow from "./FormRow.vue";
@@ -16,30 +16,27 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "save", form: T): void;
   (e: "cancel"): void;
-  (e: "update:modelValue", form: Partial<T>): void;
 }>();
 
-const form = reactive({ ...props.modelValue }) as UnwrapRef<Partial<T>>;
+const form = reactive<Record<string, any>>({});
 const fileList = ref<Record<string, UploadUserFile[]>>({});
 
-// Parent → local
+// parent -> local (one-way, immediate)
 watch(
   () => props.modelValue,
   (val) => {
-    Object.assign(form, val || {});
+    Object.keys(form).forEach((k) => delete form[k]);
+    Object.assign(form, (val || {}) as Record<string, any>);
   },
-  { deep: true }
+  { deep: false, immediate: true }
 );
 
-// Local → parent
-watch(form, (val) => emit("update:modelValue", { ...val }), { deep: true });
-
-const setFormValue = <K extends keyof T>(key: K, value: any) => {
-  (form as Record<string, any>)[key as string] = value;
+const setFormValue = (key: keyof T | string, value: any) => {
+  form[key as string] = value;
 };
 
-const getFormValue = <K extends keyof T>(key: K) => {
-  return (form as Record<string, any>)[key as string];
+const getFormValue = (key: keyof T | string) => {
+  return form[key as string];
 };
 
 const getUploadFileList = (
@@ -77,11 +74,11 @@ const handleUploadChange = (
 
   fileList.value[key] = normalizedFiles;
   const lastFile = normalizedFiles[normalizedFiles.length - 1];
-  setFormValue(key as any, lastFile?.raw || lastFile?.url || null);
+  setFormValue(key, lastFile?.raw || lastFile?.url || null);
 };
 
 const handleUploadRemove = (key: string, file: UploadUserFile) => {
-  setFormValue(key as any, null);
+  setFormValue(key, null);
   fileList.value[key] = (fileList.value[key] || []).filter(
     (f) => f.uid !== file.uid
   );
@@ -92,9 +89,9 @@ onMounted(() => {
     const fieldsToCheck = field.row ?? [field];
     fieldsToCheck.forEach((f) => {
       if (!f.key) return;
-      const key = f.key;
+      const key = f.key as keyof T;
       if (f.component === ElUpload && getFormValue(key)) {
-        fileList.value[key] = getUploadFileList(getFormValue(key));
+        fileList.value[f.key as string] = getUploadFileList(getFormValue(key));
       }
     });
   });
@@ -103,11 +100,9 @@ onMounted(() => {
 const elFormRef = ref<FormInstance | null>(null);
 
 const handleSave = () => {
-  console.log(elFormRef.value);
   if (!elFormRef.value) return;
   elFormRef.value.validate((valid) => {
     if (valid) {
-      console.log("ths");
       emit("save", form as T);
     }
   });
@@ -115,7 +110,6 @@ const handleSave = () => {
 </script>
 
 <template>
-  <!-- When using Element Plus form -->
   <el-form
     v-if="useElForm"
     :model="form"
@@ -123,7 +117,6 @@ const handleSave = () => {
     v-bind="props.formProps"
   >
     <template v-for="(field, index) in props.fields" :key="index">
-      <!-- Row of fields -->
       <FormRow
         v-if="field.row"
         :rowFields="field.row"
@@ -131,10 +124,9 @@ const handleSave = () => {
         :file-list="fileList"
         :use-el-form="useElForm"
         :el-form-ref="elFormRef"
+        @upload-change="handleUploadChange"
         @upload-remove="handleUploadRemove"
       />
-
-      <!-- Single field -->
       <FormField
         v-else
         :field="field"
@@ -147,15 +139,21 @@ const handleSave = () => {
       />
     </template>
 
-    <div class="flex justify-end gap-2 mt-4">
+    <div class="flex justify-end gap-1 mt-2">
       <BaseButton type="default" @click="emit('cancel')">Cancel</BaseButton>
-      <BaseButton type="info" :loading="props.loading" @click="handleSave">
+      <BaseButton
+        type="primary"
+        class="pr-4 pb-4"
+        :loading="props.loading"
+        @click="handleSave"
+      >
         Save
       </BaseButton>
     </div>
   </el-form>
 
   <!-- Plain div mode (no Element Plus validation) -->
+
   <div v-else>
     <template v-for="(field, index) in props.fields" :key="index">
       <FormRow
@@ -180,9 +178,14 @@ const handleSave = () => {
       />
     </template>
 
-    <div class="flex justify-end gap-2 mt-4">
+    <div class="flex justify-end gap-1 mt-2">
       <BaseButton type="default" @click="emit('cancel')">Cancel</BaseButton>
-      <BaseButton type="info" :loading="props.loading" @click="handleSave">
+      <BaseButton
+        type="primary"
+        class="pr-4 pb-4"
+        :loading="props.loading"
+        @click="handleSave"
+      >
         Save
       </BaseButton>
     </div>

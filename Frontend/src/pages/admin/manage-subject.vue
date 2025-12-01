@@ -9,12 +9,12 @@ definePageMeta({
 // Base Components
 // --------------------
 import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
-import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
+import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 
-// Element Plus
-import { ElInput, ElOption, ElSelect, ElSwitch } from "element-plus";
+// Element Plus components used in script
+import { ElInput, ElOption, ElSelect } from "element-plus";
 
 // --------------------
 // Services & Types
@@ -26,6 +26,7 @@ import type {
   AdminCreateSubjectDTO,
 } from "~/api/admin/subject/dto";
 import type { Field } from "~/components/types/form";
+import type { ColumnConfig } from "~/components/types/tableEdit";
 
 const adminApi = adminService();
 
@@ -44,6 +45,42 @@ const filteredSubjects = computed(() => {
   return subjects.value.filter((s) => !s.is_active);
 });
 
+/* ---------------------- table columns for SmartTable ---------------------- */
+
+const subjectColumns = computed<ColumnConfig<AdminSubjectDataDTO>[]>(() => [
+  {
+    field: "name",
+    label: "Name",
+    minWidth: 140,
+  },
+  {
+    field: "code",
+    label: "Code",
+    minWidth: 120,
+  },
+  {
+    field: "description",
+    label: "Description",
+    minWidth: 180,
+    useSlots: true,
+    slotName: "description",
+  },
+  {
+    field: "allowed_grade_levels",
+    label: "Allowed Grades",
+    minWidth: 160,
+    useSlots: true,
+    slotName: "allowedGrades",
+  },
+  {
+    field: "is_active",
+    label: "Status",
+    width: 130,
+    align: "center",
+    operation: true, // will use #operation slot
+  },
+]);
+
 /* ---------------------- grade options ---------------------- */
 
 const gradeOptions = ref(
@@ -53,53 +90,15 @@ const gradeOptions = ref(
   }))
 );
 
-/* ---------------------- columns ---------------------- */
-
-const subjectColumns = computed(
-  () =>
-    [
-      {
-        label: "Name",
-        field: "name",
-        align: "left",
-        minWidth: "100px",
-      },
-      {
-        label: "Code",
-        field: "code",
-        minWidth: "100px",
-      },
-      {
-        label: "Description",
-        field: "description",
-        minWidth: "100px",
-      },
-      {
-        label: "Allowed Grades",
-        field: "allowed_grade_levels",
-        minWidth: "100px",
-      },
-      {
-        label: "Status",
-        field: "active",
-        align: "center",
-        component: ElSwitch,
-        componentProps: {
-          disabled: true,
-        },
-        width: "120px",
-        inlineEditActive: true,
-      },
-      {
-        label: "Actions",
-        slotName: "operation",
-        operation: true,
-        fixed: "right",
-        width: "150",
-        align: "center",
-      },
-    ] as const
-);
+function formatAllowedGrades(levels?: number[]) {
+  if (!levels || !levels.length) return "-";
+  return levels
+    .map(
+      (lvl) =>
+        gradeOptions.value.find((g) => g.value === lvl)?.label || `Grade ${lvl}`
+    )
+    .join(", ");
+}
 
 /* ---------------------- form fields (SmartFormDialog) ---------------------- */
 
@@ -194,6 +193,7 @@ const createFormData = ref<Partial<AdminCreateSubjectDTO>>({
   description: "",
   allowed_grade_levels: [],
 });
+const dialogKey = ref(0);
 
 const openCreateDialog = () => {
   createFormData.value = {
@@ -202,6 +202,7 @@ const openCreateDialog = () => {
     description: "",
     allowed_grade_levels: [],
   };
+  dialogKey.value++;
   createDialogVisible.value = true;
 };
 
@@ -218,7 +219,6 @@ const handleSaveCreateForm = async (
 ) => {
   createFormLoading.value = true;
   try {
-    // merge payload into createFormData just to be safe
     Object.assign(createFormData.value, payload);
 
     const body: AdminCreateSubjectDTO = {
@@ -231,7 +231,14 @@ const handleSaveCreateForm = async (
     await adminApi.subject.createSubject(body);
 
     await fetchSubjects();
+    createFormData.value = {
+      name: "",
+      code: "",
+      description: "",
+      allowed_grade_levels: [],
+    };
     createDialogVisible.value = false;
+    dialogKey.value++;
   } catch (err) {
     console.error("Failed to create subject:", err);
   } finally {
@@ -254,18 +261,41 @@ async function fetchSubjects() {
   }
 }
 
+const statusLoading = ref<Record<string, boolean>>({});
+
 async function toggleSubjectActive(row: AdminSubjectDataDTO) {
+  const id = row.id;
+  const previous = row.is_active;
+
+  statusLoading.value[id] = true;
+
   try {
     if (row.is_active) {
-      await adminApi.subject.deactivateSubject(row.id);
+      await adminApi.subject.activateSubject(id);
     } else {
-      await adminApi.subject.activateSubject(row.id);
+      await adminApi.subject.deactivateSubject(id);
     }
     await fetchSubjects();
   } catch (err) {
     console.error("Failed to toggle subject active state", err);
+    row.is_active = previous;
+  } finally {
+    statusLoading.value[id] = false;
   }
 }
+
+/* ---------------------- basic row actions (stubs for now) ---------------------- */
+
+const handleEditSubject = (row: AdminSubjectDataDTO) => {
+  console.log("Edit subject (not implemented yet):", row);
+};
+
+const handleDeleteSubject = async (row: AdminSubjectDataDTO) => {
+  console.log("Delete subject (not implemented yet):", row);
+  // Example:
+  // await adminApi.subject.deleteSubject(row.id);
+  // await fetchSubjects();
+};
 
 /* ---------------------- lifecycle ---------------------- */
 
@@ -275,7 +305,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <el-row class="m-2" justify="space-between">
+  <el-row justify="space-between">
     <el-col :span="12">
       <BaseButton type="default" :loading="tableLoading" @click="fetchSubjects">
         Refresh
@@ -300,15 +330,25 @@ onMounted(() => {
       :data="filteredSubjects"
       :columns="subjectColumns"
       :loading="tableLoading"
+      :smart-props="{ border: true, stripe: true, class: 'm-2 m m-5' }"
     >
+      <!-- Description column -->
+      <template #description="{ row }">
+        <span>{{ row.description || "-" }}</span>
+      </template>
+
+      <!-- Allowed Grades column -->
+      <template #allowedGrades="{ row }">
+        <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
+      </template>
+
+      <!-- Status / operation column -->
       <template #operation="{ row }">
-        <BaseButton
-          size="small"
-          :type="row.is_active ? 'danger' : 'success'"
-          @click="toggleSubjectActive(row)"
-        >
-          {{ row.is_active ? "Deactivate" : "Activate" }}
-        </BaseButton>
+        <el-switch
+          v-model="row.is_active"
+          :loading="statusLoading[row.id]"
+          @change="() => toggleSubjectActive(row)"
+        />
       </template>
     </SmartTable>
   </ErrorBoundary>
@@ -316,6 +356,7 @@ onMounted(() => {
   <!-- CREATE DIALOG -->
   <ErrorBoundary>
     <SmartFormDialog
+      :key="dialogKey"
       v-model:visible="createDialogVisible"
       v-model="createFormData"
       :fields="subjectFormFields"

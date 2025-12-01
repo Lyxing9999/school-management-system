@@ -1,10 +1,9 @@
 <!-- ~/components/Selects/TeacherClassSelect.vue -->
 <script setup lang="ts">
-import { ref } from "vue";
 import RemoteSelect from "~/components/Selects/RemoteSelect.vue";
-import { adminService } from "~/api/admin";
+import { teacherService } from "~/api/teacher";
 
-const adminApi = adminService();
+const teacherApi = teacherService();
 
 const props = withDefaults(
   defineProps<{
@@ -24,28 +23,11 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: string | string[] | null): void;
 }>();
 
-// Simple cache so we don't refetch every time
-const cachedClasses = ref<any[]>([]);
-const isLoading = ref(false);
-
 const fetchClasses = async () => {
-  if (cachedClasses.value.length > 0) {
-    return cachedClasses.value;
-  }
-
-  if (isLoading.value) {
-    return cachedClasses.value;
-  }
-
-  isLoading.value = true;
-  try {
-    const res = await adminApi.class.listClassNameSelect();
-    console.log(res);
-    cachedClasses.value = res?.items ?? [];
-    return cachedClasses.value;
-  } finally {
-    isLoading.value = false;
-  }
+  const res = await teacherApi.teacher.listClassNameSelect();
+  console.log(res);
+  // expected: [{ id, name }, ...]
+  return res?.items ?? [];
 };
 </script>
 
@@ -56,10 +38,10 @@ const fetchClasses = async () => {
     :fetcher="fetchClasses"
     label-key="name"
     value-key="id"
-    :placeholder="props.placeholder ?? 'Select class'"
-    :disabled="props.disabled"
-    :multiple="props.multiple"
-    :size="props.size"
+    :placeholder="placeholder ?? 'Select class'"
+    :disabled="disabled"
+    :multiple="multiple"
+    :size="size"
     clearable
   />
 </template>

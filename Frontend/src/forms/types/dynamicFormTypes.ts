@@ -1,6 +1,6 @@
 import type { Field } from "~/components/types/form";
 import type { formRegistryCreate, formRegistryEdit } from "../admin/register";
-import type { UseFormService } from "../types";
+import type { UseFormService } from "./serviceFormTypes";
 
 /** -------------------------------
  * Extract Create Form Item
@@ -60,3 +60,19 @@ export type SchemaOfCreate<T extends keyof typeof formRegistryCreate> =
 
 export type SchemaOfEdit<T extends keyof typeof formRegistryEdit> =
   EditFormItem<T>["schema"];
+
+export interface DynamicFormRegistryItem<TCreate, TUpdate> {
+  service: () => UseFormService<TCreate, TUpdate>;
+  schema: Field<TCreate | TUpdate>[];
+  formData: () => TCreate | TUpdate;
+}
+
+export type FormMode = "CREATE" | "EDIT";
+export type FormEntity =
+  | "USER"
+  | "STAFF"
+  | "STUDENT"
+  | "CLASS"
+  | "SUBJECT"
+  | "SCHEDULE_SLOT_BY_CLASS"
+  | "SCHEDULE_SLOT_BY_TEACHER";

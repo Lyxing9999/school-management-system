@@ -49,6 +49,7 @@ const menus: Record<RoleKey, MenuItem[]> = {
       route: ROUTES.TEACHER.MANAGE_STUDENTS,
     },
     { title: "My Classes", icon: "Notebook", route: ROUTES.TEACHER.MY_CLASSES },
+    { title: "Grades", icon: "Document", route: ROUTES.TEACHER.GRADES },
     { title: "Attendance", icon: "Calendar", route: ROUTES.TEACHER.ATTENDANCE },
     {
       title: "Notifications",
@@ -59,8 +60,14 @@ const menus: Record<RoleKey, MenuItem[]> = {
   ],
   STUDENT: [
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.STUDENT.DASHBOARD },
-    { title: "Enrollments", icon: "User", route: ROUTES.STUDENT.ENROLLMENTS },
+
     { title: "My Classes", icon: "Notebook", route: ROUTES.STUDENT.MY_CLASSES },
+    { title: "My Grades", icon: "Document", route: ROUTES.STUDENT.MY_GRADES },
+    {
+      title: "My Schedule",
+      icon: "DateTime",
+      route: ROUTES.STUDENT.MY_SCHEDULE,
+    },
     { title: "Attendance", icon: "Calendar", route: ROUTES.STUDENT.ATTENDANCE },
     {
       title: "Notifications",

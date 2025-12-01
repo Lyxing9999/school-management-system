@@ -4,6 +4,7 @@ import {
   studentForm,
   classForm,
   subjectForm,
+  scheduleSlotForm,
 } from "~/forms/admin";
 
 import type {
@@ -34,6 +35,16 @@ export const formRegistryCreate: FormRegistryCreate = {
     formData: () => ({ ...subjectForm.getSubjectFormData() }), // fresh object
   },
   STUDENT: undefined,
+  SCHEDULE_SLOT_BY_CLASS: {
+    service: () => scheduleSlotForm.useServiceFormScheduleSlot(),
+    schema: scheduleSlotForm.scheduleFormSchemaByClass,
+    formData: () => ({ ...scheduleSlotForm.getScheduleFormData() }), // fresh object
+  },
+  SCHEDULE_SLOT_BY_TEACHER: {
+    service: () => scheduleSlotForm.useServiceFormScheduleSlot(),
+    schema: scheduleSlotForm.scheduleFormSchemaByTeacher,
+    formData: () => ({ ...scheduleSlotForm.getScheduleFormData() }), // fresh object
+  },
 };
 
 // -------------------- EDIT FORMS --------------------
@@ -62,5 +73,15 @@ export const formRegistryEdit: FormRegistryEdit = {
     service: () => studentForm.useServiceFormStudentInfo(),
     schema: studentForm.studentInfoFormSchemaEdit,
     formData: () => studentForm.getStudentInfoFormDataEdit(), // reactive object
+  },
+  SCHEDULE_SLOT_BY_CLASS: {
+    service: () => scheduleSlotForm.useServiceFormScheduleSlot(),
+    schema: scheduleSlotForm.scheduleFormSchemaEdit,
+    formData: () => scheduleSlotForm.getScheduleFormDataEdit(), // reactive object
+  },
+  SCHEDULE_SLOT_BY_TEACHER: {
+    service: () => scheduleSlotForm.useServiceFormScheduleSlot(),
+    schema: scheduleSlotForm.scheduleFormSchemaEdit,
+    formData: () => scheduleSlotForm.getScheduleFormDataEdit(), // reactive object
   },
 };

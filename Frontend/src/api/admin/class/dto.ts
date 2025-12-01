@@ -17,7 +17,13 @@ export interface AdminCreateClassDTO {
   max_students?: number | null;
 }
 
+export interface AdminClassNameSelectDTO {
+  id: string;
+  name: string;
+}
+
 export interface AdminClassDataDTO extends ClassSectionDTO {}
+
 /**
  * List wrapper
  * Python: AdminClassListDTO
@@ -25,9 +31,18 @@ export interface AdminClassDataDTO extends ClassSectionDTO {}
 export interface AdminClassListDTO {
   items: AdminClassDataDTO[];
 }
-
+/**
+ * List wrapper
+ * Python: AdminClassListDTO
+ */
+export interface AdminClassNameSelectListDTO {
+  items: AdminClassNameSelectDTO[];
+}
 /**
  * Wrapped responses
  */
 export type AdminGetClassResponse = ApiResponse<AdminClassDataDTO>;
 export type AdminGetClassListResponse = ApiResponse<AdminClassListDTO>;
+
+export type AdminClassNameSelectListResponse =
+  ApiResponse<AdminClassNameSelectListDTO>;

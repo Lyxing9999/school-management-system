@@ -1,9 +1,13 @@
 import type { AxiosError } from "axios";
-import { ref } from "vue";
 import { useAuthStore } from "~/stores/authStore";
 import { eventBus } from "~/composables/useGlobalEventBus";
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 import { useMessage } from "~/composables/common/useMessage";
+
+export type ApiCallOptions = {
+  showSuccess?: boolean;
+  showError?: boolean;
+};
 
 export const useApiUtils = () => {
   const message = useMessage();
@@ -76,5 +80,25 @@ export const useApiUtils = () => {
       throw axiosErr;
     }
   };
-  return { safeApiCall };
+
+  /**
+   * Higher-level helper used by services.
+   * This is your “decorator-like” wrapper around safeApiCall.
+   */
+  const callApi = async <T>(
+    fn: () => Promise<ApiResponse<T>>,
+    options: ApiCallOptions = {}
+  ): Promise<T | null> => {
+    const { showSuccess = false, showError = true } = options;
+
+    const { data } = await safeApiCall<T>(fn, {
+      showSuccessNotification: showSuccess,
+      showErrorNotification: showError,
+    });
+
+    // service can decide whether to `!` or handle null
+    return data;
+  };
+
+  return { safeApiCall, callApi };
 };

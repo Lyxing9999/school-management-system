@@ -10,9 +10,9 @@ import type {
   FormDataOfEdit,
   SchemaOfEdit,
 } from "~/forms/types/dynamicFormTypes";
-import type { UseFormService } from "~/forms/types";
-import { toInlineEditUpdateService } from "~/composables/inline-edit/useInlineEdit";
-import type { UseInlineEditService } from "~/composables/inline-edit/useInlineEdit";
+import type { UseFormService } from "~/forms/types/serviceFormTypes";
+import { toInlineEditUpdateService } from "~/composables/useInlineEdit";
+import type { UseInlineEditService } from "~/composables/useInlineEdit";
 
 /** -------------------------------
  * Dynamic Create Form Hook
