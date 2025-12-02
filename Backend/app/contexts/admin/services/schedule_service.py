@@ -69,20 +69,18 @@ class ScheduleAdminService:
         self.school_service.delete_schedule_slot(slot_id)
 
     # ---------- Queries ----------
-
-    def admin_list_class_schedules(
+    def admin_list_schedules_for_class_enriched(
         self,
         class_id: str | ObjectId,
     ) -> List[dict]:
-        schedules = self.admin_read_model.admin_list_class_schedules(class_id=class_id)
-        print(schedules)
+        schedules = self.admin_read_model.admin_list_schedules_for_class_enriched(class_id=class_id)
         return schedules
         
-    def admin_list_teacher_schedules(
+    def admin_list_schedules_for_teacher_enriched(
         self,
         teacher_id: str | ObjectId,
     ) -> List[dict]:
-        return self.admin_read_model.admin_list_teacher_schedules(teacher_id=teacher_id)
+        return self.admin_read_model.admin_list_schedules_for_teacher_enriched(teacher_id=teacher_id)
 
 
     def admin_get_schedule_by_id(

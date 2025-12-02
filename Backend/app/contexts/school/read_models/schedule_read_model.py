@@ -49,7 +49,7 @@ class ScheduleReadModel(MongoErrorMixin):
             self._handle_mongo_error("list_all", e)
             return []
 
-    def list_student_schedules(self, student_id: ObjectId | str) -> List[Dict]:
+    def list_schedules_for_student(self, student_id: ObjectId | str) -> List[Dict]:
         """
         Return all non-deleted schedule documents for a given student_id.
         """
@@ -63,10 +63,10 @@ class ScheduleReadModel(MongoErrorMixin):
             )
             return list(cursor)
         except Exception as e:
-            self._handle_mongo_error("list_student_schedules", e)
+            self._handle_mongo_error("list_schedules_for_student", e)
             return []
 
-    def list_class_schedules(self, class_id: ObjectId | str) -> List[Dict]:
+    def list_schedules_for_class(self, class_id: ObjectId | str) -> List[Dict]:
         """
         Return all non-deleted schedule documents for a given class_id.
         """
@@ -80,10 +80,10 @@ class ScheduleReadModel(MongoErrorMixin):
             )
             return list(cursor)
         except Exception as e:
-            self._handle_mongo_error("list_class_schedules", e)
+            self._handle_mongo_error("list_schedules_for_class", e)
             return []
 
-    def list_classes_schedules(
+    def list_schedules_for_classes(
         self,
         class_ids: Iterable[str | ObjectId],
     ) -> List[Dict]:
@@ -104,10 +104,10 @@ class ScheduleReadModel(MongoErrorMixin):
             )
             return list(cursor)
         except Exception as e:
-            self._handle_mongo_error("list_classes_schedules", e)
+            self._handle_mongo_error("list_schedules_for_classes", e)
             return []
 
-    def list_teacher_schedules(self, teacher_id: ObjectId | str) -> List[Dict]:
+    def list_schedules_for_teacher(self, teacher_id: ObjectId | str) -> List[Dict]:
         """
         Return all non-deleted schedule documents for a given teacher_id.
         """
@@ -121,10 +121,10 @@ class ScheduleReadModel(MongoErrorMixin):
             )
             return list(cursor)
         except Exception as e:
-            self._handle_mongo_error("list_teacher_schedules", e)
+            self._handle_mongo_error("list_schedules_for_teacher", e)
             return []
 
-    def list_subject_schedules(self, subject_id: ObjectId | str) -> List[Dict]:
+    def list_schedules_for_subject(self, subject_id: ObjectId | str) -> List[Dict]:
         """
         Return all non-deleted schedule documents for a given subject_id.
         """
@@ -138,5 +138,5 @@ class ScheduleReadModel(MongoErrorMixin):
             )
             return list(cursor)
         except Exception as e:
-            self._handle_mongo_error("list_subject_schedules", e)
+            self._handle_mongo_error("list_schedules_for_subject", e)
             return []

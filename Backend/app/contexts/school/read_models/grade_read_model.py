@@ -13,12 +13,12 @@ class GradeReadModel:
     def __init__(self, db: Database):
         self.collection: Collection = db["grades"]
     
-    def list_class_grades(self, class_id: ObjectId | str) -> list[dict]:
+    def list_grades_for_class(self, class_id: ObjectId | str) -> list[dict]:
         oid = mongo_converter.convert_to_object_id(class_id)
         return list(self.collection.find({"class_id": oid}))
     
-    def list_student_grades(self, student_id: ObjectId) -> list[dict]:
+    def list_grades_for_student(self, student_id: ObjectId | str) -> list[dict]:
         oid = mongo_converter.convert_to_object_id(student_id)
-        return list(self.collection.find({"student_id": student_id}))
+        return list(self.collection.find({"student_id": oid}))
 
     

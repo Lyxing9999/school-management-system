@@ -93,22 +93,29 @@ class AdminReadModel(MongoErrorMixin):
 
     # ------------- schedules with names -------------
 
-    def admin_list_class_schedules(self, class_id: Union[str, ObjectId]) -> List[dict]:
+    def admin_list_schedules_for_class_enriched(self, class_id: Union[str, ObjectId]) -> List[dict]:
 
         oid = mongo_converter.convert_to_object_id(class_id)
-        class_schedules = self.schedule_read_model.list_class_schedules(oid)
+        class_schedules = self.schedule_read_model.list_schedules_for_class(oid)
         if not class_schedules:
             return []
         enriched = self.display_names.enrich_schedules(class_schedules)
         return enriched
 
-    def admin_list_teacher_schedules(self, teacher_id: Union[str, ObjectId]) -> List[dict]:
+    def admin_list_schedules_for_teacher_enriched(self, teacher_id: Union[str, ObjectId]) -> List[dict]:
 
         oid = mongo_converter.convert_to_object_id(teacher_id)
-        teacher_schedules = self.schedule_read_model.list_teacher_schedules(oid)
+        teacher_schedules = self.schedule_read_model.list_schedules_for_teacher(oid)
         if not teacher_schedules:
             return []
         enriched = self.display_names.enrich_schedules(teacher_schedules)
+        return enriched
+
+    def admin_list_classes_enriched(self) -> List[dict]:
+        classes = self.class_read_model.list_all()
+        if not classes:
+            return []
+        enriched = self.display_names.enrich_classes(classes)
         return enriched
 
 
@@ -131,7 +138,7 @@ class AdminReadModel(MongoErrorMixin):
         """
         For class dropdowns: returns [{_id, name}, ...] for classes.
         """
-        return self.class_read_model.list_name_class()
+        return self.class_read_model.list_class_names()
 
     def admin_get_schedule_by_id(self, slot_id: Union[str, ObjectId]) -> Optional[dict]:
         """

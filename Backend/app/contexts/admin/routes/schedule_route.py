@@ -97,11 +97,11 @@ def admin_delete_schedule_slot(slot_id: str):
 @admin_bp.route("/schedule/classes/<class_id>", methods=["GET"])
 @role_required(["admin"])
 @wrap_response
-def admin_list_class_schedules(class_id: str):
+def admin_list_schedules_for_class_enriched(class_id: str):
     """
     List all schedule slots for a given class.
     """
-    slots = g.admin.schedule_service.admin_list_class_schedules(
+    slots = g.admin.schedule_service.admin_list_schedules_for_class_enriched(
         class_id=class_id,
     )
     slots_dto = mongo_converter.list_to_dto(slots, AdminScheduleSlotDataDTO)
@@ -114,12 +114,12 @@ def admin_list_class_schedules(class_id: str):
 @admin_bp.route("/schedule/teachers/<teacher_id>", methods=["GET"])
 @role_required(["admin"])
 @wrap_response
-def admin_list_teacher_schedules(teacher_id: str):
+def admin_list_schedules_for_teacher_enriched(teacher_id: str):
     """
     List all schedule slots for a given teacher.
     Useful for admin overview / conflict debugging.
     """
-    slots = g.admin.schedule_service.admin_list_teacher_schedules(
+    slots = g.admin.schedule_service.admin_list_schedules_for_teacher_enriched(
         teacher_id=teacher_id,
     )
     slots_dto = mongo_converter.list_to_dto(slots, AdminScheduleSlotDataDTO)

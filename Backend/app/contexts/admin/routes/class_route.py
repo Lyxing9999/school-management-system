@@ -11,9 +11,10 @@ from app.contexts.admin.data_transfer.request import (
     AdminCreateClassSchema,
     AdminAssignTeacherToClassSchema,
     AdminEnrollStudentToClassSchema,
+    AdminUnAssignTeacherToClassSchema
 )
 from app.contexts.admin.mapper.school_admin_mapper import SchoolAdminMapper
-from app.contexts.admin.data_transfer.response import AdminClassSelectListDTO, AdminClassSelectDTO
+from app.contexts.admin.data_transfer.response import AdminClassSelectListDTO, AdminClassSelectDTO, AdminClassDataDTO, AdminClassListDTO   
 
 
 @admin_bp.route("/classes", methods=["POST"])
@@ -37,8 +38,9 @@ def admin_create_class():
 @role_required(["admin"])
 @wrap_response
 def admin_list_classes():
-    classes = g.admin.class_service.admin_list_classes()
-    return SchoolAdminMapper.class_list_to_dto(classes)
+    classes = g.admin.class_service.admin_list_classes_enriched()
+    items = mongo_converter.list_to_dto(classes, AdminClassDataDTO)
+    return AdminClassListDTO(items=items)
 
 
 @admin_bp.route("/classes/<class_id>", methods=["GET"])
@@ -64,6 +66,13 @@ def admin_assign_teacher_to_class(class_id: str):
     return SchoolAdminMapper.class_to_dto(section)
 
 
+@admin_bp.route("/classes/<class_id>/teacher", methods=["DELETE"])
+@role_required(["admin"])
+@wrap_response
+def admin_unassign_teacher_to_class(class_id: str):
+    section = g.admin.class_service.admin_unassign_teacher(class_id=class_id)
+    return SchoolAdminMapper.class_to_dto(section)
+
 @admin_bp.route("/classes/<class_id>/students", methods=["POST"])
 @role_required(["admin"])
 @wrap_response
@@ -76,6 +85,7 @@ def admin_enroll_student_to_class(class_id: str):
         class_id=class_id,
         student_id=payload.student_id,
     )
+    
     return SchoolAdminMapper.class_to_dto(section)
 
 

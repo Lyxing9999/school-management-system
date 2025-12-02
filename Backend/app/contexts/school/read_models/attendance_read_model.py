@@ -1,26 +1,31 @@
 from datetime import datetime, date as date_type, time
-from typing import Optional
+from typing import Optional, List, Dict, Union
+
 from bson import ObjectId
 from pymongo.database import Database
 from pymongo.collection import Collection
-from typing import List
+
 from app.contexts.shared.model_converter import mongo_converter
+
 
 class AttendanceReadModel:
     """
     Read model to check existing attendance records
-    (e.g., to prevent duplicates).
+    and list attendance by various filters.
     """
 
     def __init__(self, db: Database):
         self.collection: Collection = db["attendance"]
 
+    def _normalize_id(self, id_: Union[str, ObjectId]) -> ObjectId:
+        return mongo_converter.convert_to_object_id(id_)
+
     def get_by_student_class_date(
         self,
-        student_id: ObjectId,
-        class_id: ObjectId,
-        record_date: date_type | None,
-    ) -> dict | None:
+        student_id: Union[str, ObjectId],
+        class_id: Union[str, ObjectId],
+        record_date: Optional[date_type] = None,
+    ) -> Optional[Dict]:
         """
         Find an attendance record for (student, class, date).
 
@@ -35,33 +40,39 @@ class AttendanceReadModel:
         else:
             record_dt = record_date  # already datetime
 
+        sid = self._normalize_id(student_id)
+        cid = self._normalize_id(class_id)
+
         return self.collection.find_one(
             {
-                "student_id": student_id,
-                "class_id": class_id,
+                "student_id": sid,
+                "class_id": cid,
                 "date": record_dt,
             }
         )
 
-    def list_by_student(self, student_id: ObjectId) -> List[dict]:
-        return list(self.collection.find({"student_id": student_id}))
-    
-    def list_teacher_attendance(self, teacher_id: ObjectId) -> List[dict]:
-        return list(self.collection.find({"teacher_id": teacher_id}))
+    def list_attendance_for_student(self, student_id: Union[str, ObjectId]) -> List[Dict]:
+        sid = self._normalize_id(student_id)
+        return list(self.collection.find({"student_id": sid}))
 
-    def list_class_attendance(self, class_id: ObjectId) -> List[dict]:
-        oid = mongo_converter.convert_to_object_id(class_id)
-        return list(self.collection.find({"class_id": oid}))
+    def list_attendance_for_teacher(self, teacher_id: Union[str, ObjectId]) -> List[Dict]:
+        tid = self._normalize_id(teacher_id)
+        return list(self.collection.find({"teacher_id": tid}))
 
-    def list_student_attendances(
+    def list_attendance_for_class(self, class_id: Union[str, ObjectId]) -> List[Dict]:
+        cid = self._normalize_id(class_id)
+        return list(self.collection.find({"class_id": cid}))
+
+    def list_attendance_for_class_and_student(
         self,
-        student_id: ObjectId,
-        class_id: Optional[ObjectId] = None,
-    ) -> List[dict]:
-        query: dict = {
-            "student_id": student_id,
-        }
-        if class_id is not None:
-            query["class_id"] = class_id
+        class_id: Union[str, ObjectId],
+        student_id: Optional[Union[str, ObjectId]] = None,
+    ) -> List[Dict]:
+        cid = self._normalize_id(class_id)
+        query: Dict = {"class_id": cid}
 
-        return list(self.collection.find(query))    
+        if student_id is not None:
+            sid = self._normalize_id(student_id)
+            query["student_id"] = sid
+
+        return list(self.collection.find(query))

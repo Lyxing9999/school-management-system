@@ -4,6 +4,7 @@ from app.contexts.iam.data_transfer.response import IAMBaseDataDTO , IAMUpdateDa
 from app.contexts.staff.data_transfer.responses import StaffReadDataDTO
 from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from typing import List, Optional
+from app.contexts.school.data_transfer.responses import ClassSectionDTO
 import datetime as dt
 # =====================================================
 # SECTION 1: USER MANAGEMENT (IAM)
@@ -63,8 +64,6 @@ class AdminTeacherListDTO(BaseModel):
     items: List[AdminTeacherSelectDTO]
 
 
-
-
 class AdminCreateClassDTO(BaseModel):
     model_config = {
         "extra": "allow"
@@ -73,25 +72,7 @@ class AdminCreateClassDTO(BaseModel):
 
 
 # =====================================================
-# SECTION 4: CLASS MANAGEMENT
-# =====================================================
-
-class AdminClassDataDTO(BaseModel):
-    id: str
-    name: str
-    teacher_id: Optional[str]
-    student_ids: List[str]
-    subject_ids: List[str]
-    max_students: Optional[int]
-    created_at: dt.datetime
-    updated_at: dt.datetime
-    deleted: bool
-
-class AdminClassListDTO(BaseModel):
-    items: List[AdminClassDataDTO]
-
-# =====================================================
-# SECTION 5: SUBJECT MANAGEMENT
+# SECTION 3: SUBJECT MANAGEMENT
 # =====================================================
 
 class AdminSubjectDataDTO(BaseModel):
@@ -109,7 +90,7 @@ class AdminSubjectListDTO(BaseModel):
 
 
 # =====================================================
-# SECTION 6: SCHEDULE MANAGEMENT
+# SECTION 4: SCHEDULE MANAGEMENT
 # =====================================================
 class AdminScheduleSlotDataDTO(BaseModel):
     model_config = ConfigDict(
@@ -157,8 +138,24 @@ class AdminStudentNameSelectListDTO(BaseModel):
 
 
 # =====================================================
-# Class Management
+# SECTION 5: CLASS MANAGEMENT
 # =====================================================
+
+
+class AdminClassDataDTO(ClassSectionDTO):
+    student_count: int
+    subject_count: int
+    teacher_id: Optional[str] = None
+    teacher_name: str
+    subject_labels: List[str] = []
+
+
+
+
+
+
+class AdminClassListDTO(BaseModel):
+    items: List[AdminClassDataDTO]
 
 
 class AdminClassSelectDTO(BaseModel):

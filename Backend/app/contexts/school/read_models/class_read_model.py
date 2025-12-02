@@ -49,14 +49,31 @@ class ClassReadModel:
         )
         return doc
 
+
+    def get_name_by_id(self, class_id: Union[str, ObjectId]) -> Optional[str]:
+        """
+        Return the name of the given class, or None if not found.
+        """
+        oid = self._normalize_id(class_id)
+        doc = self.collection.find_one(
+            {"_id": oid, "deleted": {"$ne": True}},
+            {"name": 1},
+        )
+        if not doc:
+            return None
+        return doc.get("name")
+
+
+
+
     def list_all(self) -> List[Dict]:
         """
         Return all non-deleted class documents as plain dicts.
         """
         cursor = self.collection.find({"deleted": {"$ne": True}})
-        return [doc for doc in cursor]
+        return list(cursor)
 
-    def list_teacher_classes(self, teacher_id: str | ObjectId) -> List[Dict]:
+    def list_classes_for_teacher(self, teacher_id: str | ObjectId) -> List[Dict]:
         """
         Return all non-deleted class documents where the given teacher is assigned.
         """
@@ -68,7 +85,7 @@ class ClassReadModel:
             }
         ))
 
-    def list_student_classes(self, student_id: str | ObjectId) -> List[Dict]:
+    def list_classes_for_student(self, student_id: str | ObjectId) -> List[Dict]:
         """
         Return all non-deleted class documents where the given student is enrolled.
         """
@@ -80,7 +97,7 @@ class ClassReadModel:
             }
         ))
 
-    def list_student_ids_in_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
+    def list_student_ids_for_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
         """
         Return the list of student_ids (ObjectId) enrolled in the given class.
         """
@@ -94,7 +111,7 @@ class ClassReadModel:
         student_ids = doc.get("student_ids") or []
         return [self._normalize_id(sid) for sid in student_ids]
 
-    def list_subject_ids_in_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
+    def list_subject_ids_for_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
         """
         Return the list of subject_ids (ObjectId) in the given class.
         """
@@ -110,7 +127,7 @@ class ClassReadModel:
 
 
 
-    def list_name_class(self) -> List[Dict]:
+    def list_class_names(self) -> List[Dict]:
         """
         Return all non-deleted class documents as plain dicts.
         """
@@ -119,18 +136,7 @@ class ClassReadModel:
 
 
 
-    def get_class_name_by_id(self, class_id: Union[str, ObjectId]) -> Optional[str]:
-        """
-        Return the name of the given class, or None if not found.
-        """
-        oid = self._normalize_id(class_id)
-        doc = self.collection.find_one(
-            {"_id": oid, "deleted": {"$ne": True}},
-            {"name": 1},
-        )
-        if not doc:
-            return None
-        return doc.get("name")
+
 
     def list_class_names_by_ids(self, class_ids: List[ObjectId]) -> Dict[ObjectId, str]:
         """

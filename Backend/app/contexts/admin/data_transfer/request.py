@@ -74,7 +74,8 @@ class AdminCreateClassSchema(BaseModel):
 class AdminAssignTeacherToClassSchema(BaseModel):
     teacher_id: str = Field(..., min_length=1)
 
-
+class AdminUnAssignTeacherToClassSchema(BaseModel):
+    teacher_id: str = Field(..., min_length=1)
 class AdminEnrollStudentToClassSchema(BaseModel):
     student_id: str = Field(..., min_length=1)
 

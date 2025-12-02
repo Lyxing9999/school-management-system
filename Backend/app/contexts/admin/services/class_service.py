@@ -93,16 +93,16 @@ class ClassAdminService:
         """
         return self.class_read_model.get_by_id(class_id)
 
-    def admin_list_classes(self) -> List[dict]:
+    def admin_list_classes_enriched(self) -> List[dict]:
         """
         Read-only: list all non-deleted classes.
         Later you can add pagination/filtering here.
         """
-        return self.class_read_model.list_all()
+        return self.admin_read_model.admin_list_classes_enriched()
 
     def admin_list_classes_select(self) -> List[dict]:
         """
         Read-only: list all non-deleted classes.
         Later you can add pagination/filtering here.
         """
-        return self.adm.admin_list_class_select()
+        return self.admin_read_model.admin_list_class_select()

@@ -108,7 +108,7 @@ class TeacherReadModel(MongoErrorMixin):
         }
         """
         oid = mongo_converter.convert_to_object_id(teacher_id)
-        raw_classes = self.classes.list_teacher_classes(oid)
+        raw_classes = self.classes.list_classes_for_teacher(oid)
 
         # returns { user_id(ObjectId) -> staff_name }
         name_map = self.staff.list_names_by_user_ids([oid])
@@ -140,11 +140,11 @@ class TeacherReadModel(MongoErrorMixin):
 
         return result
 
-    def list_student_ids_in_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
-        return self.classes.list_student_ids_in_class(class_id)
+    def list_student_ids_for_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
+        return self.classes.list_student_ids_for_class(class_id)
 
-    def list_subject_ids_in_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
-        return self.classes.list_subject_ids_in_class(class_id)
+    def list_subject_ids_for_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
+        return self.classes.list_subject_ids_for_class(class_id)
 
     # ----------------- select options (for dropdowns) -----------------
 
@@ -164,7 +164,7 @@ class TeacherReadModel(MongoErrorMixin):
         NOTE: Currently uses IAM.username. Later you can switch to
         student full_name via DisplayNameService if you want.
         """
-        student_ids = self.list_student_ids_in_class(class_id)
+        student_ids = self.list_student_ids_for_class(class_id)
         if not student_ids:
             return []
 
@@ -198,7 +198,7 @@ class TeacherReadModel(MongoErrorMixin):
         Uses SubjectReadModel.list_names_by_ids which returns {ObjectId: name}
         (or you can route this through DisplayNameService.subject_names_for_ids).
         """
-        subject_ids = self.list_subject_ids_in_class(class_id)
+        subject_ids = self.list_subject_ids_for_class(class_id)
         if not subject_ids:
             return []
 
@@ -228,7 +228,7 @@ class TeacherReadModel(MongoErrorMixin):
         ]
         """
         oid = mongo_converter.convert_to_object_id(teacher_id)
-        docs = self.classes.list_teacher_classes(oid)
+        docs = self.classes.list_classes_for_teacher(oid)
         options: List[Dict[str, Any]] = []
         for c in docs:
             cid = c.get("_id")
@@ -253,7 +253,7 @@ class TeacherReadModel(MongoErrorMixin):
         - maybe subject_name if you add subject_id to schedule
         """
         oid = mongo_converter.convert_to_object_id(teacher_id)
-        return self.schedule.list_teacher_schedules(oid)
+        return self.schedule.list_schedules_for_teacher(oid)
 
     # ----------------- grades & attendance -----------------
 

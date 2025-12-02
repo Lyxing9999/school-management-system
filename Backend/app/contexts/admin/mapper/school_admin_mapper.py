@@ -20,9 +20,9 @@ class SchoolAdminMapper:
     # ========== CLASS ==========
 
     @staticmethod
-    def class_to_dto(section: ClassSection) -> AdminClassDataDTO:
+    def class_to_dto(section: ClassSection) -> ClassSection:
         """Domain ClassSection -> DTO"""
-        return AdminClassDataDTO(
+        return ClassSection(
             id=str(section.id),
             name=section.name,
             teacher_id=str(section.teacher_id) if section.teacher_id else None,
@@ -35,9 +35,9 @@ class SchoolAdminMapper:
         )
 
     @staticmethod
-    def class_doc_to_dto(doc: dict) -> AdminClassDataDTO:
+    def class_doc_to_dto(doc: dict) -> ClassSection:
         """Raw Mongo dict -> DTO (used by read models)."""
-        return AdminClassDataDTO(
+        return ClassSection(
             id=str(doc["_id"]),
             name=doc["name"],
             teacher_id=str(doc["teacher_id"]) if doc.get("teacher_id") else None,
@@ -50,7 +50,7 @@ class SchoolAdminMapper:
         )
 
     @staticmethod
-    def class_list_to_dto(docs: List[dict]) -> AdminClassListDTO:
+    def class_list_to_dto(docs: List[dict]) -> List[ClassSection]:
         """
         NOTE: this takes *dicts* from ClassReadModel, not domain objects.
         """
@@ -58,7 +58,7 @@ class SchoolAdminMapper:
             SchoolAdminMapper.class_doc_to_dto(doc)
             for doc in docs
         ]
-        return AdminClassListDTO(items=items)
+        return items
 
     # ========== SUBJECT ==========
 

@@ -103,7 +103,7 @@ class StudentReadModel(MongoErrorMixin):
         }
         """
         oid = mongo_converter.convert_to_object_id(student_id)
-        raw_classes = self.classes.list_student_classes(oid)  # raw Mongo docs
+        raw_classes = self.classes.list_classes_for_student(oid)  # raw Mongo docs
 
         # collect teacher_ids
         teacher_ids: List[ObjectId] = [
@@ -162,7 +162,7 @@ class StudentReadModel(MongoErrorMixin):
         ]
         """
         oid = mongo_converter.convert_to_object_id(student_id)
-        class_docs = self.classes.list_student_classes(oid)
+        class_docs = self.classes.list_classes_for_student(oid)
         if not class_docs:
             return []
 
@@ -203,13 +203,13 @@ class StudentReadModel(MongoErrorMixin):
            - teacher_id (string)
         """
         oid = mongo_converter.convert_to_object_id(student_id)
-        class_docs = self.classes.list_student_classes(oid)
+        class_docs = self.classes.list_classes_for_student(oid)
         if not class_docs:
             return []
 
         # Build class meta: { class_id(ObjectId) -> {"class_name", "teacher_id"} }
         class_ids: List[ObjectId] = []
-        teacher_ids: List[ObjectId] = []
+        teacher_ids: List[ObjectId] = []    
         class_meta_by_id: Dict[ObjectId, Dict[str, Any]] = {}
 
         for c in class_docs:
@@ -240,7 +240,7 @@ class StudentReadModel(MongoErrorMixin):
         # Fetch schedules for all classes
         schedules: List[Dict[str, Any]] = []
         for cid in class_ids:
-            class_slots = self.schedule.list_class_schedules(cid)
+            class_slots = self.schedule.list_schedules_for_class(cid)
             schedules.extend(class_slots)
 
         # Enrich + normalize ids

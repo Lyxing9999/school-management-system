@@ -89,6 +89,6 @@ class StudentService:
         student_id: str | ObjectId,
     ) -> list[ClassSectionDTO]:
         sid = self._oid(student_id)
-        docs = self.class_read.list_student_classes(sid)
+        docs = self.class_read.list_classes_for_student(sid)
         
         return mongo_converter.list_to_dto(docs, ClassSectionDTO)

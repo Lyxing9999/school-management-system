@@ -54,3 +54,4 @@ class ScheduleMapper:
             "created_at": slot.created_at,
             "updated_at": slot.updated_at,
         }
+    

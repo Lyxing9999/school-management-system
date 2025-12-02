@@ -1,168 +1,183 @@
 # School Management System – Backend
 
-A modular and scalable backend for a School Management System, built with **Flask**, **MongoDB**, and a clean **Service → Route → Response** architecture.  
-The goal is to create a maintainable, production-ready backend with strong separation of concerns.
+A Flask-based backend for managing schools, built with MongoDB and a clean, context-driven architecture. Designed for maintainability and scalability.
 
 ---
 
-## 🚧 Development Status
+## Overview
 
-**Backend Progress: ~30% Completed**
-
-- ✅ Admin module (CRUD, user management)
-- ✅ Authentication skeleton
-- ✅ Database models (Pydantic + MongoDB)
-- ✅ IAM module
-- 🔄 Teacher module – IN PROGRESS
-- 🔄 School module – IN PROGRESS
-- 🔄 Academic module – IN PROGRESS
-- ⏳ Student module – NOT STARTED
+This backend provides APIs for managing:
+- **Students** – enrollment, profiles, academic records
+- **Teachers** – assignments, schedules, class management
+- **Classes & Subjects** – sections, capacities, subject metadata
+- **Schedules** – timetables, slots, teacher assignments
+- **Attendance & Grades** – tracking and reporting
+- **Users & Staff** – authentication, roles, permissions
 
 ---
 
-## 🔧 Tech Stack
+## Architecture
 
-- **Flask** (Blueprint modular architecture)
-- **MongoDB** (PyMongo)
-- **Pydantic** for validation
-- **Layered Architecture**
-  - Routes → handle HTTP + validate DTOs
-  - Services → business logic
-  - Repositories → database access
-  - Models → define pure OOP domain objects and business rules (no DB access)
-- **Docker** support
-- CORS, JWT-ready
-- Future-proof permission system
+### Context-Based Design
 
----
+The system is organized into bounded contexts, each owning its domain:
 
-## 📁 Project Structure
+- **`admin/`** – Admin dashboard APIs (CRUD for users, staff, classes, schedules)
+- **`school/`** – Core domain (ClassSection, Schedule, Attendance, Grade, Enrollment)
+- **`teacher/`** – Teacher-facing features
+- **`student/`** – Student-facing features
+- **`iam/`** – Identity & Access Management (JWT, roles, permissions)
+- **`staff/`** – Staff profiles and metadata
+- **`auth/`** – Authentication utilities
+- **`shared/`** – Cross-cutting concerns (DTOs, display names, decorators)
+- **`core/`** – Security, error handling
+- **`infra/`** – Database, configuration
+- **`jobs/`** – Background tasks
+
+### Separation of Concerns
+
+Each context follows a layered structure:
+
 ```
-app/
-├─ contexts/
-│  ├─ admin/          ✅ DONE
-│  │  ├─ routes.py
-│  │  ├─ services.py
-│  │  ├─ models.py
-│  │  ├─ repository.py
-│  │  ├─ read_models.py
-│  │  ├─ data_transfer/
-│  │  ├─ error/
-│  │  └─ tests/
-│  ├─ teacher/        🔄 IN PROGRESS
-│  ├─ student/        ⏳ NOT STARTED
-│  ├─ academic/       🔄 IN PROGRESS
-│  ├─ school/         🔄 IN PROGRESS
-│  ├─ iam/            ✅ DONE
-│  └─ core/
-│     ├─ security/
-│     └─ placeholder/
-├─ uploads/
-├─ __init__.py
-run.py
-requirements.txt
-Dockerfile
+context/
+  routes/         # HTTP layer (Flask blueprints)
+  services/       # Application logic (orchestration)
+  domain/         # Business rules (aggregates, entities)
+  repositories/   # Data persistence (MongoDB)
+  read_models/    # Optimized queries for views
+  data_transfer/  # Request/response DTOs
+  mapper/         # Domain ↔ DTO conversion
+  errors/         # Context-specific exceptions
 ```
 
-### Why This Structure Works
-
-- Each context is fully isolated
-- Routes only handle HTTP
-- Services contain business logic
-- Models define domain objects (pure OOP, business rules)
-- Easy to add new contexts with no breaking changes
-
----
-
-## ✨ Features (Current & Planned)
-
-✔ Admin/Teacher/Student roles  
-✔ Modular Blueprints  
-✔ Class & Schedule management  
-✔ Grading workflow  
-✔ Attendance tracking  
-✔ Telegram bot integration ready  
-✔ Dynamic permissions (future-ready)  
+**Key principles:**
+- Routes handle HTTP only – no business logic
+- Services orchestrate use cases
+- Domain enforces business rules
+- Read models optimize queries without mixing business logic
+- Soft delete for core entities (users, classes, staff)
 
 ---
 
-## 🚀 Running the Backend
+## Quick Start
 
 ### Local Development
-```bash
-pip install -r requirements.txt
-python run.py
-```
+
+1. **Install dependencies:**
+   ```bash
+   cd Backend
+   pip install -r requirements.txt
+   ```
+
+2. **Configure environment:**  
+   Create `.env` in `Backend/`:
+   ```env
+   FLASK_ENV=development
+   MONGO_URI=mongodb://localhost:27017/school_db
+   SECRET_KEY=your-secret-key
+   JWT_SECRET_KEY=your-jwt-secret
+   ```
+
+3. **Run the server:**
+   ```bash
+   python run.py
+   ```
+
+   API available at `http://localhost:5001`
 
 ### Docker
-```bash
-docker build -t school-backend .
-docker run -p 5000:5000 --env-file .env school-backend
-```
 
-Or with Compose:
+From the repository root:
+
 ```bash
 docker-compose up --build
 ```
 
-Backend runs at: **http://localhost:5001**
+This starts:
+- Flask backend
+- Nuxt frontend (admin panel)
+- MongoDB
 
 ---
 
-## ⚙️ Environment Variables
+## Project Structure
 
-Create a `.env` file:
+```
+Backend/
+  app/
+    contexts/       # Bounded contexts
+      admin/
+      school/
+      teacher/
+      student/
+      iam/
+      staff/
+      ...
+  run.py            # Application entry point
+  requirements.txt
+  Dockerfile
+  admin.http        # HTTP request samples (admin)
+  teacher.http      # HTTP request samples (teacher)
+  pytest.ini
+```
+
+---
+
+## Adding Features
+
+1. **Domain logic** → `app/contexts/{context}/domain/`
+2. **Application logic** → `app/contexts/{context}/services/`
+3. **HTTP endpoints** → `app/contexts/{context}/routes/`
+4. **Queries** → `app/contexts/{context}/read_models/`
+5. **Enrich views** → Use `AdminReadModel` + `DisplayNameService` for joined data
+
+**Never:**
+- Put database queries in routes
+- Put business logic in repositories
+- Skip DTOs when returning data to clients
+
+---
+
+## Testing
+
+Run tests with pytest:
+
 ```bash
-FLASK_ENV=development
-MONGO_URI=mongodb://localhost:27017/school_db
-SECRET_KEY=your-secret-key
+pytest
 ```
+
+Test files are co-located within each context under `tests/`.
 
 ---
 
-## 📡 Example API Endpoints
-```
-GET  /api/admin/users
-POST /api/admin/create-user
-PUT  /api/teacher/grade
-GET  /api/academic/classes
-```
+## API Documentation
 
-Use **Postman** or **Thunder Client** for testing.
+Sample requests are provided in:
+- `admin.http` – Admin operations
+- `teacher.http` – Teacher operations
+
+Use tools like REST Client (VS Code) or Postman to test endpoints.
 
 ---
 
-## 🧪 Tests
+## Design Goals
 
-Each context has its own tests:
-```
-app/contexts/<context>/tests/
-```
-
----
-
-## 📘 Developer Notes
-
-This backend follows:
-
-- **Clean Architecture**
-- No business logic in routes
-- No raw DB logic in routes
-- Services are the "brain"
-- Pydantic for strong typing
-- Context-based modularity
+- **Separation of concerns** – HTTP, application, domain, and data layers are isolated
+- **Testability** – Each layer can be tested independently
+- **Scalability** – Add contexts and features without restructuring
+- **Read/write separation** – Commands (writes) and queries (reads) use different paths
+- **Soft delete** – Preserve data integrity with logical deletes
 
 ---
 
-## ⚠️ Common Issues
+## Contributing
 
-**MongoDB connection error:**
-- Check your `.env`
-- Make sure MongoDB is running
-
-**Port already in use:**
-- Change port in `run.py`
-- Or kill the conflicting process
+When adding features:
+1. Follow the existing context structure
+2. Use DTOs for all API boundaries
+3. Keep domain logic pure (no I/O)
+4. Enrich read views via `AdminReadModel` when cross-context data is needed
+5. Write tests for services and domain logic
 
 ---
 
