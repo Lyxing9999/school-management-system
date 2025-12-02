@@ -1,16 +1,18 @@
-// composables/useFormEdit.ts
 import {
   ref,
   computed,
   unref,
   watch,
   toRaw,
+  nextTick,
   type Ref,
   type ComputedRef,
 } from "vue";
 import type { FormInstance } from "element-plus";
 import type { UseFormService } from "~/forms/types/serviceFormTypes";
 import type { Field } from "~/components/types/form";
+
+import { useMessage } from "~/composables/common/useMessage";
 
 export type InitialData<I> =
   | Partial<I>
@@ -21,8 +23,9 @@ type WithResult<T> = { result: T };
 
 /**
  * useFormEdit
- * Handles dynamic edit/detail forms with patch/put/update support.
- * Defaults to PATCH on save.
+ * Handles dynamic edit/detail forms with PATCH / PUT support.
+ * - PATCH: send only changed fields
+ * - PUT:   send full filtered data
  */
 export function useFormEdit<I extends object, O extends I = I>(
   getService: () => UseFormService<undefined, I, undefined, O>,
@@ -35,7 +38,7 @@ export function useFormEdit<I extends object, O extends I = I>(
   const elFormRef = ref<FormInstance>();
   const saveId = ref<string | number>("");
 
-  // current form state
+  // current form state (what user edits)
   const formData = ref<Partial<I>>({});
 
   // original data loaded from API for this record
@@ -48,7 +51,8 @@ export function useFormEdit<I extends object, O extends I = I>(
   const defaultData = computed(() => unref(getDefaultData()));
 
   /**
-   * Track diffs: whenever formData changes, compute patchData compared to reactiveInitialData
+   * Track diffs:
+   * whenever formData changes, compute patchData compared to reactiveInitialData
    */
   watch(
     formData,
@@ -56,23 +60,28 @@ export function useFormEdit<I extends object, O extends I = I>(
       if (!newVal || typeof newVal !== "object") return;
 
       const fields = schema.value;
-      fields.forEach((field) => {
-        const fieldsToCheck = field.row ?? [field];
+      const nextDiff: Partial<I> = {};
 
-        fieldsToCheck.forEach((f) => {
-          const key = f.key as keyof I;
-          if (!key) return;
+      const collectDiffs = (fields: Field<I>[]) => {
+        fields.forEach((field) => {
+          const rowFields = field.row ?? [field];
 
-          const newValue = newVal[key];
-          const oldValue = reactiveInitialData.value[key];
+          rowFields.forEach((f) => {
+            const key = f.key as keyof I | undefined;
+            if (!key) return;
 
-          if (newValue !== oldValue) {
-            patchData.value[key] = newValue;
-          } else {
-            delete patchData.value[key];
-          }
+            const newValue = (newVal as any)[key];
+            const oldValue = (reactiveInitialData.value as any)[key];
+
+            if (newValue !== oldValue) {
+              (nextDiff as any)[key] = newValue;
+            }
+          });
         });
-      });
+      };
+
+      collectDiffs(fields);
+      patchData.value = nextDiff;
     },
     { deep: true }
   );
@@ -84,6 +93,7 @@ export function useFormEdit<I extends object, O extends I = I>(
     const safeInitial = reactiveInitialData.value || {};
     formData.value = { ...safeInitial, ...data } as Partial<I>;
   };
+
   /**
    * Open form and load detail by ID
    */
@@ -93,14 +103,14 @@ export function useFormEdit<I extends object, O extends I = I>(
     saveId.value = id;
 
     reactiveInitialData.value = {};
-    patchData.value = {};
     formData.value = {};
+    patchData.value = {};
 
     try {
       const detail = await service.value.getDetail(saveId.value.toString());
       const data = (
         detail && "result" in detail ? (detail as WithResult<O>).result : detail
-      ) as Partial<I>;
+      ) as Partial<I> | null | undefined;
 
       if (!data || Object.keys(data).length === 0) {
         reactiveInitialData.value = { ...defaultData.value };
@@ -110,14 +120,20 @@ export function useFormEdit<I extends object, O extends I = I>(
         resetFormData(data);
       }
 
+      // clear diffs for this record
+      patchData.value = {};
+
       // open after data is ready
       formDialogVisible.value = true;
     } finally {
       loading.value = false;
     }
   };
+
   /**
-   * Save form — PATCH by default, PUT if method is explicitly set
+   * Save form
+   * - PATCH: send only changed fields (patchData)
+   * - PUT:   send full filteredData
    */
   const saveForm = async (
     payload: Partial<I>,
@@ -135,6 +151,7 @@ export function useFormEdit<I extends object, O extends I = I>(
       // Merge external payload (from SmartForm) into formData
       if (payload && Object.keys(payload).length > 0) {
         Object.assign(formData.value, payload);
+        await nextTick();
       }
 
       const fields = schema.value as Field<I>[];
@@ -162,15 +179,21 @@ export function useFormEdit<I extends object, O extends I = I>(
         (filteredData as any).photo_file = file;
       }
 
-      // Decide what to send:
-      // - PATCH: use diff (patchData) when available, otherwise fall back to full filteredData
-      // - PUT: always full filteredData
+      // Decide what to send
       let basePayload: Partial<I>;
 
       if (method === "PATCH") {
         const hasDiff = Object.keys(patchData.value).length > 0;
-        basePayload = hasDiff ? (patchData.value as Partial<I>) : filteredData;
+
+        if (!hasDiff) {
+          useMessage().showInfo("No changes detected, skip update");
+          return true;
+        }
+
+        // Only changed fields
+        basePayload = patchData.value;
       } else {
+        // PUT: full object
         basePayload = filteredData as I;
       }
 
@@ -192,8 +215,7 @@ export function useFormEdit<I extends object, O extends I = I>(
 
       try {
         response = await service.value.update(saveId.value.toString(), body);
-      } catch (err) {
-        console.error("Update failed:", err);
+      } catch (err: any) {
         return false;
       }
 
@@ -201,6 +223,7 @@ export function useFormEdit<I extends object, O extends I = I>(
         // Refresh initial data with response, reset form, close dialog
         reactiveInitialData.value = toRaw(response);
         resetFormData(response);
+        patchData.value = {};
         formDialogVisible.value = false;
         return true;
       }
@@ -215,10 +238,9 @@ export function useFormEdit<I extends object, O extends I = I>(
    * Cancel: discard edits and close dialog
    */
   const cancelForm = () => {
-    // Optionally clear IDs/diffs so next open starts clean
+    // Restore form to initial data and clear diffs
+    resetFormData();
     patchData.value = {};
-
-    // Close dialog
     formDialogVisible.value = false;
   };
 

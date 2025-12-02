@@ -188,7 +188,7 @@ const handleOpenEditForm = async (row: AdminScheduleSlotDataDTO) => {
   try {
     detailLoading.value = true;
     editFormDataKey.value = row.id?.toString() ?? "new";
-    
+
     await nextTick();
     await openEditForm(row.id);
     editFormVisible.value = true;
@@ -198,7 +198,7 @@ const handleOpenEditForm = async (row: AdminScheduleSlotDataDTO) => {
 };
 
 const handleSaveEditForm = (payload: Partial<any>) => {
-  saveEditForm(payload);
+  saveEditForm(payload, "PUT");
 };
 
 const handleCancelEditForm = () => {

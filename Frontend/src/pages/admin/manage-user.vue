@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch, nextTick, onMounted } from "vue";
 // --------------------
 // Page Meta
 // --------------------
@@ -49,7 +49,10 @@ import {
 // --------------------
 // API & Types
 // --------------------
-import type { AdminGetUserData, AdminUpdateUser } from "~/api/admin/user/dto";
+import type {
+  AdminGetUserItemData,
+  AdminUpdateUser,
+} from "~/api/admin/user/dto";
 
 import { Role } from "~/api/types/enums/role.enum";
 
@@ -107,7 +110,7 @@ const {
   loading: editFormLoading,
 } = useDynamicEditFormReactive(selectedFormEdit);
 const detailLoading = ref<Record<string | number, boolean>>({});
-const handleOpenEditForm = async (row: AdminGetUserData) => {
+const handleOpenEditForm = async (row: AdminGetUserItemData) => {
   try {
     detailLoading.value[row.id] = true;
     selectedFormEdit.value =
@@ -142,7 +145,7 @@ const {
   autoSave,
   getPreviousValue,
   revertField,
-} = useInlineEdit<AdminGetUserData, AdminUpdateUser>(
+} = useInlineEdit<AdminGetUserItemData, AdminUpdateUser>(
   [],
   useInlineEditService("USER")
 );
@@ -224,8 +227,8 @@ const editDialogWidth = computed(() => {
   return dynamicWidthEdit.value;
 });
 const handleRevertField = (
-  row: AdminGetUserData,
-  field: keyof AdminGetUserData
+  row: AdminGetUserItemData,
+  field: keyof AdminGetUserItemData
 ) => {
   revertField(row, field);
 };
@@ -239,8 +242,8 @@ onMounted(() => {
 });
 
 function handleSaveWrapper(
-  row: AdminGetUserData,
-  field: keyof AdminGetUserData
+  row: AdminGetUserItemData,
+  field: keyof AdminGetUserItemData
 ) {
   if (field === "id") return;
   save(row, field as keyof AdminUpdateUser).catch((err) => {
@@ -248,8 +251,8 @@ function handleSaveWrapper(
   });
 }
 function handleAutoSaveWrapper(
-  row: AdminGetUserData,
-  field: keyof AdminGetUserData
+  row: AdminGetUserItemData,
+  field: keyof AdminGetUserItemData
 ) {
   if (field === "id") return;
   autoSave(row, field as keyof AdminUpdateUser).catch((err) => {

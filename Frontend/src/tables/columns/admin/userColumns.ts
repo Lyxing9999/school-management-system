@@ -30,7 +30,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     controls: false,
     autoSave: true,
     controlsSlot: true,
-    minWidth: "300px", // flexible
+    minWidth: "300px", 
     component: ElInput,
     componentProps: { placeholder: "Enter email" },
     childComponentProps: { appendValue: "@gmail.com" },
@@ -62,7 +62,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     inlineEditActive: true,
     controls: false,
     controlsSlot: false,
-    minWidth: "140px", // flexible
+    minWidth: "140px", 
     align: "center",
     render: (row: AdminGetUserItemData, field: keyof AdminGetUserItemData) =>
       h("span", { style: { color: "#999" } }, row[field]),
@@ -71,7 +71,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     field: "created_at",
     label: "Created At",
     inlineEditActive: true,
-    minWidth: "160px", // flexible
+    minWidth: "160px", 
     component: ElDatePicker,
     componentProps: {
       style: "width: 100%",
@@ -86,7 +86,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     field: "updated_at",
     label: "Updated At",
     inlineEditActive: true,
-    minWidth: "160px", // flexible
+    minWidth: "160px", 
     component: ElDatePicker,
     componentProps: {
       style: "width: 100%",
@@ -104,7 +104,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     inlineEditActive: false,
     fixed: "right",
     align: "center",
-    width: "220px", // fixed
+    width: "220px", 
     smartProps: {
       headerStyle: { background: "#6B3FA0", color: "#fff" },
       columnClass: "operation-column",
