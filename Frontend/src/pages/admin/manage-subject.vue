@@ -305,7 +305,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <el-row justify="space-between">
+  <el-row justify="space-between" class="m-4">
     <el-col :span="12">
       <BaseButton type="default" :loading="tableLoading" @click="fetchSubjects">
         Refresh
@@ -330,13 +330,25 @@ onMounted(() => {
       :data="filteredSubjects"
       :columns="subjectColumns"
       :loading="tableLoading"
-      :smart-props="{ border: true, stripe: true, class: 'm-2 m m-5' }"
     >
       <!-- Description column -->
       <template #description="{ row }">
-        <span>{{ row.description || "-" }}</span>
-      </template>
+        <div class="description-cell">
+          <span
+            v-if="row.description"
+            class="description-text"
+            :title="row.description"
+          >
+            {{ row.description }}
+          </span>
 
+          <span v-else class="description-empty">
+            <!-- optional icon -->
+            <!-- <i class="icon-info"></i> -->
+            <span>No description</span>
+          </span>
+        </div>
+      </template>
       <!-- Allowed Grades column -->
       <template #allowedGrades="{ row }">
         <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
@@ -373,5 +385,24 @@ onMounted(() => {
 <style scoped>
 :deep(.el-input-group__append) {
   padding: 0 10px;
+}
+
+.description-cell {
+  display: flex;
+  align-items: center;
+  max-width: 260px; /* clamp the cell width */
+}
+
+.description-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.description-empty {
+  font-size: 12px;
+  color: #9ca3af; /* muted gray */
+  font-style: italic;
 }
 </style>

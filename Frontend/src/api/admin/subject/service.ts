@@ -42,7 +42,7 @@ export class SubjectService {
   ) {
     const data = await this.callApi<AdminSubjectDataDTO>(
       () => this.subjectApi.createSubject(subjectData),
-      { showSuccess: true, ...(options ?? {}) }
+      { showSuccess: true, showError: true }
     );
     return data!;
   }

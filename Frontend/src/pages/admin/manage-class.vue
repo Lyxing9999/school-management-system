@@ -1,19 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from "vue";
+import { ref, computed, onMounted, h, nextTick } from "vue";
 
-definePageMeta({
-  layout: "admin",
-});
+definePageMeta({ layout: "admin" });
 
-// --------------------
-// Base Components
-// --------------------
+// Base components
 import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
+import StudentSelect from "~/components/Selects/StudentSelect.vue";
 
 // Element Plus
 import {
@@ -23,20 +20,17 @@ import {
   ElOption,
   ElMessageBox,
   ElMessage,
+  ElRadioGroup,
+  ElRadioButton,
 } from "element-plus";
 
-// --------------------
-// Services & Types
-// --------------------
+// Services & types
 import { adminService } from "~/api/admin";
 import type {
   AdminCreateClassDTO,
   AdminClassDataDTO,
   AdminClassListDTO,
 } from "~/api/admin/class/dto";
-import type { ColumnConfig } from "~/components/types/tableEdit";
-import type { AdminGetUserData } from "~/api/admin/user/dto";
-import { Role } from "~/api/types/enums/role.enum";
 
 const adminApi = adminService();
 
@@ -64,6 +58,7 @@ const filteredClasses = computed(() => {
 });
 
 /* ---------------------- subject options ---------------------- */
+
 const subjectOptions = ref<{ value: string; label: string }[]>([]);
 const subjectOptionsLoading = ref(false);
 
@@ -84,9 +79,6 @@ async function fetchSubjectOptions() {
   }
 }
 
-/* ---------------------- student options (for enroll) ---------------------- */
-import StudentSelect from "~/components/Selects/StudentSelect.vue";
-
 /* ---------------------- columns (SmartTable) ---------------------- */
 
 const classColumns = computed(() => [
@@ -102,7 +94,7 @@ const classColumns = computed(() => [
     align: "left",
     minWidth: "160px",
     render: (row: AdminClassDataDTO) =>
-      h("span", row.teacher_id ? "Has teacher" : "No teacher"),
+      h("span", row.teacher_name || "No teacher"),
   },
   {
     label: "Students",
@@ -145,7 +137,7 @@ const classColumns = computed(() => [
 ]);
 
 /* ---------------------- create form state ---------------------- */
-
+import type { Field } from "~/components/types/form";
 const createDialogVisible = ref(false);
 const createFormLoading = ref(false);
 
@@ -156,7 +148,7 @@ const createFormData = ref<AdminCreateClassDTO>({
   max_students: 30,
 });
 
-const classFormFields = computed(() => [
+const classFormFields: Field<AdminCreateClassDTO>[] = [
   {
     key: "name",
     label: "Class Name",
@@ -223,70 +215,94 @@ const classFormFields = computed(() => [
       labelKey: "label",
     },
   },
-]);
+];
 
 const createDialogWidth = computed(() => "50%");
 
-/* ---------------------- manage students dialog ---------------------- */
+/* ---------------------- manage students & teacher dialog ---------------------- */
 
 const manageStudentsVisible = ref(false);
 const currentClassForStudents = ref<AdminClassDataDTO | null>(null);
 
 const originalStudentIds = ref<string[]>([]);
 const selectedStudentIds = ref<string[]>([]);
-const detailLoading = ref(false);
-const deleteLoading = ref<Record<string | number, boolean>>({});
-async function openManageStudentsDialog(row: AdminClassDataDTO) {
-  detailLoading.value = true;
-  currentClassForStudents.value = row;
-  originalStudentIds.value = [...(row.student_ids ?? [])];
-  selectedStudentIds.value = [...(row.student_ids ?? [])];
-  await nextTick();
+const selectedTeacherId = ref<string | null>(null);
 
-  manageStudentsVisible.value = true;
-  detailLoading.value = false;
+const detailLoading = ref<Record<string | number, boolean>>({});
+const deleteLoading = ref<Record<string | number, boolean>>({});
+const saveStudentsLoading = ref(false);
+
+async function openManageStudentsDialog(row: AdminClassDataDTO) {
+  detailLoading.value[row.id] = true;
+  try {
+    currentClassForStudents.value = row;
+
+    originalStudentIds.value = [...(row.student_ids ?? [])];
+    selectedStudentIds.value = [...(row.student_ids ?? [])];
+
+    selectedTeacherId.value = (row.teacher_id as string | null) ?? null;
+
+    await nextTick();
+    manageStudentsVisible.value = true;
+  } finally {
+    detailLoading.value[row.id] = false;
+  }
 }
 
 function cancelManageStudents() {
   manageStudentsVisible.value = false;
-  detailLoading.value = false;
 }
-const saveStudentsLoading = ref(false);
+
+/**
+ * Save both students and teacher changes in one click.
+ */
 async function saveManageStudents() {
-  saveStudentsLoading.value = true;
   const cls = currentClassForStudents.value;
   if (!cls) return;
 
+  saveStudentsLoading.value = true;
+
   const classId = cls.id;
-  const oldSet = new Set(originalStudentIds.value);
-  const newSet = new Set(selectedStudentIds.value);
+  const oldStudentSet = new Set(originalStudentIds.value);
+  const newStudentSet = new Set(selectedStudentIds.value);
 
   const toAdd: string[] = [];
   const toRemove: string[] = [];
 
-  for (const id of newSet) {
-    if (!oldSet.has(id)) toAdd.push(id);
+  for (const id of newStudentSet) {
+    if (!oldStudentSet.has(id)) toAdd.push(id);
   }
-  for (const id of oldSet) {
-    if (!newSet.has(id)) toRemove.push(id);
+  for (const id of oldStudentSet) {
+    if (!newStudentSet.has(id)) toRemove.push(id);
   }
 
+  const oldTeacherId = (cls.teacher_id as string | null) ?? null;
+  const newTeacherId = selectedTeacherId.value ?? null;
+  const teacherChanged = oldTeacherId !== newTeacherId;
+
   try {
-    // add newly selected
+    // update students
     for (const sid of toAdd) {
       await adminApi.class.enrollStudent(classId, sid);
     }
-    // remove unselected
     for (const sid of toRemove) {
       await adminApi.class.unenrollStudent(classId, sid);
     }
 
-    ElMessage.success("Students updated");
+    // update teacher if changed
+    if (teacherChanged) {
+      if (newTeacherId === null) {
+        await adminApi.class.unassignClassTeacher(classId);
+      } else {
+        await adminApi.class.assignClassTeacher(classId, newTeacherId!);
+      }
+    }
+
     manageStudentsVisible.value = false;
     await fetchClasses();
-  } catch (err: any) {
-    console.error("Failed to update students", err);
-    ElMessage.error("Failed to update students");
+  } catch (err) {
+    console.error("Failed to update class", err);
+    ElMessage.error("Failed to update class");
   } finally {
     saveStudentsLoading.value = false;
   }
@@ -300,7 +316,7 @@ async function fetchClasses() {
     const res: AdminClassListDTO | undefined =
       await adminApi.class.getClasses();
     classes.value = res?.items ?? [];
-  } catch (err: any) {
+  } catch (err) {
     console.error("Failed to fetch classes", err);
   } finally {
     tableLoading.value = false;
@@ -314,7 +330,7 @@ async function openCreateDialog() {
     name: "",
     teacher_id: null,
     subject_ids: [],
-    max_students: null,
+    max_students: 30,
   };
   await fetchSubjectOptions();
   createDialogVisible.value = true;
@@ -339,6 +355,7 @@ async function handleSaveCreateForm(payload: Partial<AdminCreateClassDTO>) {
     await fetchClasses();
   } catch (err) {
     console.error("Failed to create class", err);
+    ElMessage.error("Failed to create class");
   } finally {
     createFormLoading.value = false;
   }
@@ -352,7 +369,6 @@ function handleCancelCreateForm() {
 
 async function handleSoftDelete(row: AdminClassDataDTO) {
   try {
-    deleteLoading.value[row.id] = true;
     await ElMessageBox.confirm(
       "Are you sure you want to soft delete this class?",
       "Warning",
@@ -363,6 +379,7 @@ async function handleSoftDelete(row: AdminClassDataDTO) {
       }
     );
 
+    deleteLoading.value[row.id] = true;
     await adminApi.class.softDeleteClass(row.id);
     await fetchClasses();
   } catch (err: any) {
@@ -393,11 +410,11 @@ onMounted(() => {
     </el-col>
 
     <el-col :span="12" class="text-right">
-      <el-radio-group v-model="showDeleted">
-        <el-radio-button label="all">All</el-radio-button>
-        <el-radio-button label="active">Active</el-radio-button>
-        <el-radio-button label="deleted">Deleted</el-radio-button>
-      </el-radio-group>
+      <ElRadioGroup v-model="showDeleted">
+        <ElRadioButton label="all">All</ElRadioButton>
+        <ElRadioButton label="active">Active</ElRadioButton>
+        <ElRadioButton label="deleted">Deleted</ElRadioButton>
+      </ElRadioGroup>
     </el-col>
   </el-row>
 
@@ -414,8 +431,8 @@ onMounted(() => {
           deleteContent="Delete class"
           @detail="openManageStudentsDialog(row)"
           @delete="handleSoftDelete(row)"
-          :deleteLoading="deleteLoading[row.id]"
-          :detailLoading="detailLoading"
+          :deleteLoading="deleteLoading[row.id] ?? false"
+          :detailLoading="detailLoading[row.id] ?? false"
         />
       </template>
     </SmartTable>
@@ -436,21 +453,33 @@ onMounted(() => {
     />
   </ErrorBoundary>
 
-  <!-- MANAGE STUDENTS DIALOG -->
+  <!-- MANAGE STUDENTS + TEACHER DIALOG -->
   <ErrorBoundary>
     <el-dialog
       v-model="manageStudentsVisible"
-      :title="`Manage Students${
+      :title="`Manage Class${
         currentClassForStudents ? ' - ' + currentClassForStudents.name : ''
       }`"
       width="40%"
     >
-      <div class="mb-4">
-        <StudentSelect
-          v-model="selectedStudentIds"
-          multiple
-          placeholder="Select students to enroll"
-        />
+      <div class="mb-4 space-y-4">
+        <div>
+          <p class="text-xs text-gray-500 mb-1">Students</p>
+          <StudentSelect
+            v-model="selectedStudentIds"
+            multiple
+            placeholder="Select students to enroll"
+          />
+        </div>
+
+        <div>
+          <p class="text-xs text-gray-500 mb-1">Teacher</p>
+          <TeacherSelect
+            v-model="selectedTeacherId"
+            placeholder="Select teacher"
+            clearable
+          />
+        </div>
       </div>
 
       <template #footer>

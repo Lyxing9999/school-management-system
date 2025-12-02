@@ -9,7 +9,7 @@ import ClassSelect from "~/components/Selects/ClassSelect.vue";
 import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
 import { dayOptions } from "~/utils/constants/dayOptions";
 
-export const scheduleFormSchemaByClass: Field<AdminCreateScheduleSlotDTO>[] = [
+export const scheduleFormSchema: Field<AdminCreateScheduleSlotDTO>[] = [
   {
     key: "class_id",
     label: "Class",
@@ -103,102 +103,6 @@ export const scheduleFormSchemaByClass: Field<AdminCreateScheduleSlotDTO>[] = [
     },
   },
 ];
-
-export const scheduleFormSchemaByTeacher: Field<AdminCreateScheduleSlotDTO>[] =
-  [
-    {
-      key: "class_id",
-      label: "Class",
-      component: TeacherSelect,
-      formItemProps: {
-        required: true,
-        prop: "teacher_id",
-        label: "Class",
-      },
-      componentProps: {
-        placeholder: "Select Teacher",
-        filterable: true,
-        clearable: false,
-        format: "HH:mm",
-      },
-    },
-    {
-      key: "teacher_id",
-      label: "Teacher",
-      component: TeacherSelect,
-      formItemProps: {
-        required: true,
-        prop: "teacher_id",
-        label: "Teacher",
-      },
-      componentProps: {
-        placeholder: "Select teacher",
-        clearable: true,
-      },
-    },
-
-    {
-      key: "day_of_week",
-      label: "Day of Week",
-      component: ElSelect,
-      childComponent: ElOption,
-      formItemProps: {
-        required: true,
-        prop: "day_of_week",
-        label: "Day of Week",
-      },
-      componentProps: {
-        placeholder: "Select day",
-      },
-      childComponentProps: {
-        options: () => dayOptions,
-        valueKey: "value",
-        labelKey: "label",
-      },
-    },
-    {
-      key: "start_time",
-      label: "Start Time",
-      component: ElTimeSelect,
-      formItemProps: {
-        required: true,
-        prop: "start_time",
-        label: "Start Time",
-      },
-      componentProps: {
-        placeholder: "Select start time",
-        format: "HH:mm",
-      },
-    },
-    {
-      key: "end_time",
-      label: "End Time",
-      component: ElTimeSelect,
-      formItemProps: {
-        required: true,
-        prop: "end_time",
-        label: "End Time",
-      },
-      componentProps: {
-        placeholder: "Select end time",
-        format: "HH:mm",
-      },
-    },
-    {
-      key: "room",
-      label: "Room",
-      component: ElInput,
-      formItemProps: {
-        required: false,
-        prop: "room",
-        label: "Room",
-      },
-      componentProps: {
-        placeholder: "Room (optional)",
-        clearable: true,
-      },
-    },
-  ];
 
 export const scheduleFormSchemaEdit: Field<AdminUpdateScheduleSlotDTO>[] = [
   {

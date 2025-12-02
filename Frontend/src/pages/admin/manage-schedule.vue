@@ -11,7 +11,6 @@ import ActionButtons from "~/components/Button/ActionButtons.vue";
 import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
 
 import {
-  ElInput,
   ElOption,
   ElSelect,
   ElRadioGroup,
@@ -27,28 +26,18 @@ import type {
   AdminClassListDTO,
 } from "~/api/admin/class/dto";
 
-import { dayOptions } from "~/utils/constants/dayOptions";
 import { useLabelMap } from "~/composables/common/useLabelMap";
 import { createScheduleColumns } from "~/tables/columns/admin/scheduleColumns";
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
 } from "~/forms/dynamic/useAdminForms";
-import type { FormEntity } from "~/forms/types/dynamicFormTypes";
 
 const adminApi = adminService();
 
 /* ---------------------- mode ---------------------- */
 
-// UI mode
 const viewMode = ref<"class" | "teacher">("class");
-
-// form entity used by dynamic form system
-const formEntity = computed<FormEntity>(() =>
-  viewMode.value === "class"
-    ? "SCHEDULE_SLOT_BY_CLASS"
-    : "SCHEDULE_SLOT_BY_TEACHER"
-);
 
 /* ---------------------- state ---------------------- */
 
@@ -92,7 +81,6 @@ const classOptions = ref<{ value: string; label: string }[]>([]);
 const teacherOptions = ref<{ value: string; label: string }[]>([]);
 const optionsLoading = ref({ classes: false, teachers: false });
 
-const classLabelMap = useLabelMap(classOptions);
 const teacherLabelMap = useLabelMap(teacherOptions);
 
 async function fetchClassOptions() {
@@ -142,6 +130,9 @@ const scheduleColumns = createScheduleColumns(teacherLabelMap);
 
 /* ---------------------- dynamic create form ---------------------- */
 
+type CreateMode = "SCHEDULE_SLOT";
+const formEntity = ref<CreateMode>("SCHEDULE_SLOT");
+
 const {
   formDialogVisible: createFormVisible,
   formData: createFormData,
@@ -150,12 +141,28 @@ const {
   cancelForm: cancelCreateForm,
   openForm: openCreateForm,
   loading: createFormLoading,
-  resetFormData,
+  resetFormData: resetCreateFormData,
 } = useDynamicCreateFormReactive(formEntity);
 
+const createDialogKey = ref(0);
+
 const handleOpenCreateForm = async () => {
-  await openCreateForm();
+  createDialogKey.value++;
+
+  if (viewMode.value === "class") {
+    await openCreateForm({
+      class_id: selectedClassId.value,
+    });
+  } else {
+    await openCreateForm({
+      teacher_id: selectedTeacherId.value,
+    });
+  }
 };
+
+watch(formEntity, () => {
+  resetCreateFormData();
+});
 
 const handleSaveCreateForm = (payload: Partial<any>) => {
   saveCreateForm(payload);
@@ -164,11 +171,6 @@ const handleSaveCreateForm = (payload: Partial<any>) => {
 const handleCancelCreateForm = () => {
   cancelCreateForm();
 };
-
-// reset create form when entity (mode) changes
-watch(formEntity, () => {
-  resetFormData();
-});
 
 /* ---------------------- dynamic edit form ---------------------- */
 
@@ -182,18 +184,19 @@ const {
   loading: editFormLoading,
 } = useDynamicEditFormReactive(formEntity);
 
-const detailLoading = ref(false);
+const detailLoading = ref<Record<string | number, boolean>>({});
 const editFormDataKey = ref("");
+
 const handleOpenEditForm = async (row: AdminScheduleSlotDataDTO) => {
   try {
-    detailLoading.value = true;
+    detailLoading.value[row.id] = true;
     editFormDataKey.value = row.id?.toString() ?? "new";
 
     await nextTick();
     await openEditForm(row.id);
     editFormVisible.value = true;
   } finally {
-    detailLoading.value = false;
+    detailLoading.value[row.id] = false;
   }
 };
 
@@ -206,27 +209,30 @@ const handleCancelEditForm = () => {
 };
 
 /* ---------------------- delete ---------------------- */
-
+const deleteLoading = ref<Record<string | number, boolean>>({});
 async function handleDeleteSlot(row: AdminScheduleSlotDataDTO) {
-  await adminApi.scheduleSlot.deleteScheduleSlot(row.id);
-  await fetchSchedule();
+  deleteLoading.value[row.id] = true;
+  try {
+    await adminApi.scheduleSlot.deleteScheduleSlot(row.id);
+    await fetchSchedule();
+  } finally {
+    deleteLoading.value[row.id] = false;
+  }
 }
 
 /* ---------------------- schedule fetch ---------------------- */
 
 async function fetchSchedule() {
   if (!hasSelectedFilter.value) return;
+
   tableLoading.value = true;
   try {
-    // call your schedule API depending on viewMode
     if (viewMode.value === "class") {
-      // by class
       const res = await adminApi.scheduleSlot.getClassSchedule(
         selectedClassId.value
       );
       slots.value = res.items ?? [];
     } else {
-      // by teacher
       const res = await adminApi.scheduleSlot.getTeacherSchedule(
         selectedTeacherId.value
       );
@@ -362,6 +368,8 @@ watch([selectedClassId, selectedTeacherId], async () => {
               :rowId="row.id"
               detailContent="Edit Schedule Slot"
               deleteContent="Delete schedule slot"
+              :detailLoading="detailLoading[row.id] ?? false"
+              :deleteLoading="deleteLoading[row.id] ?? false"
               @detail="() => handleOpenEditForm(row)"
               @delete="() => handleDeleteSlot(row)"
             />
@@ -391,6 +399,7 @@ watch([selectedClassId, selectedTeacherId], async () => {
 
   <!-- CREATE DIALOG -->
   <SmartFormDialog
+    :key="viewMode + '-' + createDialogKey"
     v-model:visible="createFormVisible"
     v-model="createFormData"
     :fields="createFormSchema"

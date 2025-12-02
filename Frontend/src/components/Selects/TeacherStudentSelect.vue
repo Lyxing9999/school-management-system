@@ -25,12 +25,16 @@ const fetchStudents = async () => {
   // expected backend DTO: [{ id, name }, ...]
   return res?.items ?? [];
 };
+
+const innerValue = computed({
+  get: () => props.modelValue,
+  set: (v) => emit("update:modelValue", v),
+});
 </script>
 
 <template>
   <RemoteSelect
-    :model-value="modelValue"
-    @update:modelValue="(v) => emit('update:modelValue', v)"
+    v-model="innerValue"
     :fetcher="fetchStudents"
     :reload-key="classId"
     label-key="name"

@@ -72,6 +72,13 @@ export class ClassService {
     return classData!;
   }
 
+  async unassignClassTeacher(classId: string, options?: ApiCallOptions) {
+    const classData = await this.callApi<AdminClassDataDTO>(
+      () => this.classApi.unassignClassTeacher(classId),
+      { showSuccess: true, ...(options ?? {}) }
+    );
+    return classData!;
+  }
   async enrollStudent(
     classId: string,
     studentId: string,

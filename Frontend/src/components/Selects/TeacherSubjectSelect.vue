@@ -25,12 +25,16 @@ const fetchSubjects = async () => {
   // { items: [{ id: string, name: string | code: string, ... }, ...] }
   return res?.items ?? [];
 };
+
+const innerValue = computed({
+  get: () => props.modelValue,
+  set: (v) => emit("update:modelValue", v),
+});
 </script>
 
 <template>
   <RemoteSelect
-    :model-value="props.modelValue"
-    @update:modelValue="(v) => emit('update:modelValue', v)"
+    v-model="innerValue"
     :fetcher="fetchSubjects"
     label-key="name"
     value-key="id"

@@ -22,7 +22,15 @@ export interface AdminClassNameSelectDTO {
   name: string;
 }
 
-export interface AdminClassDataDTO extends ClassSectionDTO {}
+export interface AdminClassDataDTO extends ClassSectionDTO {
+  // enriched fields from backend
+  teacher_name?: string | null;
+  subject_labels?: string[];
+
+  // convenience counts from backend
+  student_count?: number;
+  subject_count?: number;
+}
 
 /**
  * List wrapper

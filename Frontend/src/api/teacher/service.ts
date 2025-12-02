@@ -144,4 +144,15 @@ export class TeacherService {
     );
     return data!;
   }
+
+  // ----------
+  // list my schedule
+  // ----------
+  async listMySchedule(options?: ApiCallOptions) {
+    const data = await this.callApi<TeacherScheduleListDTO>(
+      () => this.teacherApi.listMySchedule(),
+      options
+    );
+    return data!;
+  }
 }

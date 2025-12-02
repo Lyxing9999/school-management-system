@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import RemoteSelect from "~/components/Selects/RemoteSelect.vue";
 import { adminService } from "~/api/admin";
+import { computed } from "vue";
 
 const adminApi = adminService();
 
@@ -17,20 +18,28 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: StudentValue): void;
 }>();
 
-const fetchStudents = async (_id?: string) => {
+// simple in-memory cache so subsequent dialogs are instant
+let cachedStudents: any[] | null = null;
+
+const fetchStudents = async () => {
+  if (cachedStudents) {
+    return cachedStudents;
+  }
+
   const res = await adminApi.user.listStudentNamesSelect();
-  return res?.items ?? [];
+  cachedStudents = res?.items ?? [];
+  return cachedStudents;
 };
 
-const handleUpdate = (v: StudentValue) => {
-  emit("update:modelValue", v);
-};
+const innerValue = computed({
+  get: () => props.modelValue,
+  set: (v) => emit("update:modelValue", v),
+});
 </script>
 
 <template>
   <RemoteSelect
-    :model-value="props.modelValue"
-    @update:modelValue="handleUpdate"
+    v-model="innerValue"
     :fetcher="fetchStudents"
     label-key="username"
     value-key="id"

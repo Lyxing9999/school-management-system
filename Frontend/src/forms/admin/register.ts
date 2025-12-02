@@ -35,14 +35,9 @@ export const formRegistryCreate: FormRegistryCreate = {
     formData: () => ({ ...subjectForm.getSubjectFormData() }), // fresh object
   },
   STUDENT: undefined,
-  SCHEDULE_SLOT_BY_CLASS: {
+  SCHEDULE_SLOT: {
     service: () => scheduleSlotForm.useServiceFormScheduleSlot(),
-    schema: scheduleSlotForm.scheduleFormSchemaByClass,
-    formData: () => ({ ...scheduleSlotForm.getScheduleFormData() }), // fresh object
-  },
-  SCHEDULE_SLOT_BY_TEACHER: {
-    service: () => scheduleSlotForm.useServiceFormScheduleSlot(),
-    schema: scheduleSlotForm.scheduleFormSchemaByTeacher,
+    schema: scheduleSlotForm.scheduleFormSchema,
     formData: () => ({ ...scheduleSlotForm.getScheduleFormData() }), // fresh object
   },
 };
@@ -74,12 +69,7 @@ export const formRegistryEdit: FormRegistryEdit = {
     schema: studentForm.studentInfoFormSchemaEdit,
     formData: () => studentForm.getStudentInfoFormDataEdit(), // reactive object
   },
-  SCHEDULE_SLOT_BY_CLASS: {
-    service: () => scheduleSlotForm.useServiceFormScheduleSlot(),
-    schema: scheduleSlotForm.scheduleFormSchemaEdit,
-    formData: () => scheduleSlotForm.getScheduleFormDataEdit(), // reactive object
-  },
-  SCHEDULE_SLOT_BY_TEACHER: {
+  SCHEDULE_SLOT: {
     service: () => scheduleSlotForm.useServiceFormScheduleSlot(),
     schema: scheduleSlotForm.scheduleFormSchemaEdit,
     formData: () => scheduleSlotForm.getScheduleFormDataEdit(), // reactive object

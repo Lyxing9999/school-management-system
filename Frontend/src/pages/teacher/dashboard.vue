@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { ElMessage } from "element-plus";
 import { teacherService } from "~/api/teacher";
+import CambodiaCalendar from "~/components/Calendar/CambodiaCalendar.vue";
 import type { ClassSectionDTO } from "~/api/types/school.dto";
 
 definePageMeta({

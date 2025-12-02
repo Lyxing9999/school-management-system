@@ -1,6 +1,5 @@
-<!-- ~/components/Selects/TeacherClassSelect.vue -->
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import RemoteSelect from "~/components/Selects/RemoteSelect.vue";
 import { adminService } from "~/api/admin";
 
@@ -24,35 +23,28 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: string | string[] | null): void;
 }>();
 
-// Simple cache so we don't refetch every time
+// Cache so we don't refetch every time
 const cachedClasses = ref<any[]>([]);
-const isLoading = ref(false);
 
 const fetchClasses = async () => {
   if (cachedClasses.value.length > 0) {
     return cachedClasses.value;
   }
-
-  if (isLoading.value) {
-    return cachedClasses.value;
-  }
-
-  isLoading.value = true;
-  try {
-    const res = await adminApi.class.listClassNameSelect();
-    console.log(res);
-    cachedClasses.value = res?.items ?? [];
-    return cachedClasses.value;
-  } finally {
-    isLoading.value = false;
-  }
+  const res = await adminApi.class.listClassNameSelect();
+  cachedClasses.value = res?.items ?? [];
+  return cachedClasses.value;
 };
+
+// Simple bridge v-model so parent stays in control
+const innerValue = computed({
+  get: () => props.modelValue,
+  set: (v) => emit("update:modelValue", v),
+});
 </script>
 
 <template>
   <RemoteSelect
-    :model-value="props.modelValue"
-    @update:modelValue="(v) => emit('update:modelValue', v)"
+    v-model="innerValue"
     :fetcher="fetchClasses"
     label-key="name"
     value-key="id"

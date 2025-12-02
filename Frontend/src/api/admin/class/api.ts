@@ -54,6 +54,12 @@ export class ClassApi {
     return res.data;
   }
 
+  async unassignClassTeacher(classID: string) {
+    const res = await this.$api.delete<AdminGetClassResponse>(
+      `${this.baseURL}/${classID}/teacher`
+    );
+    return res.data;
+  }
   async enrollStudent(classID: string, studentID: string) {
     const res = await this.$api.post<AdminGetClassResponse>(
       `${this.baseURL}/${classID}/students`,

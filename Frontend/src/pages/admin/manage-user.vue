@@ -140,7 +140,8 @@ const {
   save,
   cancel,
   remove: removeUser,
-  loading: inlineEditLoading,
+  deleteLoading,
+  inlineEditLoading,
   setData,
   autoSave,
   getPreviousValue,
@@ -325,8 +326,12 @@ function handleAutoSaveWrapper(
             :deleteContent="`Delete ${
               row.role.charAt(0).toUpperCase() + row.role.slice(1)
             }`"
-            :detailLoading="detailLoading[row.id] ?? false"
-            :deleteLoading="inlineEditLoading[row.id] ?? false"
+            :detailLoading="
+              inlineEditLoading[row.id] ?? detailLoading[row.id] ?? false
+            "
+            :deleteLoading="
+              inlineEditLoading[row.id] ?? deleteLoading[row.id] ?? false
+            "
             @detail="handleOpenEditForm(row)"
             @delete="removeUser(row)"
           />

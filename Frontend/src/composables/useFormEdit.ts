@@ -8,7 +8,6 @@ import {
   type Ref,
   type ComputedRef,
 } from "vue";
-import type { FormInstance } from "element-plus";
 import type { UseFormService } from "~/forms/types/serviceFormTypes";
 import type { Field } from "~/components/types/form";
 
@@ -35,7 +34,6 @@ export function useFormEdit<I extends object, O extends I = I>(
   const service = computed(() => getService());
   const formDialogVisible = ref(false);
   const loading = ref(false);
-  const elFormRef = ref<FormInstance>();
   const saveId = ref<string | number>("");
 
   // current form state (what user edits)
@@ -143,11 +141,6 @@ export function useFormEdit<I extends object, O extends I = I>(
     loading.value = true;
 
     try {
-      // Validate form if a FormInstance is provided
-      if (elFormRef.value) {
-        await elFormRef.value.validate();
-      }
-
       // Merge external payload (from SmartForm) into formData
       if (payload && Object.keys(payload).length > 0) {
         Object.assign(formData.value, payload);
@@ -247,7 +240,7 @@ export function useFormEdit<I extends object, O extends I = I>(
   return {
     formDialogVisible,
     loading,
-    elFormRef,
+
     formData,
     schema,
     patchData,

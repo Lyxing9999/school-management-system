@@ -74,5 +74,4 @@ export type FormEntity =
   | "STUDENT"
   | "CLASS"
   | "SUBJECT"
-  | "SCHEDULE_SLOT_BY_CLASS"
-  | "SCHEDULE_SLOT_BY_TEACHER";
+  | "SCHEDULE_SLOT";

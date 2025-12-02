@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { reactive, ref, watch, onMounted } from "vue";
+import { reactive, ref, watch, onMounted, computed } from "vue";
 import type { Field } from "../types/form";
 import { ElUpload, type UploadUserFile, type FormInstance } from "element-plus";
 import FormRow from "./FormRow.vue";
@@ -10,7 +10,7 @@ const props = defineProps<{
   fields: Field<T>[];
   useElForm: boolean;
   formProps?: Record<string, any>;
-  loading?: boolean;
+  loading?: boolean; // parent-controlled (API save, etc.)
 }>();
 
 const emit = defineEmits<{
@@ -20,6 +20,14 @@ const emit = defineEmits<{
 
 const form = reactive<Record<string, any>>({});
 const fileList = ref<Record<string, UploadUserFile[]>>({});
+
+// local flag for “user clicked save”
+const submitting = ref(false);
+
+// combined loading state for the button:
+// - parent loading (API call)
+// - OR local submitting (validation in progress)
+const buttonLoading = computed(() => !!props.loading || submitting.value);
 
 // parent -> local (one-way, immediate)
 watch(
@@ -99,13 +107,30 @@ onMounted(() => {
 
 const elFormRef = ref<FormInstance | null>(null);
 
-const handleSave = () => {
-  if (!elFormRef.value) return;
-  elFormRef.value.validate((valid) => {
-    if (valid) {
+const handleSave = async () => {
+  // No Element Plus form: just emit
+  if (!props.useElForm || !elFormRef.value) {
+    emit("save", form as T);
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    // Promise-based validate; throws on invalid
+    const valid = await elFormRef.value.validate();
+
+    // Element Plus validate() returns true or throws,
+    // but we keep check for safety.
+    if (valid !== false) {
       emit("save", form as T);
     }
-  });
+  } catch {
+    // Validation failed: do nothing, stay on form
+  } finally {
+    // Local “validation in progress” is over.
+    // Parent may still keep button loading via props.loading
+    submitting.value = false;
+  }
 };
 </script>
 
@@ -144,7 +169,7 @@ const handleSave = () => {
       <BaseButton
         type="primary"
         class="pr-4 pb-4"
-        :loading="props.loading"
+        :loading="buttonLoading"
         @click="handleSave"
       >
         Save
@@ -153,7 +178,6 @@ const handleSave = () => {
   </el-form>
 
   <!-- Plain div mode (no Element Plus validation) -->
-
   <div v-else>
     <template v-for="(field, index) in props.fields" :key="index">
       <FormRow
@@ -183,7 +207,7 @@ const handleSave = () => {
       <BaseButton
         type="primary"
         class="pr-4 pb-4"
-        :loading="props.loading"
+        :loading="buttonLoading"
         @click="handleSave"
       >
         Save

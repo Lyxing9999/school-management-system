@@ -35,7 +35,8 @@ export function useInlineEdit<
   const service = inlineEditService.value;
 
   const data = ref<TGet[]>([...initialData]);
-  const loading = ref<Record<string | number, boolean>>({});
+  const inlineEditLoading = ref<Record<string | number, boolean>>({});
+  const deleteLoading = ref<Record<string | number, boolean>>({});
   const originalRows = ref<Record<string | number, TGet>>({});
   const previousValues = ref<
     Record<string | number, Partial<Record<keyof TGet, any[]>>>
@@ -58,7 +59,7 @@ export function useInlineEdit<
       return;
     }
 
-    loading.value[rowKey] = true;
+    inlineEditLoading.value[rowKey] = true;
 
     try {
       // Store previous value if autoSave
@@ -100,7 +101,7 @@ export function useInlineEdit<
     } catch (err) {
       row[key] = originalRows.value[rowKey]?.[key] ?? currentValue;
     } finally {
-      loading.value[rowKey] = false;
+      inlineEditLoading.value[rowKey] = false;
     }
   };
 
@@ -131,13 +132,13 @@ export function useInlineEdit<
           type: "warning",
         }
       );
-      loading.value[rowKey] = true;
+      deleteLoading.value[rowKey] = true;
       await service.delete(row.id.toString());
       data.value = data.value.filter((r) => r.id !== row.id);
       delete originalRows.value[rowKey];
       delete previousValues.value[rowKey];
     } finally {
-      loading.value[rowKey] = false;
+      deleteLoading.value[rowKey] = false;
     }
   };
 
@@ -171,7 +172,8 @@ export function useInlineEdit<
 
   return {
     data,
-    loading,
+    inlineEditLoading,
+    deleteLoading,
     save,
     cancel,
     remove,

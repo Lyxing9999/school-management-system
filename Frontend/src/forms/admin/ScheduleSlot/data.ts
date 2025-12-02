@@ -7,8 +7,8 @@ import type {
 export const getScheduleFormData = (): AdminCreateScheduleSlotDTO => ({
   class_id: "",
   teacher_id: "",
-    day_of_week: 1,
-    start_time: "08:00",
+  day_of_week: 1,
+  start_time: "08:00",
   end_time: "09:00",
   room: "",
 });

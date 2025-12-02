@@ -28,11 +28,7 @@ export type FormRegistryCreate = {
   SUBJECT: FormRegistryCreateItem<AdminCreateSubjectDTO, AdminUpdateSubjectDTO>;
   STUDENT: undefined;
 
-  SCHEDULE_SLOT_BY_CLASS: FormRegistryCreateItem<
-    AdminCreateScheduleSlotDTO,
-    AdminUpdateScheduleSlotDTO
-  >;
-  SCHEDULE_SLOT_BY_TEACHER: FormRegistryCreateItem<
+  SCHEDULE_SLOT: FormRegistryCreateItem<
     AdminCreateScheduleSlotDTO,
     AdminUpdateScheduleSlotDTO
   >;
@@ -45,11 +41,7 @@ export type FormRegistryEdit = {
   SUBJECT: FormRegistryEditItem<AdminCreateSubjectDTO, AdminUpdateSubjectDTO>;
   STUDENT: FormRegistryEditItem<undefined, AdminUpdateStudentInfo>;
 
-  SCHEDULE_SLOT_BY_CLASS: FormRegistryEditItem<
-    AdminCreateScheduleSlotDTO,
-    AdminUpdateScheduleSlotDTO
-  >;
-  SCHEDULE_SLOT_BY_TEACHER: FormRegistryEditItem<
+  SCHEDULE_SLOT: FormRegistryEditItem<
     AdminCreateScheduleSlotDTO,
     AdminUpdateScheduleSlotDTO
   >;
