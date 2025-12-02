@@ -3,6 +3,10 @@ from bson import ObjectId
 from pymongo.database import Database
 from app.contexts.core.error import MongoErrorMixin
 from typing import Optional
+
+from app.contexts.shared.model_converter import mongo_converter
+
+
 class StaffRepository(MongoErrorMixin):
     def __init__(self, db: Database, collection_name: str = "staff"):
         self.collection = db[collection_name]
@@ -36,7 +40,7 @@ class StaffRepository(MongoErrorMixin):
                 update_data["$set"]["deleted_by"] = deleted_by
 
             result = self.collection.update_one(
-                {"user_id": staff_id, "deleted": {"$ne": True}},
+                {"_id": staff_id, "deleted": {"$ne": True}},
                 update_data
             )
             return result.modified_count
@@ -51,13 +55,13 @@ class StaffRepository(MongoErrorMixin):
         """
         if not payload:
             return 0  # Nothing to update
-
+        oid = mongo_converter.convert_to_object_id(staff_id)
         # Add updated_at timestamp
         payload["updated_at"] = datetime.utcnow()
 
         try:
             result = self.collection.update_one(
-                {"user_id": staff_id, "deleted": {"$ne": True}},  # Only non-deleted
+                {"_id": oid, "deleted": {"$ne": True}},
                 {"$set": payload}
             )
             return result.modified_count

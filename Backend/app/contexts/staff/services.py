@@ -60,7 +60,9 @@ class StaffService:
     def update_staff(self, staff_id: str | ObjectId, payload: StaffUpdateSchema | dict) -> Staff:
         staff_obj = self.get_to_staff_domain(staff_id)
         staff_obj.update_staff_patch(payload, self._staff_repo)
-        self._staff_repo.update(staff_obj.id, StaffMapper.to_persistence_dict(staff_obj))
+        modified_count = self._staff_repo.update(staff_obj.id, StaffMapper.to_persistence_dict(staff_obj))
+        if modified_count == 0:
+            raise StaffNoChangeAppException("Staff already updated in DB")
         return staff_obj
 
     def soft_staff_delete(self, staff_id: str | ObjectId, deleted_by: str) -> Staff:
