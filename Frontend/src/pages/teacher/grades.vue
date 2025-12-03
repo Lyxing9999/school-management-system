@@ -27,7 +27,7 @@ const gradeForm = ref<{
 }>({
   student_id: "",
   subject_id: "",
-  score: null,
+  score: 50,
   type: "" as GradeType | "",
   term: "",
 });
@@ -314,25 +314,20 @@ const submitChangeGradeType = async () => {
             size="small"
             height="320"
           >
+            <el-table-column prop="class_name" label="Class" min-width="180" />
             <el-table-column
-              prop="student_id"
+              prop="student_name"
               label="Student"
               min-width="180"
             />
             <el-table-column
-              prop="subject_id"
+              prop="subject_label"
               label="Subject"
               min-width="180"
             />
             <el-table-column prop="score" label="Score" min-width="80" />
             <el-table-column prop="type" label="Type" min-width="110" />
             <el-table-column prop="term" label="Term" min-width="110" />
-            <el-table-column
-              prop="id"
-              label="Grade ID"
-              min-width="260"
-              show-overflow-tooltip
-            />
           </el-table>
 
           <div

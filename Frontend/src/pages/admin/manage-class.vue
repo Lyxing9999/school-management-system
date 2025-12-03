@@ -33,7 +33,6 @@ import type {
 } from "~/api/admin/class/dto";
 
 const adminApi = adminService();
-
 /* ---------------------- table state ---------------------- */
 
 const classes = ref<AdminClassDataDTO[]>([]);
