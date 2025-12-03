@@ -18,8 +18,8 @@ from app.contexts.teacher.data_transfer.responses import (
 @teacher_bp.route("/me/classes", methods=["GET"])
 @role_required(["teacher"])
 @wrap_response
-def get_my_classes():
+def list_my_classes_enriched():
     teacher_id = get_current_user_id()
-    classes = g.teacher_service.list_my_classes(teacher_id)
+    classes = g.teacher_service.list_my_classes_enriched(teacher_id)
     classes_dto = mongo_converter.list_to_dto(classes, TeacherClassSectionDTO)
     return TeacherClassSectionListDTO(items=classes_dto)

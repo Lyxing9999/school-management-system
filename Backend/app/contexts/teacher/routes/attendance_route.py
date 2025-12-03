@@ -51,10 +51,10 @@ def change_attendance_status(attendance_id: str):
 @teacher_bp.route("/classes/<class_id>/attendance", methods=["GET"])
 @role_required(["teacher"])
 @wrap_response
-def list_attendance_for_class(class_id: str):
+def list_attendance_for_class_enriched(class_id: str):
 
     teacher_id = get_current_user_id()
-    docs = g.teacher_service.list_attendance_for_class(
+    docs = g.teacher_service.list_attendance_for_class_enriched(
         teacher_id=teacher_id,
         class_id=class_id,
     )

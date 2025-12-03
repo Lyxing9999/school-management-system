@@ -159,3 +159,11 @@ class SubjectReadModel(MongoErrorMixin):
         except Exception as e:
             self._handle_mongo_error("list_codes_by_ids", e)
             return {}
+
+
+    def list_subject_for_class(self, class_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+        try:
+            return list(self.collection.find({"class_id": class_id, "is_deleted": {"$ne": True}}))
+        except Exception as e:
+            self._handle_mongo_error("list_subject_for_class", e)
+            return []

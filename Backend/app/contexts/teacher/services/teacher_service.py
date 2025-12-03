@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Union
+from typing import List, Union, Dict, Any
 from bson import ObjectId
 from pymongo.database import Database
 
@@ -39,8 +39,8 @@ class TeacherService:
 
     # ---------- Classes ----------
 
-    def list_my_classes(self, teacher_id: str | ObjectId) -> list[dict]:
-        return self.teacher_read.list_my_classes(teacher_id)
+    def list_my_classes_enriched(self, teacher_id: str | ObjectId) -> list[dict]:
+        return self.teacher_read.list_my_classes_enriched(teacher_id)
         
 
 
@@ -75,12 +75,12 @@ class TeacherService:
             return None  # route will convert to 404 or similar
         return attendance_to_dto(record)
 
-    def list_attendance_for_class(
+    def list_attendance_for_class_enriched(
         self,
         teacher_id: str | ObjectId,
         class_id: str | ObjectId,
     ) -> list[dict]:
-        docs = self.teacher_read.list_class_attendance_for_teacher(class_id)
+        docs = self.teacher_read.list_attendance_for_class_enriched(class_id)
         return docs
 
     # ---------- Grades ----------
@@ -129,28 +129,28 @@ class TeacherService:
             return None
         return grade_to_dto(grade)
 
-    def list_grades_for_class(
+    def list_grades_for_class_enriched(
         self,
         teacher_id: str | ObjectId,
         class_id: str | ObjectId,
     ) -> list[GradeDTO]:
-        docs = self.teacher_read.list_class_grades(class_id)
-        grades: list[GradeDTO] = []
-        for d in docs:
-            g = self.school_service.grade_repo.mapper.to_domain(d)
-            grades.append(grade_to_dto(g))
-        return grades
+        return self.teacher_read.list_grades_for_class_enriched(class_id)
 
 
 
-    def list_class_name_options_in_class(
+
+    def list_class_name_options_for_teacher(
         self,
-        teacher_id: str | ObjectId,
-    ) -> list[dict]:
-        return self.teacher_read.list_class_name_options_in_class(teacher_id)
+        teacher_id: Union[str, ObjectId],
+    ) -> List[Dict[str, Any]]:
+        return self.teacher_read.list_class_name_options_for_teacher(teacher_id)
+
+
 
     def list_student_name_options_in_class(
-        self, class_id: Union[str, ObjectId], teacher_id: Union[str, ObjectId]
+        self,
+        class_id: Union[str, ObjectId],
+        teacher_id: Union[str, ObjectId]
     ) -> List[Dict]:
         cls = self.teacher_read.classes.get_by_id(class_id)
         if not cls or cls.get("teacher_id") != mongo_converter.convert_to_object_id(teacher_id):

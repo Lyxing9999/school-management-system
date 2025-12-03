@@ -16,6 +16,8 @@ from app.contexts.staff.read_model import StaffReadModel
 from app.contexts.shared.model_converter import mongo_converter
 
 
+from app.contexts.shared.services.display_name_service import DisplayNameService
+
 class StudentReadModel(MongoErrorMixin):
     """
     Read-side facade for student use cases.
@@ -38,6 +40,14 @@ class StudentReadModel(MongoErrorMixin):
         self._attendance_read_model: Final[AttendanceReadModel] = AttendanceReadModel(self.db)
         self._grade_read_model: Final[GradeReadModel] = GradeReadModel(self.db)
         self._subject_read_model: Final[SubjectReadModel] = SubjectReadModel(self.db)
+        # shared display-name helper (depends only on read models)
+        self._display_name_service: Final[DisplayNameService] = DisplayNameService(
+            iam_read_model=self._iam_read_model,
+            staff_read_model=self._staff_read_model,
+            class_read_model=self._class_read_model,
+            subject_read_model=self._subject_read_model,
+            student_read_model=self,
+        )
 
     # -------------
     # properties
@@ -71,6 +81,10 @@ class StudentReadModel(MongoErrorMixin):
     def subject(self) -> SubjectReadModel:
         return self._subject_read_model
 
+    @property
+    def display_name(self) -> DisplayNameService:
+        return self._display_name_service
+
     # -------------
     # basic
     # -------------
@@ -85,7 +99,7 @@ class StudentReadModel(MongoErrorMixin):
     # classes
     # -------------
 
-    def list_my_classes(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+    def list_my_classes_enriched(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
         """
         Return the classes where this student is enrolled, with:
         - ids converted to string
@@ -104,50 +118,8 @@ class StudentReadModel(MongoErrorMixin):
         """
         oid = mongo_converter.convert_to_object_id(student_id)
         raw_classes = self.classes.list_classes_for_student(oid)  # raw Mongo docs
-
-        # collect teacher_ids
-        teacher_ids: List[ObjectId] = [
-            c["teacher_id"]
-            for c in raw_classes
-            if c.get("teacher_id") is not None
-        ]
-        # map { user_id -> staff_name }
-        teacher_name_map = self.staff.list_names_by_user_ids(teacher_ids)
-
-        result: List[Dict[str, Any]] = []
-        for c in raw_classes:
-            doc = dict(c)
-
-            # normalize _id -> id (string)
-            if "_id" in doc:
-                doc["id"] = str(doc["_id"])
-                del doc["_id"]
-
-            # normalize teacher_id
-            tid = doc.get("teacher_id")
-            if isinstance(tid, ObjectId):
-                doc["teacher_id"] = str(tid)
-
-            # normalize student_ids / subject_ids
-            if "student_ids" in doc and isinstance(doc["student_ids"], list):
-                doc["student_ids"] = [str(s) for s in doc["student_ids"]]
-
-            if "subject_ids" in doc and isinstance(doc["subject_ids"], list):
-                doc["subject_ids"] = [str(s) for s in doc["subject_ids"]]
-
-            # attach teacher_name (looked up by ObjectId)
-            teacher_oid = c.get("teacher_id")
-            if teacher_oid is not None:
-                doc["teacher_name"] = (
-                    teacher_name_map.get(teacher_oid)
-                    or teacher_name_map.get(str(teacher_oid), "")
-                )
-            else:
-                doc["teacher_name"] = ""
-
-            result.append(doc)
-
-        return result
+        return self.display_name.enrich_classes(raw_classes)
+      
 
     def list_my_subjects(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
         """
@@ -339,21 +311,7 @@ class StudentReadModel(MongoErrorMixin):
         You can enrich later with subject_name / class_name if needed.
         """
         oid = mongo_converter.convert_to_object_id(student_id)
-        records = self.grade.list_student_grades(oid)  
+        records = self.grade.list_grades_for_student(oid)  
         if not records:
             return []
-
-        result: List[Dict[str, Any]] = []
-        for rec in records:
-            doc = dict(rec)
-            gid = doc.pop("_id", None)
-            if gid:
-                doc["id"] = str(gid)
-
-            for key in ("student_id", "class_id", "subject_id"):
-                if isinstance(doc.get(key), ObjectId):
-                    doc[key] = str(doc[key])
-
-            result.append(doc)
-
-        return result
+        

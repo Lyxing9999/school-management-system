@@ -4,18 +4,13 @@ from bson import ObjectId
 from pymongo.database import Database
 
 from app.contexts.school.services.school_service import SchoolService
-from app.contexts.school.read_models.attendance_read_model import AttendanceReadModel
-from app.contexts.school.read_models.grade_read_model import GradeReadModel
-from app.contexts.school.read_models.class_read_model import ClassReadModel
-from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
 from app.contexts.school.data_transfer.responses import (
     ClassSectionDTO,
     AttendanceDTO,
     GradeDTO,
-
 )
-from app.contexts.student.data_transfer.responses import StudentScheduleDTO
 from app.contexts.shared.model_converter import mongo_converter
+from app.contexts.student.data_transfer.responses import StudentScheduleDTO
 from app.contexts.student.read_models.student_read_model import StudentReadModel
 
 class StudentService:
@@ -27,17 +22,21 @@ class StudentService:
     def __init__(self, db: Database, school_service: SchoolService):
         self.db = db
         self.school_service = school_service
-
-        self.attendance_read = AttendanceReadModel(db)
-        self.grade_read = GradeReadModel(db)
-        self.schedule_read = ScheduleReadModel(db)
-        self.class_read = ClassReadModel(db)
-        self.student_read = StudentReadModel(db)
+        self._student_read: StudentReadModel | None = None
 
     def _oid(self, id_: str | ObjectId) -> ObjectId:
         return mongo_converter.convert_to_object_id(id_)
 
+
+    @property
+    def student_read(self) -> StudentReadModel:
+        if self._student_read is None:
+            self._student_read = StudentReadModel(self.db)
+        return self._student_read
+
     # ---------------- ATTENDANCE ----------------
+
+
 
     def get_my_attendance(
         self,
@@ -49,10 +48,10 @@ class StudentService:
         # If your read model only supports (student, class) you can simplify
         if class_id is not None:
             cid = self._oid(class_id)
-            docs = self.attendance_read.list_student_attendances(sid, cid)
+            docs = self.student_read.list_student_attendances(sid, cid)
         else:
             # implement this in your read model or adjust
-            docs = self.attendance_read.list_student_attendances(sid)
+            docs = self.student_read.list_student_attendances(sid)
 
         return mongo_converter.list_to_dto(docs, AttendanceDTO)
 
@@ -89,6 +88,5 @@ class StudentService:
         student_id: str | ObjectId,
     ) -> list[ClassSectionDTO]:
         sid = self._oid(student_id)
-        docs = self.class_read.list_classes_for_student(sid)
+        return self.student_read.list_my_classes_enriched(sid)
         
-        return mongo_converter.list_to_dto(docs, ClassSectionDTO)

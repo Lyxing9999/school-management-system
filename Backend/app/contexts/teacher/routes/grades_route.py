@@ -14,7 +14,17 @@ from app.contexts.teacher.data_transfer.requests import (
 )
 from app.contexts.teacher.data_transfer.responses import (
     TeacherGradeListDTO,
+    TeacherGradeDTO,
 )
+
+
+
+from app.contexts.shared.model_converter import mongo_converter
+
+
+
+
+
 
 
 @teacher_bp.route("/grades", methods=["POST"])
@@ -67,10 +77,11 @@ def change_grade_type(grade_id: str):
 @teacher_bp.route("/classes/<class_id>/grades", methods=["GET"])
 @role_required(["teacher"])
 @wrap_response
-def list_grades_for_class(class_id: str):
+def list_grades_for_class_enriched(class_id: str):
     teacher_id = get_current_user_id()
-    items = g.teacher_service.list_grades_for_class(
+    grade_enriched = g.teacher_service.list_grades_for_class_enriched(
         teacher_id=teacher_id,
         class_id=class_id,
     )
-    return TeacherGradeListDTO(items=items)
+    grade_dto = mongo_converter.list_to_dto(grade_enriched, TeacherGradeDTO)
+    return TeacherGradeListDTO(items=grade_dto)

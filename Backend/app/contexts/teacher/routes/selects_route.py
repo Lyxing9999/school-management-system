@@ -21,9 +21,9 @@ from app.contexts.teacher.data_transfer.responses import (
 @teacher_bp.route("/classes/name-select", methods=["GET"])
 @role_required(["teacher"])
 @wrap_response
-def list_class_name_select():
+def list_class_name_options_for_teacher():
     teacher_id = get_current_user_id()
-    classes = g.teacher_service.list_class_name_options_in_class(
+    classes = g.teacher_service.list_class_name_options_for_teacher(
         teacher_id=teacher_id
     )
     items = mongo_converter.list_to_dto(classes, TeacherClassNameSelectDTO)

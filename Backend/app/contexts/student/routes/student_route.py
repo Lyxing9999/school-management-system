@@ -4,12 +4,13 @@ from app.contexts.student.routes import student_bp
 from app.contexts.core.security.auth_utils import get_current_user_id
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
-
+from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.student.data_transfer.responses import (
     StudentClassListDTO,
     StudentAttendanceListDTO,
     StudentGradeListDTO,
     StudentScheduleListDTO,
+    StudentClassSectionDTO,
 )
 
 
@@ -19,7 +20,8 @@ from app.contexts.student.data_transfer.responses import (
 def get_my_classes():
     student_id = get_current_user_id()
     classes = g.student_service.get_my_classes(student_id)
-    return StudentClassListDTO(items=classes)
+    items = mongo_converter.list_to_dto(classes, StudentClassSectionDTO)
+    return StudentClassListDTO(items=items)
 
 
 @student_bp.route("/me/attendance", methods=["GET"])
@@ -57,5 +59,5 @@ def get_my_grades():
 def get_my_schedule():
     student_id = get_current_user_id()
     items = g.student_service.get_my_schedule(student_id)
-    print(items)
+
     return StudentScheduleListDTO(items=items)

@@ -13,8 +13,8 @@ from app.contexts.school.read_models.subject_read_model import SubjectReadModel
 from app.contexts.staff.read_model import StaffReadModel
 
 from app.contexts.shared.model_converter import mongo_converter
-from app.contexts.shared.services.display_name_service import DisplayNameService
 
+from app.contexts.shared.services.display_name_service import DisplayNameService
 
 class TeacherReadModel(MongoErrorMixin):
     """
@@ -90,7 +90,7 @@ class TeacherReadModel(MongoErrorMixin):
 
     # ----------------- classes -----------------
 
-    def list_my_classes(self, teacher_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+    def list_my_classes_enriched(self, teacher_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
         """
         Classes for this teacher, with:
         - ids converted to str
@@ -109,36 +109,10 @@ class TeacherReadModel(MongoErrorMixin):
         """
         oid = mongo_converter.convert_to_object_id(teacher_id)
         raw_classes = self.classes.list_classes_for_teacher(oid)
-
-        # returns { user_id(ObjectId) -> staff_name }
-        name_map = self.staff.list_names_by_user_ids([oid])
-        teacher_name = name_map.get(oid) or name_map.get(str(oid), "")
-
-        result: List[Dict[str, Any]] = []
-        for c in raw_classes:
-            # make a shallow copy so we can safely mutate
-            doc = dict(c)
-
-            # normalize ids to strings for DTO/frontend
-            if "_id" in doc:
-                doc["id"] = str(doc["_id"])
-                del doc["_id"]
-
-            if "teacher_id" in doc and doc["teacher_id"] is not None:
-                doc["teacher_id"] = str(doc["teacher_id"])
-
-            if "student_ids" in doc and isinstance(doc["student_ids"], list):
-                doc["student_ids"] = [str(sid) for sid in doc["student_ids"]]
-
-            if "subject_ids" in doc and isinstance(doc["subject_ids"], list):
-                doc["subject_ids"] = [str(sid) for sid in doc["subject_ids"]]
-
-            # attach display name
-            doc["teacher_name"] = teacher_name
-
-            result.append(doc)
-
-        return result
+        if not raw_classes:
+            return []
+        enriched_classes = self.display_names.enrich_classes(raw_classes)
+        return enriched_classes
 
     def list_student_ids_for_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
         return self.classes.list_student_ids_for_class(class_id)
@@ -203,7 +177,7 @@ class TeacherReadModel(MongoErrorMixin):
             return []
 
         # subject_names_for_ids => { ObjectId: "Math (MTH101)", ... }
-        name_map = self.display_names.subject_names_for_ids(subject_ids)
+        name_map = self.display_names.subject_labels_for_ids(subject_ids)
 
         options: List[Dict[str, Any]] = []
         for sid, label in name_map.items():
@@ -219,28 +193,7 @@ class TeacherReadModel(MongoErrorMixin):
         self,
         teacher_id: Union[str, ObjectId],
     ) -> List[Dict[str, Any]]:
-        """
-        Return class options for a teacher, shaped for UI select:
-
-        [
-          { "id": "ObjectIdString", "name": "Grade 7A" },
-          ...
-        ]
-        """
-        oid = mongo_converter.convert_to_object_id(teacher_id)
-        docs = self.classes.list_classes_for_teacher(oid)
-        options: List[Dict[str, Any]] = []
-        for c in docs:
-            cid = c.get("_id")
-            if not cid:
-                continue
-            options.append(
-                {
-                    "id": str(cid),
-                    "name": c.get("name", ""),
-                }
-            )
-        return options
+        return self.classes.list_class_name_options_for_teacher(teacher_id)
 
     # ----------------- schedule -----------------
 
@@ -257,7 +210,7 @@ class TeacherReadModel(MongoErrorMixin):
 
     # ----------------- grades & attendance -----------------
 
-    def list_class_grades(self, class_id: Union[str, ObjectId]) -> List[dict]:
+    def list_grades_for_class_enriched(self, class_id: Union[str, ObjectId]) -> List[dict]:
         """
         Currently returns raw grade docs for a class.
 
@@ -265,9 +218,21 @@ class TeacherReadModel(MongoErrorMixin):
         - display_names.username_for_id(...)
         - display_names.subject_name_for_id(...)
         """
-        return self.grade.list_class_grades(class_id)
+        grades = self.grade.list_grades_for_class(class_id)
+        if not grades:
+            return []
+        return self.display_names.enrich_grades(grades)
 
-    def list_class_attendance_for_teacher(
+
+
+
+
+
+
+
+
+
+    def list_attendance_for_class_enriched(
         self,
         class_id: Union[str, ObjectId],
     ) -> List[dict]:
@@ -285,43 +250,8 @@ class TeacherReadModel(MongoErrorMixin):
           ...
         }
         """
-        attendances = self.attendance.list_class_attendance(class_id)
+        attendances = self.attendance.list_attendance_for_class(class_id)
         if not attendances:
             return []
+        return self.display_names.enrich_attendance(attendances)
 
-        # collect student_ids
-        student_ids = list({rec["student_id"] for rec in attendances if rec.get("student_id")})
-        if not student_ids:
-            return attendances
-
-        # map {ObjectId -> username}
-        user_docs = self.iam.list_usernames_by_ids(student_ids, role="student")
-        username_by_id = {
-            doc["_id"]: doc.get("username", "")
-            for doc in user_docs
-            if doc.get("_id") is not None
-        }
-
-        result: List[dict] = []
-        for rec in attendances:
-            r = dict(rec)
-
-            # normalize ids to strings for UI
-            if "_id" in r:
-                r["id"] = str(r["_id"])
-                del r["_id"]
-
-            sid = r.get("student_id")
-            if isinstance(sid, ObjectId):
-                r["student_id"] = str(sid)
-
-            cid = r.get("class_id")
-            if isinstance(cid, ObjectId):
-                r["class_id"] = str(cid)
-
-            # attach display name
-            r["student_name"] = username_by_id.get(rec.get("student_id"), "")
-
-            result.append(r)
-
-        return result

@@ -7,9 +7,15 @@ from datetime import datetime
 from app.contexts.school.data_transfer.responses import (
     ClassSectionDTO,
     AttendanceDTO,
-    GradeDTO,
+
     
 )
+class StudentClassSectionDTO(ClassSectionDTO):
+    student_count: int
+    subject_count: int
+    teacher_id: Optional[str] = None
+    teacher_name: str
+    subject_labels: List[str] = []
 
 
 class StudentScheduleDTO(BaseModel):
@@ -29,15 +35,30 @@ class StudentScheduleDTO(BaseModel):
     updated_at: datetime
 
 class StudentClassListDTO(BaseModel):
-    items: List[ClassSectionDTO]
+    items: List[StudentClassSectionDTO]
 
 
 class StudentAttendanceListDTO(BaseModel):
     items: List[AttendanceDTO]
 
 
+
+class StudentGradeDTO(BaseModel):
+    id: str
+    student_id: str
+    student_name: str | None = None
+    class_id: str | None = None
+    class_name: str | None = None           # add this if you want it
+    subject_id: str
+    subject_label: str | None = None        # or subject_name if you prefer
+    score: float
+    type: GradeType
+    term: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
 class StudentGradeListDTO(BaseModel):
-    items: List[GradeDTO]
+    items: List[StudentGradeDTO]
 
 
 class StudentScheduleListDTO(BaseModel):

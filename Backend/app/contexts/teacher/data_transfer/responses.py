@@ -7,6 +7,8 @@ from typing import Optional
 from datetime import datetime, date
 from app.contexts.school.domain.attendance import AttendanceStatus
 from app.contexts.school.domain.grade import GradeType
+from app.contexts.school.data_transfer.responses import ClassSectionDTO
+
 
 
 
@@ -14,13 +16,19 @@ from app.contexts.school.domain.grade import GradeType
 class TeacherAttendanceDTO(BaseModel):
     id: str
     student_id: str
-    student_name: str | None = None 
-    class_id: str
-    record_date: date
+    student_name: Optional[str] = None
+
+    class_id: Optional[str] = None
+    class_name: Optional[str] = None
+
     status: AttendanceStatus
+    record_date: date
+
+    marked_by_teacher_id: str
+    teacher_name: Optional[str] = None
+
     created_at: datetime
     updated_at: datetime
-
 
 class TeacherAttendanceListDTO(BaseModel):
     items: List[TeacherAttendanceDTO]
@@ -28,32 +36,32 @@ class TeacherAttendanceListDTO(BaseModel):
 class TeacherGradeDTO(BaseModel):
     id: str
     student_id: str
-    student_name: str | None = None   
-    class_id: str | None = None
+    student_name: Optional[str] = None
+    class_id: Optional[str] = None
+    class_name: Optional[str] = None
     subject_id: str
-    subject_name: str | None = None   # 
+    subject_label: Optional[str] = None  
+    teacher_id: Optional[str] = None
+    teacher_name: Optional[str] = None
     score: float
     type: GradeType
-    term: str | None = None
+    term: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
 
 class TeacherGradeListDTO(BaseModel):
     items: List[TeacherGradeDTO]
 
 
 
-class TeacherClassSectionDTO(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: str
-    name: str
-    teacher_id: Optional[str]
-    student_ids: list[str]
-    subject_ids: list[str]
-    max_students: Optional[int]
-    teacher_name: Optional[str]
-    created_at: datetime
-    updated_at: datetime
+class TeacherClassSectionDTO(ClassSectionDTO):
+    student_count: int
+    subject_count: int
+    teacher_id: Optional[str] = None
+    teacher_name: str
+    subject_labels: List[str] = []
+
 
 class TeacherClassSectionListDTO(BaseModel):
     items: List[TeacherClassSectionDTO]

@@ -1,13 +1,16 @@
 from __future__ import annotations
-from typing import Iterable, Dict, List, Any
+from typing import Iterable, Dict, List, TYPE_CHECKING
 from bson import ObjectId
 
 from app.contexts.iam.read_models.iam_read_model import IAMReadModel
 from app.contexts.staff.read_model import StaffReadModel
 from app.contexts.school.read_models.class_read_model import ClassReadModel
 from app.contexts.school.read_models.subject_read_model import SubjectReadModel
-from app.contexts.student.read_models.student_read_model import StudentReadModel
+
 from app.contexts.shared.model_converter import mongo_converter
+
+if TYPE_CHECKING:
+    from app.contexts.student.read_models.student_read_model import StudentReadModel
 
 
 class DisplayNameService:
@@ -76,6 +79,7 @@ class DisplayNameService:
 
         # IAMReadModel returns list[{"_id": ..., "username": ...}]
         docs = self.iam_read_model.list_usernames_by_ids(oids, role=role)
+        print("this is docs from iam read model", docs)
         mapping: Dict[ObjectId, str] = {}
         for doc in docs:
             _id = doc.get("_id")
@@ -296,5 +300,259 @@ class DisplayNameService:
             # Simple counts (handy for UI)
             d["student_count"] = len(students)
             d["subject_count"] = len(sids)
+        
+        return docs
+
+
+
+    # -----------------------------
+    # GRADE ENRICHMENT
+    # -----------------------------
+
+    def enrich_grades(self, grade_docs: Iterable[dict]) -> List[dict]:
+        """
+        Take raw grade docs and attach:
+
+        - student_name (or "[deleted student]")
+        - class_name (or "[deleted class]")
+        - teacher_name (or "[deleted teacher]")
+        - subject_label (or "[deleted subject]")
+
+        Input example:
+        {
+          "_id": ObjectId(...),
+          "student_id": ObjectId(...),
+          "subject_id": ObjectId(...),
+          "class_id": ObjectId(...),
+          "teacher_id": ObjectId(...),
+          "term": "S1",
+          "type": "exam",
+          "score": 13,
+          ...
+        }
+        """
+
+        docs: List[dict] = [dict(d) for d in grade_docs]
+
+        student_ids: list[ObjectId | str | dict | None] = []
+        class_ids: list[ObjectId | str | dict | None] = []
+        teacher_ids: list[ObjectId | str | dict | None] = []
+        subject_ids: list[ObjectId | str | dict | None] = []
+
+        for d in docs:
+            sid_student = d.get("student_id")
+            cid_class = d.get("class_id")
+            tid_teacher = d.get("teacher_id")
+            sid_subject = d.get("subject_id")
+
+            if sid_student is not None:
+                student_ids.append(sid_student)
+            if cid_class is not None:
+                class_ids.append(cid_class)
+            if tid_teacher is not None:
+                teacher_ids.append(tid_teacher)
+            if sid_subject is not None:
+                subject_ids.append(sid_subject)
+
+        student_name_map = self.usernames_for_ids(student_ids, role="student")
+        class_name_map = self.class_names_for_ids(class_ids)
+        teacher_name_map = self.staff_names_for_user_ids(teacher_ids)
+        subject_label_map = self.subject_labels_for_ids(subject_ids)
+
+        student_name_map_str = {str(k): v for k, v in student_name_map.items()}
+        class_name_map_str = {str(k): v for k, v in class_name_map.items()}
+        teacher_name_map_str = {str(k): v for k, v in teacher_name_map.items()}
+        subject_label_map_str = {str(k): v for k, v in subject_label_map.items()}
+
+        for d in docs:
+            sid_student = d.get("student_id")
+            cid_class = d.get("class_id")
+            tid_teacher = d.get("teacher_id")
+            sid_subject = d.get("subject_id")
+
+            if sid_student is not None:
+                sname = (
+                    student_name_map.get(sid_student)
+                    or student_name_map_str.get(str(sid_student))
+                )
+                d["student_name"] = (
+                    sname if sname is not None else "[deleted student]"
+                )
+
+            if cid_class is not None:
+                cname = (
+                    class_name_map.get(cid_class)
+                    or class_name_map_str.get(str(cid_class))
+                )
+                d["class_name"] = (
+                    cname if cname is not None else "[deleted class]"
+                )
+
+            if tid_teacher is not None:
+                tname = (
+                    teacher_name_map.get(tid_teacher)
+                    or teacher_name_map_str.get(str(tid_teacher))
+                )
+                d["teacher_name"] = (
+                    tname if tname is not None else "[deleted teacher]"
+                )
+
+            if sid_subject is not None:
+                slabel = (
+                    subject_label_map.get(sid_subject)
+                    or subject_label_map_str.get(str(sid_subject))
+                )
+                d["subject_label"] = (
+                    slabel if slabel is not None else "[deleted subject]"
+                )
+        return docs
+
+
+    # -----------------------------
+    # ATTENDANCE ENRICHMENT
+    # -----------------------------
+
+    def enrich_attendance(self, attendance_docs: Iterable[dict]) -> List[dict]:
+        """
+        Take raw attendance docs and attach:
+
+        - student_name (or "[deleted student]")
+        - class_name (or "[deleted class]")
+        - teacher_name (or "[deleted teacher]")
+
+        It does NOT hit Mongo directly; it uses the other helpers.
+        """
+        docs: List[dict] = [dict(d) for d in attendance_docs]
+
+        student_ids: list[ObjectId | str | dict | None] = []
+        class_ids: list[ObjectId | str | dict | None] = []
+        teacher_ids: list[ObjectId | str | dict | None] = []
+
+        # Collect IDs
+        for d in docs:
+            sid = d.get("student_id")
+            cid = d.get("class_id")
+            tid = d.get("marked_by_teacher_id")
+
+            if sid is not None:
+                student_ids.append(sid)
+            if cid is not None:
+                class_ids.append(cid)
+            if tid is not None:
+                teacher_ids.append(tid)
+
+        # Build maps
+        student_name_map = self.usernames_for_ids(student_ids, role="student")
+        class_name_map = self.class_names_for_ids(class_ids)
+        teacher_name_map = self.staff_names_for_user_ids(teacher_ids)
+
+        # String-key versions (for when docs carry string IDs)
+        student_name_map_str = {str(k): v for k, v in student_name_map.items()}
+        class_name_map_str = {str(k): v for k, v in class_name_map.items()}
+        teacher_name_map_str = {str(k): v for k, v in teacher_name_map.items()}
+
+        # Attach enriched fields
+        for d in docs:
+            sid = d.get("student_id")
+            cid = d.get("class_id")
+            tid = d.get("marked_by_teacher_id")
+
+            if sid is not None:
+                sname = (
+                    student_name_map.get(sid)
+                    or student_name_map_str.get(str(sid))
+                )
+                d["student_name"] = (
+                    sname if sname is not None else "[deleted student]"
+                )
+
+            if cid is not None:
+                cname = (
+                    class_name_map.get(cid)
+                    or class_name_map_str.get(str(cid))
+                )
+                d["class_name"] = (
+                    cname if cname is not None else "[deleted class]"
+                )
+
+            if tid is not None:
+                tname = (
+                    teacher_name_map.get(tid)
+                    or teacher_name_map_str.get(str(tid))
+                )
+                d["teacher_name"] = (
+                    tname if tname is not None else "[deleted teacher]"
+                )
+
+        return docs
+
+
+
+
+    def enrich_grades(self, grade_docs: Iterable[dict]) -> List[dict]:
+        """
+        Take raw grade docs and attach:
+        - student_name
+        - class_name
+        - teacher_name
+        - subject_label
+
+        It does NOT hit Mongo directly; it uses other read models / helpers.
+        """
+
+        docs: List[dict] = [dict(d) for d in grade_docs]
+
+        student_ids: list[ObjectId | str | dict | None] = []
+        class_ids: list[ObjectId | str | dict | None] = []
+        teacher_ids: list[ObjectId | str | dict | None] = []
+        subject_ids: list[ObjectId | str | dict | None] = []
+
+        for d in docs:
+            student_ids.append(d.get("student_id"))
+            class_ids.append(d.get("class_id"))
+            teacher_ids.append(d.get("teacher_id"))
+            subject_ids.append(d.get("subject_id"))
+
+        # Build maps using existing helpers
+        # You need a helper on StudentReadModel like: list_names_by_ids([...]) -> {ObjectId: name}
+        student_name_map = self.student_read_model.list_names_by_ids(
+            self._normalize_ids(student_ids)
+        )
+        class_name_map = self.class_names_for_ids(class_ids)
+        teacher_name_map = self.staff_names_for_user_ids(teacher_ids)
+        subject_label_map = self.subject_labels_for_ids(subject_ids)
+
+        # string-keyed copies, for when ids in docs are strings
+        student_name_map_str = {str(k): v for k, v in student_name_map.items()}
+        class_name_map_str = {str(k): v for k, v in class_name_map.items()}
+        teacher_name_map_str = {str(k): v for k, v in teacher_name_map.items()}
+        subject_label_map_str = {str(k): v for k, v in subject_label_map.items()}
+
+        for d in docs:
+            sid = d.get("student_id")
+            cid = d.get("class_id")
+            tid = d.get("teacher_id")
+            subid = d.get("subject_id")
+
+            if sid is not None:
+                sname = student_name_map.get(sid) or student_name_map_str.get(str(sid))
+                d["student_name"] = sname if sname is not None else "[deleted student]"
+
+            if cid is not None:
+                cname = class_name_map.get(cid) or class_name_map_str.get(str(cid))
+                d["class_name"] = cname if cname is not None else "[deleted class]"
+
+            if tid is not None:
+                tname = teacher_name_map.get(tid) or teacher_name_map_str.get(str(tid))
+                d["teacher_name"] = tname if tname is not None else "[deleted teacher]"
+
+            if subid is not None:
+                slabel = (
+                    subject_label_map.get(subid)
+                    or subject_label_map_str.get(str(subid))
+                )
+                d["subject_label"] = (
+                    slabel if slabel is not None else "[deleted subject]"
+                )
 
         return docs
