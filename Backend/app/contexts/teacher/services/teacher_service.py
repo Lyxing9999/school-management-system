@@ -168,3 +168,7 @@ class TeacherService:
             raise TeacherForbiddenException()
 
         return self.teacher_read.list_subject_name_options_in_class(class_id)
+
+
+    def list_my_schedule_enriched(self, teacher_id: Union[str, ObjectId]) -> List[Dict]:
+        return self.teacher_read.list_schedule_for_teacher_enriched(teacher_id)

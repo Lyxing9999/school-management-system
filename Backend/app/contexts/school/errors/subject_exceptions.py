@@ -8,6 +8,7 @@ class InvalidSubjectNameError(AppBaseException):
             error_code="SUBJECT_INVALID_NAME",
             severity=ErrorSeverity.LOW,
             received_value=received_value,
+            user_message="Subject name cannot be empty.",
             hint="Provide a non-empty subject name."
         )
 
@@ -19,6 +20,7 @@ class InvalidSubjectCodeError(AppBaseException):
             error_code="SUBJECT_INVALID_CODE",
             severity=ErrorSeverity.LOW,
             received_value=received_value,
+            user_message="Subject code cannot be empty.",
             hint="Provide a non-empty subject code."
         )
 
@@ -30,6 +32,7 @@ class InvalidGradeLevelError(AppBaseException):
             error_code="SUBJECT_INVALID_GRADE_LEVEL",
             severity=ErrorSeverity.LOW,
             received_value=level,
+            user_message="Invalid grade level.",
             hint="Grade levels must be between 1 and 12."
         )
 
@@ -44,6 +47,7 @@ class SubjectCodeAlreadyExistsException(AppBaseException):
             error_code="SUBJECT_CODE_ALREADY_EXISTS",
             severity=ErrorSeverity.LOW,
             received_value=received_value,
+            user_message="The subject code already exists.",
             hint="Choose a unique subject code that does not exist in the system."
         )
 
@@ -56,6 +60,7 @@ class SubjectNameAlreadyExistsException(AppBaseException):
             error_code="SUBJECT_NAME_ALREADY_EXISTS",
             severity=ErrorSeverity.LOW,
             received_value=received_value,
+            user_message="The subject name already exists.",
             hint="Choose a unique subject name that does not exist in the system."
         )
 

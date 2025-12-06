@@ -44,17 +44,8 @@ class StudentService:
         class_id: str | ObjectId | None = None,
     ) -> list[AttendanceDTO]:
         sid = self._oid(student_id)
-
-        # If your read model only supports (student, class) you can simplify
-        if class_id is not None:
-            cid = self._oid(class_id)
-            docs = self.student_read.list_student_attendances(sid, cid)
-        else:
-            # implement this in your read model or adjust
-            docs = self.student_read.list_student_attendances(sid)
-
-        return mongo_converter.list_to_dto(docs, AttendanceDTO)
-
+        cid = self._oid(class_id)
+        return self.student_read.list_my_attendance(sid, cid)
     # ---------------- GRADES ----------------
 
     def get_my_grades(
@@ -64,11 +55,11 @@ class StudentService:
     ) -> list[GradeDTO]:
         sid = self._oid(student_id)
 
-        # If later you add filtering by term, plug it in here
-        # e.g. self.grade_read.list_student_grades_by_term(sid, term)
-        docs = self.grade_read.list_student_grades(sid)
+            # If later you add filtering by term, plug it in here
+            # e.g. self.grade_read.list_student_grades_by_term(sid, term)
+        return self.student_read.list_my_grades_enriched(sid)
 
-        return mongo_converter.list_to_dto(docs, GradeDTO)
+
 
     # ---------------- SCHEDULE ----------------
 
@@ -77,9 +68,8 @@ class StudentService:
         student_id: str | ObjectId,
     ) -> list[StudentScheduleDTO]:
         sid = self._oid(student_id)
-        docs = self.student_read.list_my_schedule(sid)
+        return self.student_read.list_my_schedule(sid)
         
-        return mongo_converter.list_to_dto(docs, StudentScheduleDTO)
 
     # ---------------- CLASSES ----------------
 

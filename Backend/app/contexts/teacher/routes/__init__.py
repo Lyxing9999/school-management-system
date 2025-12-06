@@ -15,3 +15,4 @@ def register_routes():
     from . import  selects_route
     from . import attendance_route
     from . import classes_route
+    from . import schedule_route

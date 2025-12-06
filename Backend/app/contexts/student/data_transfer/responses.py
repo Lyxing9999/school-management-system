@@ -2,14 +2,14 @@
 from __future__ import annotations
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+from datetime import datetime, date
 
 from app.contexts.school.data_transfer.responses import (
     ClassSectionDTO,
-    AttendanceDTO,
 
-    
 )
+from app.contexts.school.data_transfer.responses import GradeType
+from app.contexts.school.data_transfer.responses import AttendanceStatus
 class StudentClassSectionDTO(ClassSectionDTO):
     student_count: int
     subject_count: int
@@ -39,7 +39,7 @@ class StudentClassListDTO(BaseModel):
 
 
 class StudentAttendanceListDTO(BaseModel):
-    items: List[AttendanceDTO]
+    items: List[StudentAttendanceDTO]
 
 
 
@@ -64,3 +64,24 @@ class StudentGradeListDTO(BaseModel):
 class StudentScheduleListDTO(BaseModel):
     items: List[StudentScheduleDTO]
     
+
+
+class StudentAttendanceDTO(BaseModel):
+    id: str
+    student_id: str
+    student_name: Optional[str] = None
+
+    class_id: Optional[str] = None
+    class_name: Optional[str] = None
+
+    status: AttendanceStatus
+    record_date: date
+
+    marked_by_teacher_id: str
+    teacher_name: Optional[str] = None
+
+    created_at: datetime
+    updated_at: datetime
+
+class StudentAttendanceListDTO(BaseModel):
+    items: List[StudentAttendanceDTO]

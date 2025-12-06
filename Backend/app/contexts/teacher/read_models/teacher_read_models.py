@@ -197,7 +197,7 @@ class TeacherReadModel(MongoErrorMixin):
 
     # ----------------- schedule -----------------
 
-    def list_my_schedule(self, teacher_id: Union[str, ObjectId]) -> List[dict]:
+    def list_schedule_for_teacher_enriched(self, teacher_id: Union[str, ObjectId]) -> List[dict]:
         """
         For now: raw schedule docs for this teacher.
 
@@ -206,7 +206,10 @@ class TeacherReadModel(MongoErrorMixin):
         - maybe subject_name if you add subject_id to schedule
         """
         oid = mongo_converter.convert_to_object_id(teacher_id)
-        return self.schedule.list_schedules_for_teacher(oid)
+        schedules = self.schedule.list_schedules_for_teacher(oid)
+        if not schedules:
+            return []
+        return self.display_names.enrich_schedules(schedules)
 
     # ----------------- grades & attendance -----------------
 

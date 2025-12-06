@@ -95,6 +95,9 @@ class StudentReadModel(MongoErrorMixin):
         """
         return self.iam.get_by_id(user_id)
 
+
+    
+
     # -------------
     # classes
     # -------------
@@ -253,7 +256,7 @@ class StudentReadModel(MongoErrorMixin):
     # attendance & grades
     # -------------
 
-    def list_my_attendance(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+    def list_my_attendance(self, student_id: Union[str, ObjectId], class_ids: List[Union[str, ObjectId]]) -> List[Dict[str, Any]]:
         """
         Attendance records for this student, enriched with class_name
         and ids converted to string.
@@ -269,43 +272,13 @@ class StudentReadModel(MongoErrorMixin):
           ...
         }
         """
-        oid = mongo_converter.convert_to_object_id(student_id)
-        records = self.attendance.list_student_attendances(oid)
+        records = self.attendance.list_attendance_for_class_and_student(class_id=class_ids, student_id=student_id)
         if not records:
             return []
+        return self.display_name.enrich_attendance(records)
 
-        class_ids = {
-            rec["class_id"]
-            for rec in records
-            if rec.get("class_id") is not None
-        }
 
-        # {class_id(ObjectId) -> name}
-        class_name_map = self.classes.list_class_names_by_ids(list(class_ids))
-
-        result: List[Dict[str, Any]] = []
-        for rec in records:
-            doc = dict(rec)
-
-            rid = doc.pop("_id", None)
-            if rid:
-                doc["id"] = str(rid)
-
-            cid = doc.get("class_id")
-            if isinstance(cid, ObjectId):
-                doc["class_id"] = str(cid)
-                doc["class_name"] = class_name_map.get(cid, "")
-            else:
-                doc["class_name"] = ""
-
-            if isinstance(doc.get("student_id"), ObjectId):
-                doc["student_id"] = str(doc["student_id"])
-
-            result.append(doc)
-
-        return result
-
-    def list_my_grades(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+    def list_my_grades_enriched(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
         """
         Optional helper: list all grades for this student, across classes.
         You can enrich later with subject_name / class_name if needed.
@@ -314,4 +287,6 @@ class StudentReadModel(MongoErrorMixin):
         records = self.grade.list_grades_for_student(oid)  
         if not records:
             return []
+        return self.display_name.enrich_grades(records)
+
         

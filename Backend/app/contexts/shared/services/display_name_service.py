@@ -515,8 +515,8 @@ class DisplayNameService:
 
         # Build maps using existing helpers
         # You need a helper on StudentReadModel like: list_names_by_ids([...]) -> {ObjectId: name}
-        student_name_map = self.student_read_model.list_names_by_ids(
-            self._normalize_ids(student_ids)
+        student_name_map = self.usernames_for_ids(
+            self._normalize_ids(student_ids), role="student"
         )
         class_name_map = self.class_names_for_ids(class_ids)
         teacher_name_map = self.staff_names_for_user_ids(teacher_ids)

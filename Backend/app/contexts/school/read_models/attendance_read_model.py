@@ -76,3 +76,4 @@ class AttendanceReadModel:
             query["student_id"] = sid
 
         return list(self.collection.find(query))
+

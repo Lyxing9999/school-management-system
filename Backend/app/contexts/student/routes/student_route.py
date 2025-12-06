@@ -11,6 +11,9 @@ from app.contexts.student.data_transfer.responses import (
     StudentGradeListDTO,
     StudentScheduleListDTO,
     StudentClassSectionDTO,
+    StudentGradeDTO,
+    StudentScheduleDTO,
+    StudentAttendanceDTO,
 )
 
 
@@ -30,10 +33,11 @@ def get_my_classes():
 def get_my_attendance():
     student_id = get_current_user_id()
     class_id = request.args.get("class_id")
-    items = g.student_service.get_my_attendance(
+    attendance = g.student_service.get_my_attendance(
         student_id=student_id,
         class_id=class_id,
     )
+    items = mongo_converter.list_to_dto(attendance, StudentAttendanceDTO)
     return StudentAttendanceListDTO(items=items)
 
 
@@ -46,10 +50,11 @@ def get_my_attendance():
 def get_my_grades():
     student_id = get_current_user_id()
     term = request.args.get("term")
-    items = g.student_service.get_my_grades(
+    my_grades = g.student_service.get_my_grades(
         student_id=student_id,
         term=term,
     )
+    items = mongo_converter.list_to_dto(my_grades, StudentGradeDTO)
     return StudentGradeListDTO(items=items)
 
 
@@ -58,6 +63,6 @@ def get_my_grades():
 @wrap_response
 def get_my_schedule():
     student_id = get_current_user_id()
-    items = g.student_service.get_my_schedule(student_id)
-
+    schedule = g.student_service.get_my_schedule(student_id)
+    items = mongo_converter.list_to_dto(schedule, StudentScheduleDTO)
     return StudentScheduleListDTO(items=items)
