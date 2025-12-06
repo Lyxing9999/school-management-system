@@ -20,14 +20,14 @@ import {
 } from "element-plus";
 
 import { adminService } from "~/api/admin";
-import type { AdminScheduleSlotDataDTO } from "~/api/admin/schedule/schedule.dto";
+import type { AdminScheduleSlotData } from "~/api/admin/schedule/schedule.dto";
 import type {
   AdminClassDataDTO,
   AdminClassListDTO,
 } from "~/api/admin/class/class.dto";
 
 import { useLabelMap } from "~/composables/common/useLabelMap";
-import { createScheduleColumns } from "~/tables/columns/admin/scheduleColumns";
+import { createScheduleColumns } from "~/modules/tables/columns/admin/scheduleColumns";
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
@@ -44,7 +44,7 @@ const viewMode = ref<"class" | "teacher">("class");
 const selectedClassId = ref<string>("");
 const selectedTeacherId = ref<string>("");
 
-const slots = ref<AdminScheduleSlotDataDTO[]>([]);
+const slots = ref<AdminScheduleSlotData[]>([]);
 const tableLoading = ref(false);
 
 const filteredSlots = computed(() => slots.value);
