@@ -8,7 +8,7 @@ import {
   type Ref,
   type ComputedRef,
 } from "vue";
-import type { UseFormService } from "~/forms/types/serviceFormTypes";
+import type { UseFormService } from "~/form-system/types/serviceFormTypes";
 import type { Field } from "~/components/types/form";
 
 import { useMessage } from "~/composables/common/useMessage";

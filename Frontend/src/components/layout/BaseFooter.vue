@@ -1,9 +1,7 @@
+<!-- components/layout/AppFooter.vue -->
 <script setup lang="ts">
-// Footer classes
-const footerClass =
-  "el-footer flex justify-between items-center px-6 py-3 border-t h-16 text-sm text-gray-500";
+const year = new Date().getFullYear();
 
-// Hardcoded links
 const links = [
   { name: "Privacy Policy", url: "#" },
   { name: "Terms of Service", url: "#" },
@@ -11,18 +9,75 @@ const links = [
 </script>
 
 <template>
-  <el-footer :class="footerClass">
-    <div class="flex items-center gap-4">
-      <span>© 2025 Your Company. All rights reserved.</span>
-      <span v-for="link in links" :key="link.name">
-        <a :href="link.url" class="hover:underline">{{ link.name }}</a>
+  <el-footer class="app-footer">
+    <div class="footer-left">
+      <span>© {{ year }} Your School. All rights reserved.</span>
+
+      <span v-for="link in links" :key="link.name" class="footer-link-wrapper">
+        <a :href="link.url" class="footer-link">
+          {{ link.name }}
+        </a>
       </span>
     </div>
 
-    <div class="flex items-center gap-3">
-      <span class="ml-2">v1.0.0</span>
+    <div class="footer-right">
+      <span class="footer-version">v1.0.0</span>
     </div>
   </el-footer>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  height: 56px;
+  border-top: 1px solid var(--color-primary-light-6);
+  background-color: var(--color-card);
+  font-size: 12px;
+  color: #6b7280; // neutral gray text
+}
+
+.footer-left,
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.footer-link {
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 12px;
+  transition: color var(--transition-base);
+}
+
+.footer-link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.footer-version {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: var(--color-primary-light-8);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* Mobile: stack content */
+@media (max-width: 640px) {
+  .app-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 0.5rem 1rem;
+    height: auto;
+  }
+
+  .footer-right {
+    align-self: flex-end;
+  }
+}
+</style>

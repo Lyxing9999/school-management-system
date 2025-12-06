@@ -5,7 +5,7 @@ import { ElMessage } from "element-plus";
 
 import { studentService } from "~/api/student";
 import type { ScheduleDTO } from "~/api/types/school.dto";
-import type { StudentScheduleFilterDTO } from "~/api/student/dto";
+import type { StudentScheduleFilterDTO } from "~/api/student/student.dto";
 
 definePageMeta({
   layout: "student",

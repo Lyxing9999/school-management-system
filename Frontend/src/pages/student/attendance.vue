@@ -1,11 +1,14 @@
-<!-- ~/pages/student/attendance/index.vue -->
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
 import { ElMessage } from "element-plus";
 
 import { studentService } from "~/api/student";
-import type { ClassSectionDTO, AttendanceDTO } from "~/api/types/school.dto";
-import type { StudentAttendanceFilterDTO } from "~/api/student/dto";
+import { formatDate } from "~/utils/formatDate";
+
+import type {
+  StudentClassListDTO,
+  StudentAttendanceListDTO,
+} from "~/api/student/student.dto";
 
 definePageMeta({
   layout: "student",
@@ -17,9 +20,9 @@ const loadingClasses = ref(false);
 const loadingAttendance = ref(false);
 const errorMessage = ref<string | null>(null);
 
-const classes = ref<ClassSectionDTO[]>([]);
+const classes = ref<StudentClassListDTO[]>([]);
 const selectedClassId = ref<string | null>(null);
-const attendance = ref<AttendanceDTO[]>([]);
+const attendance = ref<StudentAttendanceListDTO[]>([]);
 
 // ---------- load classes ----------
 
@@ -28,7 +31,10 @@ const loadClasses = async () => {
   errorMessage.value = null;
   try {
     const res = await student.student.getMyClasses();
+    console.log(res);
     classes.value = res.items ?? [];
+
+    // auto-select first class
     if (!selectedClassId.value && classes.value.length > 0) {
       selectedClassId.value = classes.value[0].id;
     }
@@ -52,10 +58,10 @@ const loadAttendance = async () => {
   loadingAttendance.value = true;
   errorMessage.value = null;
   try {
-    const params: StudentAttendanceFilterDTO = {
+    // path param style: /me/attendance/<class_id>
+    const res = await student.student.getMyAttendance({
       class_id: selectedClassId.value,
-    };
-    const res = await student.student.getMyAttendance(params);
+    });
     attendance.value = res.items ?? [];
   } catch (err: any) {
     console.error(err);
@@ -74,14 +80,25 @@ onMounted(async () => {
   await loadClasses();
   await loadAttendance();
 });
+
+const current = ref(1);
+const pageSize = ref(10);
+const pagedData = computed(() => {
+  const start = (current.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  return attendance.value.slice(start, end);
+});
 </script>
 
 <template>
   <div class="p-4 space-y-4">
+    <!-- Header -->
     <el-row justify="space-between" align="middle">
       <el-col :span="18">
         <h1 class="text-xl font-semibold">My Attendance</h1>
-        <p class="text-xs text-gray-500">Check your attendance per class.</p>
+        <p class="text-xs text-gray-500">
+          Check your attendance for each class.
+        </p>
       </el-col>
 
       <el-col :span="6" class="text-right">
@@ -100,6 +117,7 @@ onMounted(async () => {
       </el-col>
     </el-row>
 
+    <!-- Error -->
     <el-alert
       v-if="errorMessage"
       :title="errorMessage"
@@ -108,14 +126,17 @@ onMounted(async () => {
       class="mb-2"
     />
 
+    <!-- Main Card -->
     <el-card shadow="hover" class="space-y-4">
-      <el-form inline label-width="90px" size="small">
+      <!-- Filters -->
+      <el-form inline label-width="80px" size="small">
         <el-form-item label="Class">
           <el-select
             v-model="selectedClassId"
             placeholder="Select class"
             style="min-width: 260px"
             :loading="loadingClasses"
+            clearable
           >
             <el-option
               v-for="c in classes"
@@ -127,14 +148,31 @@ onMounted(async () => {
         </el-form-item>
       </el-form>
 
+      <!-- Table -->
       <el-table
         :data="attendance"
         v-loading="loadingAttendance"
         border
         size="small"
         style="width: 100%"
+        highlight-current-row
       >
-        <el-table-column prop="date" label="Date" min-width="120" />
+        <!-- Date -->
+        <el-table-column prop="record_date" label="Date" min-width="130">
+          <template #default="{ row }">
+            {{ row.record_date }}
+          </template>
+        </el-table-column>
+
+        <!-- Class -->
+        <el-table-column
+          prop="class_name"
+          label="Class"
+          min-width="160"
+          show-overflow-tooltip
+        />
+
+        <!-- Status -->
         <el-table-column prop="status" label="Status" min-width="120">
           <template #default="{ row }">
             <el-tag
@@ -151,14 +189,29 @@ onMounted(async () => {
             </el-tag>
           </template>
         </el-table-column>
+
+        <!-- Teacher -->
         <el-table-column
-          prop="class_id"
-          label="Class ID"
-          min-width="260"
+          prop="teacher_name"
+          label="Marked By"
+          min-width="150"
           show-overflow-tooltip
         />
+
+        <!-- Created at (optional small info) -->
+        <el-table-column
+          prop="created_at"
+          label="Recorded At"
+          min-width="180"
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            {{ formatDate(row.created_at) }}
+          </template>
+        </el-table-column>
       </el-table>
 
+      <!-- Empty state -->
       <div
         v-if="!loadingAttendance && !attendance.length"
         class="text-center text-gray-500 text-sm py-4"
@@ -166,5 +219,13 @@ onMounted(async () => {
         No attendance records for this class yet.
       </div>
     </el-card>
+
+    <el-pagination
+      v-model:current-page="current"
+      v-model:page-size="pageSize"
+      :total="attendance.length"
+      layout="prev, pager, next, jumper, ->, total, sizes"
+      :page-sizes="[5, 10, 20, 50]"
+    />
   </div>
 </template>

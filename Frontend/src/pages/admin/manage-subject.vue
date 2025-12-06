@@ -13,8 +13,8 @@ import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 
-// Element Plus components used in script
-import { ElInput, ElOption, ElSelect } from "element-plus";
+// Element Plus
+import { ElMessage, ElRadioGroup, ElRadioButton, ElSwitch } from "element-plus";
 
 // --------------------
 // Services & Types
@@ -23,10 +23,16 @@ import { adminService } from "~/api/admin";
 import type {
   AdminSubjectDataDTO,
   AdminSubjectListDTO,
-  AdminCreateSubjectDTO,
-} from "~/api/admin/subject/dto";
-import type { Field } from "~/components/types/form";
+  AdminCreateSubject,
+} from "~/api/admin/subject/subject.dto";
 import type { ColumnConfig } from "~/components/types/tableEdit";
+import type { Field } from "~/components/types/form";
+
+// For grade labels in table
+import { gradeOptions } from "~/modules/forms/admin/subject/subject.schema";
+
+// Dynamic form system
+import { useDynamicCreateFormReactive } from "~/form-system/useDynamicForm.ts/useAdminForms";
 
 const adminApi = adminService();
 
@@ -75,20 +81,12 @@ const subjectColumns = computed<ColumnConfig<AdminSubjectDataDTO>[]>(() => [
   {
     field: "is_active",
     label: "Status",
-    width: 130,
     align: "center",
-    operation: true, // will use #operation slot
+    operation: true, // use #operation slot
   },
 ]);
 
-/* ---------------------- grade options ---------------------- */
-
-const gradeOptions = ref(
-  Array.from({ length: 12 }, (_, i) => ({
-    value: i + 1,
-    label: `Grade ${i + 1}`,
-  }))
-);
+/* ---------------------- grade options display helper ---------------------- */
 
 function formatAllowedGrades(levels?: number[]) {
   if (!levels || !levels.length) return "-";
@@ -100,151 +98,38 @@ function formatAllowedGrades(levels?: number[]) {
     .join(", ");
 }
 
-/* ---------------------- form fields (SmartFormDialog) ---------------------- */
+/* ---------------------- CREATE FORM (dynamic) ---------------------- */
 
-const subjectFormFields = computed<Field<AdminCreateSubjectDTO>[]>(() => [
-  {
-    key: "name",
-    label: "Name",
-    component: ElInput,
-    formItemProps: {
-      prop: "name",
-      label: "Name",
-      rules: [
-        {
-          required: true,
-          message: "Name is required",
-          trigger: ["blur", "change"],
-        },
-      ],
-    },
-    componentProps: {
-      placeholder: "Subject name (e.g. Mathematics)",
-      clearable: true,
-    },
-  },
-  {
-    key: "code",
-    label: "Code",
-    component: ElInput,
-    formItemProps: {
-      prop: "code",
-      label: "Code",
-      rules: [
-        {
-          required: true,
-          message: "Code is required",
-          trigger: ["blur", "change"],
-        },
-      ],
-    },
-    componentProps: {
-      placeholder: "Unique subject code (e.g. MATH101)",
-      clearable: true,
-    },
-  },
-  {
-    key: "description",
-    label: "Description",
-    component: ElInput,
-    formItemProps: {
-      prop: "description",
-      label: "Description",
-    },
-    componentProps: {
-      type: "textarea",
-      placeholder: "Short description",
-      rows: 3,
-    },
-  },
-  {
-    key: "allowed_grade_levels",
-    label: "Allowed Grade Levels",
-    component: ElSelect,
-    childComponent: ElOption,
-    formItemProps: {
-      prop: "allowed_grade_levels",
-      label: "Allowed Grade Levels",
-    },
-    componentProps: {
-      multiple: true,
-      filterable: true,
-      clearable: true,
-      placeholder: "Select grade levels",
-    },
-    childComponentProps: {
-      options: () => gradeOptions.value,
-      valueKey: "value",
-      labelKey: "label",
-    },
-  },
-]);
+// IMPORTANT: correct mode key must match your registry ("SUBJECT")
+const createMode = ref<"SUBJECT">("SUBJECT");
+
+const {
+  formDialogVisible: createFormVisible,
+  formData: createFormData,
+  schema: baseCreateFormSchema,
+  saveForm: saveCreateForm,
+  cancelForm: cancelCreateForm,
+  openForm: openCreateForm,
+  loading: createFormLoading,
+} = useDynamicCreateFormReactive(createMode);
 
 const createDialogWidth = computed(() => "40%");
+const createDialogKey = ref(0);
 
-/* ---------------------- create form state (local) ---------------------- */
+async function openCreateDialog() {
+  // This will init formData using getSubjectFormData() from registry
+  createDialogKey.value++;
+  await openCreateForm();
+}
 
-const createDialogVisible = ref(false);
-const createFormLoading = ref(false);
+async function handleSaveCreateForm(payload: Partial<AdminCreateSubject>) {
+  await saveCreateForm(payload);
+  await fetchSubjects();
+}
 
-const createFormData = ref<Partial<AdminCreateSubjectDTO>>({
-  name: "",
-  code: "",
-  description: "",
-  allowed_grade_levels: [],
-});
-const dialogKey = ref(0);
-
-const openCreateDialog = () => {
-  createFormData.value = {
-    name: "",
-    code: "",
-    description: "",
-    allowed_grade_levels: [],
-  };
-  dialogKey.value++;
-  createDialogVisible.value = true;
-};
-
-const handleCancelCreateForm = () => {
-  createDialogVisible.value = false;
-};
-
-/**
- * This gets the payload emitted from SmartFormDialog,
- * but we also have v-model="createFormData", so they are in sync.
- */
-const handleSaveCreateForm = async (
-  payload: Partial<AdminCreateSubjectDTO>
-) => {
-  createFormLoading.value = true;
-  try {
-    Object.assign(createFormData.value, payload);
-
-    const body: AdminCreateSubjectDTO = {
-      name: createFormData.value.name ?? "",
-      code: createFormData.value.code ?? "",
-      description: createFormData.value.description ?? "",
-      allowed_grade_levels: createFormData.value.allowed_grade_levels ?? [],
-    };
-
-    await adminApi.subject.createSubject(body);
-
-    await fetchSubjects();
-    createFormData.value = {
-      name: "",
-      code: "",
-      description: "",
-      allowed_grade_levels: [],
-    };
-    createDialogVisible.value = false;
-    dialogKey.value++;
-  } catch (err) {
-    console.error("Failed to create subject:", err);
-  } finally {
-    createFormLoading.value = false;
-  }
-};
+function handleCancelCreateForm() {
+  cancelCreateForm();
+}
 
 /* ---------------------- actions: fetch + toggle ---------------------- */
 
@@ -283,19 +168,6 @@ async function toggleSubjectActive(row: AdminSubjectDataDTO) {
     statusLoading.value[id] = false;
   }
 }
-
-/* ---------------------- basic row actions (stubs for now) ---------------------- */
-
-const handleEditSubject = (row: AdminSubjectDataDTO) => {
-  console.log("Edit subject (not implemented yet):", row);
-};
-
-const handleDeleteSubject = async (row: AdminSubjectDataDTO) => {
-  console.log("Delete subject (not implemented yet):", row);
-  // Example:
-  // await adminApi.subject.deleteSubject(row.id);
-  // await fetchSubjects();
-};
 
 /* ---------------------- lifecycle ---------------------- */
 
@@ -343,12 +215,11 @@ onMounted(() => {
           </span>
 
           <span v-else class="description-empty">
-            <!-- optional icon -->
-            <!-- <i class="icon-info"></i> -->
             <span>No description</span>
           </span>
         </div>
       </template>
+
       <!-- Allowed Grades column -->
       <template #allowedGrades="{ row }">
         <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
@@ -356,7 +227,7 @@ onMounted(() => {
 
       <!-- Status / operation column -->
       <template #operation="{ row }">
-        <el-switch
+        <ElSwitch
           v-model="row.is_active"
           :loading="statusLoading[row.id]"
           @change="() => toggleSubjectActive(row)"
@@ -365,13 +236,13 @@ onMounted(() => {
     </SmartTable>
   </ErrorBoundary>
 
-  <!-- CREATE DIALOG -->
+  <!-- CREATE SUBJECT DIALOG (SmartFormDialog + form-system) -->
   <ErrorBoundary>
     <SmartFormDialog
-      :key="dialogKey"
-      v-model:visible="createDialogVisible"
+      :key="createDialogKey"
+      v-model:visible="createFormVisible"
       v-model="createFormData"
-      :fields="subjectFormFields"
+      :fields="baseCreateFormSchema"
       title="Add Subject"
       :loading="createFormLoading"
       @save="handleSaveCreateForm"
@@ -390,7 +261,7 @@ onMounted(() => {
 .description-cell {
   display: flex;
   align-items: center;
-  max-width: 260px; /* clamp the cell width */
+  max-width: 260px;
 }
 
 .description-text {
@@ -402,7 +273,7 @@ onMounted(() => {
 
 .description-empty {
   font-size: 12px;
-  color: #9ca3af; /* muted gray */
+  color: #9ca3af;
   font-style: italic;
 }
 </style>

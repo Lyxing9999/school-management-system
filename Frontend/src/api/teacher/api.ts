@@ -18,6 +18,7 @@ import type {
   TeacherSubjectsSelectNameListResponse,
   TeacherClassSelectNameListResponse,
   TeacherStudentNameListResponse,
+  TeacherListMyScheduleResponse,
 } from "./dto";
 
 export class TeacherApi {
@@ -120,6 +121,17 @@ export class TeacherApi {
   async listGradesForClass(classId: string) {
     const res = await this.$api.get<TeacherListClassGradesResponse>(
       `${this.baseURL}/classes/${classId}/grades`
+    );
+    return res.data;
+  }
+
+  // ----------
+  // Schedule
+  // ----------
+
+  async listMySchedule() {
+    const res = await this.$api.get<TeacherListMyScheduleResponse>(
+      `${this.baseURL}/schedule`
     );
     return res.data;
   }

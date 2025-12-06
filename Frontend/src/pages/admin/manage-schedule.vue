@@ -20,18 +20,18 @@ import {
 } from "element-plus";
 
 import { adminService } from "~/api/admin";
-import type { AdminScheduleSlotDataDTO } from "~/api/admin/schedule/dto";
+import type { AdminScheduleSlotDataDTO } from "~/api/admin/schedule/schedule.dto";
 import type {
   AdminClassDataDTO,
   AdminClassListDTO,
-} from "~/api/admin/class/dto";
+} from "~/api/admin/class/class.dto";
 
 import { useLabelMap } from "~/composables/common/useLabelMap";
 import { createScheduleColumns } from "~/tables/columns/admin/scheduleColumns";
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
-} from "~/forms/dynamic/useAdminForms";
+} from "~/form-system/useDynamicForm.ts/useAdminForms";
 
 const adminApi = adminService();
 
@@ -164,8 +164,9 @@ watch(formEntity, () => {
   resetCreateFormData();
 });
 
-const handleSaveCreateForm = (payload: Partial<any>) => {
-  saveCreateForm(payload);
+const handleSaveCreateForm = async (payload: Partial<any>) => {
+  await saveCreateForm(payload);
+  await fetchSchedule();
 };
 
 const handleCancelCreateForm = () => {
@@ -231,6 +232,7 @@ async function fetchSchedule() {
       const res = await adminApi.scheduleSlot.getClassSchedule(
         selectedClassId.value
       );
+      console.log("Class schedule response:", res);
       slots.value = res.items ?? [];
     } else {
       const res = await adminApi.scheduleSlot.getTeacherSchedule(

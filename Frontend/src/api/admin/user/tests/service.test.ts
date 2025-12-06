@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { UserService } from "../service";
+import { UserService } from "../user.service";
 import { Role } from "~/api/types/enums/role.enum";
-import type { AdminUpdateUser, AdminCreateUser } from "../dto";
+import type { AdminUpdateUser, AdminCreateUser } from "../user.dto";
 
 describe("UserService", () => {
   let service: UserService;

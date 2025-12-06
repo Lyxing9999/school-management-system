@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import CambodiaCalendar from "~/components/Calendar/CambodiaCalendar.vue";
 definePageMeta({
   layout: "admin",
 });
-import index from "~/views/admin/Dashboard/index.vue";
 </script>
 
 <template>
   <el-card class="w-full h-full">
-    <index />
+    <CambodiaCalendar />
   </el-card>
 </template>

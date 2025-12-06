@@ -14,6 +14,7 @@ import type {
   TeacherSubjectSelectNameListDTO,
   TeacherClassSelectNameListDTO,
   TeacherStudentNameListDTO,
+  TeacherScheduleListDTO,
 } from "./dto";
 import type { AttendanceDTO, GradeDTO } from "~/api/types/school.dto";
 

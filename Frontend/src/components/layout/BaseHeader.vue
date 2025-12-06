@@ -1,17 +1,12 @@
+<!-- components/layout/AppHeader.vue -->
 <script setup lang="ts">
 import { ref } from "vue";
 import { Menu, Bell, Sunny, Moon, ArrowDown } from "@element-plus/icons-vue";
 import BaseInputSearch from "~/components/Base/BaseInputSearch.vue";
 
-// -----------------------------
-// Reactive State
-// -----------------------------
 const searchQuery = ref("");
-const isDark = ref(false); // Dark mode toggle
+const isDark = ref(false); // for future real dark mode toggle
 
-// -----------------------------
-// Methods
-// -----------------------------
 const toggleDark = () => {
   isDark.value = !isDark.value;
 };
@@ -30,28 +25,29 @@ const handleLogoutClick = () => {
 </script>
 
 <template>
-  <el-header>
+  <el-header class="app-header">
     <el-row justify="space-between" align="middle" style="height: 100%">
-      <!-- Sidebar Toggle -->
-      <el-col :span="6">
-        <el-button type="text" class="mobile-toggle">
+      <!-- Left: sidebar toggle / logo placeholder -->
+      <el-col :span="6" class="flex items-center">
+        <el-button type="text" class="icon-button mobile-toggle">
           <el-icon><Menu /></el-icon>
         </el-button>
       </el-col>
 
-      <!-- Search -->
-      <el-col :span="12">
+      <!-- Middle: search -->
+      <el-col :span="12" class="flex justify-center">
         <BaseInputSearch
           v-model="searchQuery"
           placeholder="Search..."
           clearable
           size="default"
+          class="max-w-xl w-full"
         />
       </el-col>
 
-      <!-- Actions -->
-      <el-col :span="6">
-        <el-space>
+      <!-- Right: actions -->
+      <el-col :span="6" class="flex justify-end">
+        <el-space size="small" alignment="center">
           <!-- Notifications -->
           <el-tooltip content="Notifications" placement="bottom">
             <el-badge
@@ -79,20 +75,20 @@ const handleLogoutClick = () => {
           <!-- User Dropdown -->
           <el-dropdown trigger="click" placement="bottom-end">
             <el-button type="text" class="user-dropdown">
-              <el-space>
-                <el-avatar :size="32" icon="User" />
+              <el-space size="small" alignment="center">
+                <el-avatar :size="28" icon="User" />
                 <span class="user-name">Admin User</span>
                 <el-icon><ArrowDown /></el-icon>
               </el-space>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="handleProfileClick"
-                  >Profile</el-dropdown-item
-                >
-                <el-dropdown-item divided @click="handleLogoutClick"
-                  >Logout</el-dropdown-item
-                >
+                <el-dropdown-item @click="handleProfileClick">
+                  Profile
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogoutClick">
+                  Logout
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -103,19 +99,52 @@ const handleLogoutClick = () => {
 </template>
 
 <style scoped lang="scss">
-.mobile-toggle {
-  margin-left: 0.5rem;
+.app-header {
+  height: 64px;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--color-primary-light-6);
+  background-color: var(--color-card);
+  display: flex;
+  align-items: center;
 }
+
 .icon-button {
-  padding: 0.25rem;
+  padding: 4px;
+  color: #4b5563;
 }
+
+.icon-button:hover {
+  color: var(--color-primary);
+}
+
+.mobile-toggle {
+  margin-left: 0.25rem;
+}
+
 .user-dropdown {
-  padding: 0.25rem 0.5rem;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: var(--color-primary-light-9);
 }
+
+.user-dropdown:hover {
+  background-color: var(--color-primary-light-7);
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
 .notification-badge {
   cursor: pointer;
 }
-.user-name {
-  margin-left: 0.5rem;
+
+/* Mobile: move search down if needed (optional) */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 1rem;
+  }
 }
 </style>

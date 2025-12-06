@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { getKey } from "~/utils/aliasMapper";
-import type { UseFormService } from "~/forms/types/serviceFormTypes";
+import type { UseFormService } from "~/form-system/types/serviceFormTypes";
 
 export interface UseInlineEditService<T> {
   update: (id: string, payload: Partial<T>) => Promise<T>;

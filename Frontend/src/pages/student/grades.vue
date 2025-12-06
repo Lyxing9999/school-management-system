@@ -5,7 +5,9 @@ import { ElMessage } from "element-plus";
 
 import { studentService } from "~/api/student";
 import type { GradeDTO } from "~/api/types/school.dto";
-import type { StudentGradesFilterDTO } from "~/api/student/dto";
+import type { StudentGradesFilterDTO } from "~/api/student/student.dto";
+
+import { formatDate } from "~/utils/formatDate";
 
 definePageMeta({
   layout: "student",
@@ -36,8 +38,12 @@ const loadGrades = async () => {
     loading.value = false;
   }
 };
-
 onMounted(loadGrades);
+
+const formatType = (value?: string) => {
+  if (!value) return "";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
 </script>
 
 <template>
@@ -65,6 +71,7 @@ onMounted(loadGrades);
     />
 
     <el-card shadow="hover" class="space-y-4">
+      <!-- Filters -->
       <el-form inline label-width="60px" size="small">
         <el-form-item label="Term">
           <el-input
@@ -82,6 +89,7 @@ onMounted(loadGrades);
         </el-form-item>
       </el-form>
 
+      <!-- Grades table -->
       <el-table
         :data="grades"
         v-loading="loading"
@@ -89,20 +97,59 @@ onMounted(loadGrades);
         size="small"
         style="width: 100%"
       >
+        <!-- Subject label from backend -->
         <el-table-column
-          prop="subject_id"
+          prop="subject_label"
           label="Subject"
+          min-width="200"
+          show-overflow-tooltip
+        />
+
+        <!-- Class name, not class_id -->
+        <el-table-column
+          prop="class_name"
+          label="Class"
           min-width="180"
           show-overflow-tooltip
         />
-        <el-table-column prop="class_id" label="Class" min-width="180" />
-        <el-table-column prop="score" label="Score" min-width="80" />
-        <el-table-column prop="type" label="Type" min-width="100" />
-        <el-table-column prop="term" label="Term" min-width="120" />
+
+        <!-- Score -->
+        <el-table-column
+          prop="score"
+          label="Score"
+          min-width="80"
+          align="right"
+        />
+
+        <!-- Type as small tag -->
+        <el-table-column label="Type" min-width="110">
+          <template #default="{ row }">
+            <el-tag size="small" effect="plain">
+              {{ formatType(row.type) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <!-- Term -->
+        <el-table-column
+          prop="term"
+          label="Term"
+          min-width="120"
+          show-overflow-tooltip
+        />
+
+        <!-- Created date (nice format) -->
+        <el-table-column label="Recorded At" min-width="140">
+          <template #default="{ row }">
+            {{ formatDate(row.created_at) }}
+          </template>
+        </el-table-column>
+
+        <!-- Low-priority raw record id (optional) -->
         <el-table-column
           prop="id"
-          label="Grade ID"
-          min-width="260"
+          label="Record ID"
+          min-width="220"
           show-overflow-tooltip
         />
       </el-table>

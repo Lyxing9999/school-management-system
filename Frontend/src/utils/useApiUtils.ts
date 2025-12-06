@@ -38,8 +38,8 @@ export const useApiUtils = () => {
           eventBus.emit(
             "error-message",
             apiRes.user_message ||
-              apiRes.details?.hint ||
               apiRes.message ||
+              apiRes.details?.hint ||
               "An unexpected error occurred."
           );
         }
@@ -72,6 +72,7 @@ export const useApiUtils = () => {
         eventBus.emit(
           "error-message",
           apiErrorData?.user_message ||
+            apiErrorData?.message ||
             axiosErr.message ||
             "An unexpected error occurred."
         );

@@ -97,3 +97,99 @@
     color: var(--color-primary-light-3);
     background-color: rgba(0, 0, 0, 0.02);
 }
+
+/* ===========================
+   Element Plus Card Overrides (lighter)
+   =========================== */
+
+/* Base card – clean, neutral */
+.el-card {
+    background-color: var(--color-card);
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    /* neutral gray */
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    /* very soft */
+    transition:
+        transform var(--transition-base),
+        box-shadow var(--transition-base),
+        border-color var(--transition-base),
+        background-color var(--transition-base);
+}
+
+/* Subtle hover lift */
+.el-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    border-color: #e5e7eb;
+    /* keep neutral, no purple */
+}
+
+/* Card header – light with just a hint of purple */
+.el-card__header {
+    padding: 10px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    /* soft gray, not purple */
+    color: var(--color-dark);
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+}
+
+/* Optional: small purple accent bar on the left (very light) */
+.el-card__header::before {
+    content: "";
+    display: inline-block;
+    width: 3px;
+    height: 18px;
+    border-radius: 999px;
+    margin-right: 8px;
+    background: var(--color-primary-light-4);
+    /* light purple accent */
+}
+
+/* Card body */
+.el-card__body {
+    padding: 14px 16px;
+    background-color: var(--color-card);
+    color: var(--color-dark);
+}
+
+/* ===========================
+   Stat cards (dashboard KPIs)
+   =========================== */
+
+/* Only stat cards keep a soft purple background */
+.el-card.stat-card {
+    border-radius: 12px;
+    border: 1px solid var(--color-primary-light-5);
+    background: linear-gradient(135deg,
+            var(--color-primary-light-9),
+            #ffffff);
+    /* mostly white with a hint of purple */
+    box-shadow: 0 4px 14px rgba(107, 63, 160, 0.12);
+}
+
+.el-card.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(107, 63, 160, 0.18);
+}
+
+.el-card.stat-card .el-card__body {
+    padding: 12px 16px;
+}
+
+/* Title / subtitle helpers */
+.card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-dark);
+}
+
+.card-subtitle {
+    font-size: 11px;
+    color: #6b7280;
+    /* neutral gray text, not too purple */
+}

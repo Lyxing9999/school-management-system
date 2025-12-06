@@ -1,7 +1,7 @@
 //api
-import { StudentApi } from "./api";
+import { StudentApi } from "./student.api";
 //service
-import { StudentService } from "./service";
+import { StudentService } from "./student.service";
 
 /**
  * Lazy singleton pattern

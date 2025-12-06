@@ -3,43 +3,54 @@ import { ref, computed, onMounted, h, nextTick } from "vue";
 
 definePageMeta({ layout: "admin" });
 
-// Base components
+/* ------------------------------------
+ * Base components
+ * ---------------------------------- */
 import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
-import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
 import StudentSelect from "~/components/Selects/StudentSelect.vue";
+import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
 
-// Element Plus
+/* ------------------------------------
+ * Element Plus
+ * ---------------------------------- */
 import {
-  ElInput,
-  ElInputNumber,
-  ElSelect,
-  ElOption,
   ElMessageBox,
   ElMessage,
   ElRadioGroup,
   ElRadioButton,
 } from "element-plus";
 
-// Services & types
+/* ------------------------------------
+ * Services & types
+ * ---------------------------------- */
 import { adminService } from "~/api/admin";
 import type {
-  AdminCreateClassDTO,
+  AdminCreateClass,
   AdminClassDataDTO,
   AdminClassListDTO,
-} from "~/api/admin/class/dto";
+} from "~/api/admin/class/class.dto";
+
+import type { Field } from "~/components/types/form";
+
+/* ------------------------------------
+ * Dynamic create form system
+ * ---------------------------------- */
+import { useDynamicCreateFormReactive } from "~/form-system/useDynamicForm.ts/useAdminForms";
 
 const adminApi = adminService();
-/* ---------------------- table state ---------------------- */
 
+/* ===========================
+ *  TABLE STATE
+ * =========================== */
+import { classColumns } from "~/modules/tables/columns/admin/classColumns";
 const classes = ref<AdminClassDataDTO[]>([]);
 const tableLoading = ref(false);
 const showDeleted = ref<"all" | "active" | "deleted">("all");
 
-// decorate with counts
 const displayClasses = computed(() =>
   classes.value.map((c) => ({
     ...c,
@@ -56,7 +67,9 @@ const filteredClasses = computed(() => {
   return displayClasses.value.filter((c) => !c.deleted);
 });
 
-/* ---------------------- subject options ---------------------- */
+/* ===========================
+ *  SUBJECT OPTIONS (ASYNC)
+ * =========================== */
 
 const subjectOptions = ref<{ value: string; label: string }[]>([]);
 const subjectOptionsLoading = ref(false);
@@ -78,88 +91,90 @@ async function fetchSubjectOptions() {
   }
 }
 
-/* ---------------------- columns (SmartTable) ---------------------- */
+/* ===========================
+ *  CREATE CLASS (DYNAMIC FORM)
+ * =========================== */
 
-const classColumns = computed(() => [
-  {
-    label: "Name",
-    field: "name",
-    align: "left",
-    minWidth: "160px",
-  },
-  {
-    label: "Teacher",
-    field: "teacher_id",
-    align: "left",
-    minWidth: "160px",
-    render: (row: AdminClassDataDTO) =>
-      h("span", row.teacher_name || "No teacher"),
-  },
-  {
-    label: "Students",
-    field: "student_ids",
-    align: "center",
-    width: "110px",
-    render: (row: AdminClassDataDTO) =>
-      h("span", (row.student_ids?.length ?? 0).toString()),
-  },
-  {
-    label: "Subjects",
-    field: "subject_ids",
-    align: "center",
-    width: "110px",
-    render: (row: AdminClassDataDTO) =>
-      h("span", (row.subject_ids?.length ?? 0).toString()),
-  },
-  {
-    inlineEditActive: false,
-    label: "Max Students",
-    field: "max_students",
-    align: "center",
-    width: "130px",
-  },
-  {
-    label: "Deleted",
-    field: "deleted",
-    align: "center",
-    width: "100px",
-    render: (row: AdminClassDataDTO) => h("span", row.deleted ? "Yes" : "No"),
-  },
-  {
-    label: "Actions",
-    slotName: "operation",
-    operation: true,
-    fixed: "right",
-    width: "220px",
-    align: "center",
-  },
-]);
+// Only CLASS mode on this page
+const createMode = ref<"CLASS">("CLASS");
 
-/* ---------------------- create form state ---------------------- */
-import type { Field } from "~/components/types/form";
-const createDialogVisible = ref(false);
-const createFormLoading = ref(false);
+const {
+  formDialogVisible: createFormVisible,
+  formData: createFormData,
+  schema: baseCreateFormSchema,
+  saveForm: saveCreateForm,
+  cancelForm: cancelCreateForm,
+  openForm: openCreateForm,
+  loading: createFormLoading,
+} = useDynamicCreateFormReactive(createMode);
 
-const createFormData = ref<AdminCreateClassDTO>({
-  name: "",
+// Inject loading + options into the `subject_ids` field
+const createFormSchema = computed<Field<AdminCreateClass>[]>(() =>
+  baseCreateFormSchema.value.map((field) => {
+    if (field.key !== "subject_ids") return field;
+
+    return {
+      ...field,
+      componentProps: {
+        ...(field.componentProps ?? {}),
+        loading: subjectOptionsLoading.value,
+      },
+      childComponentProps: {
+        ...(field.childComponentProps ?? {}),
+        options: () => subjectOptions.value,
+      },
+    };
+  })
+);
+
+const createFormDialogWidth = computed(() => "50%");
+
+async function openCreateDialog() {
+  await fetchSubjectOptions();
+  await openCreateForm(); // uses registry formData() to init
+}
+
+async function handleSaveCreateForm(payload: Partial<AdminCreateClass>) {
+  try {
+    await saveCreateForm(payload); // registry service().create
+    cancelCreateForm();
+    await fetchClasses();
+  } catch (err) {
+    console.error("Failed to create class", err);
+    ElMessage.error("Failed to create class");
+  }
+}
+
+function handleCancelCreateForm() {
+  cancelCreateForm();
+}
+
+/* ===========================
+ *  MANAGE STUDENTS & TEACHER
+ * =========================== */
+
+type ManageClassRelationsForm = {
+  student_ids: string[];
+  teacher_id: string | null;
+};
+
+const manageStudentsVisible = ref(false);
+const manageRelationsForm = ref<ManageClassRelationsForm>({
+  student_ids: [],
   teacher_id: null,
-  subject_ids: [],
-  max_students: 30,
 });
 
-const classFormFields: Field<AdminCreateClassDTO>[] = [
+const manageRelationsFields: Field<ManageClassRelationsForm>[] = [
   {
-    key: "name",
-    label: "Class Name",
-    component: ElInput,
+    key: "student_ids",
+    label: "Students",
+    component: StudentSelect,
     formItemProps: {
-      required: true,
-      prop: "name",
-      label: "Class Name",
+      label: "Students",
     },
     componentProps: {
-      placeholder: "Class name (e.g. Grade 7A)",
-      clearable: true,
+      multiple: true,
+      placeholder: "Select students to enroll",
     },
   },
   {
@@ -167,65 +182,18 @@ const classFormFields: Field<AdminCreateClassDTO>[] = [
     label: "Teacher",
     component: TeacherSelect,
     formItemProps: {
-      required: false,
-      prop: "teacher_id",
       label: "Teacher",
     },
     componentProps: {
-      placeholder: "Optional teacher",
+      placeholder: "Select teacher",
       clearable: true,
-    },
-  },
-  {
-    key: "max_students",
-    label: "Max Students",
-    component: ElInputNumber,
-    formItemProps: {
-      required: false,
-      prop: "max_students",
-      label: "Max Students",
-    },
-    componentProps: {
-      min: 1,
-      max: 100,
-      placeholder: "Optional max students",
-    },
-  },
-  {
-    key: "subject_ids",
-    label: "Subjects",
-    component: ElSelect,
-    childComponent: ElOption,
-    formItemProps: {
-      required: false,
-      prop: "subject_ids",
-      label: "Subjects",
-    },
-    componentProps: {
-      multiple: true,
-      filterable: true,
-      clearable: true,
-      placeholder: "Select subjects",
-      loading: subjectOptionsLoading.value,
-    },
-    childComponentProps: {
-      options: () => subjectOptions.value,
-      valueKey: "value",
-      labelKey: "label",
     },
   },
 ];
 
-const createDialogWidth = computed(() => "50%");
-
-/* ---------------------- manage students & teacher dialog ---------------------- */
-
-const manageStudentsVisible = ref(false);
 const currentClassForStudents = ref<AdminClassDataDTO | null>(null);
-
 const originalStudentIds = ref<string[]>([]);
-const selectedStudentIds = ref<string[]>([]);
-const selectedTeacherId = ref<string | null>(null);
+const originalTeacherId = ref<string | null>(null);
 
 const detailLoading = ref<Record<string | number, boolean>>({});
 const deleteLoading = ref<Record<string | number, boolean>>({});
@@ -236,10 +204,16 @@ async function openManageStudentsDialog(row: AdminClassDataDTO) {
   try {
     currentClassForStudents.value = row;
 
-    originalStudentIds.value = [...(row.student_ids ?? [])];
-    selectedStudentIds.value = [...(row.student_ids ?? [])];
+    const students = row.student_ids ?? [];
+    const teacher = (row.teacher_id as string | null) ?? null;
 
-    selectedTeacherId.value = (row.teacher_id as string | null) ?? null;
+    originalStudentIds.value = [...students];
+    originalTeacherId.value = teacher;
+
+    manageRelationsForm.value = {
+      student_ids: [...students],
+      teacher_id: teacher,
+    };
 
     await nextTick();
     manageStudentsVisible.value = true;
@@ -252,18 +226,23 @@ function cancelManageStudents() {
   manageStudentsVisible.value = false;
 }
 
-/**
- * Save both students and teacher changes in one click.
- */
-async function saveManageStudents() {
+async function saveManageStudents(payload: Partial<ManageClassRelationsForm>) {
   const cls = currentClassForStudents.value;
   if (!cls) return;
+
+  const form: ManageClassRelationsForm = {
+    ...manageRelationsForm.value,
+    ...payload,
+  };
+
+  const newStudents = form.student_ids ?? [];
+  const newTeacher = form.teacher_id ?? null;
 
   saveStudentsLoading.value = true;
 
   const classId = cls.id;
   const oldStudentSet = new Set(originalStudentIds.value);
-  const newStudentSet = new Set(selectedStudentIds.value);
+  const newStudentSet = new Set(newStudents);
 
   const toAdd: string[] = [];
   const toRemove: string[] = [];
@@ -275,9 +254,8 @@ async function saveManageStudents() {
     if (!newStudentSet.has(id)) toRemove.push(id);
   }
 
-  const oldTeacherId = (cls.teacher_id as string | null) ?? null;
-  const newTeacherId = selectedTeacherId.value ?? null;
-  const teacherChanged = oldTeacherId !== newTeacherId;
+  const oldTeacherId = originalTeacherId.value;
+  const teacherChanged = oldTeacherId !== newTeacher;
 
   try {
     // update students
@@ -290,10 +268,10 @@ async function saveManageStudents() {
 
     // update teacher if changed
     if (teacherChanged) {
-      if (newTeacherId === null) {
+      if (newTeacher === null) {
         await adminApi.class.unassignClassTeacher(classId);
       } else {
-        await adminApi.class.assignClassTeacher(classId, newTeacherId!);
+        await adminApi.class.assignClassTeacher(classId, newTeacher);
       }
     }
 
@@ -307,7 +285,9 @@ async function saveManageStudents() {
   }
 }
 
-/* ---------------------- fetch classes ---------------------- */
+/* ===========================
+ *  FETCH + DELETE
+ * =========================== */
 
 async function fetchClasses() {
   tableLoading.value = true;
@@ -321,50 +301,6 @@ async function fetchClasses() {
     tableLoading.value = false;
   }
 }
-
-/* ---------------------- create class actions ---------------------- */
-
-async function openCreateDialog() {
-  createFormData.value = {
-    name: "",
-    teacher_id: null,
-    subject_ids: [],
-    max_students: 30,
-  };
-  await fetchSubjectOptions();
-  createDialogVisible.value = true;
-}
-
-async function handleSaveCreateForm(payload: Partial<AdminCreateClassDTO>) {
-  createFormLoading.value = true;
-  try {
-    const dataToSend: AdminCreateClassDTO = {
-      name: payload.name ?? createFormData.value.name,
-      teacher_id: payload.teacher_id ?? createFormData.value.teacher_id ?? null,
-      subject_ids:
-        (payload.subject_ids as string[]) ??
-        createFormData.value.subject_ids ??
-        [],
-      max_students:
-        payload.max_students ?? createFormData.value.max_students ?? null,
-    };
-
-    await adminApi.class.createClass(dataToSend);
-    createDialogVisible.value = false;
-    await fetchClasses();
-  } catch (err) {
-    console.error("Failed to create class", err);
-    ElMessage.error("Failed to create class");
-  } finally {
-    createFormLoading.value = false;
-  }
-}
-
-function handleCancelCreateForm() {
-  createDialogVisible.value = false;
-}
-
-/* ---------------------- soft delete class ---------------------- */
 
 async function handleSoftDelete(row: AdminClassDataDTO) {
   try {
@@ -389,10 +325,14 @@ async function handleSoftDelete(row: AdminClassDataDTO) {
   }
 }
 
-/* ---------------------- lifecycle ---------------------- */
+/* ===========================
+ *  LIFECYCLE
+ * =========================== */
 
 onMounted(() => {
   fetchClasses();
+  // optional: prefetch subjects
+  // fetchSubjectOptions();
 });
 </script>
 
@@ -437,62 +377,36 @@ onMounted(() => {
     </SmartTable>
   </ErrorBoundary>
 
-  <!-- CREATE CLASS DIALOG -->
+  <!-- CREATE CLASS DIALOG (form-system) -->
   <ErrorBoundary>
     <SmartFormDialog
-      v-model:visible="createDialogVisible"
+      v-model:visible="createFormVisible"
       v-model="createFormData"
-      :fields="classFormFields"
+      :fields="createFormSchema"
       title="Add Class"
       :loading="createFormLoading"
       @save="handleSaveCreateForm"
       @cancel="handleCancelCreateForm"
       :useElForm="true"
-      :width="createDialogWidth"
+      :width="createFormDialogWidth"
     />
   </ErrorBoundary>
 
-  <!-- MANAGE STUDENTS + TEACHER DIALOG -->
+  <!-- MANAGE STUDENTS + TEACHER DIALOG (SmartFormDialog) -->
   <ErrorBoundary>
-    <el-dialog
-      v-model="manageStudentsVisible"
+    <SmartFormDialog
+      v-model:visible="manageStudentsVisible"
+      v-model="manageRelationsForm"
+      :fields="manageRelationsFields"
       :title="`Manage Class${
         currentClassForStudents ? ' - ' + currentClassForStudents.name : ''
       }`"
-      width="40%"
-    >
-      <div class="mb-4 space-y-4">
-        <div>
-          <p class="text-xs text-gray-500 mb-1">Students</p>
-          <StudentSelect
-            v-model="selectedStudentIds"
-            multiple
-            placeholder="Select students to enroll"
-          />
-        </div>
-
-        <div>
-          <p class="text-xs text-gray-500 mb-1">Teacher</p>
-          <TeacherSelect
-            v-model="selectedTeacherId"
-            placeholder="Select teacher"
-            clearable
-          />
-        </div>
-      </div>
-
-      <template #footer>
-        <BaseButton @click="cancelManageStudents">Cancel</BaseButton>
-        <BaseButton
-          type="primary"
-          class="ml-2"
-          :loading="saveStudentsLoading"
-          @click="saveManageStudents"
-        >
-          Save
-        </BaseButton>
-      </template>
-    </el-dialog>
+      :loading="saveStudentsLoading"
+      :width="'40%'"
+      @save="saveManageStudents"
+      @cancel="cancelManageStudents"
+      :useElForm="true"
+    />
   </ErrorBoundary>
 </template>
 

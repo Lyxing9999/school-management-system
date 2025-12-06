@@ -4,7 +4,7 @@ import { ElMessage } from "element-plus";
 import schoolLogo from "~/assets/image/school-logo.jpg";
 import googleIcon from "~/assets/icons/svg/google.svg";
 import { iamService } from "~/api/iam/index";
-import type { UserLoginForm } from "~/api/iam/dto";
+import type { UserLoginForm } from "~/api/iam/iam.dto";
 
 const hover = ref(false);
 const hoverGoogle = ref(false);
@@ -112,7 +112,7 @@ const submit = async () => {
       <!-- Google Login Button -->
       <el-button
         class="w-full mt-2 flex items-center justify-center gap-2 border rounded-md"
-        @click="loginWithGoogle"
+        @click=""
         @mouseover="hoverGoogle = true"
         @mouseleave="hoverGoogle = false"
       >

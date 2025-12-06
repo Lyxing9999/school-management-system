@@ -26,7 +26,10 @@ import { useInlineEdit } from "~/composables/useInlineEdit";
 // --------------------
 // Schemas & Registry
 // --------------------
-import { formRegistryCreate, formRegistryEdit } from "~/forms/admin/register";
+import {
+  adminFormRegistryCreate,
+  adminFormRegistryEdit,
+} from "~/form-system/register/admin";
 
 // --------------------
 // use dynamic form
@@ -35,11 +38,11 @@ import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
   useInlineEditService,
-} from "~/forms/dynamic/useAdminForms";
+} from "~/form-system/useDynamicForm.ts/useAdminForms";
 // --------------------
 // Columns & Constants
 // --------------------
-import { userColumns } from "~/tables/columns/admin/userColumns";
+import { userColumns } from "~/modules/tables/columns/admin/userColumns";
 import {
   roleOptions,
   roleStaffOptions,
@@ -52,7 +55,7 @@ import {
 import type {
   AdminGetUserItemData,
   AdminUpdateUser,
-} from "~/api/admin/user/dto";
+} from "~/api/admin/user/user.dto";
 
 import { Role } from "~/api/types/enums/role.enum";
 
@@ -70,6 +73,7 @@ const selectedRoles = ref<Role[]>([Role.STUDENT]);
 const selectedFormCreate = ref<CreateMode>("USER");
 const selectedFormEdit = ref<EditMode>("USER");
 const editFormDataKey = ref("");
+const createFormKey = ref(0);
 
 /* ---------------------------- create form -------------------------- */
 const {
@@ -85,10 +89,13 @@ const {
 
 const handleOpenCreateForm = async () => {
   selectedFormCreate.value = isStaffMode.value ? "STAFF" : "USER";
+  createFormKey.value++;
   await openCreateForm();
 };
-const handleSaveCreateForm = (payload: Partial<any>) => {
-  saveCreateForm(payload);
+const handleSaveCreateForm = async (payload: Partial<any>) => {
+  const createdUser = await saveCreateForm(payload);
+  console.log("Create form result:", createdUser);
+  await fetchPage(currentPage.value); // reload current page only
 };
 const handleCancelCreateForm = () => {
   cancelCreateForm();
@@ -203,10 +210,10 @@ watch(isStaffMode, (mode) => {
 /* --------------------------- computed -------------------------- */
 
 const schemaCreate = computed(
-  () => formRegistryCreate[selectedFormCreate.value].schema ?? []
+  () => adminFormRegistryCreate[selectedFormCreate.value].schema ?? []
 );
 const schemaEdit = computed(
-  () => formRegistryEdit[selectedFormEdit.value].schema ?? []
+  () => adminFormRegistryEdit[selectedFormEdit.value].schema ?? []
 );
 const createWidthRef = useDialogDynamicWidth(schemaCreate.value);
 const dynamicWidthCreate = computed(() => createWidthRef.value);
@@ -366,7 +373,7 @@ function handleAutoSaveWrapper(
   <!-- CREATE DIALOG -->
   <ErrorBoundary>
     <SmartFormDialog
-      :key="selectedFormCreate"
+      :key="`${selectedFormCreate}-${createFormKey}`"
       v-model:visible="createFormVisible"
       v-model="createFormData"
       :fields="createFormSchema"

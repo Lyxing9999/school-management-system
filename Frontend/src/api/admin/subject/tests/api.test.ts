@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { AxiosInstance } from "axios";
-import { SubjectApi } from "../api";
-import type { AdminCreateSubject, AdminUpdateSubject } from "../dto";
+import { SubjectApi } from "../subject.api";
+import type { AdminCreateSubject, AdminUpdateSubject } from "../subject.dto";
 
 describe("SubjectApi", () => {
   let mockAxios: AxiosInstance;

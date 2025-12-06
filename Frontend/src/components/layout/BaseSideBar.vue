@@ -1,3 +1,4 @@
+<!-- components/layout/AppSidebar.vue -->
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute } from "vue-router";
@@ -43,14 +44,20 @@ const menus: Record<RoleKey, MenuItem[]> = {
   ],
   TEACHER: [
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.TEACHER.DASHBOARD },
+    { title: "My Classes", icon: "Notebook", route: ROUTES.TEACHER.MY_CLASSES },
     {
-      title: "Manage Students",
+      title: "My Students",
       icon: "User",
       route: ROUTES.TEACHER.MANAGE_STUDENTS,
     },
-    { title: "My Classes", icon: "Notebook", route: ROUTES.TEACHER.MY_CLASSES },
+    {
+      title: "Schedule",
+      icon: "Calendar",
+      route: ROUTES.TEACHER.SCHEDULE,
+    },
     { title: "Grades", icon: "Document", route: ROUTES.TEACHER.GRADES },
     { title: "Attendance", icon: "Calendar", route: ROUTES.TEACHER.ATTENDANCE },
+    { title: "Events", icon: "Calendar", route: ROUTES.TEACHER.EVENTS },
     {
       title: "Notifications",
       icon: "Bell",
@@ -92,6 +99,7 @@ const menus: Record<RoleKey, MenuItem[]> = {
       icon: "User",
       route: ROUTES.ACADEMIC.STUDENTS,
     },
+
     {
       title: "Attendance",
       icon: "Calendar",
@@ -101,11 +109,6 @@ const menus: Record<RoleKey, MenuItem[]> = {
       title: "Notifications",
       icon: "Bell",
       route: ROUTES.ACADEMIC.NOTIFICATIONS,
-    },
-    {
-      title: "Reports",
-      icon: "Document",
-      route: ROUTES.ACADEMIC.REPORTS,
     },
   ],
   FRONT_OFFICE: [
@@ -153,10 +156,11 @@ const menus: Record<RoleKey, MenuItem[]> = {
 
 const authStore = useAuthStore();
 const route = useRoute();
+
 const role = computed<RoleKey | null>(() => {
   const r = authStore.user?.role;
   if (!r) return null;
-  return r.toUpperCase() as RoleKey; // convert to match menus keys
+  return r.toUpperCase() as RoleKey;
 });
 
 const menuItems = computed(() => {
@@ -176,11 +180,12 @@ const activeMenu = computed(
 </script>
 
 <template>
-  <el-aside width="240px">
+  <el-aside width="240px" class="app-aside">
     <div class="logo-section">
-      <img :src="schoolLogo" alt="Logo" />
+      <img :src="schoolLogo" alt="Logo" class="logo-image" />
     </div>
-    <el-menu router>
+
+    <el-menu router :default-active="activeMenu" class="app-menu">
       <el-menu-item
         v-for="item in menuItems"
         :key="item.route"
@@ -199,45 +204,57 @@ const activeMenu = computed(
   </el-aside>
 </template>
 
-<style scoped>
-.el-aside {
-  background-color: rgba(255, 255, 255, 0.9);
+<style scoped lang="scss">
+.app-aside {
+  background-color: var(--color-card);
   backdrop-filter: blur(10px);
-  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.06);
   padding-top: 1rem;
   display: flex;
   flex-direction: column;
   border-radius: 8px;
 }
+
 .logo-section {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 0 1rem 0.75rem;
 }
-.el-menu {
-  border-right: none;
-  padding: 0.5rem 0;
-}
-.el-menu-item {
-  border: 1px solid transparent;
+
+.logo-image {
+  max-width: 160px;
   border-radius: 8px;
+}
+
+.app-menu {
+  border-right: none;
+  padding: 0.25rem 0.5rem 0.75rem;
+}
+
+.el-menu-item {
+  border-radius: 9999px;
   margin: 0.25rem 0;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1rem !important;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-weight: 500;
-  color: var(--aside-text);
+  color: #4b5563;
+  border: 1px solid transparent;
 }
+
 .el-menu-item:hover {
-  border-color: var(--color-primary);
-  background-color: transparent;
+  border-color: var(--color-primary-light-4);
+  background-color: var(--color-primary-light-9);
   color: var(--color-primary);
 }
+
 .active-menu-item {
-  border: 2px solid var(--color-primary);
-  background-color: rgba(126, 87, 194, 0.1);
+  border-color: var(--color-primary);
+  background-color: rgba(126, 87, 194, 0.12);
 }
+
 .active-menu-item::after {
   display: none;
 }

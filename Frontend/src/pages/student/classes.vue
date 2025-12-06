@@ -6,6 +6,7 @@ import { useRouter } from "vue-router";
 
 import { studentService } from "~/api/student";
 import type { ClassSectionDTO } from "~/api/types/school.dto";
+import { formatDate } from "~/utils/formatDate";
 
 definePageMeta({
   layout: "student",
@@ -146,7 +147,7 @@ onMounted(loadClasses);
         >
           <template #default="{ row }">
             <span class="text-xs text-gray-500">
-              {{ row.created_at }}
+              {{ formatDate(row.created_at) }}
             </span>
           </template>
         </el-table-column>

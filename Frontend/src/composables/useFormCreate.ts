@@ -1,5 +1,5 @@
 import { reactive, ref, computed, unref } from "vue";
-import type { UseFormService } from "~/forms/types/serviceFormTypes";
+import type { UseFormService } from "~/form-system/types/serviceFormTypes";
 import type { Field } from "~/components/types/form";
 
 export function useFormCreate<
@@ -34,7 +34,6 @@ export function useFormCreate<
 
     try {
       if (payload) Object.assign(formData, payload);
-      console.log("Form data before filtering:", formData);
       const filteredData: Partial<I> = {};
       const collectKeys = (fields: Field<I>[]) => {
         fields.forEach((f) => {
@@ -48,7 +47,6 @@ export function useFormCreate<
 
       let response: I | null = null;
       try {
-        console.log("this is filteredData", filteredData);
         response = await service.value.create(filteredData as I);
       } catch (err) {
         console.error("Create failed:", err);
@@ -56,7 +54,6 @@ export function useFormCreate<
       }
 
       if (response) {
-        console.log("Response from create:", response);
         resetFormData(response);
         formDialogVisible.value = false;
       }

@@ -1,18 +1,18 @@
 //api
-import { UserApi } from "./user/api";
-import { StaffApi } from "./staff/api";
-import { StudentApi } from "./student/api";
-import { ClassApi } from "./class/api";
-import { SubjectApi } from "./subject/api";
-import { ScheduleSlotApi } from "./schedule/api";
+import { UserApi } from "./user/user.api";
+import { StaffApi } from "./staff/staff.api";
+import { StudentApi } from "./student/student.api";
+import { ClassApi } from "./class/class.api";
+import { SubjectApi } from "./subject/subject.api";
+import { ScheduleSlotApi } from "./schedule/schedule.api";
 
 //service
-import { UserService } from "./user/service";
-import { StaffService } from "./staff/service";
-import { StudentService } from "./student/service";
-import { ClassService } from "./class/service";
-import { SubjectService } from "./subject/service";
-import { ScheduleSlotService } from "./schedule/service";
+import { UserService } from "./user/user.service";
+import { StaffService } from "./staff/staff.service";
+import { StudentService } from "./student/student.service";
+import { ClassService } from "./class/class.service";
+import { SubjectService } from "./subject/subject.service";
+import { ScheduleSlotService } from "./schedule/schedule.service";
 
 /**
  * Lazy singleton pattern

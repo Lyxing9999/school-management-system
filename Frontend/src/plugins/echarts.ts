@@ -1,4 +1,4 @@
-// plugins/echarts.ts
+// src/plugins/echarts.client.ts  (or echarts.ts)
 import { defineNuxtPlugin } from "nuxt/app";
 import VueECharts from "vue-echarts";
 import { use } from "echarts/core";

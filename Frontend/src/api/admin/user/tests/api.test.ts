@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { UserApi } from "../api";
+import { UserApi } from "../user.api";
 import type { AxiosInstance } from "axios";
 import { Role } from "~/api/types/enums/role.enum";
-import type { AdminCreateUser, AdminUpdateUser } from "../dto";
+import type { AdminCreateUser, AdminUpdateUser } from "../user.dto";
 
 describe("UserApi", () => {
   let mockAxios: AxiosInstance;

@@ -1,55 +1,92 @@
 <!-- ~/pages/teacher/attendance/index.vue -->
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
-import { ElMessage } from "element-plus";
+definePageMeta({
+  layout: "teacher",
+});
+import { ref, computed, watch } from "vue";
+import {
+  ElMessage,
+  ElMessageBox,
+  ElTag,
+  ElSelect,
+  ElOption,
+  ElInput,
+  ElDatePicker,
+} from "element-plus";
 
 import { teacherService } from "~/api/teacher";
 import type { AttendanceDTO, AttendanceStatus } from "~/api/types/school.dto";
 
-definePageMeta({
-  layout: "teacher",
-});
+import TeacherClassSelect from "~/components/Selects/TeacherClassSelect.vue";
+import TeacherStudentSelect from "~/components/Selects/TeacherClassStudentSelect.vue";
+
+import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
+import type { Field } from "~/components/types/form";
+import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
+
+import ActionButtons from "~/components/Button/ActionButtons.vue";
+import BaseButton from "~/components/Base/BaseButton.vue";
+import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
+
+/* ---------------- SmartTable config ---------------- */
+import { attendanceColumns } from "~/modules/tables/columns/teacher/attendanceColumns";
 
 const teacherApi = teacherService();
 
-// ---------------- types ----------------
+/* ---------------- types ---------------- */
 
-interface ClassOption {
-  id: string;
-  name: string;
-}
+type AttendanceEnriched = AttendanceDTO & {
+  student_name?: string;
+  class_name?: string;
+  teacher_name?: string;
+};
 
-interface StudentOption {
-  id: string;
-  username: string;
-}
-
-interface AttendanceForm {
+type AttendanceFormModel = {
   student_id: string;
   status: AttendanceStatus | "";
-  record_date: string; // YYYY-MM-DD
-}
+  record_date: string;
+};
+
+type EditAttendanceFormModel = {
+  student_name: string;
+  attendance_id: string;
+  status: AttendanceStatus | "";
+};
 
 const todayISO = new Date().toISOString().slice(0, 10);
 
-// ---------------- state ----------------
+/* ---------------- state ---------------- */
 
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
-const classOptions = ref<ClassOption[]>([]);
 const selectedClassId = ref<string | null>(null);
 
-const studentOptions = ref<StudentOption[]>([]);
-const attendanceList = ref<AttendanceDTO[]>([]);
+const attendanceList = ref<AttendanceEnriched[]>([]);
 
-const attendanceForm = ref<AttendanceForm>({
+/* ---------------- SmartTable columns ---------------- */
+
+// create (mark) attendance
+const attendanceForm = ref<AttendanceFormModel>({
   student_id: "",
   status: "" as AttendanceStatus | "",
   record_date: todayISO,
 });
 
-// ---------------- computed ----------------
+// edit attendance
+const editAttendanceForm = ref<EditAttendanceFormModel>({
+  attendance_id: "",
+  status: "" as AttendanceStatus | "",
+  student_name: "",
+});
+
+const addDialogVisible = ref(false);
+const addDialogLoading = ref(false);
+
+const editDialogVisible = ref(false);
+const editDialogLoading = ref(false);
+
+/* ---------------- computed ---------------- */
 
 const statusSummary = computed(() => {
   const summary = {
@@ -68,76 +105,130 @@ const statusSummary = computed(() => {
   return summary;
 });
 
+const presentRate = computed(() => {
+  if (!statusSummary.value.total) return null;
+  return (
+    Math.round(
+      (statusSummary.value.present / statusSummary.value.total) * 1000
+    ) / 10
+  );
+});
+
+// filtered by selected student (using form.student_id as simple filter)
 const filteredAttendance = computed(() => {
   const sId = attendanceForm.value.student_id;
   if (!sId) return attendanceList.value;
   return attendanceList.value.filter((a) => a.student_id === sId);
 });
 
-const canRefresh = computed(
-  () =>
-    !!selectedClassId.value && !loading.value && classOptions.value.length > 0
-);
+const canRefresh = computed(() => !!selectedClassId.value && !loading.value);
 
-// ---------------- helpers ----------------
+/* ---------------- helpers ---------------- */
 
-const getStatusTagType = (status: AttendanceStatus) => {
-  if (status === "present") return "success";
-  if (status === "excused") return "warning";
-  return "danger"; // absent
-};
+/* ---------------- SmartForm fields (dialogs) ---------------- */
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "-";
-  // assuming backend returns ISO string; keep only date part
-  return value.slice(0, 10);
-};
+// Create / mark attendance
+const addAttendanceFields = computed<Field<AttendanceFormModel>[]>(() => [
+  {
+    key: "student_id",
+    label: "Student",
+    component: TeacherStudentSelect,
+    componentProps: {
+      classId: selectedClassId.value || "",
+      reload: true,
+      valueKey: "id",
+      labelKey: "username",
+      multiple: false,
+      placeholder: "Select student",
+      disabled: !selectedClassId.value,
+    },
+  },
+  {
+    key: "status",
+    label: "Status",
+    component: ElSelect,
+    childComponent: ElOption,
+    childComponentProps: {
+      options: [
+        { label: "Present", value: "present" },
+        { label: "Absent", value: "absent" },
+        { label: "Excused", value: "excused" },
+      ],
+      labelKey: "label",
+      valueKey: "value",
+    },
+    componentProps: {
+      placeholder: "Select status",
+      style: "width: 100%",
+    },
+  },
+  {
+    key: "record_date",
+    label: "Date",
+    component: ElDatePicker,
+    componentProps: {
+      type: "date",
+      valueFormat: "YYYY-MM-DD",
+      placeholder: "Pick a day",
+      style: "width: 100%",
+      disabledDate: (date: Date) => {
+        // disable any date strictly in the future
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-// ---------------- api calls ----------------
+        const candidate = new Date(date);
+        candidate.setHours(0, 0, 0, 0);
 
-const loadClassOptions = async () => {
-  loading.value = true;
-  errorMessage.value = null;
+        return candidate.getTime() > today.getTime();
+      },
+    },
+  },
+]);
 
-  try {
-    const res = await teacherApi.teacher.listClassNameSelect();
-    const items = res?.items ?? [];
+// Edit attendance (status only)
+const editAttendanceFields: Field<EditAttendanceFormModel>[] = [
+  {
+    key: "student_name",
+    label: "Student",
+    component: ElInput,
+    formItemProps: {
+      required: false,
+    },
+    componentProps: {
+      disabled: true,
+      placeholder: "Student name",
+    },
+  },
+  {
+    key: "attendance_id",
+    label: "Record ID",
+    component: ElInput,
+    componentProps: {
+      disabled: true,
+    },
+  },
+  {
+    key: "status",
+    label: "Status",
+    component: ElSelect,
+    childComponent: ElOption,
+    childComponentProps: {
+      options: [
+        { label: "Present", value: "present" },
+        { label: "Absent", value: "absent" },
+        { label: "Excused", value: "excused" },
+      ],
+      labelKey: "label",
+      valueKey: "value",
+    },
+    componentProps: {
+      placeholder: "Select status",
+      style: "width: 100%",
+    },
+  },
+];
 
-    classOptions.value = items.map((c: any) => ({
-      id: c.id,
-      name: c.name,
-    }));
-
-    if (!selectedClassId.value && classOptions.value.length > 0) {
-      selectedClassId.value = classOptions.value[0].id;
-    }
-  } catch (err: any) {
-    console.error(err);
-    errorMessage.value = err?.message ?? "Failed to load classes.";
-    ElMessage.error(errorMessage.value);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const loadStudentOptions = async (classId: string | null) => {
-  if (!classId) {
-    studentOptions.value = [];
-    return;
-  }
-
-  try {
-    const res = await teacherApi.teacher.listStudentsInClass(classId);
-    const items = res?.items ?? [];
-    studentOptions.value = items.map((s: any) => ({
-      id: s.id,
-      username: s.username,
-    }));
-  } catch (err: any) {
-    console.error(err);
-    ElMessage.error(err?.message ?? "Failed to load students.");
-  }
-};
+/* ---------------- api: load attendance ---------------- */
 
 const loadAttendance = async () => {
   if (!selectedClassId.value) {
@@ -150,63 +241,69 @@ const loadAttendance = async () => {
 
   try {
     const res = await teacherApi.teacher.listAttendanceForClass(
-      selectedClassId.value
+      selectedClassId.value,
+      { showError: false }
     );
-    attendanceList.value = res.items ?? [];
+
+    if (!res) {
+      errorMessage.value = "Failed to load attendance.";
+      attendanceList.value = [];
+      return;
+    }
+
+    attendanceList.value = (res.items ?? []) as AttendanceEnriched[];
   } catch (err: any) {
     console.error(err);
     errorMessage.value = err?.message ?? "Failed to load attendance.";
-    ElMessage.error(errorMessage.value);
   } finally {
     loading.value = false;
   }
 };
 
-// when class changes => reset student, reload students + attendance
+/* ---------------- watch: when class changes ---------------- */
+
 watch(
   () => selectedClassId.value,
-  async (newId) => {
+  async () => {
     attendanceForm.value.student_id = "";
-    studentOptions.value = [];
     attendanceList.value = [];
 
-    if (!newId) return;
-    await Promise.all([loadStudentOptions(newId), loadAttendance()]);
+    if (!selectedClassId.value) return;
+    await loadAttendance();
   }
 );
 
-// initial load
-onMounted(async () => {
-  await loadClassOptions();
-  if (selectedClassId.value) {
-    await Promise.all([
-      loadStudentOptions(selectedClassId.value),
-      loadAttendance(),
-    ]);
-  }
-});
-
-// ---------------- actions ----------------
+/* ---------------- create: mark attendance ---------------- */
 
 const submitAttendance = async () => {
+  const form = attendanceForm.value;
+
   if (!selectedClassId.value) {
     ElMessage.warning("Please select a class first.");
     return;
   }
-  if (!attendanceForm.value.student_id || !attendanceForm.value.status) {
+  if (!form.student_id || !form.status) {
     ElMessage.warning("Student and status are required.");
     return;
   }
 
   try {
-    const dto = await teacherApi.teacher.markAttendance({
-      student_id: attendanceForm.value.student_id,
-      class_id: selectedClassId.value,
-      status: attendanceForm.value.status as AttendanceStatus,
-      record_date: attendanceForm.value.record_date || undefined,
-    });
+    const dto = await teacherApi.teacher.markAttendance(
+      {
+        student_id: form.student_id,
+        class_id: selectedClassId.value,
+        status: form.status as AttendanceStatus,
+        record_date: form.record_date || undefined,
+      },
+      { showError: false }
+    );
 
-    attendanceList.value.unshift(dto);
+    if (!dto) {
+      ElMessage.error("Failed to record attendance.");
+      return;
+    }
+
+    await loadAttendance();
     ElMessage.success("Attendance recorded.");
   } catch (err: any) {
     console.error(err);
@@ -214,247 +311,356 @@ const submitAttendance = async () => {
   }
 };
 
-const quickChangeAttendanceStatus = async (
-  attendanceId: string,
-  newStatus: AttendanceStatus
-) => {
+const handleOpenAddDialog = () => {
+  if (!selectedClassId.value) {
+    ElMessage.warning("Please select a class first.");
+    return;
+  }
+
+  attendanceForm.value = {
+    student_id: "",
+    status: "" as AttendanceStatus | "",
+    record_date: todayISO,
+  };
+
+  addDialogVisible.value = true;
+};
+
+const handleSaveAddDialog = async (payload: Partial<AttendanceFormModel>) => {
+  attendanceForm.value = { ...attendanceForm.value, ...payload };
+  addDialogLoading.value = true;
   try {
-    const dto = await teacherApi.teacher.changeAttendanceStatus(attendanceId, {
-      new_status: newStatus,
-    });
-    const idx = attendanceList.value.findIndex((a) => a.id === dto.id);
-    if (idx !== -1) attendanceList.value[idx] = dto;
+    await submitAttendance();
+    addDialogVisible.value = false;
+  } finally {
+    addDialogLoading.value = false;
+  }
+};
+
+const handleCancelAddDialog = () => {
+  addDialogVisible.value = false;
+};
+
+/* ---------------- edit: change status ---------------- */
+
+const openEditAttendanceDialog = (row: AttendanceEnriched) => {
+  editAttendanceForm.value = {
+    attendance_id: row.id,
+    status: row.status,
+    student_name: row.student_name || row.student_id || "Unknown",
+  };
+  editDialogVisible.value = true;
+};
+
+const submitEditAttendance = async () => {
+  const form = editAttendanceForm.value;
+  if (!form.attendance_id || !form.status) {
+    ElMessage.warning("Record ID and status are required.");
+    return;
+  }
+
+  try {
+    const dto = await teacherApi.teacher.changeAttendanceStatus(
+      form.attendance_id,
+      { new_status: form.status as AttendanceStatus },
+      { showError: false }
+    );
+
+    if (!dto) {
+      ElMessage.error("Failed to update status.");
+      return;
+    }
+
+    await loadAttendance();
     ElMessage.success("Attendance updated.");
   } catch (err: any) {
     console.error(err);
     ElMessage.error(err?.message ?? "Failed to update status.");
   }
 };
+
+const handleSaveEditDialog = async (
+  payload: Partial<EditAttendanceFormModel>
+) => {
+  editAttendanceForm.value = { ...editAttendanceForm.value, ...payload };
+  editDialogLoading.value = true;
+  try {
+    await submitEditAttendance();
+    editDialogVisible.value = false;
+  } finally {
+    editDialogLoading.value = false;
+  }
+};
+
+const handleCancelEditDialog = () => {
+  editDialogVisible.value = false;
+};
+
+/* ---------------- delete: future remove ---------------- */
+
+const handleDeleteAttendance = async (row: AttendanceEnriched) => {
+  try {
+    await ElMessageBox.confirm(
+      "Are you sure you want to remove this attendance record?",
+      "Confirm",
+      {
+        type: "warning",
+        confirmButtonText: "Yes",
+        cancelButtonText: "No",
+      }
+    );
+
+    // TODO: when backend is ready:
+    // await teacherApi.teacher.deleteAttendance(row.id, { showError: false });
+
+    attendanceList.value = attendanceList.value.filter((a) => a.id !== row.id);
+
+    ElMessage.success("Attendance record removed.");
+  } catch {
+    // cancelled
+  }
+};
 </script>
 
 <template>
   <div class="p-4 space-y-6">
-    <!-- HEADER -->
-    <el-row justify="space-between" align="middle">
-      <el-col :span="12">
-        <h1 class="text-xl font-semibold mb-2">Attendance</h1>
+    <!-- HEADER: gradient, consistent with other teacher pages -->
+    <div
+      class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-[var(--color-primary-light-9)] to-[var(--color-primary-light-7)] rounded-2xl border border-[color:var(--color-primary-light-5)] shadow-sm p-5"
+    >
+      <div class="space-y-2">
+        <h1
+          class="text-2xl font-bold flex items-center gap-2 text-[color:var(--color-dark)]"
+        >
+          Attendance
+        </h1>
+        <p class="text-sm text-[color:var(--color-primary-light-1)]">
+          Mark and review attendance records for your classes.
+        </p>
 
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-gray-500">Class:</span>
-          <el-select
-            v-model="selectedClassId"
-            placeholder="Select class"
-            size="small"
-            style="min-width: 220px"
-            :disabled="!classOptions.length"
-            clearable
-          >
-            <el-option
-              v-for="c in classOptions"
-              :key="c.id"
-              :label="c.name"
-              :value="c.id"
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-500">Class:</span>
+            <TeacherClassSelect
+              v-model="selectedClassId"
+              placeholder="Select class"
+              style="min-width: 220px"
             />
-          </el-select>
-        </div>
-      </el-col>
+          </div>
 
-      <el-col :span="12" class="text-right">
-        <el-button
-          type="primary"
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span
+              v-if="statusSummary.total"
+              class="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-light-8)] text-[color:var(--color-primary)] px-3 py-0.5 border border-[var(--color-primary-light-5)]"
+            >
+              <span
+                class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]"
+              />
+              {{ statusSummary.total }}
+              {{ statusSummary.total === 1 ? "record" : "records" }}
+            </span>
+
+            <span
+              v-if="presentRate !== null"
+              class="inline-flex items-center gap-1 rounded-full bg-white text-gray-700 px-3 py-0.5 border border-gray-200"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Present rate:
+              <span class="font-medium">{{ presentRate }}%</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 justify-end">
+        <BaseButton
+          plain
           :loading="loading"
           :disabled="!canRefresh"
+          class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
           @click="loadAttendance"
         >
           Refresh
-        </el-button>
+        </BaseButton>
+
+        <BaseButton
+          type="primary"
+          :disabled="!selectedClassId"
+          :loading="loading"
+          @click="handleOpenAddDialog"
+        >
+          Mark attendance
+        </BaseButton>
+      </div>
+    </div>
+
+    <!-- ERROR -->
+    <transition name="el-fade-in">
+      <el-alert
+        v-if="errorMessage"
+        :title="errorMessage"
+        type="error"
+        show-icon
+        closable
+        class="rounded-xl border border-red-200/60 shadow-sm"
+        @close="errorMessage = null"
+      />
+    </transition>
+
+    <!-- SUMMARY CARDS -->
+    <el-row :gutter="16" class="mt-2">
+      <el-col :xs="24" :sm="8">
+        <el-card shadow="hover" class="stat-card">
+          <div class="card-title">Total records</div>
+          <div class="text-2xl font-semibold mt-1">
+            {{ statusSummary.total }}
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="8">
+        <el-card shadow="hover" class="stat-card">
+          <div class="card-title">Present</div>
+          <div class="text-2xl font-semibold mt-1 text-emerald-600">
+            {{ statusSummary.present }}
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="8">
+        <el-card shadow="hover" class="stat-card">
+          <div class="card-title">Absent / Excused</div>
+          <div class="text-sm mt-1">
+            <span class="text-red-500 font-semibold">
+              {{ statusSummary.absent }}
+            </span>
+            <span class="mx-1 text-gray-400">/</span>
+            <span class="text-amber-600 font-semibold">
+              {{ statusSummary.excused }}
+            </span>
+          </div>
+        </el-card>
       </el-col>
     </el-row>
 
-    <!-- ERROR -->
-    <el-alert
-      v-if="errorMessage"
-      :title="errorMessage"
-      type="error"
-      show-icon
-      class="mt-2"
+    <!-- TABLE CARD -->
+    <el-card
+      shadow="never"
+      :body-style="{ padding: '20px' }"
+      class="rounded-2xl border border-gray-200/60 shadow-sm bg-white mt-4"
+    >
+      <template #header>
+        <div
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+        >
+          <div>
+            <div class="text-base font-semibold text-gray-800">
+              Attendance records
+            </div>
+            <p class="text-xs text-gray-500">
+              Each row is one record for a given student and date.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs text-gray-500">
+            <span>
+              Showing {{ filteredAttendance.length }} /
+              {{ attendanceList.length }} records
+            </span>
+          </div>
+        </div>
+      </template>
+
+      <ErrorBoundary>
+        <SmartTable
+          :data="filteredAttendance"
+          :columns="attendanceColumns"
+          :loading="loading"
+          :smartProps="{
+            border: true,
+            size: 'small',
+            'highlight-current-row': true,
+          }"
+        >
+          <template #operation="{ row }">
+            <ActionButtons
+              :rowId="row.id"
+              :detailContent="`Edit ${row.status}`"
+              :deleteContent="`Remove record`"
+              @detail="openEditAttendanceDialog(row)"
+              @delete="handleDeleteAttendance(row)"
+            />
+          </template>
+        </SmartTable>
+      </ErrorBoundary>
+
+      <div v-if="!loading && !filteredAttendance.length" class="py-10">
+        <el-empty
+          :description="
+            selectedClassId
+              ? 'No attendance records for this class yet'
+              : 'Select a class to see attendance'
+          "
+          :image-size="120"
+        >
+          <template #extra>
+            <p class="text-sm text-gray-500 max-w-md mx-auto">
+              {{
+                selectedClassId
+                  ? "Use the Mark attendance button to create the first record."
+                  : "Choose a class from the top to load its attendance records."
+              }}
+            </p>
+          </template>
+        </el-empty>
+      </div>
+    </el-card>
+
+    <!-- CREATE / MARK ATTENDANCE DIALOG -->
+    <SmartFormDialog
+      v-model:visible="addDialogVisible"
+      v-model="attendanceForm"
+      :fields="addAttendanceFields"
+      title="Mark attendance"
+      :loading="addDialogLoading"
+      :width="'600px'"
+      @save="handleSaveAddDialog"
+      @cancel="handleCancelAddDialog"
     />
 
-    <!-- SKELETON -->
-    <el-skeleton v-if="loading" :rows="4" animated />
-
-    <template v-else>
-      <!-- SUMMARY -->
-      <el-row :gutter="16">
-        <el-col :xs="24" :sm="8">
-          <el-card shadow="hover">
-            <div class="text-xs text-gray-500">Total records</div>
-            <div class="text-2xl font-semibold mt-1">
-              {{ statusSummary.total }}
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="8">
-          <el-card shadow="hover">
-            <div class="text-xs text-gray-500">Present</div>
-            <div class="text-2xl font-semibold mt-1 text-green-600">
-              {{ statusSummary.present }}
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="8">
-          <el-card shadow="hover">
-            <div class="text-xs text-gray-500">Absent / Excused</div>
-            <div class="text-sm mt-1">
-              <span class="text-red-500 font-semibold">
-                {{ statusSummary.absent }}
-              </span>
-              <span class="mx-1 text-gray-400">/</span>
-              <span class="text-yellow-600 font-semibold">
-                {{ statusSummary.excused }}
-              </span>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- MAIN CONTENT -->
-      <el-row :gutter="16" class="mt-4">
-        <!-- LEFT: FORM -->
-        <el-col :xs="24" :lg="10">
-          <el-card shadow="hover">
-            <template #header>
-              <span class="font-semibold">Mark attendance</span>
-            </template>
-
-            <el-form
-              :model="attendanceForm"
-              label-width="110px"
-              size="small"
-              class="mb-2"
-            >
-              <el-form-item label="Student">
-                <el-select
-                  v-model="attendanceForm.student_id"
-                  placeholder="Select student"
-                  :disabled="!selectedClassId || !studentOptions.length"
-                  filterable
-                >
-                  <el-option
-                    v-for="s in studentOptions"
-                    :key="s.id"
-                    :label="s.username"
-                    :value="s.id"
-                  />
-                </el-select>
-              </el-form-item>
-
-              <el-form-item label="Status">
-                <el-select v-model="attendanceForm.status" placeholder="Select">
-                  <el-option label="Present" value="present" />
-                  <el-option label="Absent" value="absent" />
-                  <el-option label="Excused" value="excused" />
-                </el-select>
-              </el-form-item>
-
-              <el-form-item label="Date">
-                <el-date-picker
-                  v-model="attendanceForm.record_date"
-                  type="date"
-                  value-format="YYYY-MM-DD"
-                  placeholder="Pick a day"
-                  style="width: 100%"
-                />
-              </el-form-item>
-
-              <el-form-item>
-                <el-button type="primary" @click="submitAttendance">
-                  Save attendance
-                </el-button>
-              </el-form-item>
-            </el-form>
-          </el-card>
-        </el-col>
-
-        <!-- RIGHT: TABLE -->
-        <el-col :xs="24" :lg="14">
-          <el-card shadow="hover">
-            <template #header>
-              <div class="flex justify-between items-center">
-                <span class="font-semibold">Attendance records</span>
-                <span class="text-xs text-gray-500">
-                  Showing
-                  {{ filteredAttendance.length }} / {{ attendanceList.length }}
-                  records
-                </span>
-              </div>
-            </template>
-
-            <el-table
-              v-if="filteredAttendance.length"
-              :data="filteredAttendance"
-              size="small"
-              border
-              height="420"
-            >
-              <el-table-column
-                prop="student_id"
-                label="Student"
-                min-width="200"
-              >
-                <template #default="{ row }">
-                  <span>{{ row.student_name || row.student_id }}</span>
-                </template>
-              </el-table-column>
-
-              <el-table-column prop="record_date" label="Date" min-width="140">
-                <template #default="{ row }">
-                  {{ formatDate(row.record_date as any) }}
-                </template>
-              </el-table-column>
-
-              <el-table-column prop="status" label="Status" min-width="120">
-                <template #default="{ row }">
-                  <el-tag :type="getStatusTagType(row.status)" size="small">
-                    {{ row.status }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-
-              <el-table-column label="Actions" min-width="220" fixed="right">
-                <template #default="{ row }">
-                  <el-button
-                    size="small"
-                    @click="quickChangeAttendanceStatus(row.id, 'present')"
-                  >
-                    Present
-                  </el-button>
-                  <el-button
-                    size="small"
-                    @click="quickChangeAttendanceStatus(row.id, 'absent')"
-                  >
-                    Absent
-                  </el-button>
-                  <el-button
-                    size="small"
-                    @click="quickChangeAttendanceStatus(row.id, 'excused')"
-                  >
-                    Excused
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-
-            <div
-              v-else
-              class="text-sm text-gray-500 italic text-center py-4 mt-2"
-            >
-              No attendance records for this class
-              <span v-if="attendanceForm.student_id"> / student</span>.
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </template>
+    <!-- EDIT ATTENDANCE DIALOG -->
+    <SmartFormDialog
+      v-model:visible="editDialogVisible"
+      v-model="editAttendanceForm"
+      :fields="editAttendanceFields"
+      title="Edit attendance"
+      :loading="editDialogLoading"
+      :width="'500px'"
+      @save="handleSaveEditDialog"
+      @cancel="handleCancelEditDialog"
+    />
   </div>
 </template>
+
+<style scoped>
+.stat-card {
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.card-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+.el-card {
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+.el-card:hover {
+  box-shadow: 0 4px 14px rgba(126, 87, 194, 0.12);
+}
+
+/* Table rounding */
+:deep(.el-table) {
+  border-radius: 0.75rem;
+}
+</style>

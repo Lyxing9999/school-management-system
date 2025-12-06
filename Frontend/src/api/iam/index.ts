@@ -1,8 +1,8 @@
 //api
-import { AuthApi } from "./api";
+import { AuthApi } from "./iam.api";
 
 //service
-import { AuthService } from "./service";
+import { AuthService } from "./iam.service";
 
 let _iamService: ReturnType<typeof createIamService> | null = null;
 

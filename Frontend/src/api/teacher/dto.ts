@@ -6,6 +6,7 @@ import type {
   GradeDTO,
   AttendanceStatus,
   GradeType,
+  ScheduleDTO,
 } from "~/api/types/school.dto";
 
 /**
@@ -108,6 +109,12 @@ export interface TeacherChangeGradeTypeDTO {
   type: GradeType;
 }
 
+export interface TeacherScheduleListDTO {
+  items: ScheduleDTO[];
+}
+
+
+
 /**
  * Wrapped responses
  */
@@ -131,3 +138,5 @@ export type TeacherClassSelectNameListResponse =
 
 export type TeacherStudentNameListResponse =
   ApiResponse<TeacherStudentNameListDTO>;
+
+export type TeacherListMyScheduleResponse = ApiResponse<TeacherScheduleListDTO>;
