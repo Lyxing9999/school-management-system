@@ -9,28 +9,72 @@ const route = useRoute();
 </script>
 
 <template>
-  <el-container>
-    <BaseSideBar :logoSrc="schoolLogo" />
+  <el-container class="app-layout">
+    <!-- Sidebar -->
+    <el-aside width="240px" class="layout-aside">
+      <BaseSideBar :logoSrc="schoolLogo" />
+    </el-aside>
 
-    <el-container>
-      <el-header v-if="!route.meta.noHeader">
+    <!-- Main area -->
+    <el-container direction="vertical" class="layout-main-container">
+      <!-- Header -->
+      <el-header v-if="!route.meta.noHeader" class="layout-header">
         <BaseHeader />
       </el-header>
 
+      <!-- Content -->
       <Transition name="page" mode="out-in">
-        <el-main :key="route.fullPath">
+        <el-main :key="route.fullPath" class="layout-main">
           <NuxtPage />
         </el-main>
       </Transition>
 
-      <el-footer v-if="!route.meta.noHeader">
+      <!-- Footer -->
+      <el-footer v-if="!route.meta.noHeader" class="layout-footer">
         <BaseFooter />
       </el-footer>
     </el-container>
   </el-container>
 </template>
 
-<style>
+<style lang="scss">
+.app-layout {
+  height: 100vh;
+}
+
+/* Sidebar */
+.layout-aside {
+  border-right: 1px solid #e5e7eb;
+  background-color: var(--color-card);
+}
+
+/* Main container */
+.layout-main-container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.layout-header {
+  padding: 0;
+  background-color: var(--color-card);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Main content area */
+.layout-main {
+  padding: 16px;
+  background-color: var(--color-bg); /* now = light purple */
+}
+
+/* Footer */
+.layout-footer {
+  padding: 8px 16px;
+  border-top: 1px solid #e5e7eb;
+  background-color: var(--color-card);
+}
+
+/* Page transition */
 .page-enter-active,
 .page-leave-active {
   transition: opacity 0.25s ease;

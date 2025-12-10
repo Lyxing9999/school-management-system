@@ -113,7 +113,16 @@ export interface TeacherScheduleListDTO {
   items: ScheduleDTO[];
 }
 
+export interface TeacherClassSummaryDTO {
+  total_classes: number;
+  total_students: number;
+  total_subjects: number;
+}
 
+export interface TeacherClassListWithSummeryDTO {
+  items: ClassSectionDTO[];
+  summary: TeacherClassSummaryDTO;
+}
 
 /**
  * Wrapped responses
@@ -140,3 +149,6 @@ export type TeacherStudentNameListResponse =
   ApiResponse<TeacherStudentNameListDTO>;
 
 export type TeacherListMyScheduleResponse = ApiResponse<TeacherScheduleListDTO>;
+
+export type TeacherClassListWithSummeryResponse =
+  ApiResponse<TeacherClassListWithSummeryDTO>;

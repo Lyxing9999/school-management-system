@@ -13,14 +13,14 @@ export class StaffApi {
     private baseURL = "/api/admin/staff"
   ) {}
 
-  async getStaffNameSelect(): Promise<AdminGetStaffSelectResponse> {
+  async listStaffNameSelect(): Promise<AdminGetStaffSelectResponse> {
     const res = await this.$api.get<AdminGetStaffSelectResponse>(
       `${this.baseURL}/name-select`
     );
     return res.data;
   }
 
-  async getTeacherSelect(): Promise<AdminTeacherSelectListResponse> {
+  async listTeacherSelect(): Promise<AdminTeacherSelectListResponse> {
     const res = await this.$api.get<AdminTeacherSelectListResponse>(
       `${this.baseURL}/teacher-select`
     );

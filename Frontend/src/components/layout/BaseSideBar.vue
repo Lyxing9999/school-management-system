@@ -1,10 +1,8 @@
-<!-- components/layout/AppSidebar.vue -->
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute } from "vue-router";
-import { useAuthStore } from "~/stores/authStore";
-import schoolLogo from "~/assets/image/school-logo.jpg";
 import * as Icons from "@element-plus/icons-vue";
+import { useAuthStore } from "~/stores/authStore";
 import { ROUTES } from "~/constants/routes";
 
 type RoleKey = keyof typeof ROUTES;
@@ -15,10 +13,21 @@ interface MenuItem {
   route: string;
 }
 
+const props = defineProps<{
+  logoSrc: string;
+}>();
+
+const authStore = useAuthStore();
+const route = useRoute();
+
 const menus: Record<RoleKey, MenuItem[]> = {
   ADMIN: [
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.ADMIN.DASHBOARD },
-    { title: "Manage Users", icon: "User", route: ROUTES.ADMIN.MANAGE_USERS },
+    {
+      title: "Manage Users",
+      icon: "Management",
+      route: ROUTES.ADMIN.MANAGE_USERS,
+    },
     {
       title: "Manage Classes",
       icon: "Notebook",
@@ -26,37 +35,33 @@ const menus: Record<RoleKey, MenuItem[]> = {
     },
     {
       title: "Manage Subjects",
-      icon: "Document",
+      icon: "Collection",
       route: ROUTES.ADMIN.MANAGE_SUBJECTS,
     },
     {
       title: "Manage Schedules",
-      icon: "Document",
+      icon: "Calendar",
       route: ROUTES.ADMIN.MANAGE_SCHEDULES,
     },
     { title: "Notifications", icon: "Bell", route: ROUTES.ADMIN.NOTIFICATIONS },
     {
       title: "System Events",
-      icon: "Calendar",
+      icon: "Tickets",
       route: ROUTES.ADMIN.SYSTEM_EVENTS,
     },
     { title: "Settings", icon: "Setting", route: ROUTES.ADMIN.SETTINGS },
   ],
   TEACHER: [
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.TEACHER.DASHBOARD },
-    { title: "My Classes", icon: "Notebook", route: ROUTES.TEACHER.MY_CLASSES },
     {
-      title: "My Students",
-      icon: "User",
+      title: "Manage Students",
+      icon: "UserFilled",
       route: ROUTES.TEACHER.MANAGE_STUDENTS,
     },
-    {
-      title: "Schedule",
-      icon: "Calendar",
-      route: ROUTES.TEACHER.SCHEDULE,
-    },
-    { title: "Grades", icon: "Document", route: ROUTES.TEACHER.GRADES },
-    { title: "Attendance", icon: "Calendar", route: ROUTES.TEACHER.ATTENDANCE },
+    { title: "My Classes", icon: "Notebook", route: ROUTES.TEACHER.MY_CLASSES },
+    { title: "Grades", icon: "TrendCharts", route: ROUTES.TEACHER.GRADES },
+    { title: "Schedule", icon: "Timer", route: ROUTES.TEACHER.SCHEDULE },
+    { title: "Attendance", icon: "Finished", route: ROUTES.TEACHER.ATTENDANCE },
     { title: "Events", icon: "Calendar", route: ROUTES.TEACHER.EVENTS },
     {
       title: "Notifications",
@@ -67,20 +72,15 @@ const menus: Record<RoleKey, MenuItem[]> = {
   ],
   STUDENT: [
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.STUDENT.DASHBOARD },
-
     { title: "My Classes", icon: "Notebook", route: ROUTES.STUDENT.MY_CLASSES },
-    { title: "My Grades", icon: "Document", route: ROUTES.STUDENT.MY_GRADES },
     {
-      title: "My Schedule",
-      icon: "DateTime",
-      route: ROUTES.STUDENT.MY_SCHEDULE,
+      title: "My Grades",
+      icon: "TrendCharts",
+      route: ROUTES.STUDENT.MY_GRADES,
     },
-    { title: "Attendance", icon: "Calendar", route: ROUTES.STUDENT.ATTENDANCE },
-    {
-      title: "Notifications",
-      icon: "Bell",
-      route: ROUTES.STUDENT.NOTIFICATIONS,
-    },
+    { title: "My Schedule", icon: "Timer", route: ROUTES.STUDENT.MY_SCHEDULE },
+    { title: "Attendance", icon: "Finished", route: ROUTES.STUDENT.ATTENDANCE },
+    { title: "Events", icon: "Calendar", route: ROUTES.STUDENT.EVENTS },
     { title: "Settings", icon: "Setting", route: ROUTES.STUDENT.SETTINGS },
   ],
   ACADEMIC: [
@@ -94,12 +94,7 @@ const menus: Record<RoleKey, MenuItem[]> = {
       icon: "Notebook",
       route: ROUTES.ACADEMIC.MY_CLASSES,
     },
-    {
-      title: "Manage Students",
-      icon: "User",
-      route: ROUTES.ACADEMIC.STUDENTS,
-    },
-
+    { title: "Manage Students", icon: "User", route: ROUTES.ACADEMIC.STUDENTS },
     {
       title: "Attendance",
       icon: "Calendar",
@@ -119,7 +114,7 @@ const menus: Record<RoleKey, MenuItem[]> = {
     },
     {
       title: "Manage Visits",
-      icon: "User",
+      icon: "Place",
       route: ROUTES.FRONT_OFFICE.MANAGE_VISITS,
     },
     {
@@ -131,13 +126,13 @@ const menus: Record<RoleKey, MenuItem[]> = {
   ],
   FINANCE: [
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.FINANCE.DASHBOARD },
-    { title: "Payments", icon: "Money", route: ROUTES.FINANCE.PAYMENTS },
-    { title: "Reports", icon: "Document", route: ROUTES.FINANCE.REPORTS },
+    { title: "Payments", icon: "WalletFilled", route: ROUTES.FINANCE.PAYMENTS },
+    { title: "Reports", icon: "DataAnalysis", route: ROUTES.FINANCE.REPORTS },
     { title: "Settings", icon: "Setting", route: ROUTES.FINANCE.SETTINGS },
   ],
   PARENT: [
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.PARENT.DASHBOARD },
-    { title: "Children", icon: "User", route: ROUTES.PARENT.CHILDREN },
+    { title: "Children", icon: "UserFilled", route: ROUTES.PARENT.CHILDREN },
     { title: "Attendance", icon: "Calendar", route: ROUTES.PARENT.ATTENDANCE },
     {
       title: "Notifications",
@@ -148,29 +143,24 @@ const menus: Record<RoleKey, MenuItem[]> = {
   ],
   HR: [
     { title: "Dashboard", icon: "HomeFilled", route: ROUTES.HR.DASHBOARD },
-    { title: "Employees", icon: "User", route: ROUTES.HR.EMPLOYEES },
+    { title: "Employees", icon: "OfficeBuilding", route: ROUTES.HR.EMPLOYEES },
     { title: "Notifications", icon: "Bell", route: ROUTES.HR.NOTIFICATIONS },
     { title: "Settings", icon: "Setting", route: ROUTES.HR.SETTINGS },
   ],
 };
 
-const authStore = useAuthStore();
-const route = useRoute();
-
 const role = computed<RoleKey | null>(() => {
   const r = authStore.user?.role;
-  if (!r) return null;
-  return r.toUpperCase() as RoleKey;
+  return r ? (r.toUpperCase() as RoleKey) : null;
 });
 
-const menuItems = computed(() => {
-  return (
+const menuItems = computed(
+  () =>
     menus[role.value ?? "ADMIN"]?.map((item) => ({
       ...item,
       iconComponent: Icons[item.icon] ?? Icons.HomeFilled,
     })) ?? []
-  );
-});
+);
 
 const activeMenu = computed(
   () =>
@@ -180,9 +170,9 @@ const activeMenu = computed(
 </script>
 
 <template>
-  <el-aside width="240px" class="app-aside">
+  <aside class="app-aside">
     <div class="logo-section">
-      <img :src="schoolLogo" alt="Logo" class="logo-image" />
+      <img :src="logoSrc" alt="Logo" class="logo-image" />
     </div>
 
     <el-menu router :default-active="activeMenu" class="app-menu">
@@ -201,7 +191,7 @@ const activeMenu = computed(
         </template>
       </el-menu-item>
     </el-menu>
-  </el-aside>
+  </aside>
 </template>
 
 <style scoped lang="scss">
@@ -212,7 +202,6 @@ const activeMenu = computed(
   padding-top: 1rem;
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
 }
 
 .logo-section {

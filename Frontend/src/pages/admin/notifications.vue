@@ -2,7 +2,7 @@
 definePageMeta({
   layout: "admin",
 });
-import BaseDictInput from "~/components/admin/AdminAttendanceDict.vue";
+
 import { ref } from "vue";
 const form = ref<Record<string, string>>({});
 </script>

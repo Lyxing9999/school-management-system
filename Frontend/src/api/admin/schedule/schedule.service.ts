@@ -4,6 +4,7 @@ import type {
   AdminCreateScheduleSlot,
   AdminScheduleSlotData,
   AdminUpdateScheduleSlot,
+  AdminScheduleSlotList,
 } from "./schedule.dto";
 import { ScheduleSlotApi } from "./schedule.api";
 
@@ -17,7 +18,7 @@ export class ScheduleSlotService {
   // ============
 
   async getClassSchedule(classId: string, options?: ApiCallOptions) {
-    const data = await this.callApi<AdminScheduleSlotData>(
+    const data = await this.callApi<AdminScheduleSlotList>(
       () => this.scheduleSlotApi.getClassSchedule(classId),
       options
     );
@@ -25,7 +26,7 @@ export class ScheduleSlotService {
   }
 
   async getTeacherSchedule(teacherId: string, options?: ApiCallOptions) {
-    const data = await this.callApi<AdminScheduleSlotData>(
+    const data = await this.callApi<AdminScheduleSlotList>(
       () => this.scheduleSlotApi.getTeacherSchedule(teacherId),
       options
     );

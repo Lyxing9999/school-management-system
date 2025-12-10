@@ -26,6 +26,7 @@ const skeletonCount = 5;
 </script>
 
 <template>
+  <!-- 1. Empty + loading: show skeleton rows -->
   <div v-if="props.loading && (!props.data || props.data.length === 0)">
     <el-skeleton
       v-for="i in skeletonCount"
@@ -36,13 +37,13 @@ const skeletonCount = 5;
     />
   </div>
 
-  <div v-else>
+  <!-- 2. Has data: show table + overlay while loading -->
+  <div v-else v-loading="props.loading">
     <el-table
       :data="props.data"
       v-bind="props.smartProps"
       height="500"
       max-height="500"
-      :loading="props.loading"
     >
       <EditableColumn
         v-for="(column, colIndex) in safeColumns"

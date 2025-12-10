@@ -4,6 +4,7 @@ import type {
   AdminSubjectListDTO,
   AdminSubjectDataDTO,
   AdminCreateSubject,
+  AdminClassNameSelectList,
 } from "./subject.dto";
 import { SubjectApi } from "./subject.api";
 
@@ -59,6 +60,13 @@ export class SubjectService {
     const data = await this.callApi<AdminSubjectDataDTO>(
       () => this.subjectApi.deactivateSubject(id),
       { showSuccess: true, ...(options ?? {}) }
+    );
+    return data!;
+  }
+  async listSubjectNameSelect() {
+    const data = await this.callApi<AdminClassNameSelectList>(
+      () => this.subjectApi.listSubjectNameSelect(),
+      { showSuccess: false }
     );
     return data!;
   }

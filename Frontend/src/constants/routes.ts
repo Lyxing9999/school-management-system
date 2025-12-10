@@ -27,7 +27,7 @@ export const ROUTES = {
     MY_GRADES: "/student/grades",
     MY_SCHEDULE: "/student/schedule",
     ATTENDANCE: "/student/attendance",
-    NOTIFICATIONS: "/student/notifications",
+    EVENTS: "/student/events",
     SETTINGS: "/student/settings",
   },
   ACADEMIC: {

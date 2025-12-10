@@ -36,7 +36,7 @@ const links = [
   border-top: 1px solid var(--color-primary-light-6);
   background-color: var(--color-card);
   font-size: 12px;
-  color: #6b7280; // neutral gray text
+  color: #6b7280; 
 }
 
 .footer-left,

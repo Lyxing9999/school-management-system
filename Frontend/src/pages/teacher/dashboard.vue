@@ -10,7 +10,11 @@ import type {
   GradeDTO,
   AttendanceDTO,
 } from "~/api/types/school.dto";
-import type { TeacherScheduleDTO } from "~/api/teacher/dto";
+import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
+import type {
+  TeacherScheduleListDTO,
+  TeacherClassListWithSummeryDTO,
+} from "~/api/teacher/dto";
 
 definePageMeta({
   layout: "teacher",
@@ -41,7 +45,9 @@ type TeacherAttendanceEnriched = AttendanceDTO & {
   teacher_name?: string;
 };
 
-type TeacherScheduleItem = TeacherScheduleDTO & {
+type TeacherScheduleItem = TeacherScheduleListDTO & {
+  // If your DTO already has these, great. If not, these are just “enriched” fields.
+  class_id?: string;
   class_name?: string;
   subject_label?: string;
   teacher_name?: string;
@@ -49,6 +55,12 @@ type TeacherScheduleItem = TeacherScheduleDTO & {
   day_of_week: number; // 1=Mon..7=Sun
   start_time: string;
   end_time: string;
+};
+
+type ClassSummary = {
+  total_classes: number;
+  total_students: number;
+  total_subjects: number;
 };
 
 /* ------------------------------------------------
@@ -59,11 +71,14 @@ const loadingOverview = ref(false);
 const errorMessage = ref<string | null>(null);
 
 const classes = ref<TeacherClassEnriched[]>([]);
+const classSummary = ref<ClassSummary | null>(null);
+
 const grades = ref<TeacherGradeEnriched[]>([]);
 const schedule = ref<TeacherScheduleItem[]>([]);
 const attendance = ref<TeacherAttendanceEnriched[]>([]);
 
-const defaultClassId = ref<string | null>(null);
+// Selected / focus class
+const focusClassId = ref<string | null>(null);
 
 /* ------------------------------------------------
  * Helpers
@@ -90,50 +105,64 @@ function normalizeItems<T>(res: { items?: T[] } | T[] | null | undefined): T[] {
 }
 
 /* ------------------------------------------------
- * Load overview data
+ * Load data
  * ------------------------------------------------ */
+
+const loadClassDetails = async (classId: string) => {
+  try {
+    const [gradesRes, attendanceRes] = await Promise.all([
+      teacher.teacher.listGradesForClass(classId, { showError: false }),
+      teacher.teacher.listAttendanceForClass(classId, { showError: false }),
+    ]);
+
+    grades.value = normalizeItems<TeacherGradeEnriched>(
+      gradesRes as { items?: TeacherGradeEnriched[] } | TeacherGradeEnriched[]
+    );
+
+    attendance.value = normalizeItems<TeacherAttendanceEnriched>(
+      attendanceRes as
+        | { items?: TeacherAttendanceEnriched[] }
+        | TeacherAttendanceEnriched[]
+    );
+  } catch (err) {
+    console.error(err);
+    const message = extractErrorMessage(err, "Failed to load class details.");
+    ElMessage.error(message);
+  }
+};
 
 const loadOverview = async () => {
   loadingOverview.value = true;
   errorMessage.value = null;
 
   try {
-    const [classesRes, scheduleRes] = await Promise.all([
-      teacher.teacher.listMyClasses({ showError: false }),
+    const [classesResSummery, scheduleRes] = await Promise.all([
+      teacher.teacher.listMyClassesWithSummery({ showError: false }),
       teacher.teacher.listMySchedule({ showError: false }),
     ]);
 
-    classes.value = normalizeItems<TeacherClassEnriched>(
-      classesRes as { items?: TeacherClassEnriched[] } | TeacherClassEnriched[]
-    );
+    const classPayload =
+      (classesResSummery as TeacherClassListWithSummeryDTO) ?? {
+        items: [],
+        summary: undefined,
+      };
+
+    classes.value = (classPayload.items as TeacherClassEnriched[]) ?? [];
+    classSummary.value =
+      (classPayload.summary as ClassSummary | undefined) ?? null;
 
     schedule.value = normalizeItems<TeacherScheduleItem>(
       scheduleRes as { items?: TeacherScheduleItem[] } | TeacherScheduleItem[]
     );
 
-    if (!defaultClassId.value && classes.value.length > 0) {
-      defaultClassId.value = classes.value[0].id;
+    // Set initial focus class
+    if (!focusClassId.value && classes.value.length > 0) {
+      focusClassId.value = classes.value[0].id;
     }
 
-    if (defaultClassId.value) {
-      const [gradesRes, attendanceRes] = await Promise.all([
-        teacher.teacher.listGradesForClass(defaultClassId.value, {
-          showError: false,
-        }),
-        teacher.teacher.listAttendanceForClass(defaultClassId.value, {
-          showError: false,
-        }),
-      ]);
-
-      grades.value = normalizeItems<TeacherGradeEnriched>(
-        gradesRes as { items?: TeacherGradeEnriched[] } | TeacherGradeEnriched[]
-      );
-
-      attendance.value = normalizeItems<TeacherAttendanceEnriched>(
-        attendanceRes as
-          | { items?: TeacherAttendanceEnriched[] }
-          | TeacherAttendanceEnriched[]
-      );
+    // Load details for focus class
+    if (focusClassId.value) {
+      await loadClassDetails(focusClassId.value);
     } else {
       grades.value = [];
       attendance.value = [];
@@ -150,32 +179,56 @@ const loadOverview = async () => {
     loadingOverview.value = false;
   }
 };
+const attendanceLoading = ref(false);
+const onFocusClassChange = async (value: string) => {
+  if (!value) return;
+  attendanceLoading.value = true;
+  try {
+    await loadClassDetails(value);
+  } finally {
+    attendanceLoading.value = false;
+  }
+};
+
+const focusClassName = computed(() => {
+  if (!focusClassId.value) return null;
+  return classes.value.find((c) => c.id === focusClassId.value)?.name ?? null;
+});
 
 /* ------------------------------------------------
- * Stats
+ * Stats (prefer backend summary, fallback to local)
  * ------------------------------------------------ */
 
-const totalClasses = computed(() => classes.value.length);
+const totalClasses = computed(() => {
+  if (classSummary.value) return classSummary.value.total_classes;
+  return classes.value.length;
+});
 
-const totalStudents = computed(() =>
-  classes.value.reduce((sum, c) => {
+const totalStudents = computed(() => {
+  if (classSummary.value) return classSummary.value.total_students;
+
+  // Fallback: compute from classes array
+  return classes.value.reduce((sum, c) => {
     if (typeof c.student_count === "number") return sum + c.student_count;
     if (Array.isArray((c as any).student_ids)) {
       return sum + (c as any).student_ids.length;
     }
     return sum;
-  }, 0)
-);
+  }, 0);
+});
 
-const totalSubjects = computed(() =>
-  classes.value.reduce((sum, c) => {
+const totalSubjects = computed(() => {
+  if (classSummary.value) return classSummary.value.total_subjects;
+
+  // Fallback: compute from classes array
+  return classes.value.reduce((sum, c) => {
     if (typeof c.subject_count === "number") return sum + c.subject_count;
     if (Array.isArray((c as any).subject_ids)) {
       return sum + (c as any).subject_ids.length;
     }
     return sum;
-  }, 0)
-);
+  }, 0);
+});
 
 // backend uses 1=Mon..7=Sun
 const todayDayOfWeek = computed(() => {
@@ -183,6 +236,7 @@ const todayDayOfWeek = computed(() => {
   return jsDay === 0 ? 7 : jsDay;
 });
 
+// Today schedule: still teacher-level
 const todaySchedule = computed(() =>
   schedule.value.filter((s) => s.day_of_week === todayDayOfWeek.value)
 );
@@ -197,11 +251,6 @@ const recentAttendance = computed(() =>
     .slice(0, 8)
 );
 
-const defaultClassName = computed(() => {
-  if (!defaultClassId.value) return null;
-  return classes.value.find((c) => c.id === defaultClassId.value)?.name ?? null;
-});
-
 /* ------------------------------------------------
  * Lifecycle
  * ------------------------------------------------ */
@@ -211,35 +260,24 @@ onMounted(async () => {
 });
 
 /* ------------------------------------------------
- * Demo data for charts (when backend is empty)
- * ------------------------------------------------ */
-
-const demoAttendanceBuckets = [
-  { status: "present", count: 40 },
-  { status: "absent", count: 6 },
-  { status: "excused", count: 4 },
-];
-
-const demoGradeItemsByType = [
-  { type: "quiz", score: 78 },
-  { type: "quiz", score: 85 },
-  { type: "exam", score: 62 },
-  { type: "exam", score: 58 },
-  { type: "assignment", score: 90 },
-  { type: "assignment", score: 82 },
-];
-
-/* ------------------------------------------------
  * Chart options
  * ------------------------------------------------ */
 
-/** 1) Teaching load by weekday (lessons per day) */
+/** 1) Teaching load by weekday (per focus class if schedule has class_id; otherwise all classes) */
 const scheduleByDayOption = computed(() => {
+  // If backend provides class_id on schedule, filter by focus class; otherwise use all.
+  const hasClassId = schedule.value.some((s) => (s as any).class_id);
+  const filteredSchedule =
+    focusClassId.value && hasClassId
+      ? schedule.value.filter((s) => (s as any).class_id === focusClassId.value)
+      : schedule.value;
+
   const counts: number[] = [];
   for (let day = 1; day <= 7; day++) {
-    const lessonsForDay = schedule.value.filter((s) => s.day_of_week === day);
+    const lessonsForDay = filteredSchedule.filter((s) => s.day_of_week === day);
     counts.push(lessonsForDay.length);
   }
+
   return {
     tooltip: { trigger: "axis" },
     grid: { top: 24, left: 40, right: 16, bottom: 40 },
@@ -265,39 +303,11 @@ const scheduleByDayOption = computed(() => {
   };
 });
 
-/** 2) Grade overview by subject (avg score) */
+/** 2) Grade overview by subject (focus class) */
 const gradeBySubjectOption = computed(() => {
   if (!grades.value.length) {
-    // Fallback demo data so the chart still shows structure
-    const demoLabels = ["Math", "Khmer", "English", "Physics"];
-    const demoValues = [82, 75, 88, 70];
     return {
-      tooltip: { trigger: "axis" },
-      grid: { top: 24, left: 40, right: 16, bottom: 80 },
-      xAxis: {
-        type: "category",
-        data: demoLabels,
-        axisLabel: {
-          interval: 0,
-          rotate: demoLabels.length > 4 ? 30 : 0,
-          fontSize: 11,
-        },
-      },
-      yAxis: {
-        type: "value",
-        min: 0,
-        max: 100,
-        name: "Avg score",
-      },
-      series: [
-        {
-          name: "Average score",
-          type: "bar",
-          data: demoValues,
-          barWidth: "60%",
-          itemStyle: { borderRadius: [6, 6, 0, 0] },
-        },
-      ],
+      title: { text: "No grade data yet", left: "center", top: "center" },
     };
   }
 
@@ -306,7 +316,8 @@ const gradeBySubjectOption = computed(() => {
   for (const g of grades.value) {
     const key = g.subject_label || "Unknown subject";
     const prev = map.get(key) ?? { total: 0, count: 0 };
-    prev.total += g.score;
+    const score = Number(g.score ?? 0); // safe numeric
+    prev.total += score;
     prev.count += 1;
     map.set(key, prev);
   }
@@ -353,28 +364,11 @@ const gradeBySubjectOption = computed(() => {
   };
 });
 
-/** 3) Attendance overview (present / absent / excused) */
+/** 3) Attendance overview (present / absent / excused, focus class) */
 const attendanceStatusOption = computed(() => {
-  // Use real attendance if available, else demo buckets
   if (attendance.value.length === 0) {
-    const data = demoAttendanceBuckets.map((b) => ({
-      name: b.status,
-      value: b.count,
-    }));
-
     return {
-      tooltip: { trigger: "item" },
-      legend: { bottom: 0 },
-      series: [
-        {
-          name: "Attendance",
-          type: "pie",
-          radius: ["40%", "70%"],
-          avoidLabelOverlap: false,
-          itemStyle: { borderRadius: 6, borderColor: "#fff", borderWidth: 1 },
-          data,
-        },
-      ],
+      title: { text: "No attendance data yet", left: "center", top: "center" },
     };
   }
 
@@ -402,51 +396,56 @@ const attendanceStatusOption = computed(() => {
   };
 });
 
-/** 4) Performance by assessment type (quiz / exam / assignment) */
-const gradeByTypeOption = computed(() => {
-  // If no real grades yet, use demo items
-  const source =
-    grades.value.length === 0
-      ? demoGradeItemsByType
-      : grades.value.map((g) => ({ type: g.type, score: g.score }));
-
-  if (!source.length) {
+/** 4) Score distribution (focus class) – replaces old "grade by type" to avoid repetition */
+const gradeDistributionOption = computed(() => {
+  if (!grades.value.length) {
     return {
       title: { text: "No grade data yet", left: "center", top: "center" },
     };
   }
 
-  const map = new Map<string, { total: number; count: number }>();
+  // Buckets: change ranges if your grading scale is different
+  const buckets = [
+    { label: "0–49", min: 0, max: 49 },
+    { label: "50–59", min: 50, max: 59 },
+    { label: "60–69", min: 60, max: 69 },
+    { label: "70–79", min: 70, max: 79 },
+    { label: "80–89", min: 80, max: 89 },
+    { label: "90–100", min: 90, max: 100 },
+  ];
 
-  for (const g of source) {
-    const key = g.type || "unknown";
-    const prev = map.get(key) ?? { total: 0, count: 0 };
-    prev.total += g.score;
-    prev.count += 1;
-    map.set(key, prev);
-  }
-
-  const labels = Array.from(map.keys());
-  const averages = labels.map((label) => {
-    const agg = map.get(label)!;
-    return Number((agg.total / agg.count).toFixed(2));
-  });
+  const counts = buckets.map(
+    (b) =>
+      grades.value.filter((g) => {
+        const score = Number(g.score ?? 0);
+        return score >= b.min && score <= b.max;
+      }).length
+  );
 
   return {
-    tooltip: { trigger: "axis" },
+    tooltip: {
+      trigger: "axis",
+      formatter: (params: any) => {
+        const p = Array.isArray(params) ? params[0] : params;
+        return `${p.axisValue}<br/>Students: ${p.data}`;
+      },
+    },
     grid: { top: 24, left: 40, right: 16, bottom: 40 },
-    xAxis: { type: "category", data: labels },
+    xAxis: {
+      type: "category",
+      data: buckets.map((b) => b.label),
+      axisLabel: { fontSize: 11 },
+    },
     yAxis: {
       type: "value",
-      min: 0,
-      max: 100,
-      name: "Avg score",
+      minInterval: 1,
+      name: "Students",
     },
     series: [
       {
-        name: "Average score",
+        name: "Students",
         type: "bar",
-        data: averages,
+        data: counts,
         barWidth: "50%",
         itemStyle: { borderRadius: [6, 6, 0, 0] },
       },
@@ -458,43 +457,59 @@ const gradeByTypeOption = computed(() => {
 <template>
   <div class="p-4 space-y-4">
     <!-- Header -->
-    <div
-      class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-[var(--color-primary-light-9)] to-[var(--color-primary-light-9)] border border-[color:var(--color-primary-light-9)] shadow-sm rounded-2xl p-5"
+    <OverviewHeader
+      title="Teacher Dashboard"
+      description="Overview of your overall classes plus detailed performance and attendance for your focus class."
+      :loading="loadingOverview"
+      :showRefresh="false"
     >
-      <div>
-        <h1
-          class="text-2xl font-bold flex items-center gap-2 text-[color:var(--color-dark)]"
+      <!-- Small pill next to the title -->
+      <template #icon>
+        <span
+          v-if="focusClassName"
+          class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-[var(--color-primary-light-6)] text-[color:var(--color-primary)] border border-[color:var(--color-primary-light-4)]"
         >
-          Teacher Dashboard
-          <span
-            v-if="defaultClassName"
-            class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-[var(--color-primary-light-6)] text-[color:var(--color-primary)] border border-[color:var(--color-primary-light-4)]"
-          >
-            Focus: {{ defaultClassName }}
-          </span>
-        </h1>
+          Focus: {{ focusClassName }}
+        </span>
+      </template>
 
-        <p class="mt-1.5 text-sm text-[color:var(--color-primary-light-1)]">
-          Overview of your classes, teaching load, student performance, and
-          attendance for your focus class.
-        </p>
-
-        <p v-if="!defaultClassName" class="text-[11px] text-gray-500 mt-1">
+      <!-- Extra helper text under description -->
+      <template #custom-stats>
+        <p v-if="!focusClassName" class="text-[11px] text-gray-500 mt-1">
           Assign a class to see focus grades and attendance here.
         </p>
-      </div>
+      </template>
 
-      <div class="flex items-center gap-2 justify-end">
-        <BaseButton
-          plain
-          :loading="loadingOverview"
-          class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
-          @click="loadOverview"
-        >
-          Refresh
-        </BaseButton>
-      </div>
-    </div>
+      <!-- Right-side actions -->
+      <template #actions>
+        <div class="flex items-center gap-2">
+          <el-select
+            v-model="focusClassId"
+            placeholder="Select class"
+            size="small"
+            style="min-width: 180px"
+            @change="onFocusClassChange"
+            :disabled="classes.length === 0"
+          >
+            <el-option
+              v-for="c in classes"
+              :key="c.id"
+              :label="c.name"
+              :value="c.id"
+            />
+          </el-select>
+
+          <BaseButton
+            plain
+            :loading="loadingOverview"
+            class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
+            @click="loadOverview"
+          >
+            Refresh
+          </BaseButton>
+        </div>
+      </template>
+    </OverviewHeader>
 
     <!-- Error -->
     <el-alert
@@ -552,7 +567,8 @@ const gradeByTypeOption = computed(() => {
             <div>
               <div class="font-semibold">Teaching Schedule Overview</div>
               <div class="text-xs text-gray-500">
-                Number of lessons you teach on each day of the week.
+                Lessons per weekday for the focus class (or all classes if
+                class_id is not available).
               </div>
             </div>
           </div>
@@ -611,13 +627,13 @@ const gradeByTypeOption = computed(() => {
       </el-col>
     </el-row>
 
-    <!-- Row 2: Attendance + Grade by type -->
+    <!-- Row 2: Attendance + Grade distribution -->
     <el-row :gutter="16" class="mt-2">
       <el-col :xs="24" :md="12">
         <el-card shadow="hover" v-loading="loadingOverview" class="mb-4">
           <div class="flex justify-between items-center mb-2">
             <div>
-              <div class="font-semibold">Attendance Overview</div>
+              <div class="font-semibold">Attendance Overview (focus class)</div>
               <div class="text-xs text-gray-500">
                 Distribution of present, absent, and excused records in the
                 focus class.
@@ -653,9 +669,9 @@ const gradeByTypeOption = computed(() => {
         <el-card shadow="hover" v-loading="loadingOverview" class="mb-4">
           <div class="flex justify-between items-center mb-2">
             <div>
-              <div class="font-semibold">Performance by Assessment Type</div>
+              <div class="font-semibold">Score Distribution (focus class)</div>
               <div class="text-xs text-gray-500">
-                Average scores for quizzes, exams, and assignments.
+                How many students fall into each score range.
               </div>
             </div>
           </div>
@@ -663,7 +679,7 @@ const gradeByTypeOption = computed(() => {
           <ClientOnly>
             <div class="w-full" style="height: 260px">
               <VChart
-                :option="gradeByTypeOption"
+                :option="gradeDistributionOption"
                 autoresize
                 class="w-full h-full"
               />
@@ -678,8 +694,8 @@ const gradeByTypeOption = computed(() => {
           </ClientOnly>
 
           <p class="mt-2 text-[11px] text-gray-500">
-            Tip: If exams are much lower than quizzes, it may indicate test
-            difficulty or preparation issues.
+            Tip: This helps you see the spread of performance – how many are
+            failing, passing, or excelling.
           </p>
         </el-card>
       </el-col>
@@ -700,7 +716,7 @@ const gradeByTypeOption = computed(() => {
 
           <el-table
             :data="recentAttendance"
-            v-loading="loadingOverview"
+            v-loading="attendanceLoading ?? loadingOverview ?? false"
             size="small"
             style="width: 100%"
             :height="320"

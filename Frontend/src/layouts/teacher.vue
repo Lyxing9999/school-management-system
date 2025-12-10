@@ -9,32 +9,71 @@ const route = useRoute();
 </script>
 
 <template>
-  <el-container>
-    <el-aside width="250px">
+  <el-container class="app-layout">
+    <!-- Sidebar -->
+    <el-aside width="240px" class="layout-aside">
       <BaseSideBar :logoSrc="schoolLogo" />
     </el-aside>
 
-    <el-container>
-      <el-header v-if="!route.meta.noHeader">
+    <!-- Main area -->
+    <el-container direction="vertical" class="layout-main-container">
+      <!-- Header -->
+      <el-header v-if="!route.meta.noHeader" class="layout-header">
         <BaseHeader />
       </el-header>
+
+      <!-- Content -->
       <Transition name="page" mode="out-in">
-        <el-main :key="route.fullPath">
+        <el-main :key="route.fullPath" class="layout-main">
           <NuxtPage />
         </el-main>
       </Transition>
-      <el-footer v-if="!route.meta.noHeader">
+
+      <!-- Footer -->
+      <el-footer v-if="!route.meta.noHeader" class="layout-footer">
         <BaseFooter />
       </el-footer>
     </el-container>
   </el-container>
 </template>
-<style>
+
+<style lang="scss">
+.app-layout {
+  height: 100vh;
+}
+
+/* Outer layout shells */
+.layout-aside {
+  border-right: 1px solid var(--el-border-color-light);
+  background-color: var(--color-card);
+}
+
+.layout-main-container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* VERY IMPORTANT: remove default header padding */
+.layout-header {
+  padding: 0; /* no 20px left/right from Element Plus */
+}
+
+/* Let BaseHeader control its own internal padding */
+.layout-main {
+  padding: 16px;
+  background-color: var(--el-bg-color-page);
+}
+
+.layout-footer {
+  padding: 8px 16px;
+  border-top: 1px solid var(--el-border-color-light);
+}
+
+/* Page transition */
 .page-enter-active,
 .page-leave-active {
   transition: opacity 0.25s ease;
 }
-
 .page-enter-from,
 .page-leave-to {
   opacity: 0;

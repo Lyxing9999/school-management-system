@@ -122,6 +122,7 @@ export function useInlineEdit<
 
   const remove = async (row: TGet) => {
     const rowKey = getKey(row.id);
+
     try {
       await ElMessageBox.confirm(
         "Are you sure you want to delete this row?",
@@ -132,16 +133,23 @@ export function useInlineEdit<
           type: "warning",
         }
       );
+    } catch (e) {
+      return;
+    }
+
+    try {
       deleteLoading.value[rowKey] = true;
+
       await service.delete(row.id.toString());
+
       data.value = data.value.filter((r) => r.id !== row.id);
       delete originalRows.value[rowKey];
       delete previousValues.value[rowKey];
+    } catch (e: any) {
     } finally {
       deleteLoading.value[rowKey] = false;
     }
   };
-
   const getPreviousValue = (row: TGet, field: keyof TGet) => {
     const rowKey = getKey(row.id);
     const stack = previousValues.value[rowKey]?.[field];

@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, h, nextTick } from "vue";
+import { ref, computed, onMounted, nextTick, watch } from "vue";
 
 definePageMeta({ layout: "admin" });
 
 /* ------------------------------------
  * Base components
  * ---------------------------------- */
-import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
+import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 import StudentSelect from "~/components/Selects/StudentSelect.vue";
 import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
+import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
 /* ------------------------------------
  * Element Plus
@@ -41,31 +42,87 @@ import type { Field } from "~/components/types/form";
  * ---------------------------------- */
 import { useDynamicCreateFormReactive } from "~/form-system/useDynamicForm.ts/useAdminForms";
 
+/* ------------------------------------
+ * Table columns
+ * ---------------------------------- */
+import { classColumns } from "~/modules/tables/columns/admin/classColumns";
+
+/* ------------------------------------
+ * Pagination composable
+ * ---------------------------------- */
+import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
+
+/* ------------------------------------
+ * Header stats composable
+ * ---------------------------------- */
+import { useHeaderState } from "~/composables/useHeaderState";
+
 const adminApi = adminService();
 
 /* ===========================
- *  TABLE STATE
+ *  TYPES
  * =========================== */
-import { classColumns } from "~/modules/tables/columns/admin/classColumns";
-const classes = ref<AdminClassDataDTO[]>([]);
-const tableLoading = ref(false);
-const showDeleted = ref<"all" | "active" | "deleted">("all");
 
-const displayClasses = computed(() =>
-  classes.value.map((c) => ({
-    ...c,
-    student_count: c.student_ids?.length ?? 0,
-    subject_count: c.subject_ids?.length ?? 0,
-  }))
+type ShowDeletedFilter = "all" | "active" | "deleted";
+
+// extend row with computed fields for table display
+type AdminClassRow = AdminClassDataDTO & {
+  student_count: number;
+  subject_count: number;
+};
+
+/* ===========================
+ *  FILTER STATE
+ * =========================== */
+
+const showDeleted = ref<ShowDeletedFilter>("all");
+
+/* ===========================
+ *  PAGINATED FETCH
+ * =========================== */
+
+const {
+  data: classes, // data for SmartTable
+  loading: tableLoading,
+  error: tableError,
+  currentPage,
+  pageSize,
+  totalRows,
+  fetchPage,
+  goPage,
+} = usePaginatedFetch<AdminClassRow, ShowDeletedFilter>(
+  // fetchFn: backend returns all classes; we filter + paginate on client
+  async (filter, page, pageSize) => {
+    const res: AdminClassListDTO | undefined =
+      await adminApi.class.getClasses();
+
+    const rawItems = res?.items ?? [];
+
+    // add student_count and subject_count
+    const displayClasses: AdminClassRow[] = rawItems.map((c) => ({
+      ...c,
+      student_count: c.student_ids?.length ?? 0,
+      subject_count: c.subject_ids?.length ?? 0,
+    }));
+
+    // filter by deleted state
+    const filtered =
+      filter === "all"
+        ? displayClasses
+        : filter === "deleted"
+        ? displayClasses.filter((c) => c.deleted)
+        : displayClasses.filter((c) => !c.deleted);
+
+    const total = filtered.length;
+    const start = (page - 1) * pageSize;
+    const items = filtered.slice(start, start + pageSize);
+
+    return { items, total };
+  },
+  1,
+  10,
+  showDeleted
 );
-
-const filteredClasses = computed(() => {
-  if (showDeleted.value === "all") return displayClasses.value;
-  if (showDeleted.value === "deleted") {
-    return displayClasses.value.filter((c) => c.deleted);
-  }
-  return displayClasses.value.filter((c) => !c.deleted);
-});
 
 /* ===========================
  *  SUBJECT OPTIONS (ASYNC)
@@ -131,14 +188,14 @@ const createFormDialogWidth = computed(() => "50%");
 
 async function openCreateDialog() {
   await fetchSubjectOptions();
-  await openCreateForm(); // uses registry formData() to init
+  await openCreateForm();
 }
 
 async function handleSaveCreateForm(payload: Partial<AdminCreateClass>) {
   try {
-    await saveCreateForm(payload); // registry service().create
+    await saveCreateForm(payload);
     cancelCreateForm();
-    await fetchClasses();
+    await fetchPage(1); // after create, go back to page 1
   } catch (err) {
     console.error("Failed to create class", err);
     ElMessage.error("Failed to create class");
@@ -191,7 +248,7 @@ const manageRelationsFields: Field<ManageClassRelationsForm>[] = [
   },
 ];
 
-const currentClassForStudents = ref<AdminClassDataDTO | null>(null);
+const currentClassForStudents = ref<AdminClassRow | null>(null);
 const originalStudentIds = ref<string[]>([]);
 const originalTeacherId = ref<string | null>(null);
 
@@ -199,7 +256,7 @@ const detailLoading = ref<Record<string | number, boolean>>({});
 const deleteLoading = ref<Record<string | number, boolean>>({});
 const saveStudentsLoading = ref(false);
 
-async function openManageStudentsDialog(row: AdminClassDataDTO) {
+async function openManageStudentsDialog(row: AdminClassRow) {
   detailLoading.value[row.id] = true;
   try {
     currentClassForStudents.value = row;
@@ -276,7 +333,7 @@ async function saveManageStudents(payload: Partial<ManageClassRelationsForm>) {
     }
 
     manageStudentsVisible.value = false;
-    await fetchClasses();
+    await fetchPage(currentPage.value || 1);
   } catch (err) {
     console.error("Failed to update class", err);
     ElMessage.error("Failed to update class");
@@ -290,19 +347,10 @@ async function saveManageStudents(payload: Partial<ManageClassRelationsForm>) {
  * =========================== */
 
 async function fetchClasses() {
-  tableLoading.value = true;
-  try {
-    const res: AdminClassListDTO | undefined =
-      await adminApi.class.getClasses();
-    classes.value = res?.items ?? [];
-  } catch (err) {
-    console.error("Failed to fetch classes", err);
-  } finally {
-    tableLoading.value = false;
-  }
+  await fetchPage(currentPage.value || 1);
 }
 
-async function handleSoftDelete(row: AdminClassDataDTO) {
+async function handleSoftDelete(row: AdminClassRow) {
   try {
     await ElMessageBox.confirm(
       "Are you sure you want to soft delete this class?",
@@ -316,7 +364,7 @@ async function handleSoftDelete(row: AdminClassDataDTO) {
 
     deleteLoading.value[row.id] = true;
     await adminApi.class.softDeleteClass(row.id);
-    await fetchClasses();
+    await fetchPage(currentPage.value || 1);
   } catch (err: any) {
     if (err === "cancel" || err === "close") return;
     console.error("Soft delete failed", err);
@@ -326,88 +374,168 @@ async function handleSoftDelete(row: AdminClassDataDTO) {
 }
 
 /* ===========================
- *  LIFECYCLE
+ *  LIFECYCLE & WATCHERS
  * =========================== */
 
 onMounted(() => {
-  fetchClasses();
-  // optional: prefetch subjects
-  // fetchSubjectOptions();
+  fetchPage(1);
+});
+
+// when filter changes, reset to first page & refetch
+watch(showDeleted, () => {
+  fetchPage(1);
+});
+
+/* ===========================
+ *  HEADER STATS
+ * =========================== */
+
+const totalClasses = computed(() => totalRows.value ?? 0);
+
+const { headerState: classHeaderStats } = useHeaderState({
+  items: [
+    {
+      key: "classes",
+      getValue: () => totalClasses.value,
+      singular: "class",
+      plural: "classes",
+      variant: "primary",
+      hideWhenZero: false,
+    },
+    {
+      key: "filter",
+      getValue: () => totalClasses.value,
+      label: () =>
+        showDeleted.value === "all"
+          ? "classes (all)"
+          : showDeleted.value === "active"
+          ? "active classes"
+          : "deleted classes",
+      variant: "secondary",
+      dotClass: "bg-emerald-500",
+      hideWhenZero: true,
+    },
+  ],
 });
 </script>
 
 <template>
-  <el-row class="m-2" justify="space-between">
-    <el-col :span="12">
-      <BaseButton type="default" :loading="tableLoading" @click="fetchClasses">
-        Refresh
-      </BaseButton>
-
-      <BaseButton type="primary" class="ml-2" @click="openCreateDialog">
-        Add Class
-      </BaseButton>
-    </el-col>
-
-    <el-col :span="12" class="text-right">
-      <ElRadioGroup v-model="showDeleted">
-        <ElRadioButton label="all">All</ElRadioButton>
-        <ElRadioButton label="active">Active</ElRadioButton>
-        <ElRadioButton label="deleted">Deleted</ElRadioButton>
-      </ElRadioGroup>
-    </el-col>
-  </el-row>
-
-  <ErrorBoundary>
-    <SmartTable
-      :data="filteredClasses"
-      :columns="classColumns"
+  <div class="p-4 space-y-6">
+    <!-- OVERVIEW HEADER -->
+    <OverviewHeader
+      title="Classes"
+      description="Manage class sections, enrolled students and assigned teachers."
       :loading="tableLoading"
+      :showRefresh="true"
+      :stats="classHeaderStats"
+      @refresh="fetchClasses"
     >
-      <template #operation="{ row }">
-        <ActionButtons
-          :rowId="row.id"
-          :detailContent="`Manage students in ${row.name}`"
-          deleteContent="Delete class"
-          @detail="openManageStudentsDialog(row)"
-          @delete="handleSoftDelete(row)"
-          :deleteLoading="deleteLoading[row.id] ?? false"
-          :detailLoading="detailLoading[row.id] ?? false"
-        />
+      <!-- Filters: status (all / active / deleted) -->
+      <template #filters>
+        <div
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"
+        >
+          <!-- Status filter -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-500">Status:</span>
+            <ElRadioGroup v-model="showDeleted" size="small">
+              <ElRadioButton label="all">All</ElRadioButton>
+              <ElRadioButton label="active">Active</ElRadioButton>
+              <ElRadioButton label="deleted">Deleted</ElRadioButton>
+            </ElRadioGroup>
+          </div>
+        </div>
       </template>
-    </SmartTable>
-  </ErrorBoundary>
 
-  <!-- CREATE CLASS DIALOG (form-system) -->
-  <ErrorBoundary>
-    <SmartFormDialog
-      v-model:visible="createFormVisible"
-      v-model="createFormData"
-      :fields="createFormSchema"
-      title="Add Class"
-      :loading="createFormLoading"
-      @save="handleSaveCreateForm"
-      @cancel="handleCancelCreateForm"
-      :useElForm="true"
-      :width="createFormDialogWidth"
-    />
-  </ErrorBoundary>
+      <!-- Actions: Refresh + Add Class -->
+      <template #actions>
+        <BaseButton
+          plain
+          :loading="tableLoading"
+          class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
+          @click="fetchClasses"
+        >
+          Refresh
+        </BaseButton>
 
-  <!-- MANAGE STUDENTS + TEACHER DIALOG (SmartFormDialog) -->
-  <ErrorBoundary>
-    <SmartFormDialog
-      v-model:visible="manageStudentsVisible"
-      v-model="manageRelationsForm"
-      :fields="manageRelationsFields"
-      :title="`Manage Class${
-        currentClassForStudents ? ' - ' + currentClassForStudents.name : ''
-      }`"
-      :loading="saveStudentsLoading"
-      :width="'40%'"
-      @save="saveManageStudents"
-      @cancel="cancelManageStudents"
-      :useElForm="true"
-    />
-  </ErrorBoundary>
+        <BaseButton type="primary" @click="openCreateDialog">
+          Add Class
+        </BaseButton>
+      </template>
+    </OverviewHeader>
+
+    <!-- TABLE -->
+    <ErrorBoundary>
+      <SmartTable
+        :data="classes"
+        :columns="classColumns"
+        v-loading="tableLoading"
+      >
+        <template #operation="{ row }">
+          <ActionButtons
+            :rowId="row.id"
+            :detailContent="`Manage students in ${row.name}`"
+            deleteContent="Delete class"
+            @detail="openManageStudentsDialog(row)"
+            @delete="handleSoftDelete(row)"
+            :deleteLoading="deleteLoading[row.id] ?? false"
+            :detailLoading="detailLoading[row.id] ?? false"
+          />
+        </template>
+      </SmartTable>
+    </ErrorBoundary>
+
+    <!-- PAGINATION -->
+    <el-row v-if="totalRows > 0" justify="end" class="m-4">
+      <el-pagination
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total="totalRows"
+        :page-sizes="[10, 20, 50, 100]"
+        layout="total, sizes, prev, pager, next, jumper"
+        background
+        @current-change="goPage"
+        @size-change="
+          (size: number) => {
+            pageSize = size;
+            fetchPage(1);
+          }
+        "
+      />
+    </el-row>
+
+    <!-- CREATE CLASS DIALOG -->
+    <ErrorBoundary>
+      <SmartFormDialog
+        v-model:visible="createFormVisible"
+        v-model="createFormData"
+        :fields="createFormSchema"
+        title="Add Class"
+        :loading="createFormLoading"
+        @save="handleSaveCreateForm"
+        @cancel="handleCancelCreateForm"
+        :useElForm="true"
+        :width="createFormDialogWidth"
+      />
+    </ErrorBoundary>
+
+    <!-- MANAGE STUDENTS + TEACHER DIALOG -->
+    <ErrorBoundary>
+      <SmartFormDialog
+        v-model:visible="manageStudentsVisible"
+        v-model="manageRelationsForm"
+        :fields="manageRelationsFields"
+        :title="`Manage Class${
+          currentClassForStudents ? ' - ' + currentClassForStudents.name : ''
+        }`"
+        :loading="saveStudentsLoading"
+        :width="'40%'"
+        @save="saveManageStudents"
+        @cancel="cancelManageStudents"
+        :useElForm="true"
+      />
+    </ErrorBoundary>
+  </div>
 </template>
 
 <style scoped>

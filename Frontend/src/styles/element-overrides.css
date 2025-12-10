@@ -1,13 +1,21 @@
 /* ===========================
-   Element Plus Global Overrides
+   Element Plus bridge to your color system
    =========================== */
 
-/* Dropdown selected item */
-.el-select-dropdown__item.is-selected {
-    color: var(--color-primary-light) !important;
+:root {
+    /* Make Element Plus "primary" use your purple */
+    --el-color-primary: var(--color-primary);
+    --el-color-primary-light-3: var(--color-primary-light-3);
+
+    /* Inputs */
+    --el-input-focus-border-color: var(--color-primary-light-2);
+    --el-input-border-color-hover: var(--color-primary-light-4);
 }
 
-/* Normal radio (circle style) */
+/* ===========================
+   Normal Radio (circle)
+   =========================== */
+
 .el-radio__input.is-checked .el-radio__inner,
 .el-radio__input.is-focus .el-radio__inner {
     border-color: var(--color-primary-light) !important;
@@ -18,14 +26,20 @@
     border-color: var(--color-primary-light) !important;
 }
 
-/* Table clicked column */
+/* ===========================
+   Table clicked column
+   =========================== */
+
 .el-table__row .el-table__cell.clicked-column {
     background-color: var(--color-primary) !important;
     color: #fff !important;
     font-weight: 500;
 }
 
-/* Switch handle */
+/* ===========================
+   Switch
+   =========================== */
+
 .el-switch__button {
     background-color: var(--color-light) !important;
 }
@@ -51,47 +65,37 @@
 }
 
 /* ===========================
-   Element Plus Radio Button Overrides
-   for the group: All | Active | Inactive
+   Radio Button Group
    =========================== */
 
-/* 1. Default (inactive) border/text: keep them neutral */
 .el-radio-button .el-radio-button__inner {
     border-color: var(--el-border-color) !important;
     color: var(--el-text-color-regular) !important;
 }
 
-/* 2. Optional neutral hover, not primary yet */
 .el-radio-button .el-radio-button__inner:hover {
     border-color: var(--el-border-color-darker) !important;
 }
 
-/* 3. Active (checked) state: use your primary color */
 .el-radio-button.is-active .el-radio-button__inner {
     background-color: var(--color-primary-light) !important;
     border-color: var(--color-primary-light) !important;
     color: var(--color-light) !important;
-    /* usually white */
-    /* Fix the seam on the left side with previous button */
     box-shadow: -1px 0 0 0 var(--color-primary-light);
 }
 
-/* 4. Fix border between buttons so there's no double line */
 .el-radio-group .el-radio-button:not(:first-child) .el-radio-button__inner {
     margin-left: -1px;
 }
 
-/* 5. Ensure first button left border looks correct when active */
 .el-radio-group .el-radio-button:first-child.is-active .el-radio-button__inner {
     border-left-color: var(--color-primary-light) !important;
 }
 
-/* 6. Focus state (keyboard focus) */
 .el-radio-button.is-focus .el-radio-button__inner {
     box-shadow: 0 0 0 1px var(--color-primary-light-3);
 }
 
-/* 7. Disabled (optional) */
 .el-radio-button.is-disabled .el-radio-button__inner {
     border-color: var(--color-primary-light-3);
     color: var(--color-primary-light-3);
@@ -99,17 +103,14 @@
 }
 
 /* ===========================
-   Element Plus Card Overrides (lighter)
+   Card
    =========================== */
 
-/* Base card – clean, neutral */
 .el-card {
     background-color: var(--color-card);
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    /* neutral gray */
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
-    /* very soft */
+    border-radius: 12px;
+    border: 1px solid var(--color-primary-light-6);
+    box-shadow: 0 4px 10px rgba(107, 63, 160, 0.04);
     transition:
         transform var(--transition-base),
         box-shadow var(--transition-base),
@@ -117,20 +118,17 @@
         background-color var(--transition-base);
 }
 
-/* Subtle hover lift */
 .el-card:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-    border-color: #e5e7eb;
-    /* keep neutral, no purple */
+    box-shadow: 0 8px 18px rgba(107, 63, 160, 0.1);
+    border-color: var(--color-primary-light-4);
 }
 
-/* Card header – light with just a hint of purple */
+/* Card header */
 .el-card__header {
     padding: 10px 16px;
-    border-bottom: 1px solid #e5e7eb;
-    background-color: #f9fafb;
-    /* soft gray, not purple */
+    border-bottom: 1px solid var(--color-primary-light-7);
+    background: linear-gradient(90deg, var(--color-primary-light-9), #ffffff);
     color: var(--color-dark);
     font-weight: 600;
     font-size: 13px;
@@ -138,7 +136,6 @@
     align-items: center;
 }
 
-/* Optional: small purple accent bar on the left (very light) */
 .el-card__header::before {
     content: "";
     display: inline-block;
@@ -146,42 +143,34 @@
     height: 18px;
     border-radius: 999px;
     margin-right: 8px;
-    background: var(--color-primary-light-4);
-    /* light purple accent */
+    background: var(--color-primary-light-3);
 }
 
-/* Card body */
 .el-card__body {
     padding: 14px 16px;
     background-color: var(--color-card);
     color: var(--color-dark);
 }
 
-/* ===========================
-   Stat cards (dashboard KPIs)
-   =========================== */
-
-/* Only stat cards keep a soft purple background */
+/* Stat cards (dashboard KPIs) */
 .el-card.stat-card {
-    border-radius: 12px;
+    border-radius: 14px;
     border: 1px solid var(--color-primary-light-5);
-    background: linear-gradient(135deg,
+    background: radial-gradient(circle at 0 0,
             var(--color-primary-light-9),
-            #ffffff);
-    /* mostly white with a hint of purple */
-    box-shadow: 0 4px 14px rgba(107, 63, 160, 0.12);
+            #ffffff 55%);
+    box-shadow: 0 6px 20px rgba(107, 63, 160, 0.16);
 }
 
 .el-card.stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(107, 63, 160, 0.18);
+    box-shadow: 0 10px 26px rgba(107, 63, 160, 0.22);
 }
 
 .el-card.stat-card .el-card__body {
     padding: 12px 16px;
 }
 
-/* Title / subtitle helpers */
 .card-title {
     font-size: 13px;
     font-weight: 600;
@@ -191,5 +180,307 @@
 .card-subtitle {
     font-size: 11px;
     color: #6b7280;
-    /* neutral gray text, not too purple */
+}
+
+/* ===========================
+   Pagination
+   =========================== */
+
+.el-pagination {
+    padding: 4px 0;
+    color: var(--color-dark);
+    font-size: 13px;
+}
+
+.el-pagination button {
+    border-radius: 6px;
+    border: 1px solid transparent;
+    color: var(--color-dark);
+    background-color: transparent;
+    transition:
+        background-color var(--transition-base),
+        border-color var(--transition-base),
+        color var(--transition-base);
+}
+
+.el-pagination button:not(:disabled):hover {
+    background-color: var(--color-primary-light-8);
+    border-color: var(--color-primary-light-5);
+    color: var(--color-primary);
+}
+
+.el-pagination .el-pager li {
+    border-radius: 6px;
+    margin: 0 2px;
+    min-width: 28px;
+    height: 28px;
+    line-height: 28px;
+    color: var(--color-dark);
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition:
+        background-color var(--transition-base),
+        border-color var(--transition-base),
+        color var(--transition-base),
+        transform var(--transition-base);
+}
+
+.el-pagination .el-pager li:hover {
+    background-color: var(--color-primary-light-8);
+    border-color: var(--color-primary-light-5);
+    color: var(--color-primary);
+}
+
+/* Active page */
+.el-pagination .el-pager li.is-active {
+    background-color: var(--color-primary-light) !important;
+    border-color: var(--color-primary-light) !important;
+    color: var(--color-light) !important;
+    font-weight: 600;
+    transform: translateY(-1px);
+}
+
+.el-pagination.is-background .el-pager li {
+    background-color: #f3f4f6;
+    border-radius: 6px;
+}
+
+.el-pagination.is-background .el-pager li.is-active {
+    background-color: var(--color-primary-light);
+    color: var(--color-light);
+}
+
+.el-pagination__total,
+.el-pagination__jump {
+    color: var(--color-dark);
+}
+
+.el-pagination__sizes .el-select .el-input__wrapper,
+.el-pagination__jump .el-input .el-input__wrapper {
+    border-radius: 6px;
+}
+
+.el-pagination__sizes .el-select .el-input__wrapper:hover,
+.el-pagination__jump .el-input .el-input__wrapper:hover {
+    box-shadow: 0 0 0 1px var(--color-primary-light-3);
+}
+
+/* ===========================
+   Input / Select
+   =========================== */
+
+/* Form labels */
+.el-form-item__label {
+    color: var(--color-dark);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Required asterisk */
+.el-form-item.is-required .el-form-item__label::before {
+    color: var(--color-primary-light);
+}
+
+/* Label focus when any child input is focused (includes password) */
+.el-form-item:focus-within .el-form-item__label {
+    color: var(--color-primary-light);
+}
+
+/* Success state */
+.el-form-item.is-success .el-form-item__label {
+    color: var(--color-primary-light);
+}
+
+/* Error state */
+.el-form-item.is-error .el-form-item__label {
+    color: #b91c1c !important;
+}
+
+/* Base input wrapper – used everywhere, including inside el-form-item */
+.el-input__wrapper {
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px #e5e7eb inset;
+    background-color: #ffffff;
+    transition:
+        box-shadow var(--transition-base),
+        background-color var(--transition-base),
+        transform var(--transition-base);
+}
+
+/* Hover */
+.el-input__wrapper:hover {
+    box-shadow: 0 0 0 1px var(--el-input-border-color-hover) inset;
+    background-color: #ffffff;
+}
+
+/* Focus (uses EP variable we set above) */
+.el-input__wrapper.is-focus {
+    box-shadow: 0 0 0 1px var(--el-input-focus-border-color) inset;
+    background-color: #ffffff;
+    transform: translateY(-0.5px);
+}
+
+/* Disabled input */
+.el-input.is-disabled .el-input__wrapper {
+    box-shadow: 0 0 0 1px #e5e7eb inset;
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+}
+
+/* Text + placeholder */
+.el-input__inner {
+    color: var(--color-dark);
+}
+
+.el-input__inner::placeholder {
+    color: #9ca3af;
+}
+
+/* Prefix / suffix icons */
+.el-input__prefix,
+.el-input__suffix {
+    color: #9ca3af;
+}
+
+.el-input__wrapper.is-focus .el-input__prefix,
+.el-input__wrapper.is-focus .el-input__suffix {
+    color: var(--color-primary-light);
+}
+
+/* Clear icon */
+.el-input__suffix .el-input__clear {
+    color: #9ca3af;
+}
+
+.el-input__suffix .el-input__clear:hover {
+    color: var(--color-primary);
+}
+
+/* Error border for the input wrapper */
+.el-form-item.is-error .el-input__wrapper {
+    box-shadow: 0 0 0 1px #f97373 inset;
+}
+
+/* Error text color */
+.el-form-item.is-error .el-input__inner {
+    color: #b91c1c;
+}
+
+/* ===========================
+   Password eye icon color
+   =========================== */
+
+.el-input__suffix .el-input__suffix-inner i,
+.el-input__suffix .el-icon {
+    color: #9ca3af;
+    transition: color var(--transition-base);
+}
+
+/* Focused input → purple icon */
+.el-input__wrapper.is-focus .el-input__suffix-inner i,
+.el-input__wrapper.is-focus .el-input__suffix .el-icon {
+    color: var(--color-primary-light);
+}
+
+/* Error state → red icon */
+.el-form-item.is-error .el-input__suffix-inner i,
+.el-form-item.is-error .el-input__suffix .el-icon {
+    color: #b91c1c;
+}
+
+/* ===========================
+   Select dropdown items
+   =========================== */
+
+.el-select-dropdown__item.is-selected {
+    background-color: var(--color-primary-light-8) !important;
+    color: var(--color-primary) !important;
+    font-weight: 600;
+}
+
+.el-select-dropdown__item:hover {
+    background-color: var(--color-primary-light-9) !important;
+    color: var(--color-primary) !important;
+}
+
+/* ===========================
+   Select trigger (single & multiple)
+   =========================== */
+
+.el-select__wrapper {
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px #e5e7eb inset;
+    background-color: #ffffff;
+    transition:
+        box-shadow var(--transition-base),
+        background-color var(--transition-base),
+        transform var(--transition-base);
+}
+
+.el-select__wrapper.is-focused {
+    box-shadow: 0 0 0 1px var(--color-primary-light-2) inset !important;
+    background-color: #ffffff !important;
+    transform: translateY(-0.5px);
+}
+
+.el-select__wrapper.is-hovering:not(.is-focused) {
+    box-shadow: 0 0 0 1px var(--color-primary-light-5) inset !important;
+    background-color: #ffffff !important;
+}
+
+/* Multiple select tweaks */
+.el-select--multiple .el-select__wrapper {
+    min-height: 34px;
+    padding: 2px 8px;
+}
+
+/* Tags inside multiple select */
+.el-select--multiple .el-select__tags .el-tag {
+    --el-tag-bg-color: var(--color-primary-light-9);
+    --el-tag-border-color: var(--color-primary-light-5);
+    --el-tag-text-color: var(--color-primary);
+
+    background-color: var(--el-tag-bg-color) !important;
+    border-color: var(--el-tag-border-color) !important;
+    color: var(--el-tag-text-color) !important;
+}
+
+.el-select--multiple .el-select__tags .el-tag.is-plain {
+    --el-tag-bg-color: transparent;
+    --el-tag-border-color: var(--color-primary-light-5);
+    --el-tag-text-color: var(--color-primary);
+
+    background-color: var(--el-tag-bg-color) !important;
+    border-color: var(--el-tag-border-color) !important;
+    color: var(--el-tag-text-color) !important;
+}
+
+.el-select--multiple .el-select__tags .el-tag .el-tag__close {
+    color: var(--color-primary);
+}
+
+.el-select--multiple .el-select__tags .el-tag .el-tag__close:hover {
+    background-color: var(--color-primary-light-5);
+    color: #fff;
+}
+
+/* Global "info" tags */
+.el-tag.el-tag--info {
+    --el-tag-bg-color: var(--color-primary-light-9);
+    --el-tag-border-color: var(--color-primary-light-5);
+    --el-tag-text-color: var(--color-primary);
+
+    background-color: var(--el-tag-bg-color) !important;
+    border-color: var(--el-tag-border-color) !important;
+    color: var(--el-tag-text-color) !important;
+}
+
+.el-tag.el-tag--info.is-plain {
+    --el-tag-bg-color: transparent;
+    --el-tag-border-color: var(--color-primary-light-5);
+    --el-tag-text-color: var(--color-primary);
+
+    background-color: var(--el-tag-bg-color) !important;
+    border-color: var(--el-tag-border-color) !important;
+    color: var(--el-tag-text-color) !important;
 }

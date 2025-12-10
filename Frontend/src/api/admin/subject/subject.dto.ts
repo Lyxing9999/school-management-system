@@ -25,8 +25,15 @@ export interface AdminSubjectListDTO {
   items: AdminSubjectDataDTO[];
 }
 
+export interface AdminClassNameSelectList {
+  items: { id: string; name: string }[];
+}
+
 /**
  * Wrapped responses
  */
 export type AdminGetSubjectResponse = ApiResponse<AdminSubjectDataDTO>;
 export type AdminGetSubjectListResponse = ApiResponse<AdminSubjectListDTO>;
+
+export type AdminClassNameSelectListResponse =
+  ApiResponse<AdminClassNameSelectList>;

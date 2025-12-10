@@ -15,17 +15,17 @@ export class StaffService {
   constructor(private staffApi: StaffApi) {}
 
   // Queries
-  async getTeacherSelect(options?: ApiCallOptions) {
+  async listTeacherSelect(options?: ApiCallOptions) {
     const data = await this.callApi<AdminTeacherSelectListData>(
-      () => this.staffApi.getTeacherSelect(),
+      () => this.staffApi.listTeacherSelect(),
       options
     );
     return data!;
   }
 
-  async getStaffNameSelect(options?: ApiCallOptions) {
+  async listStaffNameSelect(options?: ApiCallOptions) {
     const data = await this.callApi<AdminStaffNameSelectData>(
-      () => this.staffApi.getStaffNameSelect(),
+      () => this.staffApi.listStaffNameSelect(),
       options
     );
     return data!;

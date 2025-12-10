@@ -15,6 +15,7 @@ import type {
   TeacherClassSelectNameListDTO,
   TeacherStudentNameListDTO,
   TeacherScheduleListDTO,
+  TeacherClassListWithSummeryDTO,
 } from "./dto";
 import type { AttendanceDTO, GradeDTO } from "~/api/types/school.dto";
 
@@ -34,7 +35,13 @@ export class TeacherService {
     );
     return data!;
   }
-
+  async listMyClassesWithSummery(options?: ApiCallOptions) {
+    const data = await this.callApi<TeacherClassListWithSummeryDTO>(
+      () => this.teacherApi.listMyClassesWithSummery(),
+      options
+    );
+    return data!;
+  }
   async listClassNameSelect(options?: ApiCallOptions) {
     const data = await this.callApi<TeacherClassSelectNameListDTO>(
       () => this.teacherApi.listClassNameSelect(),

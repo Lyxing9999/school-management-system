@@ -6,6 +6,7 @@ import type { Field } from "~/components/types/form";
 import { ElInput, ElInputNumber, ElSwitch } from "element-plus";
 import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
 import { ElSelect, ElOption } from "element-plus";
+import SubjectSelect from "~/components/Selects/SubjectSelect.vue";
 export const classFormSchema: Field<AdminCreateClass>[] = [
   {
     key: "name",
@@ -53,23 +54,16 @@ export const classFormSchema: Field<AdminCreateClass>[] = [
   {
     key: "subject_ids",
     label: "Subjects",
-    component: ElSelect,
-    childComponent: ElOption,
+    component: SubjectSelect,
     formItemProps: {
       required: false,
       prop: "subject_ids",
       label: "Subjects",
     },
     componentProps: {
-      multiple: true,
-      filterable: true,
-      clearable: true,
       placeholder: "Select subjects",
-    },
-    childComponentProps: {
-      options: [],
-      valueKey: "value",
-      labelKey: "label",
+      clearable: true,
+      multiple: true,
     },
   },
 ];

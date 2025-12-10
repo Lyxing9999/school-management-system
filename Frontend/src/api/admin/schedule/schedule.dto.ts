@@ -1,4 +1,3 @@
-// ~/api/admin/schedule/dto.ts
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 import type { ScheduleDTO } from "~/api/types/school.dto";
 /* ================================
@@ -63,7 +62,7 @@ export interface AdminScheduleSlotData extends ScheduleDTO {
  * List wrapper
  * Python: AdminScheduleListDTO
  */
-export interface AdminScheduleList {
+export interface AdminScheduleSlotList {
   items: AdminScheduleSlotData[];
 }
 
@@ -71,4 +70,4 @@ export interface AdminScheduleList {
  * Wrapped responses
  */
 export type AdminGetScheduleSlotResponse = ApiResponse<AdminScheduleSlotData>;
-export type AdminGetScheduleListResponse = ApiResponse<AdminScheduleList>;
+export type AdminGetScheduleListResponse = ApiResponse<AdminScheduleSlotList>;

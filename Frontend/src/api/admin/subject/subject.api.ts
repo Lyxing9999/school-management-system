@@ -3,6 +3,7 @@ import type {
   AdminCreateSubject,
   AdminGetSubjectListResponse,
   AdminGetSubjectResponse,
+  AdminClassNameSelectListResponse,
 } from "./subject.dto";
 
 export class SubjectApi {
@@ -22,6 +23,13 @@ export class SubjectApi {
   async getSubject(id: string): Promise<AdminGetSubjectResponse> {
     const res = await this.$api.get<AdminGetSubjectResponse>(
       `${this.baseURL}/${id}`
+    );
+    return res.data;
+  }
+
+  async listSubjectNameSelect() {
+    const res = await this.$api.get<AdminClassNameSelectListResponse>(
+      `${this.baseURL}/names-select`
     );
     return res.data;
   }

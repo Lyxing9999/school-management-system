@@ -52,6 +52,7 @@ export const scheduleFormSchema: Field<AdminCreateScheduleSlot>[] = [
       label: "Day of Week",
     },
     componentProps: {
+      step: "00:15",
       placeholder: "Select day",
     },
     childComponentProps: {
@@ -70,6 +71,7 @@ export const scheduleFormSchema: Field<AdminCreateScheduleSlot>[] = [
       label: "Start Time",
     },
     componentProps: {
+      step: "00:15",
       placeholder: "Select start time",
       format: "HH:mm",
     },

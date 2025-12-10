@@ -1,9 +1,9 @@
-<!-- ~/components/Selects/TeacherClassSelect.vue -->
 <script setup lang="ts">
+import { computed, ref } from "vue";
 import RemoteSelect from "~/components/Selects/RemoteSelect.vue";
-import { teacherService } from "~/api/teacher";
+import { adminService } from "~/api/admin";
 
-const teacherApi = teacherService();
+const adminApi = adminService();
 
 const props = withDefaults(
   defineProps<{
@@ -23,12 +23,19 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: string | string[] | null): void;
 }>();
 
-const fetchClasses = async () => {
-  const res = await teacherApi.teacher.listClassNameSelect();
+// Cache so we don't refetch every time
+const cachedClasses = ref<any[]>([]);
 
-  return res?.items ?? [];
+const fetchClasses = async () => {
+  if (cachedClasses.value.length > 0) {
+    return cachedClasses.value;
+  }
+  const res = await adminApi.subject.listSubjectNameSelect();
+  cachedClasses.value = res?.items ?? [];
+  return cachedClasses.value;
 };
 
+// Simple bridge v-model so parent stays in control
 const innerValue = computed({
   get: () => props.modelValue,
   set: (v) => emit("update:modelValue", v),
@@ -41,10 +48,10 @@ const innerValue = computed({
     :fetcher="fetchClasses"
     label-key="name"
     value-key="id"
-    :placeholder="placeholder ?? 'Select class'"
-    :disabled="disabled"
-    :multiple="multiple"
-    :size="size"
+    :placeholder="props.placeholder ?? 'Select subject'"
+    :disabled="props.disabled"
+    :multiple="props.multiple"
+    :size="props.size"
     clearable
   />
 </template>

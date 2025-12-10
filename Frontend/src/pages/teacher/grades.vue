@@ -1,5 +1,9 @@
 <!-- ~/pages/teacher/grades/index.vue -->
 <script setup lang="ts">
+definePageMeta({
+  layout: "teacher",
+});
+
 import { ref, watch, computed } from "vue";
 import {
   ElMessage,
@@ -9,7 +13,6 @@ import {
   ElOption,
   ElInput,
   ElTag,
-  ElDatePicker,
 } from "element-plus";
 
 import { teacherService } from "~/api/teacher";
@@ -26,12 +29,11 @@ import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
+import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
+import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 
-import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
-
-definePageMeta({
-  layout: "teacher",
-});
+import { useHeaderState } from "~/composables/useHeaderState";
+import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
 
 const teacherApi = teacherService();
 
@@ -50,9 +52,55 @@ type GradeEnriched = GradeDTO & {
 };
 
 const selectedClassId = ref<string | null>(null);
-const gradeList = ref<GradeEnriched[]>([]);
-const loading = ref(false);
 const errorMessage = ref<string | null>(null);
+
+/* ---------------------- pagination hook ---------------------- */
+
+const {
+  data: gradeList,
+  loading,
+  error,
+  currentPage,
+  pageSize,
+  totalRows,
+  fetchPage,
+  goPage,
+} = usePaginatedFetch<GradeEnriched, string | null>(
+  async (classId, page, pageSize, signal) => {
+    if (!classId) {
+      return { items: [], total: 0 };
+    }
+
+    const res = await teacherApi.teacher.listGradesForClass(classId, {
+      page,
+      page_size: pageSize,
+      signal,
+      showError: false,
+    });
+
+    // PRE mode: backend returns all items, we slice on frontend
+    const allItems = (res?.items ?? []) as GradeEnriched[];
+    const total = res?.total ?? allItems.length;
+
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const pageItems = allItems.slice(start, end);
+
+    return {
+      items: pageItems,
+      total,
+    };
+
+    // LATER (real backend pagination):
+    // return {
+    //   items: (res?.items ?? []) as GradeEnriched[],
+    //   total: res?.total ?? res?.items?.length ?? 0,
+    // };
+  },
+  1,
+  10,
+  selectedClassId
+);
 
 /* ---------------------- forms & dialogs ---------------------- */
 
@@ -137,6 +185,8 @@ const gradeColumns: ColumnConfig<GradeEnriched>[] = [
       > = {
         exam: { type: "success", label: "Exam" },
         assignment: { type: "warning", label: "Assignment" },
+        homework: { type: "info", label: "Homework" },
+        quiz: { type: "warning", label: "Quiz" },
       };
 
       const config = map[t] ?? { type: "info", label: t || "N/A" };
@@ -162,14 +212,12 @@ const gradeColumns: ColumnConfig<GradeEnriched>[] = [
     label: "Created At",
     inlineEditActive: true,
     minWidth: "160px",
-    component: ElDatePicker,
+    component: ElInput,
     componentProps: {
-      style: "width: '100%'",
+      style: "width: 100%",
+
       readonly: true,
       disabled: true,
-      format: "DD-MM-YYYY HH:mm:ss",
-      type: "datetime",
-      valueFormat: "YYYY-MM-DD HH:mm:ss",
     },
   },
   {
@@ -196,6 +244,7 @@ const addGradeFields = computed<Field<GradeFormModel>[]>(() => [
       labelKey: "username",
       multiple: false,
       placeholder: "Select student",
+      disabled: !selectedClassId.value,
     },
   },
   {
@@ -205,6 +254,7 @@ const addGradeFields = computed<Field<GradeFormModel>[]>(() => [
     componentProps: {
       classId: selectedClassId.value || "",
       placeholder: "Select subject",
+      disabled: !selectedClassId.value,
     },
   },
   {
@@ -226,6 +276,8 @@ const addGradeFields = computed<Field<GradeFormModel>[]>(() => [
       options: [
         { label: "Exam", value: "exam" },
         { label: "Assignment", value: "assignment" },
+        { label: "Homework", value: "homework" },
+        { label: "Quiz", value: "quiz" },
       ],
       labelKey: "label",
       valueKey: "value",
@@ -268,7 +320,7 @@ const editGradeFields: Field<EditGradeFormModel>[] = [
 
 /* ---------------------- derived stats ------------------------ */
 
-const totalGrades = computed(() => gradeList.value.length);
+const totalGrades = computed(() => totalRows.value);
 
 const averageScore = computed(() => {
   if (!gradeList.value.length) return null;
@@ -276,42 +328,29 @@ const averageScore = computed(() => {
   return Math.round((sum / gradeList.value.length) * 10) / 10;
 });
 
-/* ---------------------- load grades -------------------------- */
+/* ---------------------- load / watch ------------------------- */
 
 const loadGrades = async () => {
-  if (!selectedClassId.value) {
-    gradeList.value = [];
-    return;
-  }
-
-  loading.value = true;
   errorMessage.value = null;
-
-  try {
-    const res = await teacherApi.teacher.listGradesForClass(
-      selectedClassId.value,
-      { showError: false }
-    );
-
-    if (!res) {
-      errorMessage.value = "Failed to load grades.";
-      gradeList.value = [];
-      return;
-    }
-
-    gradeList.value = (res.items ?? []) as GradeEnriched[];
-  } catch (err: any) {
-    console.error(err);
-    errorMessage.value = err?.message ?? "Failed to load grades.";
-  } finally {
-    loading.value = false;
+  await fetchPage(currentPage.value || 1);
+  if (error.value) {
+    errorMessage.value = error.value.message ?? "Failed to load grades.";
   }
 };
 
 watch(
   () => selectedClassId.value,
-  () => {
-    loadGrades();
+  async () => {
+    if (!selectedClassId.value) {
+      gradeList.value = [];
+      return;
+    }
+    await fetchPage(1);
+    if (error.value) {
+      errorMessage.value = error.value.message ?? "Failed to load grades.";
+    } else {
+      errorMessage.value = null;
+    }
   }
 );
 
@@ -421,11 +460,7 @@ const submitEditGrade = async () => {
     );
 
     await loadGrades();
-    ElMessage.success("Grade updated.");
-  } catch (err: any) {
-    console.error(err);
-    ElMessage.error(err?.message ?? "Failed to update grade.");
-  }
+  } catch (err: any) {}
 };
 
 const handleSaveEditDialog = async (payload: Partial<EditGradeFormModel>) => {
@@ -467,79 +502,100 @@ const handleDeleteGrade = async (row: GradeEnriched) => {
     // user cancelled
   }
 };
+
+/* ---------------------- header stats via composable ----------- */
+
+const canAddGrade = computed(() => !!selectedClassId.value && !loading.value);
+
+const { headerState } = useHeaderState({
+  items: [
+    {
+      key: "total",
+      getValue: () => totalGrades.value,
+      singular: "grade",
+      plural: "grades",
+      variant: "primary",
+      hideWhenZero: true,
+    },
+    {
+      key: "avg",
+      getValue: () => averageScore.value ?? 0,
+      label: () =>
+        averageScore.value === null
+          ? undefined
+          : `Average score: ${averageScore.value}`,
+      variant: "secondary",
+      dotClass: "bg-emerald-500",
+      hideWhenZero: true,
+    },
+  ],
+});
+
+/* ---------------------- pagination handlers ------------------ */
+
+const handlePageChange = (page: number) => {
+  goPage(page);
+};
+
+const handlePageSizeChange = (size: number) => {
+  pageSize.value = size;
+  fetchPage(1);
+};
 </script>
 
 <template>
   <div class="p-4 space-y-6">
-    <!-- Header (consistent gradient style) -->
-    <div
-      class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-[var(--color-primary-light-9)] to-[var(--color-primary-light-9)] border border-[color:var(--color-primary-light-9)] shadow-sm rounded-2xl p-5"
+    <!-- HEADER -->
+    <OverviewHeader
+      title="Grades"
+      description="Record and review student grades for the selected class."
+      :loading="loading"
+      :stats="headerState"
+      :showRefresh="false"
     >
-      <div class="space-y-2">
-        <h1
-          class="text-2xl font-bold flex items-center gap-2 text-[color:var(--color-dark)]"
-        >
-          Grades
-        </h1>
-        <p class="text-sm text-[color:var(--color-primary-light-1)]">
-          Record and review student grades for the selected class.
-        </p>
-
+      <!-- Left-side filters -->
+      <template #filters>
         <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-500">Class:</span>
+          <div
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 border border-[var(--color-primary-light-7)] shadow-sm"
+          >
+            <span class="text-xs font-medium text-[color:var(--color-primary)]">
+              Class:
+            </span>
             <TeacherClassSelect
               v-model="selectedClassId"
               placeholder="Select class"
               style="min-width: 220px"
+              class="header-class-select"
             />
           </div>
-
-          <div class="flex flex-wrap items-center gap-2 text-xs">
-            <span
-              v-if="totalGrades"
-              class="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-light-8)] text-[color:var(--color-primary)] px-3 py-0.5 border border-[var(--color-primary-light-5)]"
-            >
-              <span
-                class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]"
-              />
-              {{ totalGrades }}
-              {{ totalGrades === 1 ? "grade" : "grades" }}
-            </span>
-
-            <span
-              v-if="averageScore !== null"
-              class="inline-flex items-center gap-1 rounded-full bg-white text-gray-700 px-3 py-0.5 border border-gray-200"
-            >
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Avg score:
-              <span class="font-medium">{{ averageScore }}</span>
-            </span>
-          </div>
         </div>
-      </div>
+      </template>
 
-      <div class="flex items-center gap-2 justify-end">
+      <!-- Right-side actions -->
+      <template #actions>
         <BaseButton
           plain
           :loading="loading"
+          :disabled="!selectedClassId || loading"
           class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
           @click="loadGrades"
         >
           Refresh
         </BaseButton>
+
         <BaseButton
           type="primary"
-          :disabled="!selectedClassId"
+          :disabled="!canAddGrade"
           :loading="loading"
           @click="handleOpenAddDialog"
         >
           Add grade
         </BaseButton>
-      </div>
-    </div>
+      </template>
+    </OverviewHeader>
 
-    <!-- Error -->
+    <!-- ERROR -->
     <transition name="el-fade-in">
       <el-alert
         v-if="errorMessage"
@@ -552,7 +608,7 @@ const handleDeleteGrade = async (row: GradeEnriched) => {
       />
     </transition>
 
-    <!-- Table card -->
+    <!-- TABLE CARD -->
     <el-card
       shadow="never"
       :body-style="{ padding: '20px' }"
@@ -567,6 +623,12 @@ const handleDeleteGrade = async (row: GradeEnriched) => {
             <p class="text-xs text-gray-500">
               Each row represents one grade item (exam or assignment).
             </p>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs text-gray-500">
+            <span>
+              Showing {{ gradeList.length }} / {{ totalGrades }} records
+            </span>
           </div>
         </div>
       </template>
@@ -596,31 +658,24 @@ const handleDeleteGrade = async (row: GradeEnriched) => {
             />
           </template>
         </SmartTable>
-      </ErrorBoundary>
 
-      <div v-if="!loading && !gradeList.length" class="py-10">
-        <el-empty
-          :description="
-            selectedClassId
-              ? 'No grades for this class yet'
-              : 'Select a class to see grades'
-          "
-          :image-size="120"
-        >
-          <template #extra>
-            <p class="text-sm text-gray-500 max-w-md mx-auto">
-              {{
-                selectedClassId
-                  ? "Use the Add grade button to create the first record."
-                  : "Choose a class from the top to load its grades."
-              }}
-            </p>
-          </template>
-        </el-empty>
-      </div>
+        <!-- Pagination -->
+        <div v-if="totalRows > 0" class="mt-4 flex justify-end">
+          <el-pagination
+            background
+            layout="prev, pager, next, jumper, sizes, total"
+            :current-page="currentPage"
+            :page-size="pageSize"
+            :page-sizes="[10, 20, 50]"
+            :total="totalRows"
+            @current-change="handlePageChange"
+            @size-change="handlePageSizeChange"
+          />
+        </div>
+      </ErrorBoundary>
     </el-card>
 
-    <!-- Add Grade Dialog -->
+    <!-- ADD GRADE DIALOG -->
     <SmartFormDialog
       v-model:visible="addDialogVisible"
       v-model="gradeForm"
@@ -632,7 +687,7 @@ const handleDeleteGrade = async (row: GradeEnriched) => {
       @cancel="handleCancelAddDialog"
     />
 
-    <!-- Edit Grade Dialog (score only) -->
+    <!-- EDIT GRADE DIALOG -->
     <SmartFormDialog
       v-model:visible="editDialogVisible"
       v-model="editGradeForm"
@@ -646,14 +701,3 @@ const handleDeleteGrade = async (row: GradeEnriched) => {
   </div>
 </template>
 
-<style scoped>
-/* Table looks a bit smoother */
-:deep(.el-table) {
-  border-radius: 0.75rem;
-}
-
-/* Score tags stay readable on hover */
-:deep(.el-tag) {
-  font-size: 12px;
-}
-</style>

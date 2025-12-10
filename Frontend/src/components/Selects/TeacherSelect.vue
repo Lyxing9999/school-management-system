@@ -15,7 +15,7 @@ const emit = defineEmits<{
 }>();
 
 const fetchTeachers = async () => {
-  const res = await adminApi.staff.getTeacherSelect();
+  const res = await adminApi.staff.listTeacherSelect();
 
   return res?.items ?? res ?? [];
 };
@@ -31,7 +31,7 @@ const innerValue = computed({
     v-model="innerValue"
     :fetcher="fetchTeachers"
     label-key="staff_name"
-    value-key="user_id"
+    value-key="id"
     :placeholder="placeholder ?? 'Select teacher'"
     :disabled="disabled"
     clearable

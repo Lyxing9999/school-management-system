@@ -1,20 +1,24 @@
+<!-- ~/pages/admin/users/index.vue -->
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted, type Ref } from "vue";
+import { ElPagination } from "element-plus";
+
 // --------------------
 // Page Meta
 // --------------------
 definePageMeta({
   layout: "admin",
 });
+
 // --------------------
 // Base Components
 // --------------------
 import ActionButtons from "~/components/Button/ActionButtons.vue";
-import Pagination from "~/components/TableEdit/Pagination/Pagination.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
-import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
+import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
+import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
 // --------------------
 // Composables
@@ -22,6 +26,7 @@ import BaseButton from "~/components/Base/BaseButton.vue";
 import { useDialogDynamicWidth } from "~/composables/useDialogDynamicWidth";
 import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
 import { useInlineEdit } from "~/composables/useInlineEdit";
+import { useHeaderState } from "~/composables/useHeaderState";
 
 // --------------------
 // Schemas & Registry
@@ -32,13 +37,14 @@ import {
 } from "~/form-system/register/admin";
 
 // --------------------
-// use dynamic form
+// Dynamic forms
 // --------------------
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
   useInlineEditService,
 } from "~/form-system/useDynamicForm.ts/useAdminForms";
+
 // --------------------
 // Columns & Constants
 // --------------------
@@ -56,7 +62,6 @@ import type {
   AdminGetUserItemData,
   AdminUpdateUser,
 } from "~/api/admin/user/user.dto";
-
 import { Role } from "~/api/types/enums/role.enum";
 
 // --------------------
@@ -67,6 +72,7 @@ import { adminService } from "~/api/admin";
 /* ----------------------------- types ----------------------------- */
 type CreateMode = "USER" | "STAFF";
 type EditMode = "USER" | "STAFF" | "STUDENT";
+
 /* --------------------------- reactive ---------------------------- */
 const isStaffMode = ref<boolean | undefined>(undefined);
 const selectedRoles = ref<Role[]>([Role.STUDENT]);
@@ -92,20 +98,23 @@ const handleOpenCreateForm = async () => {
   createFormKey.value++;
   await openCreateForm();
 };
+
 const handleSaveCreateForm = async (payload: Partial<any>) => {
-  const createdUser = await saveCreateForm(payload);
-  console.log("Create form result:", createdUser);
-  await fetchPage(currentPage.value); // reload current page only
+  await saveCreateForm(payload);
+  await fetchPage(currentPage.value);
 };
+
 const handleCancelCreateForm = () => {
   cancelCreateForm();
 };
+
 watch(
   () => selectedFormCreate.value,
   () => {
     resetFormData();
   }
 );
+
 /* ---------------------------- edit form -------------------------- */
 const {
   formDialogVisible: editFormVisible,
@@ -116,17 +125,22 @@ const {
   cancelForm: cancelEditForm,
   loading: editFormLoading,
 } = useDynamicEditFormReactive(selectedFormEdit);
+
 const detailLoading = ref<Record<string | number, boolean>>({});
+
 const handleOpenEditForm = async (row: AdminGetUserItemData) => {
   try {
     detailLoading.value[row.id] = true;
+
     selectedFormEdit.value =
       row.role === "student"
         ? "STUDENT"
         : row.role === "academic" || row.role === "teacher"
         ? "STAFF"
         : "USER";
+
     editFormDataKey.value = row.id?.toString() ?? "new";
+
     await nextTick();
     await openEditForm(row.id);
   } catch (error) {
@@ -135,12 +149,15 @@ const handleOpenEditForm = async (row: AdminGetUserItemData) => {
     detailLoading.value[row.id] = false;
   }
 };
+
 const handleSaveEditForm = (payload: Partial<any>) => {
   saveEditForm(payload);
 };
+
 const handleCancelEditForm = () => {
   cancelEditForm();
 };
+
 /* ---------------------------- inline edit ------------------------ */
 const {
   data,
@@ -157,7 +174,9 @@ const {
   [],
   useInlineEditService("USER")
 );
+
 const adminApiService = adminService();
+
 /* ---------------------------- pagination ------------------------- */
 const fetchUsers = async (
   rolesArray: Role[] | Ref<Role[]>,
@@ -176,6 +195,7 @@ const fetchUsers = async (
     total,
   };
 };
+
 const {
   loading: fetchLoading,
   fetchPage,
@@ -193,6 +213,7 @@ const currentRoleOptions = computed(() => {
 });
 
 watch(selectedRoles, () => fetchPage(1), { deep: true });
+
 watch(isStaffMode, (mode) => {
   if (mode === true) {
     selectedFormCreate.value = "STAFF";
@@ -215,10 +236,13 @@ const schemaCreate = computed(
 const schemaEdit = computed(
   () => adminFormRegistryEdit[selectedFormEdit.value].schema ?? []
 );
+
 const createWidthRef = useDialogDynamicWidth(schemaCreate.value);
 const dynamicWidthCreate = computed(() => createWidthRef.value);
+
 const editWidthRef = useDialogDynamicWidth(schemaEdit.value);
 const dynamicWidthEdit = computed(() => editWidthRef.value);
+
 /* ----------------------------- create form width ------------------------------ */
 
 const createDialogWidth = computed(() => {
@@ -234,12 +258,14 @@ const editDialogWidth = computed(() => {
   if (selectedFormEdit.value === "STUDENT") return "70%";
   return dynamicWidthEdit.value;
 });
+
 const handleRevertField = (
   row: AdminGetUserItemData,
   field: keyof AdminGetUserItemData
 ) => {
   revertField(row, field);
 };
+
 onMounted(() => {
   selectedRoles.value = [
     Role.STUDENT,
@@ -258,6 +284,7 @@ function handleSaveWrapper(
     console.error(err);
   });
 }
+
 function handleAutoSaveWrapper(
   row: AdminGetUserItemData,
   field: keyof AdminGetUserItemData
@@ -267,139 +294,208 @@ function handleAutoSaveWrapper(
     console.error(err);
   });
 }
+
+/* --------------------------- header stats -------------------------- */
+const totalUsers = computed(() => totalRows.value ?? 0);
+
+const { headerState: userHeaderStats } = useHeaderState({
+  items: [
+    {
+      key: "users",
+      getValue: () => totalUsers.value,
+      singular: "user",
+      plural: "users",
+      variant: "primary",
+      hideWhenZero: false,
+    },
+    {
+      key: "roles",
+      getValue: () => selectedRoles.value.length,
+      singular: "role",
+      plural: "roles",
+      suffix: "selected",
+      variant: "secondary",
+      dotClass: "bg-emerald-500",
+      hideWhenZero: true,
+    },
+  ],
+});
 </script>
 
 <template>
-  <el-row class="m-2" justify="space-between">
-    <el-col :span="12">
-      <el-radio-group v-model="isStaffMode">
-        <el-radio :value="undefined">Default</el-radio>
-        <el-radio :value="false">User</el-radio>
-        <el-radio :value="true">Staff</el-radio>
-      </el-radio-group>
-    </el-col>
-
-    <el-col :span="12">
-      <el-select
-        v-model="selectedRoles"
-        multiple
-        filterable
-        placeholder="Select roles"
-        style="width: 300px"
-      >
-        <el-option
-          v-for="opt in currentRoleOptions"
-          :key="opt.value"
-          :label="opt.label"
-          :value="opt.value"
-        />
-      </el-select>
-    </el-col>
-  </el-row>
-
-  <el-row justify="space-between" class="m-4">
-    <el-col :span="24">
-      <BaseButton type="default" :loading="fetchLoading" @click="fetchPage(1)">
-        Refresh
-      </BaseButton>
-
-      <BaseButton
-        v-if="isStaffMode !== undefined"
-        type="primary"
-        @click="handleOpenCreateForm"
-      >
-        Add {{ isStaffMode ? "Staff" : "User" }}
-      </BaseButton>
-    </el-col>
-  </el-row>
-
-  <ErrorBoundary>
-    <template #default>
-      <SmartTable
-        :data="data"
-        :columns="userColumns"
-        :loading="fetchLoading"
-        @save="handleSaveWrapper"
-        @cancel="cancel"
-        @auto-save="handleAutoSaveWrapper"
-      >
-        <template #operation="{ row }">
-          <ActionButtons
-            :rowId="row.id"
-            :role="row.role"
-            :detailContent="`Edit ${
-              row.role.charAt(0).toUpperCase() + row.role.slice(1)
-            } details`"
-            :deleteContent="`Delete ${
-              row.role.charAt(0).toUpperCase() + row.role.slice(1)
-            }`"
-            :detailLoading="
-              inlineEditLoading[row.id] ?? detailLoading[row.id] ?? false
-            "
-            :deleteLoading="
-              inlineEditLoading[row.id] ?? deleteLoading[row.id] ?? false
-            "
-            @detail="handleOpenEditForm(row)"
-            @delete="removeUser(row)"
-          />
-        </template>
-
-        <template #controlsSlot="{ row, field }">
-          <el-tooltip
-            :content="`Previous: ${getPreviousValue(row, field)}`"
-            placement="top"
+  <div class="p-4 space-y-6">
+    <!-- OVERVIEW HEADER -->
+    <OverviewHeader
+      title="Users"
+      description="Manage all users, roles and staff accounts."
+      :loading="fetchLoading"
+      :showRefresh="true"
+      :stats="userHeaderStats"
+      @refresh="() => fetchPage(currentPage)"
+    >
+      <!-- Filters: mode + roles -->
+      <template #filters>
+        <div class="flex flex-col gap-2 w-full">
+          <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
           >
-            <el-icon
-              class="cursor-pointer"
-              @click="handleRevertField(row, field)"
-              ><Refresh
-            /></el-icon>
-          </el-tooltip>
+            <!-- Left: Staff/User mode -->
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-500">Mode:</span>
+              <el-radio-group v-model="isStaffMode" size="small">
+                <el-radio :value="undefined">Default</el-radio>
+                <el-radio :value="false">User</el-radio>
+                <el-radio :value="true">Staff</el-radio>
+              </el-radio-group>
+            </div>
+
+            <!-- Right: Role multi-select -->
+            <div class="flex items-center gap-2 sm:justify-end">
+              <span class="text-xs text-gray-500">Roles:</span>
+              <el-select
+                v-model="selectedRoles"
+                multiple
+                filterable
+                clearable
+                placeholder="Select roles"
+                style="min-width: 260px; max-width: 320px"
+                class="header-roles-select"
+              >
+                <el-option
+                  v-for="opt in currentRoleOptions"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </el-select>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Actions: Refresh + Add -->
+      <template #actions>
+        <BaseButton
+          plain
+          :loading="fetchLoading"
+          class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
+          @click="fetchPage(currentPage)"
+        >
+          Refresh
+        </BaseButton>
+
+        <BaseButton
+          v-if="isStaffMode !== undefined"
+          type="primary"
+          @click="handleOpenCreateForm"
+        >
+          Add {{ isStaffMode ? "Staff" : "User" }}
+        </BaseButton>
+      </template>
+    </OverviewHeader>
+
+    <!-- TABLE + INLINE EDIT -->
+    <ErrorBoundary>
+      <el-card>
+        <template #default>
+          <SmartTable
+            :data="data"
+            :columns="userColumns"
+            :loading="fetchLoading"
+            @save="handleSaveWrapper"
+            @cancel="cancel"
+            @auto-save="handleAutoSaveWrapper"
+          >
+            <template #operation="{ row }">
+              <ActionButtons
+                :rowId="row.id"
+                :role="row.role"
+                :detailContent="`Edit ${
+                  row.role.charAt(0).toUpperCase() + row.role.slice(1)
+                } details`"
+                :deleteContent="`Delete ${
+                  row.role.charAt(0).toUpperCase() + row.role.slice(1)
+                }`"
+                :detailLoading="
+                  inlineEditLoading[row.id] ?? detailLoading[row.id] ?? false
+                "
+                :deleteLoading="
+                  inlineEditLoading[row.id] ?? deleteLoading[row.id] ?? false
+                "
+                @detail="handleOpenEditForm(row)"
+                @delete="removeUser(row)"
+              />
+            </template>
+
+            <template #controlsSlot="{ row, field }">
+              <el-tooltip
+                :content="`Previous: ${getPreviousValue(row, field)}`"
+                placement="top"
+              >
+                <el-icon
+                  class="cursor-pointer"
+                  @click="handleRevertField(row, field)"
+                >
+                  <Refresh />
+                </el-icon>
+              </el-tooltip>
+            </template>
+          </SmartTable>
         </template>
-      </SmartTable>
-    </template>
-  </ErrorBoundary>
+      </el-card>
+    </ErrorBoundary>
 
-  <ErrorBoundary>
-    <Pagination
-      class-name="mt-6"
-      :current-page="currentPage"
-      :page-size="pageSize"
-      :total="totalRows"
-      @page-change="goPage"
-    />
-  </ErrorBoundary>
+    <!-- PAGINATION -->
+    <ErrorBoundary>
+      <el-row v-if="totalRows > 0" justify="end" class="mt-6">
+        <el-pagination
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :total="totalRows"
+          :page-sizes="[10, 15, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @current-change="goPage"
+          @size-change="
+            (size: number) => {
+              pageSize = size;
+              fetchPage(1);
+            }
+          "
+        />
+      </el-row>
+    </ErrorBoundary>
 
-  <!-- CREATE DIALOG -->
-  <ErrorBoundary>
+    <!-- CREATE DIALOG -->
+    <ErrorBoundary>
+      <SmartFormDialog
+        :key="`${selectedFormCreate}-${createFormKey}`"
+        v-model:visible="createFormVisible"
+        v-model="createFormData"
+        :fields="createFormSchema"
+        :title="`Add ${isStaffMode ? 'Staff' : 'User'}`"
+        :loading="createFormLoading"
+        @save="handleSaveCreateForm"
+        @cancel="handleCancelCreateForm"
+        :useElForm="true"
+        :width="createDialogWidth"
+      />
+    </ErrorBoundary>
+
+    <!-- EDIT DIALOG -->
     <SmartFormDialog
-      :key="`${selectedFormCreate}-${createFormKey}`"
-      v-model:visible="createFormVisible"
-      v-model="createFormData"
-      :fields="createFormSchema"
-      :title="`Add ${isStaffMode ? 'Staff' : 'User'}`"
-      :loading="createFormLoading"
-      @save="handleSaveCreateForm"
-      @cancel="handleCancelCreateForm"
+      :key="`${selectedFormEdit}-${editFormDataKey}`"
+      v-model:visible="editFormVisible"
+      v-model="editFormData"
+      :fields="editFormSchema"
+      title="Edit"
+      :loading="editFormLoading"
+      @save="handleSaveEditForm"
+      @cancel="handleCancelEditForm"
       :useElForm="true"
-      :width="createDialogWidth"
+      :width="editDialogWidth"
     />
-  </ErrorBoundary>
-
-  <!-- EDIT DIALOG -->
-
-  <SmartFormDialog
-    :key="`${selectedFormEdit}-${editFormDataKey}`"
-    v-model:visible="editFormVisible"
-    v-model="editFormData"
-    :fields="editFormSchema"
-    :title="'Edit'"
-    :loading="editFormLoading"
-    @save="handleSaveEditForm"
-    @cancel="handleCancelEditForm"
-    :useElForm="true"
-    :width="editDialogWidth"
-  />
+  </div>
 </template>
 
 <style scoped>

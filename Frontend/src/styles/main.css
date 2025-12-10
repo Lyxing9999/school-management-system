@@ -8,7 +8,7 @@
   /* Colors */
   --color-primary: #6B3FA0;
   --color-primary-light: #7E57C2;
---color-primary-light-1: #8F63D1;
+  --color-primary-light-1: #8F63D1;
   --color-primary-light-2: #A17FE0;
   --color-primary-light-3: #B39CF0;
   --color-primary-light-4: #C5B3F7;
@@ -17,7 +17,7 @@
   --color-primary-light-7: #F0E6FF;
   --color-primary-light-8: #F5EFFF;
   --color-primary-light-9: #FAF5FF;
-  --color-bg: #f9f9fb;
+  --color-bg: #F3F4F8;
   --color-card: #ffffff;
   --color-dark: #333333;
   --color-light: #ffffff;

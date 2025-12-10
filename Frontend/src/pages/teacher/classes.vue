@@ -3,7 +3,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-
+import OverviewHeader from "~/components/OverView/OverViewHeader.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import { teacherService } from "~/api/teacher";
 import type { ClassSectionDTO } from "~/api/types/school.dto";
@@ -13,7 +13,6 @@ definePageMeta({
 });
 
 const teacher = teacherService();
-const router = useRouter();
 
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
@@ -101,58 +100,35 @@ const loadClasses = async () => {
 };
 
 onMounted(loadClasses);
-
-// simple row click → class detail (you can change route if needed)
-const handleRowClick = (row: TeacherClassEnriched) => {
-  router.push(`/teacher/students/${row.id}`);
-};
 </script>
 
 <template>
   <div class="p-4 space-y-4">
     <!-- Header (consistent with other teacher pages) -->
-    <div
-      class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-[var(--color-primary-light-9)] to-[var(--color-primary-light-9)] border border-[color:var(--color-primary-light-9)] shadow-sm rounded-2xl p-5"
-    >
-      <div>
-        <h1
-          class="text-2xl font-bold text-[color:var(--color-dark)] flex items-center gap-2"
-        >
-          My Classes
-        </h1>
-        <p class="mt-1.5 text-sm text-[color:var(--color-primary-light-1)]">
-          Overview of every class you are responsible for, with capacity and
-          subject coverage.
-        </p>
-
-        <div class="flex flex-wrap items-center gap-2 mt-2 text-xs">
-          <span
-            class="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-light-8)] text-[color:var(--color-primary)] px-3 py-0.5 border border-[var(--color-primary-light-5)]"
-          >
-            <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
-            {{ totalClasses }}
-            {{ totalClasses === 1 ? "class" : "classes" }}
-          </span>
-
-          <span
-            class="inline-flex items-center gap-1 rounded-full bg-white text-gray-700 px-3 py-0.5 border border-gray-200"
-          >
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            {{ totalStudents }}
-            {{ totalStudents === 1 ? "student" : "students" }} total
-          </span>
-        </div>
-      </div>
-
-      <BaseButton
-        plain
-        :loading="loading"
-        class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
-        @click="loadClasses"
-      >
-        Refresh
-      </BaseButton>
-    </div>
+    <OverviewHeader
+      title="My Classes"
+      description="Overview of every class you are responsible for, with capacity and subject coverage."
+      :stats="[
+        {
+          key: 'classes',
+          value: totalClasses,
+          singular: 'class',
+          plural: 'classes',
+          variant: 'primary',
+        },
+        {
+          key: 'students',
+          value: totalStudents,
+          singular: 'student',
+          plural: 'students',
+          suffix: 'total',
+          variant: 'secondary',
+          dotClass: 'bg-emerald-500',
+        },
+      ]"
+      :loading="loading"
+      @refresh="loadClasses"
+    />
 
     <!-- Error -->
     <transition name="el-fade-in">
@@ -166,36 +142,6 @@ const handleRowClick = (row: TeacherClassEnriched) => {
         @close="errorMessage = null"
       />
     </transition>
-
-    <!-- Summary cards -->
-    <el-row :gutter="16" class="mb-2">
-      <el-col :xs="24" :sm="8">
-        <el-card shadow="hover" class="rounded-2xl stat-card">
-          <div class="text-xs text-gray-500">Total classes</div>
-          <div class="text-2xl font-semibold mt-1">
-            {{ totalClasses }}
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :xs="24" :sm="8">
-        <el-card shadow="hover" class="rounded-2xl stat-card">
-          <div class="text-xs text-gray-500">Total students (all classes)</div>
-          <div class="text-2xl font-semibold mt-1">
-            {{ totalStudents }}
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :xs="24" :sm="8">
-        <el-card shadow="hover" class="rounded-2xl stat-card">
-          <div class="text-xs text-gray-500">Total subjects (all classes)</div>
-          <div class="text-2xl font-semibold mt-1">
-            {{ totalSubjects }}
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
 
     <!-- Main table -->
     <el-card
@@ -228,7 +174,6 @@ const handleRowClick = (row: TeacherClassEnriched) => {
           fontWeight: '600',
           fontSize: '13px',
         }"
-        @row-click="handleRowClick"
       >
         <!-- Class info + subject labels -->
         <el-table-column label="Class" min-width="320">

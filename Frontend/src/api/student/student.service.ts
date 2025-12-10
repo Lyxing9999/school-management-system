@@ -1,5 +1,5 @@
-// ~/api/student/service.ts
-import { useApiUtils } from "~/utils/useApiUtils";
+// ~/api/student/student.service.ts
+import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
 import type {
   StudentClassListDTO,
   StudentAttendanceListDTO,
@@ -12,38 +12,74 @@ import type {
 import { StudentApi } from "./student.api";
 
 export class StudentService {
-  private safeApiCall = useApiUtils().safeApiCall;
+  private callApi = useApiUtils().callApi;
 
   constructor(private studentApi: StudentApi) {}
 
   // ============
-  // QUERY
+  // QUERY METHODS
   // ============
 
-  async getMyClasses() {
-    const { data } = await this.safeApiCall<StudentClassListDTO>(() =>
-      this.studentApi.getMyClasses()
+  /**
+   * GET /student/me/classes
+   */
+  async getMyClasses(options?: ApiCallOptions) {
+    const data = await this.callApi<StudentClassListDTO>(
+      () => this.studentApi.getMyClasses(),
+      {
+        // sensible default: show error toast if it fails
+        showError: true,
+        ...(options ?? {}),
+      }
     );
     return data!;
   }
 
-  async getMyAttendance(params?: StudentAttendanceFilterDTO) {
-    const { data } = await this.safeApiCall<StudentAttendanceListDTO>(() =>
-      this.studentApi.getMyAttendance(params)
+  /**
+   * GET /student/me/attendance
+   * Optional filters: class_id, date_from, date_to, etc. (depending on your DTO)
+   */
+  async getMyAttendance(
+    params?: StudentAttendanceFilterDTO,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<StudentAttendanceListDTO>(
+      () => this.studentApi.getMyAttendance(params),
+      {
+        showError: true,
+        ...(options ?? {}),
+      }
     );
     return data!;
   }
 
-  async getMyGrades(params?: StudentGradesFilterDTO) {
-    const { data } = await this.safeApiCall<StudentGradeListDTO>(() =>
-      this.studentApi.getMyGrades(params)
+  /**
+   * GET /student/me/grades
+   */
+  async getMyGrades(params?: StudentGradesFilterDTO, options?: ApiCallOptions) {
+    const data = await this.callApi<StudentGradeListDTO>(
+      () => this.studentApi.getMyGrades(params),
+      {
+        showError: true,
+        ...(options ?? {}),
+      }
     );
     return data!;
   }
 
-  async getMySchedule(params?: StudentScheduleFilterDTO) {
-    const { data } = await this.safeApiCall<StudentScheduleListDTO>(() =>
-      this.studentApi.getMySchedule(params)
+  /**
+   * GET /student/me/schedule
+   */
+  async getMySchedule(
+    params?: StudentScheduleFilterDTO,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<StudentScheduleListDTO>(
+      () => this.studentApi.getMySchedule(params),
+      {
+        showError: true,
+        ...(options ?? {}),
+      }
     );
     return data!;
   }

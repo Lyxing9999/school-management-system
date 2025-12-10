@@ -21,7 +21,7 @@ const emit = defineEmits<{
 const fetchStudents = async () => {
   if (!props.classId) return [];
   const res = await teacherApi.teacher.listStudentNamesInClass(props.classId);
-  console.log(res);
+
   // expected backend DTO: [{ id, name }, ...]
   return res?.items ?? [];
 };

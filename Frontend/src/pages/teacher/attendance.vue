@@ -3,11 +3,11 @@
 definePageMeta({
   layout: "teacher",
 });
+
 import { ref, computed, watch } from "vue";
 import {
   ElMessage,
   ElMessageBox,
-  ElTag,
   ElSelect,
   ElOption,
   ElInput,
@@ -26,8 +26,10 @@ import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
-import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
+import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
+import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
+import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
 /* ---------------- SmartTable config ---------------- */
 import { attendanceColumns } from "~/modules/tables/columns/teacher/attendanceColumns";
 
@@ -57,14 +59,54 @@ const todayISO = new Date().toISOString().slice(0, 10);
 
 /* ---------------- state ---------------- */
 
-const loading = ref(false);
-const errorMessage = ref<string | null>(null);
-
 const selectedClassId = ref<string | null>(null);
 
-const attendanceList = ref<AttendanceEnriched[]>([]);
+/* ---------------- pagination + data (usePaginatedFetch) ---------------- */
+const {
+  data: attendanceList,
+  loading,
+  error,
+  currentPage,
+  pageSize,
+  totalRows,
+  fetchPage,
+  goPage,
+} = usePaginatedFetch<AttendanceEnriched, string | null>(
+  async (classId, page, pageSize, signal) => {
+    if (!classId) {
+      return { items: [], total: 0 };
+    }
 
-/* ---------------- SmartTable columns ---------------- */
+    const res = await teacherApi.teacher.listAttendanceForClass(classId, {
+      page,
+      page_size: pageSize,
+      signal,
+      showError: false,
+    });
+
+    const allItems = (res?.items ?? []) as AttendanceEnriched[];
+    const total = res?.total ?? allItems.length;
+
+    // FRONTEND SLICE (fake pagination until backend is ready)
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const pageItems = allItems.slice(start, end);
+
+    return {
+      items: pageItems,
+      total,
+    };
+  },
+  1,
+  10,
+  selectedClassId
+);
+/* error message mapped from hook error */
+const errorMessage = computed<string | null>(() =>
+  error.value ? error.value.message ?? "Failed to load attendance." : null
+);
+
+/* ---------------- SmartTable forms ---------------- */
 
 // create (mark) attendance
 const attendanceForm = ref<AttendanceFormModel>({
@@ -122,8 +164,6 @@ const filteredAttendance = computed(() => {
 });
 
 const canRefresh = computed(() => !!selectedClassId.value && !loading.value);
-
-/* ---------------- helpers ---------------- */
 
 /* ---------------- SmartForm fields (dialogs) ---------------- */
 
@@ -231,50 +271,29 @@ const editAttendanceFields: Field<EditAttendanceFormModel>[] = [
 /* ---------------- api: load attendance ---------------- */
 
 const loadAttendance = async () => {
-  if (!selectedClassId.value) {
-    attendanceList.value = [];
-    return;
-  }
-
-  loading.value = true;
-  errorMessage.value = null;
-
-  try {
-    const res = await teacherApi.teacher.listAttendanceForClass(
-      selectedClassId.value,
-      { showError: false }
-    );
-
-    if (!res) {
-      errorMessage.value = "Failed to load attendance.";
-      attendanceList.value = [];
-      return;
-    }
-
-    attendanceList.value = (res.items ?? []) as AttendanceEnriched[];
-  } catch (err: any) {
-    console.error(err);
-    errorMessage.value = err?.message ?? "Failed to load attendance.";
-  } finally {
-    loading.value = false;
-  }
+  await fetchPage(currentPage.value || 1);
 };
 
 /* ---------------- watch: when class changes ---------------- */
 
 watch(
   () => selectedClassId.value,
-  async () => {
+  async (val) => {
     attendanceForm.value.student_id = "";
-    attendanceList.value = [];
 
-    if (!selectedClassId.value) return;
-    await loadAttendance();
+    if (!val) {
+      // clear when no class selected
+      attendanceList.value = [];
+      totalRows.value = 0;
+      return;
+    }
+
+    // when class changes, always go back to page 1
+    await fetchPage(1);
   }
 );
 
 /* ---------------- create: mark attendance ---------------- */
-
 const submitAttendance = async () => {
   const form = attendanceForm.value;
 
@@ -303,7 +322,11 @@ const submitAttendance = async () => {
       return;
     }
 
+    // reload list
     await loadAttendance();
+
+    attendanceForm.value.student_id = "";
+
     ElMessage.success("Attendance recorded.");
   } catch (err: any) {
     console.error(err);
@@ -370,9 +393,7 @@ const submitEditAttendance = async () => {
       ElMessage.error("Failed to update status.");
       return;
     }
-
     await loadAttendance();
-    ElMessage.success("Attendance updated.");
   } catch (err: any) {
     console.error(err);
     ElMessage.error(err?.message ?? "Failed to update status.");
@@ -414,65 +435,75 @@ const handleDeleteAttendance = async (row: AttendanceEnriched) => {
     // await teacherApi.teacher.deleteAttendance(row.id, { showError: false });
 
     attendanceList.value = attendanceList.value.filter((a) => a.id !== row.id);
-
-    ElMessage.success("Attendance record removed.");
   } catch {
     // cancelled
   }
 };
+
+/* ---------------- pagination handlers ---------------- */
+
+const handlePageChange = (page: number) => {
+  goPage(page);
+};
+
+const handlePageSizeChange = (size: number) => {
+  pageSize.value = size;
+  fetchPage(1);
+};
+const { headerState } = useHeaderState({
+  items: [
+    {
+      key: "total",
+      getValue: () => statusSummary.value.total,
+      singular: "record",
+      plural: "records",
+      variant: "primary",
+      hideWhenZero: true,
+    },
+    {
+      key: "present_rate",
+      getValue: () => presentRate.value ?? 0,
+      label: (value) =>
+        presentRate.value === null ? undefined : `Present rate: ${value}%`,
+      variant: "secondary",
+      dotClass: "bg-emerald-500",
+      hideWhenZero: true,
+    },
+  ],
+});
 </script>
 
 <template>
   <div class="p-4 space-y-6">
-    <!-- HEADER: gradient, consistent with other teacher pages -->
-    <div
-      class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-[var(--color-primary-light-9)] to-[var(--color-primary-light-7)] rounded-2xl border border-[color:var(--color-primary-light-5)] shadow-sm p-5"
+    <!-- HEADER -->
+    <OverviewHeader
+      title="Attendance"
+      description="Mark and review attendance records for your classes."
+      :loading="loading"
+      :showRefresh="false"
+      :stats="headerState"
     >
-      <div class="space-y-2">
-        <h1
-          class="text-2xl font-bold flex items-center gap-2 text-[color:var(--color-dark)]"
-        >
-          Attendance
-        </h1>
-        <p class="text-sm text-[color:var(--color-primary-light-1)]">
-          Mark and review attendance records for your classes.
-        </p>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-500">Class:</span>
+      <!-- Under title: class select (filters slot) -->
+      <template #filters>
+        <div class="flex flex-wrap items-center gap-3 mb-3">
+          <div
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 border border-[var(--color-primary-light-7)] shadow-sm"
+          >
+            <span class="text-xs font-medium text-[color:var(--color-primary)]">
+              Class:
+            </span>
             <TeacherClassSelect
               v-model="selectedClassId"
               placeholder="Select class"
               style="min-width: 220px"
+              class="header-class-select"
             />
           </div>
-
-          <div class="flex flex-wrap items-center gap-2 text-xs">
-            <span
-              v-if="statusSummary.total"
-              class="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-light-8)] text-[color:var(--color-primary)] px-3 py-0.5 border border-[var(--color-primary-light-5)]"
-            >
-              <span
-                class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]"
-              />
-              {{ statusSummary.total }}
-              {{ statusSummary.total === 1 ? "record" : "records" }}
-            </span>
-
-            <span
-              v-if="presentRate !== null"
-              class="inline-flex items-center gap-1 rounded-full bg-white text-gray-700 px-3 py-0.5 border border-gray-200"
-            >
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Present rate:
-              <span class="font-medium">{{ presentRate }}%</span>
-            </span>
-          </div>
         </div>
-      </div>
+      </template>
 
-      <div class="flex items-center gap-2 justify-end">
+      <!-- Right side: custom actions -->
+      <template #actions>
         <BaseButton
           plain
           :loading="loading"
@@ -491,8 +522,8 @@ const handleDeleteAttendance = async (row: AttendanceEnriched) => {
         >
           Mark attendance
         </BaseButton>
-      </div>
-    </div>
+      </template>
+    </OverviewHeader>
 
     <!-- ERROR -->
     <transition name="el-fade-in">
@@ -508,25 +539,27 @@ const handleDeleteAttendance = async (row: AttendanceEnriched) => {
     </transition>
 
     <!-- SUMMARY CARDS -->
-    <el-row :gutter="16" class="mt-2">
+    <el-row :gutter="16" class="mt-2 items-stretch">
       <el-col :xs="24" :sm="8">
-        <el-card shadow="hover" class="stat-card">
+        <el-card shadow="hover" class="stat-card h-full">
           <div class="card-title">Total records</div>
           <div class="text-2xl font-semibold mt-1">
             {{ statusSummary.total }}
           </div>
         </el-card>
       </el-col>
+
       <el-col :xs="24" :sm="8">
-        <el-card shadow="hover" class="stat-card">
+        <el-card shadow="hover" class="stat-card h-full">
           <div class="card-title">Present</div>
           <div class="text-2xl font-semibold mt-1 text-emerald-600">
             {{ statusSummary.present }}
           </div>
         </el-card>
       </el-col>
+
       <el-col :xs="24" :sm="8">
-        <el-card shadow="hover" class="stat-card">
+        <el-card shadow="hover" class="stat-card h-full">
           <div class="card-title">Absent / Excused</div>
           <div class="text-sm mt-1">
             <span class="text-red-500 font-semibold">
@@ -590,28 +623,21 @@ const handleDeleteAttendance = async (row: AttendanceEnriched) => {
             />
           </template>
         </SmartTable>
-      </ErrorBoundary>
 
-      <div v-if="!loading && !filteredAttendance.length" class="py-10">
-        <el-empty
-          :description="
-            selectedClassId
-              ? 'No attendance records for this class yet'
-              : 'Select a class to see attendance'
-          "
-          :image-size="120"
-        >
-          <template #extra>
-            <p class="text-sm text-gray-500 max-w-md mx-auto">
-              {{
-                selectedClassId
-                  ? "Use the Mark attendance button to create the first record."
-                  : "Choose a class from the top to load its attendance records."
-              }}
-            </p>
-          </template>
-        </el-empty>
-      </div>
+        <!-- Pagination -->
+        <div v-if="totalRows > 0" class="mt-4 flex justify-end">
+          <el-pagination
+            background
+            layout="prev, pager, next, jumper, sizes, total"
+            :current-page="currentPage"
+            :page-size="pageSize"
+            :page-sizes="[10, 20, 50]"
+            :total="totalRows"
+            @current-change="handlePageChange"
+            @size-change="handlePageSizeChange"
+          />
+        </div>
+      </ErrorBoundary>
     </el-card>
 
     <!-- CREATE / MARK ATTENDANCE DIALOG -->
@@ -639,28 +665,3 @@ const handleDeleteAttendance = async (row: AttendanceEnriched) => {
     />
   </div>
 </template>
-
-<style scoped>
-.stat-card {
-  border-radius: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-}
-
-.card-title {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #9ca3af;
-}
-.el-card {
-  transition: box-shadow 0.2s ease, transform 0.1s ease;
-}
-.el-card:hover {
-  box-shadow: 0 4px 14px rgba(126, 87, 194, 0.12);
-}
-
-/* Table rounding */
-:deep(.el-table) {
-  border-radius: 0.75rem;
-}
-</style>

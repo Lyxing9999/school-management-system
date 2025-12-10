@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 
 definePageMeta({
   layout: "admin",
@@ -8,13 +8,14 @@ definePageMeta({
 // --------------------
 // Base Components
 // --------------------
-import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
+import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
+import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
 // Element Plus
-import { ElMessage, ElRadioGroup, ElRadioButton, ElSwitch } from "element-plus";
+import { ElRadioGroup, ElRadioButton, ElSwitch } from "element-plus";
 
 // --------------------
 // Services & Types
@@ -25,66 +26,60 @@ import type {
   AdminSubjectListDTO,
   AdminCreateSubject,
 } from "~/api/admin/subject/subject.dto";
-import type { ColumnConfig } from "~/components/types/tableEdit";
-import type { Field } from "~/components/types/form";
-
 // For grade labels in table
 import { gradeOptions } from "~/modules/forms/admin/subject/subject.schema";
 
 // Dynamic form system
 import { useDynamicCreateFormReactive } from "~/form-system/useDynamicForm.ts/useAdminForms";
+import { subjectColumns } from "~/modules/tables/columns/admin/subjectColumns";
+
+// Pagination composable
+import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
+import { useHeaderState } from "~/composables/useHeaderState";
 
 const adminApi = adminService();
 
-/* ---------------------- table state ---------------------- */
+/* ---------------------- filter state ---------------------- */
 
-const subjects = ref<AdminSubjectDataDTO[]>([]);
-const tableLoading = ref(false);
+type SubjectFilter = "all" | "active" | "inactive";
+const activeFilter = ref<SubjectFilter>("all");
 
-const activeFilter = ref<"all" | "active" | "inactive">("all");
+/* ---------------------- paginated fetch (reusing composable) ---------------------- */
 
-const filteredSubjects = computed(() => {
-  if (activeFilter.value === "all") return subjects.value;
-  if (activeFilter.value === "active") {
-    return subjects.value.filter((s) => s.is_active);
-  }
-  return subjects.value.filter((s) => !s.is_active);
-});
+const {
+  data: subjects, // current page items
+  loading: tableLoading, // loading state
+  error: tableError, // unused for now, but available
+  currentPage,
+  pageSize,
+  totalRows,
+  fetchPage,
+  goPage,
+} = usePaginatedFetch<AdminSubjectDataDTO, SubjectFilter>(
+  // fetchFn: backend returns all; we filter + paginate on client
+  async (filter, page, pageSize, _signal) => {
+    const res: AdminSubjectListDTO | undefined =
+      await adminApi.subject.getSubjects();
 
-/* ---------------------- table columns for SmartTable ---------------------- */
+    const allItems = res?.items ?? [];
 
-const subjectColumns = computed<ColumnConfig<AdminSubjectDataDTO>[]>(() => [
-  {
-    field: "name",
-    label: "Name",
-    minWidth: 140,
+    const filtered =
+      filter === "all"
+        ? allItems
+        : filter === "active"
+        ? allItems.filter((s) => s.is_active)
+        : allItems.filter((s) => !s.is_active);
+
+    const total = filtered.length;
+    const start = (page - 1) * pageSize;
+    const items = filtered.slice(start, start + pageSize);
+
+    return { items, total };
   },
-  {
-    field: "code",
-    label: "Code",
-    minWidth: 120,
-  },
-  {
-    field: "description",
-    label: "Description",
-    minWidth: 180,
-    useSlots: true,
-    slotName: "description",
-  },
-  {
-    field: "allowed_grade_levels",
-    label: "Allowed Grades",
-    minWidth: 160,
-    useSlots: true,
-    slotName: "allowedGrades",
-  },
-  {
-    field: "is_active",
-    label: "Status",
-    align: "center",
-    operation: true, // use #operation slot
-  },
-]);
+  1, // initial page
+  10, // initial page size
+  activeFilter // reactive filter ref
+);
 
 /* ---------------------- grade options display helper ---------------------- */
 
@@ -117,33 +112,23 @@ const createDialogWidth = computed(() => "40%");
 const createDialogKey = ref(0);
 
 async function openCreateDialog() {
-  // This will init formData using getSubjectFormData() from registry
   createDialogKey.value++;
   await openCreateForm();
 }
 
 async function handleSaveCreateForm(payload: Partial<AdminCreateSubject>) {
   await saveCreateForm(payload);
-  await fetchSubjects();
+  await fetchPage(1); // reload from first page after create
 }
 
 function handleCancelCreateForm() {
   cancelCreateForm();
 }
 
-/* ---------------------- actions: fetch + toggle ---------------------- */
+/* ---------------------- actions: refresh + toggle ---------------------- */
 
 async function fetchSubjects() {
-  tableLoading.value = true;
-  try {
-    const res: AdminSubjectListDTO | undefined =
-      await adminApi.subject.getSubjects();
-    subjects.value = res?.items ?? [];
-  } catch (err) {
-    console.error("Failed to fetch subjects", err);
-  } finally {
-    tableLoading.value = false;
-  }
+  await fetchPage(currentPage.value || 1);
 }
 
 const statusLoading = ref<Record<string, boolean>>({});
@@ -155,12 +140,13 @@ async function toggleSubjectActive(row: AdminSubjectDataDTO) {
   statusLoading.value[id] = true;
 
   try {
+    // v-model already flipped the value; call matching API
     if (row.is_active) {
       await adminApi.subject.activateSubject(id);
     } else {
       await adminApi.subject.deactivateSubject(id);
     }
-    await fetchSubjects();
+    await fetchPage(currentPage.value || 1);
   } catch (err) {
     console.error("Failed to toggle subject active state", err);
     row.is_active = previous;
@@ -169,88 +155,164 @@ async function toggleSubjectActive(row: AdminSubjectDataDTO) {
   }
 }
 
+/* ---------------------- header stats ---------------------- */
+
+const totalSubjects = computed(() => totalRows.value ?? 0);
+
+const { headerState: subjectHeaderStats } = useHeaderState({
+  items: [
+    {
+      key: "subjects",
+      getValue: () => totalSubjects.value,
+      singular: "subject",
+      plural: "subjects",
+      variant: "primary",
+      hideWhenZero: false,
+    },
+    {
+      key: "filter",
+      getValue: () => (activeFilter.value === "all" ? 0 : 1),
+      label: () =>
+        activeFilter.value === "all"
+          ? "All statuses"
+          : `Filter: ${activeFilter.value}`,
+      variant: "secondary",
+      dotClass: "bg-emerald-500",
+      hideWhenZero: true,
+    },
+  ],
+});
+
+/* ---------------------- watch filter ---------------------- */
+
+watch(activeFilter, () => {
+  // when user switches All / Active / Inactive, refetch from page 1
+  fetchPage(1);
+});
+
 /* ---------------------- lifecycle ---------------------- */
 
 onMounted(() => {
-  fetchSubjects();
+  fetchPage(1);
 });
 </script>
 
 <template>
-  <el-row justify="space-between" class="m-4">
-    <el-col :span="12">
-      <BaseButton type="default" :loading="tableLoading" @click="fetchSubjects">
-        Refresh
-      </BaseButton>
-
-      <BaseButton type="primary" class="ml-2" @click="openCreateDialog">
-        Add Subject
-      </BaseButton>
-    </el-col>
-
-    <el-col :span="12" class="text-right">
-      <el-radio-group v-model="activeFilter">
-        <el-radio-button label="all">All</el-radio-button>
-        <el-radio-button label="active">Active</el-radio-button>
-        <el-radio-button label="inactive">Inactive</el-radio-button>
-      </el-radio-group>
-    </el-col>
-  </el-row>
-
-  <ErrorBoundary>
-    <SmartTable
-      :data="filteredSubjects"
-      :columns="subjectColumns"
+  <div class="p-4 space-y-6">
+    <!-- OVERVIEW HEADER -->
+    <OverviewHeader
+      title="Subjects"
+      description="Manage subjects and their availability across the school."
       :loading="tableLoading"
+      :showRefresh="false"
+      :stats="subjectHeaderStats"
     >
-      <!-- Description column -->
-      <template #description="{ row }">
-        <div class="description-cell">
-          <span
-            v-if="row.description"
-            class="description-text"
-            :title="row.description"
-          >
-            {{ row.description }}
-          </span>
-
-          <span v-else class="description-empty">
-            <span>No description</span>
-          </span>
+      <!-- Filters: status radio group -->
+      <template #filters>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-500">Status:</span>
+            <ElRadioGroup v-model="activeFilter" size="small">
+              <ElRadioButton label="all">All</ElRadioButton>
+              <ElRadioButton label="active">Active</ElRadioButton>
+              <ElRadioButton label="inactive">Inactive</ElRadioButton>
+            </ElRadioGroup>
+          </div>
         </div>
       </template>
 
-      <!-- Allowed Grades column -->
-      <template #allowedGrades="{ row }">
-        <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
-      </template>
+      <!-- Actions: Refresh + Add -->
+      <template #actions>
+        <BaseButton
+          plain
+          :loading="tableLoading"
+          class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
+          @click="fetchSubjects"
+        >
+          Refresh
+        </BaseButton>
 
-      <!-- Status / operation column -->
-      <template #operation="{ row }">
-        <ElSwitch
-          v-model="row.is_active"
-          :loading="statusLoading[row.id]"
-          @change="() => toggleSubjectActive(row)"
-        />
+        <BaseButton type="primary" @click="openCreateDialog">
+          Add Subject
+        </BaseButton>
       </template>
-    </SmartTable>
-  </ErrorBoundary>
+    </OverviewHeader>
 
-  <!-- CREATE SUBJECT DIALOG (SmartFormDialog + form-system) -->
-  <ErrorBoundary>
-    <SmartFormDialog
-      :key="createDialogKey"
-      v-model:visible="createFormVisible"
-      v-model="createFormData"
-      :fields="baseCreateFormSchema"
-      title="Add Subject"
-      :loading="createFormLoading"
-      @save="handleSaveCreateForm"
-      @cancel="handleCancelCreateForm"
-      :useElForm="true"
-      :width="createDialogWidth"
-    />
-  </ErrorBoundary>
+    <!-- TABLE -->
+    <ErrorBoundary>
+      <SmartTable
+        :data="subjects"
+        :columns="subjectColumns"
+        :loading="tableLoading"
+      >
+        <!-- Description column -->
+        <template #description="{ row }">
+          <div class="description-cell">
+            <span
+              v-if="row.description"
+              class="description-text"
+              :title="row.description"
+            >
+              {{ row.description }}
+            </span>
+
+            <span v-else class="description-empty">
+              <span>No description</span>
+            </span>
+          </div>
+        </template>
+
+        <!-- Allowed Grades column -->
+        <template #allowedGrades="{ row }">
+          <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
+        </template>
+
+        <!-- Status / operation column -->
+        <template #operation="{ row }">
+          <ElSwitch
+            v-model="row.is_active"
+            :loading="statusLoading[row.id]"
+            @change="() => toggleSubjectActive(row)"
+          />
+        </template>
+      </SmartTable>
+    </ErrorBoundary>
+
+    <!-- PAGINATION -->
+    <el-row v-if="totalRows > 0" justify="end" class="m-4">
+      <el-pagination
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total="totalRows"
+        :page-sizes="[10, 20, 50, 100]"
+        layout="total, sizes, prev, pager, next, jumper"
+        background
+        @current-change="goPage"
+        @size-change="
+          (size: number) => {
+            pageSize = size;
+            fetchPage(1);
+          }
+        "
+      />
+    </el-row>
+
+    <!-- CREATE SUBJECT DIALOG (SmartFormDialog + form-system) -->
+    <ErrorBoundary>
+      <SmartFormDialog
+        :key="createDialogKey"
+        v-model:visible="createFormVisible"
+        v-model="createFormData"
+        :fields="baseCreateFormSchema"
+        title="Add Subject"
+        :loading="createFormLoading"
+        @save="handleSaveCreateForm"
+        @cancel="handleCancelCreateForm"
+        :useElForm="true"
+        :width="createDialogWidth"
+      />
+    </ErrorBoundary>
+  </div>
 </template>
 
 <style scoped>

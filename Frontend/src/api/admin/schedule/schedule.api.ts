@@ -3,6 +3,7 @@ import type {
   AdminCreateScheduleSlot,
   AdminGetScheduleSlotResponse,
   AdminUpdateScheduleSlot,
+  AdminGetScheduleListResponse,
 } from "./schedule.dto";
 
 export class ScheduleSlotApi {
@@ -23,14 +24,14 @@ export class ScheduleSlotApi {
   }
 
   async getClassSchedule(classId: string) {
-    const res = await this.$api.get<AdminGetScheduleSlotResponse>(
+    const res = await this.$api.get<AdminGetScheduleListResponse>(
       `${this.baseURL}/classes/${classId}`
     );
     return res.data;
   }
 
   async getTeacherSchedule(teacherId: string) {
-    const res = await this.$api.get<AdminGetScheduleSlotResponse>(
+    const res = await this.$api.get<AdminGetScheduleListResponse>(
       `${this.baseURL}/teachers/${teacherId}`
     );
     return res.data;

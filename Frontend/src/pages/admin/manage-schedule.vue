@@ -3,13 +3,20 @@ import { ref, computed, onMounted, watch, nextTick } from "vue";
 
 definePageMeta({ layout: "admin" });
 
-import ErrorBoundary from "~/components/error/ErrorBoundary.vue";
+/* ------------------------------------
+ * Base components
+ * ---------------------------------- */
+import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
+import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
+/* ------------------------------------
+ * Element Plus
+ * ---------------------------------- */
 import {
   ElOption,
   ElSelect,
@@ -17,8 +24,12 @@ import {
   ElRadioButton,
   ElEmpty,
   ElSkeleton,
+  ElMessageBox,
 } from "element-plus";
 
+/* ------------------------------------
+ * Services & types
+ * ---------------------------------- */
 import { adminService } from "~/api/admin";
 import type { AdminScheduleSlotData } from "~/api/admin/schedule/schedule.dto";
 import type {
@@ -26,12 +37,17 @@ import type {
   AdminClassListDTO,
 } from "~/api/admin/class/class.dto";
 
+/* ------------------------------------
+ * Helpers / columns / forms
+ * ---------------------------------- */
 import { useLabelMap } from "~/composables/common/useLabelMap";
 import { createScheduleColumns } from "~/modules/tables/columns/admin/scheduleColumns";
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
 } from "~/form-system/useDynamicForm.ts/useAdminForms";
+import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
+import { useHeaderState } from "~/composables/useHeaderState";
 
 const adminApi = adminService();
 
@@ -39,13 +55,84 @@ const adminApi = adminService();
 
 const viewMode = ref<"class" | "teacher">("class");
 
-/* ---------------------- state ---------------------- */
+/* ---------------------- selection state ---------------------- */
 
 const selectedClassId = ref<string>("");
 const selectedTeacherId = ref<string>("");
 
-const slots = ref<AdminScheduleSlotData[]>([]);
-const tableLoading = ref(false);
+/* ---------------------- pagination filter model ---------------------- */
+
+type ScheduleFilter = {
+  mode: "class" | "teacher";
+  classId?: string;
+  teacherId?: string;
+};
+
+const scheduleFilter = ref<ScheduleFilter>({
+  mode: "class",
+  classId: "",
+  teacherId: "",
+});
+
+// keep filter in sync with viewMode + selected IDs
+watch(
+  [viewMode, selectedClassId, selectedTeacherId],
+  ([mode, classId, teacherId]) => {
+    scheduleFilter.value = {
+      mode,
+      classId: classId || undefined,
+      teacherId: teacherId || undefined,
+    };
+  },
+  { immediate: true }
+);
+
+/* ---------------------- paginated fetch ---------------------- */
+
+const {
+  data: slots,
+  loading: tableLoading,
+  error: tableError,
+  currentPage,
+  pageSize,
+  totalRows,
+  fetchPage,
+  goPage,
+} = usePaginatedFetch<AdminScheduleSlotData, ScheduleFilter>(
+  async (filter, page, pageSize, _signal) => {
+    // no selection -> no fetch
+    if (
+      !filter ||
+      (filter.mode === "class" && !filter.classId) ||
+      (filter.mode === "teacher" && !filter.teacherId)
+    ) {
+      return { items: [], total: 0 };
+    }
+
+    if (filter.mode === "class") {
+      const res = await adminApi.scheduleSlot.getClassSchedule(
+        filter.classId as string
+      );
+      const allSlots = res?.items ?? [];
+      const total = allSlots.length;
+      const start = (page - 1) * pageSize;
+      const items = allSlots.slice(start, start + pageSize);
+      return { items, total };
+    } else {
+      const res = await adminApi.scheduleSlot.getTeacherSchedule(
+        filter.teacherId as string
+      );
+      const allSlots = res?.items ?? [];
+      const total = allSlots.length;
+      const start = (page - 1) * pageSize;
+      const items = allSlots.slice(start, start + pageSize);
+      return { items, total };
+    }
+  },
+  1,
+  10,
+  scheduleFilter
+);
 
 const filteredSlots = computed(() => slots.value);
 
@@ -53,8 +140,9 @@ const filteredSlots = computed(() => slots.value);
 
 const hasSelectedFilter = computed(
   () =>
-    (viewMode.value === "class" && !!selectedClassId.value) ||
-    (viewMode.value === "teacher" && !!selectedTeacherId.value)
+    (scheduleFilter.value.mode === "class" && !!scheduleFilter.value.classId) ||
+    (scheduleFilter.value.mode === "teacher" &&
+      !!scheduleFilter.value.teacherId)
 );
 
 const showTable = computed(
@@ -147,6 +235,8 @@ const {
 const createDialogKey = ref(0);
 
 const handleOpenCreateForm = async () => {
+  if (!hasSelectedFilter.value) return;
+
   createDialogKey.value++;
 
   if (viewMode.value === "class") {
@@ -166,7 +256,7 @@ watch(formEntity, () => {
 
 const handleSaveCreateForm = async (payload: Partial<any>) => {
   await saveCreateForm(payload);
-  await fetchSchedule();
+  await fetchSchedule(1);
 };
 
 const handleCancelCreateForm = () => {
@@ -188,7 +278,7 @@ const {
 const detailLoading = ref<Record<string | number, boolean>>({});
 const editFormDataKey = ref("");
 
-const handleOpenEditForm = async (row: AdminScheduleSlotDataDTO) => {
+const handleOpenEditForm = async (row: AdminScheduleSlotData) => {
   try {
     detailLoading.value[row.id] = true;
     editFormDataKey.value = row.id?.toString() ?? "new";
@@ -202,6 +292,7 @@ const handleOpenEditForm = async (row: AdminScheduleSlotDataDTO) => {
 };
 
 const handleSaveEditForm = (payload: Partial<any>) => {
+  // fixed: remove stray "saveForm:" here
   saveEditForm(payload, "PUT");
 };
 
@@ -210,53 +301,49 @@ const handleCancelEditForm = () => {
 };
 
 /* ---------------------- delete ---------------------- */
+
 const deleteLoading = ref<Record<string | number, boolean>>({});
-async function handleDeleteSlot(row: AdminScheduleSlotDataDTO) {
-  deleteLoading.value[row.id] = true;
+
+async function handleSoftDelete(row: AdminScheduleSlotData) {
   try {
+    await ElMessageBox.confirm(
+      "Are you sure you want to delete this schedule slot?",
+      "Warning",
+      {
+        confirmButtonText: "Yes",
+        cancelButtonText: "No",
+        type: "warning",
+      }
+    );
+
+    deleteLoading.value[row.id] = true;
     await adminApi.scheduleSlot.deleteScheduleSlot(row.id);
-    await fetchSchedule();
+    await fetchSchedule(currentPage.value || 1);
+  } catch (err: any) {
+    if (err === "cancel" || err === "close") return;
+    console.error("Soft delete failed", err);
   } finally {
     deleteLoading.value[row.id] = false;
   }
 }
 
-/* ---------------------- schedule fetch ---------------------- */
+/* ---------------------- schedule fetch wrapper ---------------------- */
 
-async function fetchSchedule() {
+async function fetchSchedule(page: number = currentPage.value || 1) {
   if (!hasSelectedFilter.value) return;
-
-  tableLoading.value = true;
-  try {
-    if (viewMode.value === "class") {
-      const res = await adminApi.scheduleSlot.getClassSchedule(
-        selectedClassId.value
-      );
-      console.log("Class schedule response:", res);
-      slots.value = res.items ?? [];
-    } else {
-      const res = await adminApi.scheduleSlot.getTeacherSchedule(
-        selectedTeacherId.value
-      );
-      slots.value = res.items ?? [];
-    }
-  } finally {
-    tableLoading.value = false;
-  }
+  await fetchPage(page);
 }
 
 /* ---------------------- lifecycle ---------------------- */
 
 onMounted(async () => {
   await Promise.all([fetchClassOptions(), fetchTeacherOptions()]);
-  await fetchSchedule();
+  await fetchSchedule(1);
 });
 
 /* ---------------------- watch: viewMode / filters ---------------------- */
 
 watch(viewMode, async (newMode) => {
-  slots.value = [];
-
   if (newMode === "class") {
     if (classOptions.value.length === 0) {
       await fetchClassOptions();
@@ -269,161 +356,243 @@ watch(viewMode, async (newMode) => {
     selectedClassId.value = "";
   }
 
-  await fetchSchedule();
+  if (hasSelectedFilter.value) {
+    await fetchSchedule(1);
+  }
 });
 
 watch([selectedClassId, selectedTeacherId], async () => {
   if (hasSelectedFilter.value) {
-    await fetchSchedule();
+    await fetchSchedule(1);
   }
+});
+
+/* ---------------------- header stats ---------------------- */
+
+const totalSlots = computed(() => totalRows.value ?? 0);
+
+const { headerState: scheduleHeaderStats } = useHeaderState({
+  items: [
+    {
+      key: "slots",
+      getValue: () => totalSlots.value,
+      singular: "slot",
+      plural: "slots",
+      variant: "primary",
+      hideWhenZero: false,
+    },
+    {
+      key: "view",
+      getValue: () => (hasSelectedFilter.value ? 1 : 0),
+      label: () =>
+        viewMode.value === "class" ? "View: by class" : "View: by teacher",
+      variant: "secondary",
+      dotClass: "bg-emerald-500",
+      hideWhenZero: true,
+    },
+  ],
 });
 </script>
 
 <template>
-  <el-row class="m-2" justify="space-between">
-    <el-col :span="6">
-      <ElRadioGroup v-model="viewMode">
-        <ElRadioButton label="class" class="mr-2">By Class</ElRadioButton>
-        <ElRadioButton label="teacher" class="ml-2">By Teacher</ElRadioButton>
-      </ElRadioGroup>
+  <div class="p-4 space-y-6">
+    <!-- OVERVIEW HEADER -->
+    <OverviewHeader
+      title="Schedule"
+      description="View and manage weekly schedule by class or by teacher."
+      :loading="tableLoading"
+      :showRefresh="false"
+      :stats="scheduleHeaderStats"
+    >
+      <!-- Filters: mode + selector -->
+      <template #filters>
+        <div
+          class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 w-full"
+        >
+          <!-- Mode toggle -->
+          <div class="flex flex-col gap-1">
+            <span class="text-xs text-gray-500">View by:</span>
+            <ElRadioGroup v-model="viewMode" size="small">
+              <ElRadioButton label="class" class="mr-2">
+                By Class
+              </ElRadioButton>
+              <ElRadioButton label="teacher" class="ml-2">
+                By Teacher
+              </ElRadioButton>
+            </ElRadioGroup>
+          </div>
 
-      <ElSelect
-        v-if="viewMode === 'class'"
-        v-model="selectedClassId"
-        placeholder="Select class"
-        filterable
-        class="mt-6 w-full"
-        clearable
-        :loading="optionsLoading.classes"
-        @visible-change="(open) => open && fetchClassOptions()"
-      >
-        <ElOption
-          v-for="opt in classOptions"
-          :key="opt.value"
-          :label="opt.label"
-          :value="opt.value"
+          <!-- Selector (class / teacher) -->
+          <div class="flex flex-col gap-1 w-full md:w-auto md:max-w-xs">
+            <span class="text-xs text-gray-500">
+              {{ viewMode === "class" ? "Class:" : "Teacher:" }}
+            </span>
+
+            <ElSelect
+              v-if="viewMode === 'class'"
+              v-model="selectedClassId"
+              placeholder="Select class"
+              filterable
+              clearable
+              class="w-full"
+              :loading="optionsLoading.classes"
+              @visible-change="(open) => open && fetchClassOptions()"
+            >
+              <ElOption
+                v-for="opt in classOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
+            </ElSelect>
+
+            <TeacherSelect
+              v-else
+              v-model="selectedTeacherId"
+              placeholder="Select teacher"
+              class="w-full"
+              clearable
+              :loading="optionsLoading.teachers"
+              @visible-change="(open: boolean) => open && fetchTeacherOptions()"
+            />
+          </div>
+        </div>
+      </template>
+
+      <!-- Actions: Refresh + Add Slot -->
+      <template #actions>
+        <BaseButton
+          plain
+          :loading="tableLoading"
+          :disabled="!hasSelectedFilter"
+          class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
+          @click="() => fetchSchedule(currentPage || 1)"
+        >
+          Refresh
+        </BaseButton>
+
+        <BaseButton
+          type="primary"
+          :disabled="!hasSelectedFilter"
+          @click="handleOpenCreateForm"
+        >
+          Add Slot
+        </BaseButton>
+      </template>
+    </OverviewHeader>
+
+    <!-- MAIN CARD -->
+    <div
+      class="mx-0 md:mx-1 p-4 bg-white rounded-2xl shadow-sm border border-gray-200/60"
+    >
+      <!-- Small contextual label instead of a second big header -->
+      <div class="mb-3 flex items-center justify-between">
+        <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">
+          {{ viewMode === "class" ? "Class schedule" : "Teacher schedule" }}
+        </span>
+      </div>
+
+      <!-- Loading skeleton -->
+      <div v-if="tableLoading" class="py-4">
+        <ElSkeleton :rows="4" animated />
+      </div>
+
+      <!-- Table / states -->
+      <ErrorBoundary>
+        <template #default>
+          <SmartTable
+            v-if="showTable"
+            :data="filteredSlots"
+            :columns="scheduleColumns"
+            :loading="tableLoading"
+          >
+            <template #operation="{ row }">
+              <ActionButtons
+                :rowId="row.id"
+                detailContent="Edit schedule slot"
+                deleteContent="Delete schedule slot"
+                :detailLoading="detailLoading[row.id] ?? false"
+                :deleteLoading="deleteLoading[row.id] ?? false"
+                @detail="() => handleOpenEditForm(row)"
+                @delete="() => handleSoftDelete(row)"
+              />
+            </template>
+          </SmartTable>
+        </template>
+      </ErrorBoundary>
+
+      <!-- Pagination -->
+      <el-row v-if="showTable && totalRows > 0" justify="end" class="mt-4">
+        <el-pagination
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :total="totalRows"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @current-change="goPage"
+          @size-change="
+            (size: number) => {
+              pageSize = size;
+              fetchSchedule(1);
+            }
+          "
         />
-      </ElSelect>
+      </el-row>
 
-      <TeacherSelect
-        v-else
-        v-model="selectedTeacherId"
-        placeholder="Select teacher"
-        class="mt-6 w-full"
-        clearable
-        :loading="optionsLoading.teachers"
-        @visible-change="(open: boolean) => open && fetchTeacherOptions()"
-      />
-    </el-col>
+      <!-- Empty when selection has no data -->
+      <div v-if="showEmptyState" class="py-10">
+        <ElEmpty
+          description="No schedule slots found for this selection."
+          :image-size="100"
+        >
+          <BaseButton type="primary" @click="handleOpenCreateForm">
+            Add first slot
+          </BaseButton>
+        </ElEmpty>
+      </div>
 
-    <el-col :span="12" class="text-right">
-      <BaseButton
-        type="default"
-        :loading="tableLoading"
-        :disabled="!hasSelectedFilter"
-        @click="fetchSchedule"
-      >
-        Refresh
-      </BaseButton>
-
-      <BaseButton
-        type="primary"
-        class="ml-2"
-        :disabled="!hasSelectedFilter"
-        @click="handleOpenCreateForm"
-      >
-        Add Slot
-      </BaseButton>
-    </el-col>
-  </el-row>
-
-  <div class="mx-2 mt-4 p-4 bg-white rounded-lg shadow-sm">
-    <div class="mb-3 flex items-center justify-between">
-      <div>
-        <h2 class="text-base font-medium">
-          {{ viewMode === "class" ? "Class Schedule" : "Teacher Schedule" }}
-        </h2>
-        <p class="text-xs text-gray-500 mt-1">
-          {{
-            viewMode === "class"
-              ? "Select a class to view and manage its weekly schedule."
-              : "Select a teacher to view and manage their weekly schedule."
-          }}
-        </p>
+      <!-- Initial state: nothing selected -->
+      <div v-if="showInitialEmptyState" class="py-10">
+        <ElEmpty
+          description="Select a class or teacher, then click 'Refresh'."
+          :image-size="100"
+        />
       </div>
     </div>
 
-    <div v-if="tableLoading" class="py-4">
-      <ElSkeleton :rows="4" animated />
-    </div>
-
-    <ErrorBoundary>
-      <template #="defaults">
-        <SmartTable
-          v-if="showTable"
-          :data="filteredSlots"
-          :columns="scheduleColumns"
-          :loading="false"
-        >
-          <template #operation="{ row }">
-            <ActionButtons
-              :rowId="row.id"
-              detailContent="Edit Schedule Slot"
-              deleteContent="Delete schedule slot"
-              :detailLoading="detailLoading[row.id] ?? false"
-              :deleteLoading="deleteLoading[row.id] ?? false"
-              @detail="() => handleOpenEditForm(row)"
-              @delete="() => handleDeleteSlot(row)"
-            />
-          </template>
-        </SmartTable>
-      </template>
-    </ErrorBoundary>
-
-    <div v-if="showEmptyState" class="py-10">
-      <ElEmpty
-        description="No schedule slots found for this selection."
-        :image-size="100"
-      >
-        <BaseButton type="primary" @click="handleOpenCreateForm">
-          Add first slot
-        </BaseButton>
-      </ElEmpty>
-    </div>
-
-    <div v-if="showInitialEmptyState" class="py-10">
-      <ElEmpty
-        description="Select a class or teacher, then click 'Refresh'."
-        :image-size="100"
-      />
-    </div>
-  </div>
-
-  <!-- CREATE DIALOG -->
-  <SmartFormDialog
-    :key="viewMode + '-' + createDialogKey"
-    v-model:visible="createFormVisible"
-    v-model="createFormData"
-    :fields="createFormSchema"
-    title="Add Schedule Slot"
-    :loading="createFormLoading"
-    @save="handleSaveCreateForm"
-    @cancel="handleCancelCreateForm"
-    :useElForm="true"
-  />
-
-  <!-- EDIT DIALOG -->
-  <ErrorBoundary>
+    <!-- CREATE DIALOG -->
     <SmartFormDialog
-      :key="editFormDataKey"
-      v-model:visible="editFormVisible"
-      v-model="editFormData"
-      :fields="editFormSchema"
-      title="Edit Schedule Slot"
-      :loading="editFormLoading"
-      @save="handleSaveEditForm"
-      @cancel="handleCancelEditForm"
+      :key="viewMode + '-' + createDialogKey"
+      v-model:visible="createFormVisible"
+      v-model="createFormData"
+      :fields="createFormSchema"
+      title="Add Schedule Slot"
+      :loading="createFormLoading"
+      @save="handleSaveCreateForm"
+      @cancel="handleCancelCreateForm"
       :useElForm="true"
     />
-  </ErrorBoundary>
+
+    <!-- EDIT DIALOG -->
+    <ErrorBoundary>
+      <SmartFormDialog
+        :key="editFormDataKey"
+        v-model:visible="editFormVisible"
+        v-model="editFormData"
+        :fields="editFormSchema"
+        title="Edit Schedule Slot"
+        :loading="editFormLoading"
+        @save="handleSaveEditForm"
+        @cancel="handleCancelEditForm"
+        :useElForm="true"
+      />
+    </ErrorBoundary>
+  </div>
 </template>
+
+<style scoped>
+:deep(.el-input-group__append) {
+  padding: 0 10px;
+}
+</style>
