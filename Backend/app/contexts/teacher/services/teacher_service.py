@@ -172,3 +172,8 @@ class TeacherService:
 
     def list_my_schedule_enriched(self, teacher_id: Union[str, ObjectId]) -> List[Dict]:
         return self.teacher_read.list_schedule_for_teacher_enriched(teacher_id)
+
+
+    def list_my_classes_with_summary(self, teacher_id: Union[str, ObjectId]) -> Tuple[List[Dict], Dict]:
+        oid = mongo_converter.convert_to_object_id(teacher_id)
+        return self.teacher_read.list_teacher_classes_with_summary(oid)

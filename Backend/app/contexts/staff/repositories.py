@@ -27,7 +27,7 @@ class StaffRepository(MongoErrorMixin):
             self._handle_mongo_error("delete", e)
 
     # --- Soft delete ---
-    def soft_delete(self, staff_id: ObjectId, deleted_by: ObjectId | None = None) -> int:
+    def soft_delete(self, user_id: ObjectId, deleted_by: ObjectId | None = None) -> int:
         try:
             update_data = {
                 "$set": {
@@ -40,7 +40,7 @@ class StaffRepository(MongoErrorMixin):
                 update_data["$set"]["deleted_by"] = deleted_by
 
             result = self.collection.update_one(
-                {"_id": staff_id, "deleted": {"$ne": True}},
+                {"user_id": user_id, "deleted": {"$ne": True}},
                 update_data
             )
             return result.modified_count

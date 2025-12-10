@@ -60,9 +60,10 @@ class IAMReadModel(MongoErrorMixin):
 # -------------------------
 # return raw for service
 # -------------------------
-    def get_by_id(self, user_id: ObjectId) -> dict | None:
+    def get_by_id(self, user_id: ObjectId | str) -> dict | None:
         try:
-            cursor = self.collection.find_one({"_id": user_id})
+            oid = mongo_converter.convert_to_object_id(user_id)
+            cursor = self.collection.find_one({"_id": oid})
             self._log_operation("get_by_id", f"User ID: {user_id}")
             return cursor
         except Exception as e:
@@ -101,15 +102,19 @@ class IAMReadModel(MongoErrorMixin):
 
 
     def get_page_by_role(
-        self, 
-        roles: Union[str, list[str]], 
-        page: int = 1, 
-        page_size: int = 5
+        self,
+        roles: Union[str, list[str]],
+        page: int = 1,
+        page_size: int = 5,
     ) -> Tuple[List[dict], int]:
         try:
+            # 1) Build query
             role_filter = roles if isinstance(roles, str) else {"$in": roles}
-            query = {"deleted": {"$ne": True}, "role": role_filter}
-            projection = {"password": 0}  
+            query = {
+                "deleted": {"$ne": True},
+                "role": role_filter,
+            }
+            projection = {"password": 0}  # hide password
 
             # 2) Count + pagination
             total = self.collection.count_documents(query)
@@ -125,42 +130,43 @@ class IAMReadModel(MongoErrorMixin):
             if not users:
                 return users, total
 
-            # 3) Collect creator IDs (strings)
+            # 3) Collect creator_ids (as strings or ObjectIds)
             creator_ids_raw = [
-                u.get("created_by") for u in users 
-                if u.get("created_by")
+                u.get("created_by") for u in users if u.get("created_by")
             ]
+            creator_ids_raw = list({cid for cid in creator_ids_raw})  # deduplicate
 
-            # Deduplicate
-            creator_ids_raw = list({cid for cid in creator_ids_raw})
-
-            # 4) Convert to ObjectId because staff.user_id is probably ObjectId
+            # 4) Normalize to ObjectId list
             creator_oids = [
                 mongo_converter.convert_to_object_id(cid)
                 for cid in creator_ids_raw
+                if cid is not None
             ]
 
             staff_map: Dict[str, str] = {}
             if creator_oids:
-                staff_cursor = self.staff_read_model.list_by_user_ids(creator_oids)
+                # list_names_by_user_ids returns Dict[ObjectId, str]
+                name_map = self.staff_read_model.list_names_by_user_ids(creator_oids)
 
-                # key = string of ObjectId, value = staff_name
-                for staff in staff_cursor:
-                    key = str(staff["user_id"])
-                    staff_map[key] = staff.get("staff_name", "Unknown")
+                # convert ObjectId keys to str for easy lookup by created_by (string)
+                staff_map = {str(user_id): name for user_id, name in name_map.items()}
 
-            # 5) Attach creator name (or override created_by if you like)
+            # 5) Attach creator_name
             for user in users:
-                creator_id = user.get("created_by")  # string
+                creator_id = user.get("created_by")  # usually a string
                 creator_key = str(creator_id) if creator_id else None
                 user["created_by_name"] = staff_map.get(creator_key, "Unknown")
-
-                # If you want to REPLACE created_by by staff_name:
-                # user["created_by"] = user["created_by_name"]
-
- 
 
             return users, total
 
         except Exception as e:
             self._handle_mongo_error("get_page_by_role", e)
+
+
+
+    def count_active_users(self, role: str | list[str]) -> int:
+        try:
+            query = {"deleted": {"$ne": True}, "role": role}
+            return self.collection.count_documents(query)
+        except Exception as e:
+            self._handle_mongo_error("count_active_users", e)

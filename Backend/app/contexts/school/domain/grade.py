@@ -10,7 +10,10 @@ from app.contexts.school.errors.grade_exceptions import (
 
 class GradeType(str, Enum):
     EXAM = "exam"
-    ASSIGNMENT = "assignment"
+    ASSIGNMENT = "assignment"   
+    HOMEWORK = "homework"      
+    QUIZ = "quiz"
+    
 
 
 class GradeRecord:

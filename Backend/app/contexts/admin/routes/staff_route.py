@@ -9,7 +9,7 @@ from app.contexts.admin.data_transfer.request import (
 )
 from app.contexts.iam.mapper.iam_mapper import IAMMapper
 from app.contexts.staff.domain import StaffMapper
-from app.contexts.admin.data_transfer.response import AdminCreateStaffDataDTO, AdminTeacherListDTO, AdminTeacherSelectDTO
+from app.contexts.admin.data_transfer.response import AdminCreateStaffDataDTO, AdminTeacherSelectListDTO, AdminTeacherSelectDTO
 
 
 @admin_bp.route("/staff", methods=["POST"])
@@ -35,11 +35,11 @@ def admin_update_staff(user_id: str):
 
 
 
-@admin_bp.route("/staff/<staff_id>", methods=["GET"])
+@admin_bp.route("/staff/<user_id>", methods=["GET"])
 @role_required(["admin"])
 @wrap_response
-def admin_get_staff_by_id(staff_id: str):
-    staff = g.admin.staff_service.admin_get_staff_by_id(staff_id)
+def admin_get_staff_by_id(user_id: str):
+    staff = g.admin.staff_service.admin_get_staff_by_user_id(user_id)
     return StaffMapper.to_dto(staff)
 
 
@@ -47,10 +47,9 @@ def admin_get_staff_by_id(staff_id: str):
 @admin_bp.route("/staff/teacher-select", methods=["GET"])
 @role_required(["admin"])
 @wrap_response
-def admin_get_teacher_select():
-    teacher_list = g.admin.staff_service.admin_get_teacher_select()
-    print(teacher_list)
+def admin_list_teacher_select():
+    teacher_list = g.admin.staff_service.admin_list_teacher_select()
     teacher_dto = mongo_converter.list_to_dto(teacher_list, AdminTeacherSelectDTO)
-    return AdminTeacherListDTO(items=teacher_dto)
+    return AdminTeacherSelectListDTO(items=teacher_dto)
 
 

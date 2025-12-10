@@ -1,4 +1,4 @@
-from typing import List, Dict, Union, Any, Final
+from typing import List, Dict, Union, Any, Final, Tuple
 from bson import ObjectId
 from pymongo.database import Database
 
@@ -234,7 +234,6 @@ class TeacherReadModel(MongoErrorMixin):
 
 
 
-
     def list_attendance_for_class_enriched(
         self,
         class_id: Union[str, ObjectId],
@@ -258,3 +257,7 @@ class TeacherReadModel(MongoErrorMixin):
             return []
         return self.display_names.enrich_attendance(attendances)
 
+    def list_teacher_classes_with_summary(self, teacher_id: Union[str, ObjectId]) -> Tuple[List[Dict], Dict]:
+        docs, summary = self.classes.list_classes_for_teacher_with_summary(teacher_id)
+        enriched = self.display_names.enrich_classes(docs)
+        return enriched, summary

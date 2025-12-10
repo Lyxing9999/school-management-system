@@ -88,3 +88,9 @@ class ScheduleAdminService:
         slot_id: str | ObjectId,
     ) -> dict:
         return self.admin_read_model.admin_get_schedule_by_id(slot_id=slot_id)
+
+    def admin_count_schedules_for_teacher(
+        self,
+        teacher_id: str | ObjectId,
+    ) -> int:
+        return self.admin_read_model.admin_count_schedules_for_teacher(teacher_id)

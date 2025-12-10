@@ -101,7 +101,11 @@ class SubjectReadModel(MongoErrorMixin):
         try:
             return list(
                 self.collection.find(
-                    {"_id": {"$in": normalized_ids}, "is_deleted": {"$ne": True}}
+                    {
+                        "_id": {"$in": normalized_ids},
+                        "is_deleted": {"$ne": True},
+                        "is_active": True,
+                    }
                 )
             )
         except Exception as e:
@@ -120,7 +124,11 @@ class SubjectReadModel(MongoErrorMixin):
             return {}
         try:
             cursor = self.collection.find(
-                {"_id": {"$in": normalized_ids}, "is_deleted": {"$ne": True}},
+                {
+                    "_id": {"$in": normalized_ids},
+                    "is_deleted": {"$ne": True},
+                    "is_active": True,
+                },
                 {"_id": 1, "name": 1},
             )
             result: Dict[ObjectId, str] = {}
@@ -146,7 +154,11 @@ class SubjectReadModel(MongoErrorMixin):
             return {}
         try:
             cursor = self.collection.find(
-                {"_id": {"$in": normalized_ids}, "is_deleted": {"$ne": True}},
+                {
+                    "_id": {"$in": normalized_ids},
+                    "is_deleted": {"$ne": True},
+                    "is_active": True,
+                },
                 {"_id": 1, "code": 1},
             )
             result: Dict[ObjectId, str] = {}
@@ -160,10 +172,52 @@ class SubjectReadModel(MongoErrorMixin):
             self._handle_mongo_error("list_codes_by_ids", e)
             return {}
 
+    def list_subject_for_class(
+        self,
+        class_id: Union[str, ObjectId],
+    ) -> List[Dict[str, Any]]:
+        """
+        List subjects for a given class_id.
 
-    def list_subject_for_class(self, class_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+        NOTE: This assumes your `subjects` collection actually has a `class_id` field.
+        If the relationship lives only in `classes.subject_ids`, you do not need this
+        and should instead resolve via ClassReadModel + list_by_ids.
+        """
+        oid = self._normalize_id(class_id)
         try:
-            return list(self.collection.find({"class_id": class_id, "is_deleted": {"$ne": True}}))
+            cursor = self.collection.find(
+                {
+                    "class_id": oid,
+                    "is_deleted": {"$ne": True},
+                    "is_active": True,
+                }
+            )
+            return list(cursor)
         except Exception as e:
             self._handle_mongo_error("list_subject_for_class", e)
+            return []
+
+    def count_active_subjects(self) -> int:
+        """
+        Return the count of active subjects.
+        """
+        try:
+            return self.collection.count_documents(
+                {"is_deleted": {"$ne": True}, "is_active": True}
+            )
+        except Exception as e:
+            self._handle_mongo_error("count_active_subjects", e)
+            return 0
+    
+    def list_all_name_select(self) -> List[Dict[str, Any]]:
+        try:
+            cursor = self.collection.find(
+                {
+                    "is_deleted": {"$ne": True},
+                    "is_active": True,
+                }
+            )
+            return list(cursor)
+        except Exception as e:
+            self._handle_mongo_error("list_all_name_select", e)
             return []

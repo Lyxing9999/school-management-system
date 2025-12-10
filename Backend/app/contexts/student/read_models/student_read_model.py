@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Dict, Union, Any, Final
+from typing import List, Dict, Union, Any, Final, Iterable
 from bson import ObjectId
 from pymongo.database import Database
 
@@ -96,7 +96,8 @@ class StudentReadModel(MongoErrorMixin):
         return self.iam.get_by_id(user_id)
 
 
-    
+    def student_names_for_ids(self, user_ids: Iterable[ObjectId | str | dict | None]) -> Dict[ObjectId, str]:
+        return self.iam.list_usernames_by_ids(user_ids, role="student")
 
     # -------------
     # classes
@@ -129,12 +130,9 @@ class StudentReadModel(MongoErrorMixin):
         Aggregate all subjects from the classes where this student is enrolled.
         Dedupe by subject_id.
 
-        Return list of subject docs with id as string:
-
-        [
-          { "id": "subjectId", "name": "Math", "code": "MATH101", ... },
-          ...
-        ]
+        Return list of subject docs with:
+        - id: str
+        - label: "Name (CODE)" for selects
         """
         oid = mongo_converter.convert_to_object_id(student_id)
         class_docs = self.classes.list_classes_for_student(oid)
@@ -149,7 +147,6 @@ class StudentReadModel(MongoErrorMixin):
         if not subject_ids:
             return []
 
-        # you already have SubjectReadModel.list_by_ids
         subject_docs = self.subject.list_by_ids(list(subject_ids))
 
         result: List[Dict[str, Any]] = []
@@ -158,105 +155,70 @@ class StudentReadModel(MongoErrorMixin):
             sid = doc.pop("_id", None)
             if sid:
                 doc["id"] = str(sid)
+
+            # build label once here
+            name = doc.get("name") or ""
+            code = doc.get("code") or ""
+            if name and code:
+                doc["label"] = f"{name} ({code})"
+            else:
+                doc["label"] = name or code
+
             result.append(doc)
 
+        # optional: sort alphabetically by label (nice for UI)
+        result.sort(key=lambda d: d.get("label") or d.get("name") or "")
         return result
 
     # -------------
     # schedule
     # -------------
 
-    def list_my_schedule(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+
+
+    def list_my_schedule_enriched(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
         """
         Build weekly schedule for a student by:
 
         1) Fetching all classes the student is enrolled in
-        2) For each class, fetching its schedule slots
+        2) For those classes, fetching their schedule slots
         3) Enriching each slot with:
            - class_name
            - teacher_name
-           - teacher_id (string)
+           - subject_label (if available in schedule docs)
         """
+
         oid = mongo_converter.convert_to_object_id(student_id)
+
         class_docs = self.classes.list_classes_for_student(oid)
         if not class_docs:
             return []
-
-        # Build class meta: { class_id(ObjectId) -> {"class_name", "teacher_id"} }
         class_ids: List[ObjectId] = []
-        teacher_ids: List[ObjectId] = []    
-        class_meta_by_id: Dict[ObjectId, Dict[str, Any]] = {}
-
         for c in class_docs:
-            cid: ObjectId = c["_id"]
-            class_ids.append(cid)
-            tid: ObjectId | None = c.get("teacher_id")
+            if "_id" in c:
+                class_ids.append(c["_id"])
+            elif "id" in c:
+                class_ids.append(mongo_converter.convert_to_object_id(c["id"]))
 
-            if tid is not None:
-                teacher_ids.append(tid)
+        if not class_ids:
+            return []
+        schedule_docs = self.schedule.list_schedules_for_classes(class_ids)
 
-            class_meta_by_id[cid] = {
-                "class_name": c.get("name", ""),
-                "teacher_id": tid,
-            }
+        schedule_enriched = self.display_name.enrich_schedules(schedule_docs)
 
-        # Lookup teacher names
-        teacher_name_map = self.staff.list_names_by_user_ids(teacher_ids)
-        for cid, meta in class_meta_by_id.items():
-            tid = meta.get("teacher_id")
-            if tid is not None:
-                meta["teacher_name"] = (
-                    teacher_name_map.get(tid)
-                    or teacher_name_map.get(str(tid), "")
-                )
-            else:
-                meta["teacher_name"] = ""
+        schedule_enriched.sort(
+            key=lambda s: (
+                s.get("day_of_week", 0),
+                s.get("start_time", ""),
+            )
+        )
 
-        # Fetch schedules for all classes
-        schedules: List[Dict[str, Any]] = []
-        for cid in class_ids:
-            class_slots = self.schedule.list_schedules_for_class(cid)
-            schedules.extend(class_slots)
-
-        # Enrich + normalize ids
-        result: List[Dict[str, Any]] = []
-        for s in schedules:
-            doc = dict(s)
-
-            sid = doc.pop("_id", None)
-            if sid:
-                doc["id"] = str(sid)
-
-            cid = doc.get("class_id")
-            meta = class_meta_by_id.get(cid)
-
-            # normalize class_id
-            if isinstance(cid, ObjectId):
-                doc["class_id"] = str(cid)
-
-            if meta:
-                doc["class_name"] = meta.get("class_name", "")
-                # normalize teacher_id
-                tid = meta.get("teacher_id")
-                if isinstance(tid, ObjectId):
-                    doc["teacher_id"] = str(tid)
-                else:
-                    doc["teacher_id"] = None
-                doc["teacher_name"] = meta.get("teacher_name", "")
-            else:
-                doc["class_name"] = ""
-                doc["teacher_id"] = None
-                doc["teacher_name"] = ""
-
-            result.append(doc)
-
-        return result
-
+        return schedule_enriched
     # -------------
     # attendance & grades
     # -------------
 
-    def list_my_attendance(self, student_id: Union[str, ObjectId], class_ids: List[Union[str, ObjectId]]) -> List[Dict[str, Any]]:
+    def list_my_attendance_enriched(self, student_id: Union[str, ObjectId], class_ids: List[Union[str, ObjectId]]) -> List[Dict[str, Any]]:
         """
         Attendance records for this student, enriched with class_name
         and ids converted to string.
@@ -290,3 +252,10 @@ class StudentReadModel(MongoErrorMixin):
         return self.display_name.enrich_grades(records)
 
         
+
+
+    def count_active_students(self) -> int:
+        """
+        Return the count of active students.
+        """
+        return self.iam.count_active_users("student")

@@ -45,7 +45,7 @@ class StudentService:
     ) -> list[AttendanceDTO]:
         sid = self._oid(student_id)
         cid = self._oid(class_id)
-        return self.student_read.list_my_attendance(sid, cid)
+        return self.student_read.list_my_attendance_enriched(sid, cid)
     # ---------------- GRADES ----------------
 
     def get_my_grades(
@@ -68,7 +68,7 @@ class StudentService:
         student_id: str | ObjectId,
     ) -> list[StudentScheduleDTO]:
         sid = self._oid(student_id)
-        return self.student_read.list_my_schedule(sid)
+        return self.student_read.list_my_schedule_enriched(sid)
         
 
     # ---------------- CLASSES ----------------

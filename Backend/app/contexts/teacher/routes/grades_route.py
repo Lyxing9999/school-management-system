@@ -2,7 +2,7 @@
 from flask import request, g
 
 from app.contexts.teacher.routes import teacher_bp
-from app.contexts.core.security.auth_utils import get_current_user_id
+from app.contexts.core.security.auth_utils import get_current_staff_id
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import pydantic_converter
@@ -31,7 +31,7 @@ from app.contexts.shared.model_converter import mongo_converter
 @role_required(["teacher"])
 @wrap_response
 def add_grade():
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     body = pydantic_converter.convert_to_model(
         request.json,
         TeacherAddGradeRequest,
@@ -44,7 +44,7 @@ def add_grade():
 @role_required(["teacher"])
 @wrap_response
 def update_grade_score(grade_id: str):
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     body = pydantic_converter.convert_to_model(
         request.json,
         TeacherUpdateGradeScoreRequest,
@@ -61,7 +61,7 @@ def update_grade_score(grade_id: str):
 @role_required(["teacher"])
 @wrap_response
 def change_grade_type(grade_id: str):
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     body = pydantic_converter.convert_to_model(
         request.json,
         TeacherChangeGradeTypeRequest,
@@ -78,7 +78,7 @@ def change_grade_type(grade_id: str):
 @role_required(["teacher"])
 @wrap_response
 def list_grades_for_class_enriched(class_id: str):
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     grade_enriched = g.teacher_service.list_grades_for_class_enriched(
         teacher_id=teacher_id,
         class_id=class_id,

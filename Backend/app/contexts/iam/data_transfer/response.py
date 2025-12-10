@@ -1,27 +1,30 @@
 from typing import List
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel, ConfigDict
 from app.contexts.shared.enum.roles import SystemRole
 from datetime import datetime
+from pydantic import ConfigDict
 
 # -------------------------
 # Base User DTO
 # -------------------------
 class IAMBaseDataDTO(BaseModel):
-    id: str | None = None
-    email: str | None
-    role: SystemRole | None = None
-    username: str | None = None
-    created_by: str | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    deleted: bool = False
-    deleted_at: datetime | None = None
-    deleted_by: str | None = None
-    model_config = {
-        "extra": "allow",
-        "arbitrary_types_allowed": True,
-        "enum_values_as_str": True
-    }
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra="ignore",
+        arbitrary_types_allowed=True,
+        enum_values_as_str=True
+    )
+    id: str 
+    email: str 
+    role: SystemRole 
+    username: str 
+    created_by: str 
+    created_at: datetime 
+    updated_at: datetime 
+    deleted: bool | None = False 
+    deleted_at: datetime | None  = None
+    deleted_by: str | None = None 
+
 
 # -------------------------
 # Response DTO (login/register)
@@ -30,8 +33,11 @@ class IAMResponseDataDTO(BaseModel):
     user: IAMBaseDataDTO
     access_token: str
 
-    model_config = {"extra": "forbid",
-    "populate_by_name": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra="forbid",
+        populate_by_name=True
+    )
 
 # -------------------------
 # Update DTO

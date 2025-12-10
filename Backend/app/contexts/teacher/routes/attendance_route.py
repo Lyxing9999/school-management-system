@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import request, g
 
 from app.contexts.teacher.routes import teacher_bp
-from app.contexts.core.security.auth_utils import get_current_user_id
+from app.contexts.core.security.auth_utils import get_current_staff_id
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
@@ -22,7 +22,7 @@ from app.contexts.teacher.data_transfer.responses import (
 @role_required(["teacher"])
 @wrap_response
 def mark_attendance():
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     body = pydantic_converter.convert_to_model(
         request.json,
         TeacherMarkAttendanceRequest,
@@ -35,7 +35,7 @@ def mark_attendance():
 @role_required(["teacher"])
 @wrap_response
 def change_attendance_status(attendance_id: str):
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     body = pydantic_converter.convert_to_model(
         request.json,
         TeacherChangeAttendanceStatusRequest,
@@ -53,7 +53,7 @@ def change_attendance_status(attendance_id: str):
 @wrap_response
 def list_attendance_for_class_enriched(class_id: str):
 
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     docs = g.teacher_service.list_attendance_for_class_enriched(
         teacher_id=teacher_id,
         class_id=class_id,

@@ -181,3 +181,84 @@ class ClassReadModel:
                 }
             )
         return options
+
+
+    
+    def count_classes_for_teacher(self, teacher_id: str | ObjectId) -> int:
+        """
+        if teacher has classes, return number of classes
+        else return 0
+        """
+        oid = self._normalize_id(teacher_id)
+        return self.collection.count_documents(
+            {
+                "teacher_id": oid,
+                "deleted": {"$ne": True},
+            }
+        )
+
+
+    def list_classes_for_teacher_with_summary(
+        self,
+        teacher_id: ObjectId,
+    ) -> Tuple[List[Dict], Dict]:
+        """
+        Returns (docs, summary_dict).
+
+        summary_dict:
+        {
+          "total_classes": int,
+          "total_students": int,
+          "total_subjects": int
+        }
+        """
+        try:
+            query = {
+                "teacher_id": teacher_id,
+                "deleted": {"$ne": True},
+            }
+
+            docs: List[Dict] = list(self.collection.find(query))
+
+            # If you already store student_count / subject_count,
+            # use them; else fall back to len(student_ids) etc.
+            total_classes = len(docs)
+            total_students = 0
+            total_subjects = 0
+
+            for doc in docs:
+                # students
+                if "student_count" in doc and isinstance(doc["student_count"], int):
+                    total_students += doc["student_count"]
+                else:
+                    student_ids = doc.get("student_ids") or []
+                    if isinstance(student_ids, list):
+                        total_students += len(student_ids)
+
+                # subjects
+                if "subject_count" in doc and isinstance(doc["subject_count"], int):
+                    total_subjects += doc["subject_count"]
+                else:
+                    subject_ids = doc.get("subject_ids") or []
+                    if isinstance(subject_ids, list):
+                        total_subjects += len(subject_ids)
+
+            summary = {
+                "total_classes": total_classes,
+                "total_students": total_students,
+                "total_subjects": total_subjects,
+            }
+
+            return docs, summary
+
+        except Exception as e:
+            self._handle_mongo_error("list_classes_for_teacher_with_summary", e)
+            # _handle_mongo_error already raises appropriate AppBaseException
+            raise
+
+    
+    def count_active_classes(self) -> int:
+        """
+        Return the count of active classes.
+        """
+        return self.collection.count_documents({"deleted": {"$ne": True}})

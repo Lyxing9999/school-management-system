@@ -50,3 +50,17 @@ class EmailAlreadyExistsException(AppBaseException):
             hint="Ensure the email is unique and correctly formatted",
             recoverable=True
         )
+
+
+
+
+class CannotDeleteUserInUseException(AppBaseException):
+    def __init__(self, type: str, count: int):
+        super().__init__(
+            message=f"Cannot delete this user because they are still assigned to {count} {type}.",
+            severity=ErrorSeverity.HIGH,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message=f"Cannot delete this user because they are still assigned to {count} {type}.",
+            details={"field": "user", "value": f"Cannot delete this user because they are still assigned to {count} {type}."},
+            recoverable=True
+        )

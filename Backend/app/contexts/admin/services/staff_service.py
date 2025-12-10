@@ -1,6 +1,6 @@
 from pymongo.database import Database
 from bson import ObjectId
-from typing import Final
+from typing import Final, Optional
 from app.contexts.staff.services import StaffService
 from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 from app.contexts.admin.data_transfer.request import (
@@ -25,12 +25,18 @@ class StaffAdminService:
         return self.staff_service.create_staff(payload, created_by, user_id)
     def admin_update_staff( self, user_id: str | ObjectId, payload: AdminUpdateStaffSchema ) -> Staff:
         return self.staff_service.update_staff(user_id, payload)
-    def admin_soft_delete_staff(self, staff_id: str | ObjectId, deleted_by: str | ObjectId) -> bool:
+    def admin_soft_delete_staff(self, staff_id: str | ObjectId, deleted_by: str | ObjectId) -> Staff:
         return self.staff_service.soft_staff_delete(staff_id, deleted_by)
     def admin_hard_delete_staff(self, staff_id: str | ObjectId) -> bool:
         return self.staff_service.hard_staff_delete(staff_id)
-    def admin_get_staff_by_id(self, staff_id: str) -> Staff:
-        return self.staff_service.get_to_staff_domain(staff_id)
 
-    def admin_get_teacher_select(self) -> list[Staff]:
+
+    def admin_get_staff_by_user_id(self, user_id: str | ObjectId) -> Optional[Staff]:
+        return self.staff_service.get_to_staff_domain(user_id)
+
+
+    def admin_list_teacher_select(self) -> list[Staff]:
         return self.admin_read_model.admin_list_teacher_select()
+
+    def admin_count_schedules_for_teacher(self, teacher_id: str | ObjectId) -> int:
+        return self.admin_read_model.admin_count_schedules_for_teacher(teacher_id)

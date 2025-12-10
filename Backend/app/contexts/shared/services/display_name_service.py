@@ -79,7 +79,6 @@ class DisplayNameService:
 
         # IAMReadModel returns list[{"_id": ..., "username": ...}]
         docs = self.iam_read_model.list_usernames_by_ids(oids, role=role)
-        print("this is docs from iam read model", docs)
         mapping: Dict[ObjectId, str] = {}
         for doc in docs:
             _id = doc.get("_id")
@@ -88,11 +87,19 @@ class DisplayNameService:
                 mapping[_id] = name
         return mapping
 
+    def student_names_for_ids(
+        self,
+        user_ids: Iterable[ObjectId | str | dict | None],
+    ) -> Dict[ObjectId, str]:
+        oids = self._normalize_ids(user_ids)
+        if not oids:
+            return {}
+        return self.usernames_for_ids(oids, role="student")
     # -----------------------------
     # STAFF (teachers)
     # -----------------------------
 
-    def staff_names_for_user_ids(
+    def staff_names_for_ids(
         self,
         user_ids: Iterable[ObjectId | str | dict | None],
     ) -> Dict[ObjectId, str]:
@@ -102,7 +109,7 @@ class DisplayNameService:
         oids = self._normalize_ids(user_ids)
         if not oids:
             return {}
-        return self.staff_read_model.list_names_by_user_ids(oids)
+        return self.staff_read_model.list_names_by_ids(oids)
 
     # -----------------------------
     # CLASSES
@@ -200,7 +207,7 @@ class DisplayNameService:
                 subject_ids.append(sid)
 
         class_name_map = self.class_names_for_ids(class_ids)
-        teacher_name_map = self.staff_names_for_user_ids(teacher_ids)
+        teacher_name_map = self.staff_names_for_ids(teacher_ids)
         subject_label_map = self.subject_labels_for_ids(subject_ids)
 
         # string-keyed copies (for when ids in docs are strings)
@@ -262,7 +269,7 @@ class DisplayNameService:
                     all_subject_ids.append(sid)
 
         # Build maps using existing helpers
-        teacher_name_map = self.staff_names_for_user_ids(teacher_ids)
+        teacher_name_map = self.staff_names_for_ids(teacher_ids)
         subject_label_map = self.subject_labels_for_ids(all_subject_ids)
 
         # Also support string keys (in case ids in docs are str)
@@ -356,7 +363,7 @@ class DisplayNameService:
 
         student_name_map = self.usernames_for_ids(student_ids, role="student")
         class_name_map = self.class_names_for_ids(class_ids)
-        teacher_name_map = self.staff_names_for_user_ids(teacher_ids)
+        teacher_name_map = self.staff_names_for_ids(teacher_ids)
         subject_label_map = self.subject_labels_for_ids(subject_ids)
 
         student_name_map_str = {str(k): v for k, v in student_name_map.items()}
@@ -444,7 +451,7 @@ class DisplayNameService:
         # Build maps
         student_name_map = self.usernames_for_ids(student_ids, role="student")
         class_name_map = self.class_names_for_ids(class_ids)
-        teacher_name_map = self.staff_names_for_user_ids(teacher_ids)
+        teacher_name_map = self.staff_names_for_ids(teacher_ids)
 
         # String-key versions (for when docs carry string IDs)
         student_name_map_str = {str(k): v for k, v in student_name_map.items()}
@@ -519,7 +526,7 @@ class DisplayNameService:
             self._normalize_ids(student_ids), role="student"
         )
         class_name_map = self.class_names_for_ids(class_ids)
-        teacher_name_map = self.staff_names_for_user_ids(teacher_ids)
+        teacher_name_map = self.staff_names_for_ids(teacher_ids)
         subject_label_map = self.subject_labels_for_ids(subject_ids)
 
         # string-keyed copies, for when ids in docs are strings

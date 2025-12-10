@@ -52,3 +52,5 @@ class SubjectAdminService:
     def admin_list_subject(self) -> list[Subject]:
         return self.subject_read.list_all()
         
+    def admin_list_subject_name_select(self) -> list[Subject]:
+        return self.subject_read.list_all_name_select()

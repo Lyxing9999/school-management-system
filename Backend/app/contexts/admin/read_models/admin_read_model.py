@@ -74,8 +74,8 @@ class AdminReadModel(MongoErrorMixin):
 
     # ------------- simple delegates -------------
 
-    def get_staff_by_id(self, staff_id: ObjectId) -> Optional[dict]:
-        return self.staff_read_model.get_by_id(staff_id)
+    def get_staff_by_user_id(self, user_id: ObjectId) -> Optional[dict]:
+        return self.staff_read_model.get_by_user_id(user_id)
 
     def get_user_by_id(self, user_id: ObjectId) -> Optional[dict]:
         return self.iam_read_model.get_by_id(user_id)
@@ -146,3 +146,24 @@ class AdminReadModel(MongoErrorMixin):
         Frontend RemoteSelect will map to label/value.
         """
         return self.schedule_read_model.get_by_id(slot_id)
+
+
+
+
+    # ------------- helpers -------------
+    """
+    check relationship before delete
+    """
+    def admin_count_schedules_for_teacher(self, teacher_id: Union[str, ObjectId]) -> int:
+        """
+        if teacher has schedules, return number of schedules
+        else return 0
+        """
+        return self.schedule_read_model.count_schedules_for_teacher(teacher_id)
+
+    def admin_count_classes_for_teacher(self, teacher_id: Union[str, ObjectId]) -> int:
+        """
+        if teacher has classes, return number of classes
+        else return 0
+        """
+        return self.class_read_model.count_classes_for_teacher(teacher_id)

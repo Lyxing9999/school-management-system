@@ -34,7 +34,8 @@ class UserAdminService:
         return self.iam_service.save_domain(iam_model)
 
 
-
+    def admin_get_user_by_id(self, user_id: str | ObjectId) -> IAM:
+        return self.iam_service.get_user_to_domain(user_id)
 
     def admin_list_student_select(self) -> List[Dict[str, Any]]:
         return self.admin_read_model.admin_list_student_select()
@@ -46,8 +47,13 @@ class UserAdminService:
 
     def admin_soft_delete_user(self, user_id: str | ObjectId) -> IAM:
         return self.iam_service.soft_delete(user_id)
-
+    """
+        # IMPORTANT: check EVERY relationship that references this user
+        # before deleting it. If any relation exists (staff, student,
+        # schedule, etc.), block the delete and return an error.
+    """
     def admin_hard_delete_user(self, user_id: str | ObjectId) -> bool:
+        
         return self.iam_service.hard_delete(user_id)
 
     @log_operation(level="INFO")

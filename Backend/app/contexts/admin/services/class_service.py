@@ -106,3 +106,9 @@ class ClassAdminService:
         Later you can add pagination/filtering here.
         """
         return self.admin_read_model.admin_list_class_select()
+
+
+
+    
+    def admin_count_classes_for_teacher(self, teacher_id: str | ObjectId) -> int:
+        return self.admin_read_model.admin_count_classes_for_teacher(teacher_id)

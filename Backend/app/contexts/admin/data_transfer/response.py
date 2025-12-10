@@ -6,6 +6,14 @@ from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from typing import List, Optional
 from app.contexts.school.data_transfer.responses import ClassSectionDTO
 import datetime as dt
+
+class BaseNameSelectDTO(BaseModel):
+    id: str | None = None
+    name: str | None = None
+    model_config = {
+        "extra": "ignore",
+    }
+
 # =====================================================
 # SECTION 1: USER MANAGEMENT (IAM)
 # =====================================================
@@ -28,8 +36,6 @@ class AdminUpdateUserDataDTO(IAMUpdateDataDTO):
 
 class AdminDeleteUserDTO(BaseModel):   
     id: str
-    deleted_at: dt.datetime
-    deleted_by: str | None
     model_config = {
         "extra": "allow"
     }
@@ -49,17 +55,14 @@ class AdminCreateStaffDataDTO(StaffBaseDataDTO):
     pass
 class AdminUpdateStaffDataDTO(StaffBaseDataDTO):
     pass
-class AdminStaffNameSelectDTO(BaseModel):
-    user_id: str
-    staff_name: str
-    model_config = {
-        "extra": "ignore",
-    }
-
-class AdminTeacherSelectDTO(AdminStaffNameSelectDTO):
+class AdminStaffNameSelectDTO(BaseNameSelectDTO):
     pass
 
-class AdminTeacherListDTO(BaseModel):
+
+class AdminTeacherSelectDTO(AdminStaffNameSelectDTO):
+    staff_name: str
+
+class AdminTeacherSelectListDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     items: List[AdminTeacherSelectDTO]
 
@@ -71,6 +74,18 @@ class AdminCreateClassDTO(BaseModel):
     
 
 
+# =====================================================
+# USER + STAFF
+# =====================================================
+
+class AdminUserStaffDataDTO(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra="ignore",
+    )
+
+    user: IAMBaseDataDTO | None = None
+    staff: StaffBaseDataDTO | None = None
 # =====================================================
 # SECTION 3: SUBJECT MANAGEMENT
 # =====================================================
@@ -122,12 +137,8 @@ class AdminScheduleListDTO(BaseModel):
 # Student Management
 # =====================================================
 
-class AdminStudentNameSelectDTO(BaseModel):
-    id: str
+class AdminStudentNameSelectDTO(BaseNameSelectDTO):
     username: str
-    model_config = {
-        "extra": "ignore"
-    }
 
 
 class AdminStudentNameSelectListDTO(BaseModel):
@@ -158,14 +169,136 @@ class AdminClassListDTO(BaseModel):
     items: List[AdminClassDataDTO]
 
 
-class AdminClassSelectDTO(BaseModel):
-    id: str
-    name: str
-    model_config = {
-        "extra": "ignore",
-    }
+class AdminClassSelectDTO(BaseNameSelectDTO):
+    pass
 
 class AdminClassSelectListDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     items: List[AdminClassSelectDTO]
 
+
+
+
+class AdminSubjectNameSelectDTO(BaseNameSelectDTO):
+    pass
+
+
+
+class AdminSubjectNameSelectListDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    items: List[AdminSubjectNameSelectDTO]
+
+
+# =====================================================
+# SECTION 6: ADMIN DASHBOARD
+# =====================================================
+
+import datetime as dt
+from pydantic import BaseModel
+
+class AdminOverviewDTO(BaseModel):
+    total_students: int
+    total_teachers: int
+    total_classes: int
+    total_subjects: int
+    today_lessons: int
+
+
+# ----------------- Attendance -----------------
+
+class AdminAttendanceStatusSummaryDTO(BaseModel):
+    status: str           # e.g. "present", "absent", "excused"
+    count: int
+
+
+class AdminAttendanceDailyTrendDTO(BaseModel):
+    # Aggregation returns date as string or date; Pydantic will parse to dt.date
+    date: dt.date
+    present: int
+    absent: int
+    excused: int
+    total: int            # we will compute present+absent+excused in read model
+
+
+class AdminAttendanceByClassDTO(BaseModel):
+    class_id: str
+    class_name: str
+    present: int
+    absent: int
+    excused: int
+    total: int
+
+
+class AdminTopAbsentStudentDTO(BaseModel):
+    student_id: str
+    student_name: str
+    # These are currently missing in your aggregation, so make them optional
+    class_id: str | None = None
+    class_name: str | None = None
+    absent_count: int
+    total_records: int | None = None
+
+
+class AdminAttendanceDashboardDTO(BaseModel):
+    status_summary: list[AdminAttendanceStatusSummaryDTO]
+    daily_trend: list[AdminAttendanceDailyTrendDTO]
+    by_class: list[AdminAttendanceByClassDTO]
+    top_absent_students: list[AdminTopAbsentStudentDTO]
+
+
+# ----------------- Grades -----------------
+
+class AdminAvgScoreBySubjectDTO(BaseModel):
+    subject_id: str
+    subject_name: str
+    avg_score: float
+    sample_size: int
+
+
+class AdminGradeDistributionBucketDTO(BaseModel):
+    range: str   # "0-49", "50-69", ...
+    count: int
+
+
+class AdminPassRateByClassDTO(BaseModel):
+    class_id: str
+    class_name: str        # we will enrich in read model
+    avg_score: float
+    pass_rate: float       # 0..1
+    total_students: int    # we will map from aggregation field "total"
+    passed: int
+
+
+class AdminGradeDashboardDTO(BaseModel):
+    avg_score_by_subject: list[AdminAvgScoreBySubjectDTO]
+    grade_distribution: list[AdminGradeDistributionBucketDTO]
+    pass_rate_by_class: list[AdminPassRateByClassDTO]
+
+
+# ----------------- Schedule -----------------
+
+class AdminLessonsByWeekdayDTO(BaseModel):
+    day_of_week: int   # 1=Mon..7=Sun
+    label: str         # "Mon", "Tue", ...
+    lessons: int
+
+
+class AdminLessonsByTeacherDTO(BaseModel):
+    teacher_id: str
+    teacher_name: str
+    lessons: int
+    classes: int
+
+
+class AdminScheduleDashboardDTO(BaseModel):
+    lessons_by_weekday: list[AdminLessonsByWeekdayDTO]
+    lessons_by_teacher: list[AdminLessonsByTeacherDTO]
+
+
+# ----------------- Root Dashboard -----------------
+
+class AdminDashboardDTO(BaseModel):
+    overview: AdminOverviewDTO
+    attendance: AdminAttendanceDashboardDTO
+    grades: AdminGradeDashboardDTO
+    schedule: AdminScheduleDashboardDTO

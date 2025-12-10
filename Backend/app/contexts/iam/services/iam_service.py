@@ -145,7 +145,7 @@ class IAMService:
             raise NoChangeAppException("User already deleted in DB")  # check result
         duration_ms = (time() - start) * 1000
         self._log("soft_delete", user_id=str(user_id), extra={"duration_ms": duration_ms, "deleted_by": str(deleted_by_obj) if deleted_by else None})  # log
-        return iam_model  # return DTO
+        return iam_model  # return 
 
     # -------------------------
     # Hard delete user

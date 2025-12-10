@@ -8,14 +8,15 @@ from app.contexts.shared.model_converter import pydantic_converter
 from app.contexts.admin.data_transfer.request import AdminCreateUserSchema, AdminUpdateUserSchema
 from app.contexts.admin.data_transfer.response import (
     PaginatedUsersDataDTO,
-    AdminDeleteUserDTO,
     AdminStudentNameSelectDTO,
-AdminStudentNameSelectListDTO   
+    AdminStudentNameSelectListDTO,
+    AdminUserStaffDataDTO   
 )
 from app.contexts.common.base_response_dto import BaseResponseDTO
 from app.contexts.iam.mapper.iam_mapper import IAMMapper 
 from app.contexts.admin.data_transfer.response import PaginatedUserItemDTO
-
+from app.contexts.iam.data_transfer.response import IAMBaseDataDTO
+from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from app.contexts.shared.model_converter import mongo_converter
 
 @admin_bp.route("/users", methods=["GET"])
@@ -57,16 +58,36 @@ def admin_update_user(user_id):
     user_update_dto = g.admin.user_service.admin_update_user(user_id, user_schema)
     return IAMMapper.to_dto(user_update_dto)
 
-
-@admin_bp.route('/users/<user_id>', methods=['DELETE'])
+@admin_bp.route("/users/<user_id>", methods=["DELETE"])
 @role_required(["admin"])
 @wrap_response
-def admin_soft_delete_user(user_id):
-    deleted_user = g.admin.user_service.admin_soft_delete_user(user_id)
-    return AdminDeleteUserDTO(
-        id=str(deleted_user.id),
-        deleted_at=deleted_user.deleted_at,
-        deleted_by=deleted_user.deleted_by
+def admin_soft_delete_user(user_id: str):
+    user_doc, staff_doc = g.admin.facade.admin_soft_delete_user_workflow(
+        user_id,
+        get_current_user_id(),
+    )
+
+    user_dto = (
+        mongo_converter.doc_to_dto(
+            mongo_converter.convert_ids(user_doc),
+            IAMBaseDataDTO,
+        )
+        if user_doc
+        else None
+    )
+
+    staff_dto = (
+        mongo_converter.doc_to_dto(
+            mongo_converter.convert_ids(staff_doc),
+            StaffBaseDataDTO,
+        )
+        if staff_doc
+        else None
+    )
+
+    return AdminUserStaffDataDTO(
+        user=user_dto,
+        staff=staff_dto,
     )
 
 @admin_bp.route('/users/<user_id>/hard', methods=['DELETE'])

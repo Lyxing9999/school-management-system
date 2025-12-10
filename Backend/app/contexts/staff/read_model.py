@@ -18,11 +18,14 @@ class StaffReadModel(MongoErrorMixin):
 
     # ------------ core getters ------------
 
+
+
     def get_by_user_id(self, user_id: ObjectId) -> Optional[Dict]:
         """
         Fetch staff document by user_id (ignores soft-deleted records).
         """
         try:
+            
             doc = self.collection.find_one(
                 {"user_id": user_id, "deleted": {"$ne": True}}
             )
@@ -30,6 +33,26 @@ class StaffReadModel(MongoErrorMixin):
         except Exception as e:
             self._handle_mongo_error("get_by_user_id", e)
             return None
+    def get_by_id(self, id: ObjectId) -> Optional[Dict]:
+        try:
+            doc = self.collection.find_one(
+                {"_id": id, "deleted": {"$ne": True}}
+            )
+            return doc
+        except Exception as e:
+            self._handle_mongo_error("get_by_id", e)
+            return None
+    
+    def get_name_by_id(self, id: ObjectId) -> str:
+        try:
+            doc = self.collection.find_one(
+                {"_id": id, "deleted": {"$ne": True}},
+                {"staff_name": 1},
+            )
+            return doc.get("staff_name", "") if doc else ""
+        except Exception as e:
+            self._handle_mongo_error("get_name_by_id", e)
+            return ""
 
     def get_name_by_user_id(self, user_id: ObjectId) -> str:
         """
@@ -48,39 +71,64 @@ class StaffReadModel(MongoErrorMixin):
 
     # ------------ list / batch APIs ------------
 
-    def list_by_user_ids(self, user_ids: List[ObjectId]) -> List[Dict]:
+    def list_by_ids(self, ids: List[ObjectId]) -> List[Dict]:
         """
         Fetch all staff documents for the given user_ids (ignores soft-deleted records).
         """
-        if not user_ids:
+        if not ids:
             return []
         try:
             cursor = self.collection.find(
-                {"user_id": {"$in": user_ids}, "deleted": {"$ne": True}}
+                {"_id": {"$in": ids}, "deleted": {"$ne": True}}
             )
             return list(cursor)
         except Exception as e:
-            self._handle_mongo_error("list_by_user_ids", e)
+            self._handle_mongo_error("list_by_ids", e)
             return []
 
-    def list_names_by_user_ids(self, user_ids: List[ObjectId]) -> Dict[ObjectId, str]:
+
+
+    def list_names_by_ids(self, ids: List[ObjectId]) -> Dict[ObjectId, str]:
         """
-        Given a list of user_ids, return a mapping {user_id: staff_name}.
+        Given a list of ids, return a mapping {id: staff_name}.
         Only returns entries for staff that exist and are not deleted.
         """
-        if not user_ids:
+        if not ids:
             return {}
         try:
             cursor = self.collection.find(
-                {"user_id": {"$in": user_ids}, "deleted": {"$ne": True}},
+                {"_id": {"$in": ids}, "deleted": {"$ne": True}},
+                {"staff_name": 1},
+            )
+            result: Dict[ObjectId, str] = {}
+            for doc in cursor:
+                id = doc.get("_id")
+                name = doc.get("staff_name")
+                if id is not None and name is not None:
+                    result[id] = name
+            return result
+        except Exception as e:
+            self._handle_mongo_error("list_names_by_ids", e)
+            return {}
+
+    def list_names_by_user_ids(self, ids: List[ObjectId]) -> Dict[ObjectId, str]:
+        """
+        Given a list of ids, return a mapping {id: staff_name}.
+        Only returns entries for staff that exist and are not deleted.
+        """
+        if not ids:
+            return {}
+        try:
+            cursor = self.collection.find(
+                {"user_id": {"$in": ids}, "deleted": {"$ne": True}},
                 {"_id": 0, "user_id": 1, "staff_name": 1},
             )
             result: Dict[ObjectId, str] = {}
             for doc in cursor:
-                uid = doc.get("user_id")
+                id = doc.get("user_id")
                 name = doc.get("staff_name")
-                if uid is not None and name is not None:
-                    result[uid] = name
+                if id is not None and name is not None:
+                    result[id] = name
             return result
         except Exception as e:
             self._handle_mongo_error("list_names_by_user_ids", e)
@@ -93,13 +141,13 @@ class StaffReadModel(MongoErrorMixin):
         role: str = "teacher",
     ) -> List[Dict]:
         """
-        Return [{user_id, staff_name}, ...] for given role, for select/dropdown usage.
+        Return [{_id, staff_name}, ...] for given role, for select/dropdown usage.
         Ignores soft-deleted records.
         """
         try:
             cursor = self.collection.find(
                 {"role": role, "deleted": False},
-                {"user_id": 1, "staff_name": 1},
+                {"_id": 1, "staff_name": 1},
             )
             return list(cursor)
         except Exception as e:
@@ -110,3 +158,8 @@ class StaffReadModel(MongoErrorMixin):
 
 
             
+    def count_active_teachers(self) -> int:
+        """
+        Return the count of active teachers.
+        """
+        return self.collection.count_documents({"role": "teacher", "deleted": False})

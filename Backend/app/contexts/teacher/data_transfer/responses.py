@@ -117,3 +117,16 @@ class TeacherScheduleDTO(BaseModel):
 
 class TeacherScheduleListDTO(BaseModel):
     items: List[TeacherScheduleDTO]
+
+
+
+
+class TeacherClassSummaryDTO(BaseModel):
+    total_classes: int
+    total_students: int
+    total_subjects: int
+
+
+class TeacherClassSectionSummaryDTO(BaseModel):
+    items: List[TeacherClassSectionDTO]
+    summary: TeacherClassSummaryDTO

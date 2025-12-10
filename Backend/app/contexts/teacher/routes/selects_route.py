@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import g
 
 from app.contexts.teacher.routes import teacher_bp
-from app.contexts.core.security.auth_utils import get_current_user_id
+from app.contexts.core.security.auth_utils import get_current_staff_id
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import mongo_converter
@@ -22,7 +22,7 @@ from app.contexts.teacher.data_transfer.responses import (
 @role_required(["teacher"])
 @wrap_response
 def list_class_name_options_for_teacher():
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     classes = g.teacher_service.list_class_name_options_for_teacher(
         teacher_id=teacher_id
     )
@@ -34,7 +34,7 @@ def list_class_name_options_for_teacher():
 @role_required(["teacher"])
 @wrap_response
 def list_student_names_in_class(class_id: str):
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     students = g.teacher_service.list_student_name_options_in_class(
         class_id=class_id,
         teacher_id=teacher_id,
@@ -47,7 +47,7 @@ def list_student_names_in_class(class_id: str):
 @role_required(["teacher"])
 @wrap_response
 def list_subject_names_in_class(class_id: str):
-    teacher_id = get_current_user_id()
+    teacher_id = get_current_staff_id()
     subjects = g.teacher_service.list_subject_name_options_in_class(
         class_id=class_id,
         teacher_id=teacher_id,
