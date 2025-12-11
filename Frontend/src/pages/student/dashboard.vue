@@ -1,30 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { ElMessage } from "element-plus";
-import FullCalendar from "@fullcalendar/vue3";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import tippy from "tippy.js";
-import "tippy.js/dist/tippy.css";
 
-import { useRuntimeConfig } from "#app";
 import { studentService } from "~/api/student";
 
 import { formatDate } from "~/utils/formatDate";
-
-// Adjust these imports to your actual DTO file paths
-import type {
-  StudentClassSectionDTO,
-  StudentGradeDTO,
-  StudentScheduleDTO,
-  StudentAttendanceDTO,
-} from "~/api/student/student.dto";
 
 definePageMeta({
   layout: "student",
 });
 
-const runtimeConfig = useRuntimeConfig();
 const student = studentService();
 
 /* ------------------------------------------------
@@ -32,13 +16,12 @@ const student = studentService();
  * ------------------------------------------------ */
 
 const loadingOverview = ref(false);
-const loadingHolidays = ref(false);
 const errorMessage = ref<string | null>(null);
 
-const classes = ref<StudentClassSectionDTO[]>([]);
-const grades = ref<StudentGradeDTO[]>([]);
-const schedule = ref<StudentScheduleDTO[]>([]);
-const attendance = ref<StudentAttendanceDTO[]>([]);
+const classes = ref<[]>([]);
+const grades = ref<[]>([]);
+const schedule = ref<[]>([]);
+const attendance = ref<[]>([]);
 
 // which class we use for dashboard attendance (MVP: first class)
 const defaultClassId = ref<string | null>(null);
@@ -138,93 +121,7 @@ const recentAttendance = computed(() =>
 /* ------------------------------------------------
  * Cambodia Holidays (FullCalendar)
  * ------------------------------------------------ */
-
-const calendarOptions = ref({
-  plugins: [dayGridPlugin, interactionPlugin],
-  initialView: "dayGridMonth",
-  height: "auto",
-  headerToolbar: {
-    right: "prev,next",
-    center: "title",
-    left: "",
-  },
-  events: [] as any[],
-  eventClick(info: any) {
-    const event = info.event;
-    selectedHoliday.value = {
-      title: event.title,
-      date: event.startStr,
-      description: event.extendedProps.description || "No description",
-    };
-    showDialog.value = true;
-  },
-  eventDidMount(info: any) {
-    const titleEl = info.el.querySelector(".fc-event-title");
-    if (titleEl) {
-      const text = titleEl.textContent || "";
-      titleEl.innerHTML = `<span class="slide-text">${text}</span>`;
-    }
-
-    tippy(info.el, {
-      content: info.event.extendedProps.description || info.event.title,
-      placement: "top",
-    });
-  },
-});
-
-const showDialog = ref(false);
-const selectedHoliday = ref<{
-  title: string;
-  date: string;
-  description: string;
-} | null>(null);
-
-const fetchCambodiaHolidays = async () => {
-  loadingHolidays.value = true;
-  try {
-    const year = new Date().getFullYear();
-    const cacheKey = `cambodia_holidays_${year}`;
-    const cached = localStorage.getItem(cacheKey);
-
-    if (cached) {
-      const holidays = JSON.parse(cached);
-      calendarOptions.value.events = holidays;
-      return;
-    }
-
-    const apiKey = runtimeConfig.public.calendarificApiKey;
-    if (!apiKey) {
-      console.warn("Missing calendarificApiKey in runtime config");
-      return;
-    }
-
-    const res = await fetch(
-      `https://calendarific.com/api/v2/holidays?api_key=${apiKey}&country=KH&year=${year}`
-    );
-    const data = await res.json();
-
-    if (data.meta?.code === 200 && data.response?.holidays) {
-      const events = data.response.holidays.map((holiday: any) => ({
-        title: holiday.name,
-        date: holiday.date.iso,
-        color: "var(--color-primary)",
-        extendedProps: { description: holiday.description },
-      }));
-
-      localStorage.setItem(cacheKey, JSON.stringify(events));
-      calendarOptions.value.events = events;
-    } else {
-      console.error(
-        "Calendarific API Error:",
-        data.meta?.error_detail || "Unknown error"
-      );
-    }
-  } catch (error) {
-    console.error("Failed to fetch holidays", error);
-  } finally {
-    loadingHolidays.value = false;
-  }
-};
+import CambodiaCalendar from "~/components/Calendar/CambodiaCalendar.vue";
 
 /* ------------------------------------------------
  * Lifecycle
@@ -232,7 +129,6 @@ const fetchCambodiaHolidays = async () => {
 
 onMounted(async () => {
   await loadOverview();
-  await fetchCambodiaHolidays();
 });
 </script>
 
@@ -439,8 +335,8 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div v-loading="loadingHolidays">
-            <FullCalendar :options="calendarOptions" />
+          <div>
+            <CambodiaCalendar />
           </div>
         </el-card>
 
