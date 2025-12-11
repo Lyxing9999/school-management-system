@@ -8,7 +8,6 @@ definePageMeta({
 // --------------------
 // Base Components
 // --------------------
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
@@ -231,43 +230,41 @@ onMounted(() => {
       </template>
     </OverviewHeader>
 
-    <ErrorBoundary>
-      <el-card>
-        <SmartTable
-          :data="subjects"
-          :columns="subjectColumns"
-          :loading="tableLoading"
-        >
-          <template #description="{ row }">
-            <div class="description-cell">
-              <span
-                v-if="row.description"
-                class="description-text"
-                :title="row.description"
-              >
-                {{ row.description }}
-              </span>
+    <el-card>
+      <SmartTable
+        :data="subjects"
+        :columns="subjectColumns"
+        :loading="tableLoading"
+      >
+        <template #description="{ row }">
+          <div class="description-cell">
+            <span
+              v-if="row.description"
+              class="description-text"
+              :title="row.description"
+            >
+              {{ row.description }}
+            </span>
 
-              <span v-else class="description-empty">
-                <span>No description</span>
-              </span>
-            </div>
-          </template>
+            <span v-else class="description-empty">
+              <span>No description</span>
+            </span>
+          </div>
+        </template>
 
-          <template #allowedGrades="{ row }">
-            <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
-          </template>
+        <template #allowedGrades="{ row }">
+          <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
+        </template>
 
-          <template #operation="{ row }">
-            <ElSwitch
-              v-model="row.is_active"
-              :loading="statusLoading[row.id]"
-              @change="() => toggleSubjectActive(row)"
-            />
-          </template>
-        </SmartTable>
-      </el-card>
-    </ErrorBoundary>
+        <template #operation="{ row }">
+          <ElSwitch
+            v-model="row.is_active"
+            :loading="statusLoading[row.id]"
+            @change="() => toggleSubjectActive(row)"
+          />
+        </template>
+      </SmartTable>
+    </el-card>
 
     <el-row v-if="totalRows > 0" justify="end" class="m-4">
       <el-pagination
@@ -287,20 +284,18 @@ onMounted(() => {
       />
     </el-row>
 
-    <ErrorBoundary>
-      <SmartFormDialog
-        :key="createDialogKey"
-        v-model:visible="createFormVisible"
-        v-model="createFormData"
-        :fields="baseCreateFormSchema"
-        title="Add Subject"
-        :loading="createFormLoading"
-        @save="handleSaveCreateForm"
-        @cancel="handleCancelCreateForm"
-        :useElForm="true"
-        :width="createDialogWidth"
-      />
-    </ErrorBoundary>
+    <SmartFormDialog
+      :key="createDialogKey"
+      v-model:visible="createFormVisible"
+      v-model="createFormData"
+      :fields="baseCreateFormSchema"
+      title="Add Subject"
+      :loading="createFormLoading"
+      @save="handleSaveCreateForm"
+      @cancel="handleCancelCreateForm"
+      :useElForm="true"
+      :width="createDialogWidth"
+    />
   </div>
 </template>
 
