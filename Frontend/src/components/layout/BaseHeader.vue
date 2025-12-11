@@ -1,3 +1,4 @@
+<!-- components/Layout/BaseHeader.vue -->
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import {
@@ -25,28 +26,24 @@ const displayName = computed(() => authStore.user?.username ?? "Admin User");
 
 const toggleDark = () => {
   isDark.value = !isDark.value;
-  // TODO: connect to global theme system
 };
 
 const handleNotificationClick = () => {
   console.log("Notification clicked");
-  // TODO: open notifications drawer / route
 };
 
 const handleProfileClick = () => {
   console.log("Profile clicked");
-  // TODO: route to profile
 };
 
 const handleLogoutClick = () => {
   console.log("Logout clicked");
-  // TODO: authStore.logout()
 };
 </script>
 
 <template>
-  <!-- Plain header; Element Plus header wrapper is in layout -->
-  <header class="app-header">
+  <!-- No <header> tag, just this inner container for EL header -->
+  <div class="header-inner">
     <el-row justify="space-between" align="middle" style="height: 100%">
       <!-- Left: sidebar toggle -->
       <el-col :span="6" class="flex items-center">
@@ -90,7 +87,7 @@ const handleLogoutClick = () => {
             </el-badge>
           </el-tooltip>
 
-          <!-- Dark Mode Toggle -->
+          <!-- Dark mode -->
           <el-tooltip
             :content="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
             placement="bottom"
@@ -101,7 +98,7 @@ const handleLogoutClick = () => {
             </el-button>
           </el-tooltip>
 
-          <!-- User Dropdown -->
+          <!-- User dropdown -->
           <el-dropdown trigger="click" placement="bottom-end">
             <el-button type="text" class="user-dropdown">
               <el-space size="small" alignment="center">
@@ -126,19 +123,21 @@ const handleLogoutClick = () => {
         </el-space>
       </el-col>
     </el-row>
-  </header>
+  </div>
 </template>
 
 <style scoped lang="scss">
-.app-header {
-  height: 64px;
-  padding: 0 1.5rem; /* internal spacing ONLY */
-  border-bottom: 1px solid var(--color-primary-light-6);
-  background-color: var(--color-card);
+.header-inner {
+  width: 100%; /* full header width */
+  height: 64px; /* full header height lives here */
+  box-sizing: border-box;
+  padding: 0 1.5rem;
+
   display: flex;
-  align-items: center;
+  align-items: center; /* vertically center row inside the 64px */
 }
 
+/* Buttons/icons */
 .icon-button {
   padding: 4px;
   color: #4b5563;
@@ -152,6 +151,7 @@ const handleLogoutClick = () => {
   margin-left: 0.25rem;
 }
 
+/* User dropdown chip */
 .user-dropdown {
   padding: 2px 8px;
   border-radius: 9999px;
@@ -172,9 +172,9 @@ const handleLogoutClick = () => {
   cursor: pointer;
 }
 
-/* Mobile tweaks */
+/* Responsive */
 @media (max-width: 768px) {
-  .app-header {
+  .header-inner {
     padding: 0 1rem;
   }
 }

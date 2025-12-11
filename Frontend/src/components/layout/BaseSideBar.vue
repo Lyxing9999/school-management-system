@@ -170,7 +170,7 @@ const activeMenu = computed(
 </script>
 
 <template>
-  <aside class="app-aside">
+  <div class="app-aside">
     <div class="logo-section">
       <img :src="logoSrc" alt="Logo" class="logo-image" />
     </div>
@@ -191,65 +191,5 @@ const activeMenu = computed(
         </template>
       </el-menu-item>
     </el-menu>
-  </aside>
+  </div>
 </template>
-
-<style scoped lang="scss">
-.app-aside {
-  background-color: var(--color-card);
-  backdrop-filter: blur(10px);
-  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.06);
-  padding-top: 1rem;
-  display: flex;
-  flex-direction: column;
-}
-
-.logo-section {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0 1rem 0.75rem;
-}
-
-.logo-image {
-  max-width: 160px;
-  border-radius: 8px;
-}
-
-.app-menu {
-  border-right: none;
-  padding: 0.25rem 0.5rem 0.75rem;
-}
-
-.el-menu-item {
-  border-radius: 9999px;
-  margin: 0.25rem 0;
-  padding: 0.5rem 1rem !important;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-weight: 500;
-  color: #4b5563;
-  border: 1px solid transparent;
-}
-
-.el-menu-item:hover {
-  border-color: var(--color-primary-light-4);
-  background-color: var(--color-primary-light-9);
-  color: var(--color-primary);
-}
-
-.active-menu-item {
-  border-color: var(--color-primary);
-  background-color: rgba(126, 87, 194, 0.12);
-}
-
-.active-menu-item::after {
-  display: none;
-}
-
-.active-menu-item .el-icon,
-.active-menu-item span {
-  color: var(--color-primary);
-}
-</style>

@@ -239,45 +239,46 @@ onMounted(() => {
     </OverviewHeader>
 
     <!-- TABLE -->
-    <ErrorBoundary>
-      <SmartTable
-        :data="subjects"
-        :columns="subjectColumns"
-        :loading="tableLoading"
-      >
-        <!-- Description column -->
-        <template #description="{ row }">
-          <div class="description-cell">
-            <span
-              v-if="row.description"
-              class="description-text"
-              :title="row.description"
-            >
-              {{ row.description }}
-            </span>
+    <el-card>
+      <ErrorBoundary>
+        <SmartTable
+          :data="subjects"
+          :columns="subjectColumns"
+          :loading="tableLoading"
+        >
+          <!-- Description column -->
+          <template #description="{ row }">
+            <div class="description-cell">
+              <span
+                v-if="row.description"
+                class="description-text"
+                :title="row.description"
+              >
+                {{ row.description }}
+              </span>
 
-            <span v-else class="description-empty">
-              <span>No description</span>
-            </span>
-          </div>
-        </template>
+              <span v-else class="description-empty">
+                <span>No description</span>
+              </span>
+            </div>
+          </template>
 
-        <!-- Allowed Grades column -->
-        <template #allowedGrades="{ row }">
-          <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
-        </template>
+          <!-- Allowed Grades column -->
+          <template #allowedGrades="{ row }">
+            <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
+          </template>
 
-        <!-- Status / operation column -->
-        <template #operation="{ row }">
-          <ElSwitch
-            v-model="row.is_active"
-            :loading="statusLoading[row.id]"
-            @change="() => toggleSubjectActive(row)"
-          />
-        </template>
-      </SmartTable>
-    </ErrorBoundary>
-
+          <!-- Status / operation column -->
+          <template #operation="{ row }">
+            <ElSwitch
+              v-model="row.is_active"
+              :loading="statusLoading[row.id]"
+              @change="() => toggleSubjectActive(row)"
+            />
+          </template>
+        </SmartTable>
+      </ErrorBoundary>
+    </el-card>
     <!-- PAGINATION -->
     <el-row v-if="totalRows > 0" justify="end" class="m-4">
       <el-pagination

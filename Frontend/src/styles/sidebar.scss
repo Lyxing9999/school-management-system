@@ -1,0 +1,130 @@
+/* ===========================
+   Sidebar & Menu
+   =========================== */
+
+.app-aside {
+    /* Local sidebar variables, based on your global theme tokens */
+    --aside-bg: var(--color-bg);
+    --aside-border-color: var(--color-primary-light-6);
+
+    --app-menu-padding-x: 0.5rem;
+    --app-menu-padding-y: 0.25rem;
+
+    --app-menu-item-radius: 9999px;
+    --app-menu-item-padding-x: 1rem;
+    --app-menu-item-padding-y: 0.5rem;
+
+    /* Darker / more neutral base colors */
+    --app-menu-item-text-color: #111827;
+    /* gray-900 */
+    --app-menu-item-icon-color: #4b5563;
+    /* gray-600 */
+
+    /* Hover: keep neutral text, light purple background/border */
+    --app-menu-item-hover-text-color: #111827;
+    --app-menu-item-hover-bg-color: var(--color-primary-light-9);
+    --app-menu-item-hover-border-color: var(--color-primary-light-4);
+
+    /* Active: use your primary color for emphasis */
+    --app-menu-item-active-text-color: var(--color-primary);
+    --app-menu-item-active-bg-color: rgba(107, 63, 160, 0.12);
+    --app-menu-item-active-border-color: var(--color-primary);
+
+    --app-menu-transition: var(--transition-base);
+
+    /* Sidebar shell */
+    background: var(--aside-bg);
+    border-right: 1px solid var(--aside-border-color);
+    padding-top: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Logo */
+.logo-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 1rem 0.75rem;
+}
+
+.logo-image {
+    max-width: 160px;
+    border-radius: 8px;
+}
+
+/* Root menu */
+.app-menu.el-menu {
+    border-right: none;
+    padding: var(--app-menu-padding-y) var(--app-menu-padding-x) 0.75rem;
+
+    --el-menu-bg-color: transparent;
+    --el-menu-text-color: var(--app-menu-item-text-color);
+    --el-menu-hover-bg-color: var(--app-menu-item-hover-bg-color);
+    --el-menu-active-color: var(--app-menu-item-active-text-color);
+
+    background-color: transparent !important;
+}
+
+/* Menu pill items */
+.app-menu.el-menu .el-menu-item {
+    border-radius: var(--app-menu-item-radius);
+    margin: 0.25rem 0;
+    padding: var(--app-menu-item-padding-y) var(--app-menu-item-padding-x) !important;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+    color: var(--app-menu-item-text-color);
+    border: 1px solid transparent;
+    background-color: transparent;
+    transition:
+        background-color var(--app-menu-transition),
+        border-color var(--app-menu-transition),
+        color var(--app-menu-transition),
+        transform var(--app-menu-transition);
+}
+
+/* Hover */
+.app-menu.el-menu .el-menu-item:hover {
+    border-color: var(--app-menu-item-hover-border-color) !important;
+    background-color: var(--app-menu-item-hover-bg-color) !important;
+    color: var(--app-menu-item-hover-text-color) !important;
+    transform: translateY(-0.5px);
+}
+
+/* Active */
+.app-menu.el-menu .el-menu-item.is-active,
+.app-menu.el-menu .el-menu-item.active-menu-item {
+    border-color: var(--app-menu-item-active-border-color) !important;
+    background-color: var(--app-menu-item-active-bg-color) !important;
+    color: var(--app-menu-item-active-text-color) !important;
+}
+
+/* Remove default active border bar */
+.app-menu.el-menu .el-menu-item.is-active::after,
+.app-menu.el-menu .el-menu-item.active-menu-item::after {
+    display: none;
+}
+
+/* Icons */
+.app-menu.el-menu .el-menu-item .el-icon {
+    color: var(--app-menu-item-icon-color);
+    transition: color var(--app-menu-transition);
+}
+
+/* Hover + active icon */
+.app-menu.el-menu .el-menu-item:hover .el-icon {
+    color: var(--app-menu-item-hover-text-color);
+}
+
+.app-menu.el-menu .el-menu-item.is-active .el-icon,
+.app-menu.el-menu .el-menu-item.active-menu-item .el-icon {
+    color: var(--app-menu-item-active-text-color);
+}
+
+/* Active text */
+.app-menu.el-menu .el-menu-item.is-active span,
+.app-menu.el-menu .el-menu-item.active-menu-item span {
+    color: var(--app-menu-item-active-text-color);
+}

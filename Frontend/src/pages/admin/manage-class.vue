@@ -465,25 +465,27 @@ const { headerState: classHeaderStats } = useHeaderState({
     </OverviewHeader>
 
     <!-- TABLE -->
-    <ErrorBoundary>
-      <SmartTable
-        :data="classes"
-        :columns="classColumns"
-        v-loading="tableLoading"
-      >
-        <template #operation="{ row }">
-          <ActionButtons
-            :rowId="row.id"
-            :detailContent="`Manage students in ${row.name}`"
-            deleteContent="Delete class"
-            @detail="openManageStudentsDialog(row)"
-            @delete="handleSoftDelete(row)"
-            :deleteLoading="deleteLoading[row.id] ?? false"
-            :detailLoading="detailLoading[row.id] ?? false"
-          />
-        </template>
-      </SmartTable>
-    </ErrorBoundary>
+    <el-card>
+      <ErrorBoundary>
+        <SmartTable
+          :data="classes"
+          :columns="classColumns"
+          v-loading="tableLoading"
+        >
+          <template #operation="{ row }">
+            <ActionButtons
+              :rowId="row.id"
+              :detailContent="`Manage students in ${row.name}`"
+              deleteContent="Delete class"
+              @detail="openManageStudentsDialog(row)"
+              @delete="handleSoftDelete(row)"
+              :deleteLoading="deleteLoading[row.id] ?? false"
+              :detailLoading="detailLoading[row.id] ?? false"
+            />
+          </template>
+        </SmartTable>
+      </ErrorBoundary>
+    </el-card>
 
     <!-- PAGINATION -->
     <el-row v-if="totalRows > 0" justify="end" class="m-4">

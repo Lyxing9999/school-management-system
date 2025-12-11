@@ -498,29 +498,30 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
       </div>
 
       <!-- Table / states -->
-      <ErrorBoundary>
-        <template #default>
-          <SmartTable
-            v-if="showTable"
-            :data="filteredSlots"
-            :columns="scheduleColumns"
-            :loading="tableLoading"
-          >
-            <template #operation="{ row }">
-              <ActionButtons
-                :rowId="row.id"
-                detailContent="Edit schedule slot"
-                deleteContent="Delete schedule slot"
-                :detailLoading="detailLoading[row.id] ?? false"
-                :deleteLoading="deleteLoading[row.id] ?? false"
-                @detail="() => handleOpenEditForm(row)"
-                @delete="() => handleSoftDelete(row)"
-              />
-            </template>
-          </SmartTable>
-        </template>
-      </ErrorBoundary>
-
+      <el-card>
+        <ErrorBoundary>
+          <template #default>
+            <SmartTable
+              v-if="showTable"
+              :data="filteredSlots"
+              :columns="scheduleColumns"
+              :loading="tableLoading"
+            >
+              <template #operation="{ row }">
+                <ActionButtons
+                  :rowId="row.id"
+                  detailContent="Edit schedule slot"
+                  deleteContent="Delete schedule slot"
+                  :detailLoading="detailLoading[row.id] ?? false"
+                  :deleteLoading="deleteLoading[row.id] ?? false"
+                  @detail="() => handleOpenEditForm(row)"
+                  @delete="() => handleSoftDelete(row)"
+                />
+              </template>
+            </SmartTable>
+          </template>
+        </ErrorBoundary>
+      </el-card>
       <!-- Pagination -->
       <el-row v-if="showTable && totalRows > 0" justify="end" class="mt-4">
         <el-pagination

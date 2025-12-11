@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
-import BaseHeader from "~/components/layout/BaseHeader.vue";
-import BaseFooter from "~/components/layout/BaseFooter.vue";
-import BaseSideBar from "~/components/layout/BaseSideBar.vue";
+import BaseFooter from "~/components/Layout/BaseFooter.vue";
+import BaseHeader from "~/components/Layout/BaseHeader.vue";
+import BaseSideBar from "~/components/Layout/BaseSideBar.vue";
 import schoolLogo from "~/assets/image/school-logo.jpg";
 
 const route = useRoute();
@@ -39,37 +39,39 @@ const route = useRoute();
 
 <style lang="scss">
 .app-layout {
-  height: 100vh;
+  min-height: 100vh;
 }
-
-/* Outer layout shells */
 .layout-aside {
-  border-right: 1px solid var(--el-border-color-light);
+  border-right: 1px solid var(--color-primary-light-6);
   background-color: var(--color-card);
 }
 
 .layout-main-container {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
 }
 
-/* VERY IMPORTANT: remove default header padding */
 .layout-header {
-  padding: 0; /* no 20px left/right from Element Plus */
+  padding: 0;
+  background-color: var(--color-card);
+  border-bottom: 1px solid #e5e7eb;
 }
 
-/* Let BaseHeader control its own internal padding */
 .layout-main {
   padding: 16px;
-  background-color: var(--el-bg-color-page);
+  background-color: var(--color-bg);
+
+  flex: 1 1 auto;
+  overflow: auto;
 }
 
 .layout-footer {
   padding: 8px 16px;
-  border-top: 1px solid var(--el-border-color-light);
+  border-top: 1px solid #e5e7eb;
+  background-color: var(--color-card);
 }
 
-/* Page transition */
 .page-enter-active,
 .page-leave-active {
   transition: opacity 0.25s ease;

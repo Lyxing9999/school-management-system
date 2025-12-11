@@ -1,63 +1,10 @@
-/* ===========================
-   Element Plus bridge to your color system
-   =========================== */
-
-:root {
-    /* Make Element Plus "primary" use your purple */
-    --el-color-primary: var(--color-primary);
-    --el-color-primary-light-3: var(--color-primary-light-3);
-
-    /* Inputs */
-    --el-input-focus-border-color: var(--color-primary-light-2);
-    --el-input-border-color-hover: var(--color-primary-light-4);
+.el-container {
+    height: 100vh;
 }
 
 /* ===========================
-   Normal Radio (circle)
+   Layout scroll behavior
    =========================== */
-
-.el-radio__input.is-checked .el-radio__inner,
-.el-radio__input.is-focus .el-radio__inner {
-    border-color: var(--color-primary-light) !important;
-    background-color: var(--color-primary-light) !important;
-}
-
-.el-radio__input:hover .el-radio__inner {
-    border-color: var(--color-primary-light) !important;
-}
-
-/* ===========================
-   Table clicked column
-   =========================== */
-
-.el-table__row .el-table__cell.clicked-column {
-    background-color: var(--color-primary) !important;
-    color: #fff !important;
-    font-weight: 500;
-}
-
-/* ===========================
-   Switch
-   =========================== */
-
-.el-switch__button {
-    background-color: var(--color-light) !important;
-}
-
-.el-switch.is-checked .el-switch__core {
-    background-color: var(--color-primary-light) !important;
-}
-
-/* Optional: hover effect for active switch */
-.el-switch.is-checked:hover .el-switch__core {
-    background-color: var(--color-primary-light-3) !important;
-}
-
-/* Inner label/text inside handle */
-.el-switch__inner {
-    color: var(--color-light) !important;
-    font-weight: 500;
-}
 
 .el-main,
 .smart-table-wrapper {
@@ -65,7 +12,7 @@
 }
 
 /* ===========================
-   Radio Button Group
+   Radio Button Group (USED)
    =========================== */
 
 .el-radio-button .el-radio-button__inner {
@@ -281,7 +228,7 @@
     color: var(--color-primary-light);
 }
 
-/* Label focus when any child input is focused (includes password) */
+/* Label focus when any child input is focused */
 .el-form-item:focus-within .el-form-item__label {
     color: var(--color-primary-light);
 }
@@ -296,7 +243,7 @@
     color: #b91c1c !important;
 }
 
-/* Base input wrapper – used everywhere, including inside el-form-item */
+/* Base input wrapper */
 .el-input__wrapper {
     border-radius: 8px;
     box-shadow: 0 0 0 1px #e5e7eb inset;
@@ -313,7 +260,7 @@
     background-color: #ffffff;
 }
 
-/* Focus (uses EP variable we set above) */
+/* Focus */
 .el-input__wrapper.is-focus {
     box-shadow: 0 0 0 1px var(--el-input-focus-border-color) inset;
     background-color: #ffffff;
@@ -484,3 +431,18 @@
     border-color: var(--el-tag-border-color) !important;
     color: var(--el-tag-text-color) !important;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

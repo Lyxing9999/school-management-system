@@ -115,7 +115,9 @@ select {
   padding: 0.5rem 0.75rem;
   background-color: var(--input-bg);
   color: var(--color-dark);
-  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 input:focus,
@@ -321,10 +323,5 @@ select:focus {
 .transition {
   transition: all var(--transition-base);
 }
-
-.el-container {
-  height: 100vh;
-}
-
 
 

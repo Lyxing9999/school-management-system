@@ -14,6 +14,8 @@ export default defineNuxtConfig({
   css: [
     "~/styles/main.css",
     "~/styles/element-overrides.css",
+    "~/styles/element-overrides-dark.css",
+    "~/styles/sidebar.scss",
     "element-plus/dist/index.css",
   ],
 

@@ -1,8 +1,9 @@
+<!-- layouts/default.vue or app layout -->
 <script setup lang="ts">
 import { useRoute } from "vue-router";
-import BaseHeader from "~/components/layout/BaseHeader.vue";
-import BaseFooter from "~/components/layout/BaseFooter.vue";
-import BaseSideBar from "~/components/layout/BaseSideBar.vue";
+import BaseFooter from "~/components/Layout/BaseFooter.vue";
+import BaseHeader from "~/components/Layout/BaseHeader.vue";
+import BaseSideBar from "~/components/Layout/BaseSideBar.vue";
 import schoolLogo from "~/assets/image/school-logo.jpg";
 
 const route = useRoute();
@@ -17,7 +18,7 @@ const route = useRoute();
 
     <!-- Main area -->
     <el-container direction="vertical" class="layout-main-container">
-      <!-- Header -->
+      <!-- Header shell -->
       <el-header v-if="!route.meta.noHeader" class="layout-header">
         <BaseHeader />
       </el-header>
@@ -39,32 +40,34 @@ const route = useRoute();
 
 <style lang="scss">
 .app-layout {
-  height: 100vh;
+  min-height: 100vh;
 }
 
-/* Sidebar */
+/* Outer aside – BaseSideBar handles visuals */
 .layout-aside {
-  border-right: 1px solid #e5e7eb;
-  background-color: var(--color-card);
+  background-color: transparent;
+  border-right: none;
 }
 
-/* Main container */
 .layout-main-container {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
 }
 
-/* Header */
+/* Header shell; NO fixed height here */
 .layout-header {
   padding: 0;
   background-color: var(--color-card);
   border-bottom: 1px solid #e5e7eb;
 }
 
-/* Main content area */
+/* Content */
 .layout-main {
   padding: 16px;
-  background-color: var(--color-bg); /* now = light purple */
+  background-color: var(--color-bg);
+  flex: 1 1 auto;
+  overflow: auto;
 }
 
 /* Footer */
