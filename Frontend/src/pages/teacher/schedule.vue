@@ -5,7 +5,6 @@ definePageMeta({
 });
 
 import { ref, computed, onMounted } from "vue";
-import { ElMessage } from "element-plus";
 
 import { teacherService } from "~/api/teacher";
 import type { TeacherScheduleListDTO } from "~/api/teacher/dto";

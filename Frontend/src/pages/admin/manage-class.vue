@@ -6,7 +6,6 @@ definePageMeta({ layout: "admin" });
 /* ------------------------------------
  * Base components
  * ---------------------------------- */
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
@@ -466,25 +465,23 @@ const { headerState: classHeaderStats } = useHeaderState({
 
     <!-- TABLE -->
     <el-card>
-      <ErrorBoundary>
-        <SmartTable
-          :data="classes"
-          :columns="classColumns"
-          v-loading="tableLoading"
-        >
-          <template #operation="{ row }">
-            <ActionButtons
-              :rowId="row.id"
-              :detailContent="`Manage students in ${row.name}`"
-              deleteContent="Delete class"
-              @detail="openManageStudentsDialog(row)"
-              @delete="handleSoftDelete(row)"
-              :deleteLoading="deleteLoading[row.id] ?? false"
-              :detailLoading="detailLoading[row.id] ?? false"
-            />
-          </template>
-        </SmartTable>
-      </ErrorBoundary>
+      <SmartTable
+        :data="classes"
+        :columns="classColumns"
+        v-loading="tableLoading"
+      >
+        <template #operation="{ row }">
+          <ActionButtons
+            :rowId="row.id"
+            :detailContent="`Manage students in ${row.name}`"
+            deleteContent="Delete class"
+            @detail="openManageStudentsDialog(row)"
+            @delete="handleSoftDelete(row)"
+            :deleteLoading="deleteLoading[row.id] ?? false"
+            :detailLoading="detailLoading[row.id] ?? false"
+          />
+        </template>
+      </SmartTable>
     </el-card>
 
     <!-- PAGINATION -->
@@ -507,36 +504,34 @@ const { headerState: classHeaderStats } = useHeaderState({
     </el-row>
 
     <!-- CREATE CLASS DIALOG -->
-    <ErrorBoundary>
-      <SmartFormDialog
-        v-model:visible="createFormVisible"
-        v-model="createFormData"
-        :fields="createFormSchema"
-        title="Add Class"
-        :loading="createFormLoading"
-        @save="handleSaveCreateForm"
-        @cancel="handleCancelCreateForm"
-        :useElForm="true"
-        :width="createFormDialogWidth"
-      />
-    </ErrorBoundary>
+
+    <SmartFormDialog
+      v-model:visible="createFormVisible"
+      v-model="createFormData"
+      :fields="createFormSchema"
+      title="Add Class"
+      :loading="createFormLoading"
+      @save="handleSaveCreateForm"
+      @cancel="handleCancelCreateForm"
+      :useElForm="true"
+      :width="createFormDialogWidth"
+    />
 
     <!-- MANAGE STUDENTS + TEACHER DIALOG -->
-    <ErrorBoundary>
-      <SmartFormDialog
-        v-model:visible="manageStudentsVisible"
-        v-model="manageRelationsForm"
-        :fields="manageRelationsFields"
-        :title="`Manage Class${
-          currentClassForStudents ? ' - ' + currentClassForStudents.name : ''
-        }`"
-        :loading="saveStudentsLoading"
-        :width="'40%'"
-        @save="saveManageStudents"
-        @cancel="cancelManageStudents"
-        :useElForm="true"
-      />
-    </ErrorBoundary>
+
+    <SmartFormDialog
+      v-model:visible="manageStudentsVisible"
+      v-model="manageRelationsForm"
+      :fields="manageRelationsFields"
+      :title="`Manage Class${
+        currentClassForStudents ? ' - ' + currentClassForStudents.name : ''
+      }`"
+      :loading="saveStudentsLoading"
+      :width="'40%'"
+      @save="saveManageStudents"
+      @cancel="cancelManageStudents"
+      :useElForm="true"
+    />
   </div>
 </template>
 

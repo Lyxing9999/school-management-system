@@ -14,7 +14,6 @@ import type {
 } from "~/api/student/student.dto";
 import { useHeaderState } from "~/composables/useHeaderState";
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 
 const student = studentService();
 
@@ -254,90 +253,88 @@ const handleRefresh = async () => {
         </div>
       </div>
 
-      <ErrorBoundary>
-        <!-- TABLE -->
-        <el-table
-          :data="pagedData"
-          v-loading="loadingAttendance"
-          border
-          size="small"
-          style="width: 100%"
-          highlight-current-row
+      <!-- TABLE -->
+      <el-table
+        :data="pagedData"
+        v-loading="loadingAttendance"
+        border
+        size="small"
+        style="width: 100%"
+        highlight-current-row
+      >
+        <!-- Date -->
+        <el-table-column prop="record_date" label="Date" min-width="130">
+          <template #default="{ row }">
+            {{ row.record_date }}
+          </template>
+        </el-table-column>
+
+        <!-- Class -->
+        <el-table-column
+          prop="class_name"
+          label="Class"
+          min-width="160"
+          show-overflow-tooltip
+        />
+
+        <!-- Status -->
+        <el-table-column prop="status" label="Status" min-width="120">
+          <template #default="{ row }">
+            <el-tag
+              :type="
+                normalizeStatusCode(row.status) === 'present'
+                  ? 'success'
+                  : normalizeStatusCode(row.status) === 'excused'
+                  ? 'warning'
+                  : 'danger'
+              "
+              size="small"
+            >
+              {{ row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <!-- Teacher -->
+        <el-table-column
+          prop="teacher_name"
+          label="Marked By"
+          min-width="150"
+          show-overflow-tooltip
+        />
+
+        <!-- Created at -->
+        <el-table-column
+          prop="created_at"
+          label="Recorded At"
+          min-width="180"
+          show-overflow-tooltip
         >
-          <!-- Date -->
-          <el-table-column prop="record_date" label="Date" min-width="130">
-            <template #default="{ row }">
-              {{ row.record_date }}
-            </template>
-          </el-table-column>
+          <template #default="{ row }">
+            {{ formatDate(row.created_at) }}
+          </template>
+        </el-table-column>
+      </el-table>
 
-          <!-- Class -->
-          <el-table-column
-            prop="class_name"
-            label="Class"
-            min-width="160"
-            show-overflow-tooltip
-          />
+      <!-- Empty state -->
+      <div
+        v-if="!loadingAttendance && !attendance.length"
+        class="text-center text-gray-500 text-sm py-4"
+      >
+        No attendance records for this class yet.
+      </div>
 
-          <!-- Status -->
-          <el-table-column prop="status" label="Status" min-width="120">
-            <template #default="{ row }">
-              <el-tag
-                :type="
-                  normalizeStatusCode(row.status) === 'present'
-                    ? 'success'
-                    : normalizeStatusCode(row.status) === 'excused'
-                    ? 'warning'
-                    : 'danger'
-                "
-                size="small"
-              >
-                {{ row.status }}
-              </el-tag>
-            </template>
-          </el-table-column>
-
-          <!-- Teacher -->
-          <el-table-column
-            prop="teacher_name"
-            label="Marked By"
-            min-width="150"
-            show-overflow-tooltip
-          />
-
-          <!-- Created at -->
-          <el-table-column
-            prop="created_at"
-            label="Recorded At"
-            min-width="180"
-            show-overflow-tooltip
-          >
-            <template #default="{ row }">
-              {{ formatDate(row.created_at) }}
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <!-- Empty state -->
-        <div
-          v-if="!loadingAttendance && !attendance.length"
-          class="text-center text-gray-500 text-sm py-4"
-        >
-          No attendance records for this class yet.
-        </div>
-
-        <!-- PAGINATION -->
-        <el-row v-if="attendance.length > 0" justify="end" class="mt-6">
-          <el-pagination
-            v-model:current-page="current"
-            v-model:page-size="pageSize"
-            :total="attendance.length"
-            layout="prev, pager, next, jumper, ->, total, sizes"
-            :page-sizes="[5, 10, 20, 50]"
-            class="mt-2 flex justify-end"
-          />
-        </el-row>
-      </ErrorBoundary>
+      <!-- PAGINATION -->
+      <el-row v-if="attendance.length > 0" justify="end" class="mt-6">
+        <el-pagination
+          v-model:current-page="current"
+          v-model:page-size="pageSize"
+          :total="attendance.length"
+          layout="prev, pager, next, jumper, ->, total, sizes"
+          :page-sizes="[5, 10, 20, 50]"
+          class="mt-2 flex justify-end"
+        />
+      </el-row>
     </el-card>
   </div>
 </template>

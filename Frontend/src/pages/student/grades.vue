@@ -4,7 +4,6 @@ definePageMeta({
 });
 
 import { ref, onMounted, computed } from "vue";
-import { ElMessage } from "element-plus";
 
 import { studentService } from "~/api/student";
 import type { GradeDTO } from "~/api/types/school.dto";
@@ -15,7 +14,6 @@ import type {
 import { useHeaderState } from "~/composables/useHeaderState";
 import { formatDate } from "~/utils/formatDate";
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 const student = studentService();
 
@@ -197,7 +195,6 @@ const handleRefresh = async () => {
         </div>
       </div>
 
-      <ErrorBoundary>
         <!-- Grades table -->
         <el-table
           :data="grades"
@@ -263,7 +260,6 @@ const handleRefresh = async () => {
         >
           No grades found for this filter.
         </div>
-      </ErrorBoundary>
     </el-card>
   </div>
 </template>

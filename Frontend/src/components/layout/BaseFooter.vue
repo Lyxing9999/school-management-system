@@ -55,7 +55,7 @@ const links = [
   background-color: var(--color-bg);
   flex: 1 1 auto;
   overflow: auto;
-  min-width: 0; /* <<< add this too (safe in nested flex) */
+  min-width: 0;
 }
 
 .layout-footer {

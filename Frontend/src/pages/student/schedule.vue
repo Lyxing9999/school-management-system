@@ -4,14 +4,12 @@ definePageMeta({
 });
 
 import { ref, onMounted, computed } from "vue";
-import { ElMessage } from "element-plus";
 
 import { studentService } from "~/api/student";
 import type { ScheduleDTO } from "~/api/types/school.dto";
 import type { StudentScheduleFilterDTO } from "~/api/student/student.dto";
 
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 import { useHeaderState } from "~/composables/useHeaderState";
 const student = studentService();
 
@@ -128,52 +126,50 @@ onMounted(loadSchedule);
         </div>
       </template>
 
-      <ErrorBoundary>
-        <el-table
-          :data="schedule"
-          v-loading="loading"
-          border
-          size="small"
-          style="width: 100%"
-          highlight-current-row
-          :header-cell-style="{
-            background: '#f9fafb',
-            color: '#374151',
-            fontWeight: '600',
-            fontSize: '13px',
-          }"
-        >
-          <el-table-column prop="day_of_week" label="Day" min-width="90">
-            <template #default="{ row }">
-              {{ dayOfWeekLabel(row.day_of_week) }}
-            </template>
-          </el-table-column>
+      <el-table
+        :data="schedule"
+        v-loading="loading"
+        border
+        size="small"
+        style="width: 100%"
+        highlight-current-row
+        :header-cell-style="{
+          background: '#f9fafb',
+          color: '#374151',
+          fontWeight: '600',
+          fontSize: '13px',
+        }"
+      >
+        <el-table-column prop="day_of_week" label="Day" min-width="90">
+          <template #default="{ row }">
+            {{ dayOfWeekLabel(row.day_of_week) }}
+          </template>
+        </el-table-column>
 
-          <el-table-column prop="start_time" label="Start" min-width="90" />
-          <el-table-column prop="end_time" label="End" min-width="90" />
-          <el-table-column
-            prop="class_name"
-            label="Class"
-            min-width="200"
-            show-overflow-tooltip
-          />
-          <el-table-column
-            prop="teacher_name"
-            label="Teacher"
-            min-width="200"
-            show-overflow-tooltip
-          />
-          <el-table-column prop="room" label="Room" min-width="100" />
-        </el-table>
+        <el-table-column prop="start_time" label="Start" min-width="90" />
+        <el-table-column prop="end_time" label="End" min-width="90" />
+        <el-table-column
+          prop="class_name"
+          label="Class"
+          min-width="200"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          prop="teacher_name"
+          label="Teacher"
+          min-width="200"
+          show-overflow-tooltip
+        />
+        <el-table-column prop="room" label="Room" min-width="100" />
+      </el-table>
 
-        <!-- EMPTY STATE -->
-        <div
-          v-if="!loading && !schedule.length"
-          class="text-center text-gray-500 text-sm py-4"
-        >
-          No schedule data yet.
-        </div>
-      </ErrorBoundary>
+      <!-- EMPTY STATE -->
+      <div
+        v-if="!loading && !schedule.length"
+        class="text-center text-gray-500 text-sm py-4"
+      >
+        No schedule data yet.
+      </div>
     </el-card>
   </div>
 </template>

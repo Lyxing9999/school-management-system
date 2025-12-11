@@ -6,7 +6,7 @@ definePageMeta({ layout: "admin" });
 /* ------------------------------------
  * Base components
  * ---------------------------------- */
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
+
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
@@ -499,28 +499,26 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
 
       <!-- Table / states -->
       <el-card>
-        <ErrorBoundary>
-          <template #default>
-            <SmartTable
-              v-if="showTable"
-              :data="filteredSlots"
-              :columns="scheduleColumns"
-              :loading="tableLoading"
-            >
-              <template #operation="{ row }">
-                <ActionButtons
-                  :rowId="row.id"
-                  detailContent="Edit schedule slot"
-                  deleteContent="Delete schedule slot"
-                  :detailLoading="detailLoading[row.id] ?? false"
-                  :deleteLoading="deleteLoading[row.id] ?? false"
-                  @detail="() => handleOpenEditForm(row)"
-                  @delete="() => handleSoftDelete(row)"
-                />
-              </template>
-            </SmartTable>
-          </template>
-        </ErrorBoundary>
+        <template #default>
+          <SmartTable
+            v-if="showTable"
+            :data="filteredSlots"
+            :columns="scheduleColumns"
+            :loading="tableLoading"
+          >
+            <template #operation="{ row }">
+              <ActionButtons
+                :rowId="row.id"
+                detailContent="Edit schedule slot"
+                deleteContent="Delete schedule slot"
+                :detailLoading="detailLoading[row.id] ?? false"
+                :deleteLoading="deleteLoading[row.id] ?? false"
+                @detail="() => handleOpenEditForm(row)"
+                @delete="() => handleSoftDelete(row)"
+              />
+            </template>
+          </SmartTable>
+        </template>
       </el-card>
       <!-- Pagination -->
       <el-row v-if="showTable && totalRows > 0" justify="end" class="mt-4">
@@ -576,19 +574,18 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
     />
 
     <!-- EDIT DIALOG -->
-    <ErrorBoundary>
-      <SmartFormDialog
-        :key="editFormDataKey"
-        v-model:visible="editFormVisible"
-        v-model="editFormData"
-        :fields="editFormSchema"
-        title="Edit Schedule Slot"
-        :loading="editFormLoading"
-        @save="handleSaveEditForm"
-        @cancel="handleCancelEditForm"
-        :useElForm="true"
-      />
-    </ErrorBoundary>
+
+    <SmartFormDialog
+      :key="editFormDataKey"
+      v-model:visible="editFormVisible"
+      v-model="editFormData"
+      :fields="editFormSchema"
+      title="Edit Schedule Slot"
+      :loading="editFormLoading"
+      @save="handleSaveEditForm"
+      @cancel="handleCancelEditForm"
+      :useElForm="true"
+    />
   </div>
 </template>
 

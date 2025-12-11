@@ -1,10 +1,8 @@
 <!-- ~/pages/teacher/classes/index.vue -->
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import OverviewHeader from "~/components/OverView/OverViewHeader.vue";
-import BaseButton from "~/components/Base/BaseButton.vue";
+import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 import { teacherService } from "~/api/teacher";
 import type { ClassSectionDTO } from "~/api/types/school.dto";
 
