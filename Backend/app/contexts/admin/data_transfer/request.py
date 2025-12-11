@@ -1,9 +1,11 @@
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, EmailStr
 from app.contexts.shared.enum.roles import SystemRole, StaffRole
 from typing import Optional , List
 from app.contexts.iam.data_transfer.request import IAMUpdateSchema
 from app.contexts.staff.data_transfer.requests import StaffUpdateSchema
 from app.contexts.school.domain.schedule import DayOfWeek
+from app.contexts.student.domain.student import Gender
+
 import datetime
 # from app.contexts.schools.data_transfer.requests.class_requests import SchoolClassUpdateSchema
 # from app.contexts.schools.data_transfer.requests.subject_requests import SubjectCreateSchema, SubjectUpdateSchema
@@ -47,8 +49,28 @@ class AdminCreateStaffSchema(BaseModel):
 class AdminUpdateStaffSchema(StaffUpdateSchema):
     pass
 
+# =====================================================
+# SECTION 3: STUDENT MANAGEMENT
+# =====================================================
+class AdminCreateStudentSchema(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    student_id_code: str = Field(..., description="School ID Code e.g. STU-001")
+    first_name_kh: str
+    last_name_kh: str
+    first_name_en: str
+    last_name_en: str
+    gender: Gender 
+    dob: str 
+    current_grade_level: int = Field(..., ge=1, le=12)
+    phone_number: Optional[str] = None
+    address: Optional[dict] = None
+    guardians: Optional[list] = []
 
-
+    @field_validator("dob")
+    def parse_dob(cls, v):
+        return v
 
 # =====================================================
 # SECTION 4: SCHOOL MANAGEMENT Class

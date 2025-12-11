@@ -1,7 +1,7 @@
 import {
   userForm,
   staffForm,
-  studentInfoForm,
+  studentForm,
   classForm,
   subjectForm,
   scheduleSlotForm,
@@ -39,6 +39,11 @@ export const adminFormRegistryCreate: AdminFormRegistryCreate = {
     schema: scheduleSlotForm.scheduleFormSchema,
     formData: () => ({ ...scheduleSlotForm.getScheduleFormData() }), // fresh object
   },
+  STUDENT: {
+    service: () => studentForm.useServiceFormStudent(),
+    schema: studentForm.studentFormSchema,
+    formData: () => ({ ...studentForm.getStudentFormData() }),
+  },
 };
 
 // -------------------- EDIT FORMS --------------------
@@ -57,10 +62,5 @@ export const adminFormRegistryEdit: AdminFormRegistryEdit = {
     service: () => scheduleSlotForm.useServiceFormScheduleSlot(),
     schema: scheduleSlotForm.scheduleFormSchemaEdit,
     formData: () => scheduleSlotForm.getScheduleFormDataEdit(), // reactive object
-  },
-  STUDENT: {
-    service: () => studentInfoForm.useServiceFormStudentInfo(),
-    schema: studentInfoForm.studentInfoFormSchemaEdit,
-    formData: () => studentInfoForm.getStudentInfoFormDataEdit(), // reactive object
   },
 };

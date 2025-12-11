@@ -1,159 +1,251 @@
-import { ref, reactive, toRefs } from "vue";
-import type {
-  AdminCreateStudentInfo,
-  AdminUpdateStudentInfo,
-} from "~/api/admin/student/student.dto";
 import type { Field } from "~/components/types/form";
+import type {
+  AdminCreateStudent,
+  AdminUpdateStudent,
+} from "~/api/admin/student/student.dto";
+import { Gender } from "~/api/types/enums/gender.enum"; // Make sure you have this
 import {
   ElInput,
-  ElUpload,
   ElDatePicker,
   ElSelect,
   ElInputNumber,
   ElOption,
-  ElInputTag,
 } from "element-plus";
-import { User, Message } from "@element-plus/icons-vue";
+import {
+  User,
+  Message,
+  Calendar,
+  Lock,
+  School,
+  Iphone,
+  Postcard,
+} from "@element-plus/icons-vue";
 
-// --- Reactive form data ---
-
-export const studentInfoFormSchema: Field<AdminCreateStudentInfo>[] = [
+export const studentFormSchema: Field<AdminCreateStudent>[] = [
+  // --- ROW 1: ACCOUNT INFO (IAM) ---
   {
     row: [
       {
-        key: "student_id",
-        label: "Student ID",
-
+        key: "username",
+        label: "Username",
         component: ElInput,
-        componentProps: { placeholder: "Enter student id", suffixIcon: User },
+        componentProps: { placeholder: "k.bunly", suffixIcon: User },
       },
       {
-        key: "full_name",
-        label: "Full Name",
-        component: ElInput,
-        componentProps: { placeholder: "Enter full name", suffixIcon: Message },
-      },
-    ],
-  },
-  {
-    row: [
-      {
-        key: "first_name",
-        label: "First Name",
+        key: "email",
+        label: "Email",
         component: ElInput,
         componentProps: {
-          placeholder: "Enter first name",
-          suffixIcon: Message,
-        },
-      },
-      {
-        key: "last_name",
-        label: "Last Name",
-
-        component: ElInput,
-        componentProps: {
-          placeholder: "Enter last name",
+          placeholder: "example@school.com",
           suffixIcon: Message,
         },
       },
     ],
   },
+  // --- ROW 2: PASSWORD & STUDENT ID ---
   {
     row: [
       {
-        key: "address",
-        label: "Address",
-
+        key: "password",
+        label: "Password",
         component: ElInput,
         componentProps: {
-          placeholder: "Enter address",
-          suffixIcon: Message,
+          placeholder: "******",
+          suffixIcon: Lock,
+          type: "password",
+          showPassword: true,
         },
       },
       {
-        key: "birth_date",
-        label: "Birth Date",
-
-        component: ElDatePicker,
-        componentProps: {
-          placeholder: "Enter birth date",
-          type: "date",
-          format: "YYYY-MM-DD",
-          valueFormat: "YYYY-MM-DD",
-          suffixIcon: Message,
-        },
+        key: "student_id_code",
+        label: "Student ID Code",
+        component: ElInput,
+        componentProps: { placeholder: "STU-001", suffixIcon: Postcard },
       },
     ],
   },
+  // --- ROW 3: KHMER NAMES ---
+  {
+    row: [
+      {
+        key: "last_name_kh",
+        label: "គោត្តនាម (ខ្មែរ)",
+        component: ElInput,
+        componentProps: { placeholder: "កាំង", suffixIcon: User },
+      },
+      {
+        key: "first_name_kh",
+        label: "នាម (ខ្មែរ)",
+        component: ElInput,
+        componentProps: { placeholder: "ប៊ុនលី", suffixIcon: User },
+      },
+    ],
+  },
+  // --- ROW 4: ENGLISH NAMES ---
+  {
+    row: [
+      {
+        key: "last_name_en",
+        label: "Last Name (EN)",
+        component: ElInput,
+        componentProps: { placeholder: "Kaing", suffixIcon: User },
+      },
+      {
+        key: "first_name_en",
+        label: "First Name (EN)",
+        component: ElInput,
+        componentProps: { placeholder: "Bunly", suffixIcon: User },
+      },
+    ],
+  },
+  // --- ROW 5: DEMOGRAPHICS ---
   {
     row: [
       {
         key: "gender",
         label: "Gender",
         component: ElSelect,
-        componentProps: {
-          placeholder: "Enter gender",
-          suffixIcon: Message,
-        },
+        componentProps: { placeholder: "Select Gender" },
+        // Define Options manually or map from Enum
         childComponent: ElOption,
         childComponentProps: {
           options: [
-            { value: "male", label: "Male" },
-            { value: "female", label: "Female" },
+            { value: Gender.MALE, label: "Male" },
+            { value: Gender.FEMALE, label: "Female" },
           ],
         },
       },
       {
-        key: "grade_level",
+        key: "dob",
+        label: "Date of Birth",
+        component: ElDatePicker,
+        componentProps: {
+          placeholder: "Select date",
+          type: "date",
+          format: "YYYY-MM-DD",
+          valueFormat: "YYYY-MM-DD", // Must match Backend Pydantic validation
+          suffixIcon: Calendar,
+          style: { width: "100%" },
+        },
+      },
+    ],
+  },
+  // --- ROW 6: ACADEMIC & CONTACT ---
+  {
+    row: [
+      {
+        key: "current_grade_level",
         label: "Grade Level",
         component: ElInputNumber,
         componentProps: {
-          placeholder: "Enter grade level",
+          placeholder: "Grade",
           min: 1,
           max: 12,
-          suffixIcon: Message,
+          suffixIcon: School,
+          style: { width: "100%" },
         },
       },
-    ],
-  },
-  {
-    row: [
       {
-        key: "classes",
-        label: "Classes",
-        component: ElInputTag,
-        componentProps: { placeholder: "Enter classes", suffixIcon: Message },
-      },
-      {
-        key: "enrollment_date",
-        label: "Enrollment Date",
-
-        component: ElDatePicker,
-        componentProps: {
-          placeholder: "Enter enrollment date",
-          type: "date",
-          format: "YYYY-MM-DD",
-          valueFormat: "YYYY-MM-DD",
-          suffixIcon: Message,
-        },
-      },
-    ],
-  },
-  {
-    row: [
-      {
-        key: "photo_url",
-        label: "Photo (Optional)",
-        component: ElUpload,
-        componentProps: {
-          listType: "picture-card",
-          autoUpload: false,
-          accept: "image/*",
-          action: "",
-        },
+        key: "phone_number",
+        label: "Phone (Optional)",
+        component: ElInput,
+        componentProps: { placeholder: "012...", suffixIcon: Iphone },
       },
     ],
   },
 ];
-export const studentInfoFormSchemaEdit: Field<AdminUpdateStudentInfo>[] =
-  studentInfoFormSchema as unknown as Field<AdminUpdateStudentInfo>[];
+
+// ========================================================================
+// 🟠 UPDATE SCHEMA (PROFILE ONLY)
+// ========================================================================
+// We exclude Username/Password/Email/StudentCode because usually
+// these are handled separately or read-only in basic edit.
+
+export const StudentSchemaEdit: Field<AdminUpdateStudent>[] = [
+  // --- ROW 1: KHMER NAMES ---
+  {
+    row: [
+      {
+        key: "last_name_kh",
+        label: "គោត្តនាម (ខ្មែរ)",
+        component: ElInput,
+        componentProps: { placeholder: "កាំង", suffixIcon: User },
+      },
+      {
+        key: "first_name_kh",
+        label: "នាម (ខ្មែរ)",
+        component: ElInput,
+        componentProps: { placeholder: "ប៊ុនលី", suffixIcon: User },
+      },
+    ],
+  },
+  // --- ROW 2: ENGLISH NAMES ---
+  {
+    row: [
+      {
+        key: "last_name_en",
+        label: "Last Name (EN)",
+        component: ElInput,
+        componentProps: { placeholder: "Kaing", suffixIcon: User },
+      },
+      {
+        key: "first_name_en",
+        label: "First Name (EN)",
+        component: ElInput,
+        componentProps: { placeholder: "Bunly", suffixIcon: User },
+      },
+    ],
+  },
+  // --- ROW 3: DEMOGRAPHICS ---
+  {
+    row: [
+      {
+        key: "gender",
+        label: "Gender",
+        component: ElSelect,
+        componentProps: { placeholder: "Select Gender" },
+        childComponent: ElOption,
+        childComponentProps: {
+          options: [
+            { value: Gender.MALE, label: "Male" },
+            { value: Gender.FEMALE, label: "Female" },
+          ],
+        },
+      },
+      {
+        key: "dob",
+        label: "Date of Birth",
+        component: ElDatePicker,
+        componentProps: {
+          type: "date",
+          format: "YYYY-MM-DD",
+          valueFormat: "YYYY-MM-DD",
+          suffixIcon: Calendar,
+          style: { width: "100%" },
+        },
+      },
+    ],
+  },
+  // --- ROW 4: ACADEMIC & CONTACT ---
+  {
+    row: [
+      {
+        key: "current_grade_level",
+        label: "Grade Level",
+        component: ElInputNumber,
+        componentProps: {
+          min: 1,
+          max: 12,
+          suffixIcon: School,
+          style: { width: "100%" },
+        },
+      },
+      {
+        key: "phone_number",
+        label: "Phone",
+        component: ElInput,
+        componentProps: { placeholder: "012...", suffixIcon: Iphone },
+      },
+    ],
+  },
+];

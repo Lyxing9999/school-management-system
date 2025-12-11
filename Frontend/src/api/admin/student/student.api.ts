@@ -1,41 +1,67 @@
 import type { AxiosInstance } from "axios";
 import type {
-  AdminStudentInfoResponse,
-  AdminUpdateStudentInfo,
-} from "./student.dto";
+  AdminCreateStudent,
+  AdminCreateStudentResponse,
+  AdminGetStudentResponse,
+  AdminUpdateStudent,
+  AdminGetPageStudentResponse,
+  AdminStudentListSelectResponse,
+} from "~/api/admin/student/student.dto";
 
 export class StudentApi {
   constructor(
     private $api: AxiosInstance,
-    private baseURL = "/api/admin/student"
+    private baseURL = "/api/admin/students"
   ) {}
 
-  async getStudentInfo(id: string): Promise<AdminStudentInfoResponse> {
-    const res = await this.$api.get<AdminStudentInfoResponse>(
-      `${this.baseURL}/${id}`
+  /**
+   * Create a new student (IAM + Profile)
+   */
+  async createStudent(
+    payload: AdminCreateStudent
+  ): Promise<AdminCreateStudentResponse> {
+    const res = await this.$api.post<AdminCreateStudentResponse>(
+      this.baseURL,
+      payload
     );
     return res.data;
   }
 
-  async updateStudentInfo(
-    id: string,
-    studentData: AdminUpdateStudentInfo & { photo_file?: File | null }
-  ) {
-    const formData = new FormData();
-    Object.entries(studentData).forEach(([key, value]) => {
-      if (value === undefined || value === null || key === "photo_file") return;
-      formData.append(
-        key,
-        Array.isArray(value) ? JSON.stringify(value) : (value as string | Blob)
-      );
-    });
-    if (studentData.photo_file)
-      formData.append("photo_url", studentData.photo_file);
-    const res = await this.$api.patch<AdminStudentInfoResponse>(
-      `${this.baseURL}/${id}`,
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
-    return res.data;
-  }
+  /**
+   * Get single student info
+   */
+  // async getStudentInfo(id: string): Promise<AdminGetStudentResponse> {
+  //   const res = await this.$api.get<AdminGetStudentResponse>(
+  //     `${this.baseURL}/${id}`
+  //   );
+  //   return res.data;
+  // }
+
+  // async updateStudentInfo(
+  //   id: string,
+  //   payload: AdminUpdateStudent
+  // ): Promise<AdminGetStudentResponse> {
+  //   const res = await this.$api.patch<AdminGetStudentResponse>(
+  //     `${this.baseURL}/${id}`,
+  //     payload
+  //   );
+  //   return res.data;
+  // }
+
+  // async getStudents(
+  //   page = 1,
+  //   pageSize = 10
+  // ): Promise<AdminGetPageStudentResponse> {
+  //   const res = await this.$api.get<AdminGetPageStudentResponse>(this.baseURL, {
+  //     params: { page, page_size: pageSize },
+  //   });
+  //   return res.data;
+  // }
+
+  // async getStudentSelect(): Promise<AdminStudentListSelectResponse> {
+  //   const res = await this.$api.get<AdminStudentListSelectResponse>(
+  //     `${this.baseURL}/select`
+  //   );
+  //   return res.data;
+  // }
 }

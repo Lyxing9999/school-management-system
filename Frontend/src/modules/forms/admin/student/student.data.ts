@@ -1,47 +1,38 @@
+import { reactive } from "vue";
 import type {
-  AdminCreateStudentInfo,
-  AdminUpdateStudentInfo,
+  AdminCreateStudent,
+  AdminUpdateStudent,
 } from "~/api/admin/student/student.dto";
-import { reactive, ref } from "vue";
+import { Gender } from "~/api/types/enums/gender.enum";
 
-// File reference
-const photo_file = ref<File | null>(null);
-
-// Create form: fresh object
-export const getStudentInfoFormData = (): AdminCreateStudentInfo & {
-  photo_file?: File | null;
-} => ({
-  student_id: "",
-  full_name: "",
-  first_name: "",
-  last_name: "",
-  birth_date: "",
-  gender: "",
-  grade_level: 0,
-  classes: [],
-  enrollment_date: "",
-
-  address: "",
-  photo_url: "",
-  photo_file: null,
+// ==========================================================
+// 1. CREATE FORM (IAM + PROFILE)
+// ==========================================================
+export const getStudentFormData = (): AdminCreateStudent => ({
+  username: "",
+  email: "",
+  password: "",
+  student_id_code: "",
+  first_name_kh: "",
+  last_name_kh: "",
+  first_name_en: "",
+  last_name_en: "",
+  gender: Gender.MALE,
+  dob: "",
+  current_grade_level: 10,
+  phone_number: "",
 });
 
-// Update form: reactive object
-export const getStudentInfoFormDataEdit = (
-  data?: Partial<AdminUpdateStudentInfo>
-) =>
+export const getStudentFormDataEdit = (data?: Partial<AdminUpdateStudent>) =>
   reactive({
-    student_id: "",
-    full_name: "",
-    first_name: "",
-    last_name: "",
-    birth_date: "",
-    gender: "",
-    grade_level: 0,
-    classes: [],
-    enrollment_date: "",
-    address: "",
-    photo_url: "",
-    photo_file: null,
+    student_id_code: "",
+    first_name_kh: "",
+    last_name_kh: "",
+    first_name_en: "",
+    last_name_en: "",
+    gender: Gender.MALE,
+    dob: "",
+    current_grade_level: 10,
+    phone_number: "",
     ...data,
   });

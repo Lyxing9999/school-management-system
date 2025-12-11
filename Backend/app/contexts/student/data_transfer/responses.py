@@ -10,6 +10,30 @@ from app.contexts.school.data_transfer.responses import (
 )
 from app.contexts.school.data_transfer.responses import GradeType
 from app.contexts.school.data_transfer.responses import AttendanceStatus
+
+
+class StudentBaseDataDTO(BaseModel):
+    id: str
+    user_id: str
+    student_id_code: str
+    
+    first_name_kh: str
+    last_name_kh: str
+    first_name_en: str
+    last_name_en: str
+    
+    gender: str
+    dob: Optional[date]
+    current_grade_level: int
+    
+    photo_url: Optional[str]
+    status: str
+    
+    created_at: datetime
+    updated_at: datetime
+
+
+
 class StudentClassSectionDTO(ClassSectionDTO):
     student_count: int
     subject_count: int
@@ -48,9 +72,9 @@ class StudentGradeDTO(BaseModel):
     student_id: str
     student_name: str | None = None
     class_id: str | None = None
-    class_name: str | None = None           # add this if you want it
+    class_name: str | None = None          
     subject_id: str
-    subject_label: str | None = None        # or subject_name if you prefer
+    subject_label: str | None = None      
     score: float
     type: GradeType
     term: str | None = None

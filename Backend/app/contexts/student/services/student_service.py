@@ -1,6 +1,7 @@
 from __future__ import annotations
-from typing import List
+from typing import Final, Optional
 from bson import ObjectId
+from datetime import datetime
 from pymongo.database import Database
 
 from app.contexts.school.services.school_service import SchoolService
@@ -8,10 +9,14 @@ from app.contexts.school.data_transfer.responses import (
     ClassSectionDTO,
     AttendanceDTO,
     GradeDTO,
-)
+)   
 from app.contexts.shared.model_converter import mongo_converter
-from app.contexts.student.data_transfer.responses import StudentScheduleDTO
-from app.contexts.student.read_models.student_read_model import StudentReadModel
+
+
+from ..data_transfer.responses import StudentScheduleDTO
+from ..read_models.student_read_model import StudentReadModel
+from ..repositories.student_repository import MongoStudentRepository
+from ..domain.student import Student
 
 class StudentService:
     """
@@ -22,21 +27,21 @@ class StudentService:
     def __init__(self, db: Database, school_service: SchoolService):
         self.db = db
         self.school_service = school_service
-        self._student_read: StudentReadModel | None = None
-
+        self._student_read: Final(StudentReadModel | None) = None
+        self._student_repo: Final(MongoStudentRepository | None) = None
+    
     def _oid(self, id_: str | ObjectId) -> ObjectId:
         return mongo_converter.convert_to_object_id(id_)
 
 
-    @property
-    def student_read(self) -> StudentReadModel:
-        if self._student_read is None:
-            self._student_read = StudentReadModel(self.db)
-        return self._student_read
+
+    # ---------------- MY PROFILE ----------------
+    
+    def get_my_profile(self, user_id: str | ObjectId) -> Optional[Student]:
+        uid = self._oid(user_id)
+        return self._student_repo.find_by_user_id(uid)
 
     # ---------------- ATTENDANCE ----------------
-
-
 
     def get_my_attendance(
         self,
@@ -45,7 +50,7 @@ class StudentService:
     ) -> list[AttendanceDTO]:
         sid = self._oid(student_id)
         cid = self._oid(class_id)
-        return self.student_read.list_my_attendance_enriched(sid, cid)
+        return self._student_read.list_my_attendance_enriched(sid, cid)
     # ---------------- GRADES ----------------
 
     def get_my_grades(
@@ -55,9 +60,7 @@ class StudentService:
     ) -> list[GradeDTO]:
         sid = self._oid(student_id)
 
-            # If later you add filtering by term, plug it in here
-            # e.g. self.grade_read.list_student_grades_by_term(sid, term)
-        return self.student_read.list_my_grades_enriched(sid)
+        return self._student_read.list_my_grades_enriched(sid)
 
 
 
@@ -68,7 +71,7 @@ class StudentService:
         student_id: str | ObjectId,
     ) -> list[StudentScheduleDTO]:
         sid = self._oid(student_id)
-        return self.student_read.list_my_schedule_enriched(sid)
+        return self._student_read.list_my_schedule_enriched(sid)
         
 
     # ---------------- CLASSES ----------------
@@ -78,5 +81,5 @@ class StudentService:
         student_id: str | ObjectId,
     ) -> list[ClassSectionDTO]:
         sid = self._oid(student_id)
-        return self.student_read.list_my_classes_enriched(sid)
+        return self._student_read.list_my_classes_enriched(sid)
         

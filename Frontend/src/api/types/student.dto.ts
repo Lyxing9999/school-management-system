@@ -19,22 +19,27 @@
  *  }
  * }
  */
+import { Gender } from "~/api/types/enums/gender.enum";
+import { StudentStatus } from "~/api/types/enums/student-status.enum";
+export interface StudentBaseDataDTO {
+  id: string; // ObjectId string
+  user_id: string; // IAM ID
+  student_id_code: string;
 
-export interface StudentInfoBaseDataDTO {
-  user_id: string;
-  student_info: {
-    student_id: string;
-    full_name: string;
-    photo_url: string | null | undefined;
-    photo_file?: File | null;
-    first_name?: string;
-    last_name?: string;
-    birth_date?: string;
-    gender?: string;
-    grade_level?: number;
-    classes?: string[];
-    enrollment_date?: string;
-    address?: string;
-  };
+  first_name_kh: string;
+  last_name_kh: string;
+  first_name_en: string;
+  last_name_en: string;
+
+  gender: Gender;
+  dob: string; // ISO Date String or 'YYYY-MM-DD'
+  current_grade_level: number;
+
+  photo_url?: string;
+  phone_number?: string;
+
+  status: StudentStatus | string;
+
+  created_at: string;
+  updated_at: string;
 }
-

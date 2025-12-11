@@ -69,7 +69,7 @@ import { Role } from "~/api/types/enums/role.enum";
 import { adminService } from "~/api/admin";
 
 /* ----------------------------- types ----------------------------- */
-type CreateMode = "USER" | "STAFF";
+type CreateMode = "USER" | "STAFF" | "STUDENT";
 type EditMode = "USER" | "STAFF" | "STUDENT";
 
 /* --------------------------- reactive ---------------------------- */
@@ -93,7 +93,7 @@ const {
 } = useDynamicCreateFormReactive(selectedFormCreate);
 
 const handleOpenCreateForm = async () => {
-  selectedFormCreate.value = isStaffMode.value ? "STAFF" : "USER";
+  selectedFormCreate.value = isStaffMode.value ? "STAFF" : "STUDENT";
   createFormKey.value++;
   await openCreateForm();
 };
@@ -246,6 +246,7 @@ const dynamicWidthEdit = computed(() => editWidthRef.value);
 const createDialogWidth = computed(() => {
   if (selectedFormCreate.value === "STAFF") return "65%";
   if (selectedFormCreate.value === "USER") return "40%";
+  if (selectedFormCreate.value === "STUDENT") return "80%";
   return dynamicWidthCreate.value;
 });
 

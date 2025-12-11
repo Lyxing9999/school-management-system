@@ -49,55 +49,33 @@ class StudentReadModel(MongoErrorMixin):
             student_read_model=self,
         )
 
-    # -------------
-    # properties
-    # -------------
-
-    @property
-    def iam(self) -> IAMReadModel:
-        return self._iam_read_model
-
-    @property
-    def schedule(self) -> ScheduleReadModel:
-        return self._schedule_read_model
-
-    @property
-    def classes(self) -> ClassReadModel:
-        return self._class_read_model
-
-    @property
-    def staff(self) -> StaffReadModel:
-        return self._staff_read_model
-
-    @property
-    def attendance(self) -> AttendanceReadModel:
-        return self._attendance_read_model
-
-    @property
-    def grade(self) -> GradeReadModel:
-        return self._grade_read_model
-
-    @property
-    def subject(self) -> SubjectReadModel:
-        return self._subject_read_model
-
-    @property
-    def display_name(self) -> DisplayNameService:
-        return self._display_name_service
 
     # -------------
     # basic
     # -------------
-
+    def get_by_user_id(self, user_id: ObjectId):
+            return self.collection.find_one({"user_id": user_id})
+            
     def get_me(self, user_id: ObjectId) -> dict | None:
         """
         Simple pass-through to IAM get_by_id.
         """
-        return self.iam.get_by_id(user_id)
+        return self.get_by_user_id(user_id)
 
+    def get_by_student_code(self, code: str):
+            return self.collection.find_one({"student_id_code": code})
 
-    def student_names_for_ids(self, user_ids: Iterable[ObjectId | str | dict | None]) -> Dict[ObjectId, str]:
-        return self.iam.list_usernames_by_ids(user_ids, role="student")
+    def get_student_names_by_ids(self, student_ids: list) -> dict:
+            ids = [mongo_converter.convert_to_object_id(sid) for sid in student_ids if sid]
+            cursor = self.collection.find(
+                {"_id": {"$in": ids}},
+                {"first_name_en": 1, "last_name_en": 1}
+            )
+            names = {}
+            for doc in cursor:
+                full_name = f"{doc.get('first_name_en')} {doc.get('last_name_en')}"
+                names[doc["_id"]] = full_name
+            return names
 
     # -------------
     # classes
@@ -121,8 +99,8 @@ class StudentReadModel(MongoErrorMixin):
         }
         """
         oid = mongo_converter.convert_to_object_id(student_id)
-        raw_classes = self.classes.list_classes_for_student(oid)  # raw Mongo docs
-        return self.display_name.enrich_classes(raw_classes)
+        raw_classes = self._class_read_model.list_classes_for_student(oid)  # raw Mongo docs
+        return self._display_name_service.enrich_classes(raw_classes)
       
 
     def list_my_subjects(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
@@ -135,7 +113,7 @@ class StudentReadModel(MongoErrorMixin):
         - label: "Name (CODE)" for selects
         """
         oid = mongo_converter.convert_to_object_id(student_id)
-        class_docs = self.classes.list_classes_for_student(oid)
+        class_docs = self._class_read_model.list_classes_for_student(oid)
         if not class_docs:
             return []
 
@@ -190,7 +168,7 @@ class StudentReadModel(MongoErrorMixin):
 
         oid = mongo_converter.convert_to_object_id(student_id)
 
-        class_docs = self.classes.list_classes_for_student(oid)
+        class_docs = self._class_read_model.list_classes_for_student(oid)
         if not class_docs:
             return []
         class_ids: List[ObjectId] = []
@@ -202,9 +180,9 @@ class StudentReadModel(MongoErrorMixin):
 
         if not class_ids:
             return []
-        schedule_docs = self.schedule.list_schedules_for_classes(class_ids)
+        schedule_docs = self._schedule_read_model.list_schedules_for_classes(class_ids)
 
-        schedule_enriched = self.display_name.enrich_schedules(schedule_docs)
+        schedule_enriched = self._display_name_service.enrich_schedules(schedule_docs)
 
         schedule_enriched.sort(
             key=lambda s: (
@@ -234,10 +212,10 @@ class StudentReadModel(MongoErrorMixin):
           ...
         }
         """
-        records = self.attendance.list_attendance_for_class_and_student(class_id=class_ids, student_id=student_id)
+        records = self._attendance_read_model.list_attendance_for_class_and_student(class_id=class_ids, student_id=student_id)
         if not records:
             return []
-        return self.display_name.enrich_attendance(records)
+        return self._display_name_service.enrich_attendance(records)
 
 
     def list_my_grades_enriched(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
@@ -246,10 +224,10 @@ class StudentReadModel(MongoErrorMixin):
         You can enrich later with subject_name / class_name if needed.
         """
         oid = mongo_converter.convert_to_object_id(student_id)
-        records = self.grade.list_grades_for_student(oid)  
+        records = self._grade_read_model.list_grades_for_student(oid)  
         if not records:
             return []
-        return self.display_name.enrich_grades(records)
+        return self._display_name_service.enrich_grades(records)
 
         
 
@@ -258,4 +236,4 @@ class StudentReadModel(MongoErrorMixin):
         """
         Return the count of active students.
         """
-        return self.iam.count_active_users("student")
+        return self._iam.count_active_users("student")

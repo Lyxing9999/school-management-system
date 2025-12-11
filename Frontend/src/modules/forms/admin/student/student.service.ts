@@ -1,15 +1,15 @@
 import { adminService } from "~/api/admin";
 import type { UseFormService } from "~/form-system/types/serviceFormTypes";
 
-import type { AdminUpdateStudentInfo } from "~/api/admin/student/student.dto";
-export function useServiceFormStudentInfo(): UseFormService<
+import type { AdminCreateStudent } from "~/api/admin/student/student.dto";
+export function useServiceFormStudent(): UseFormService<
   any,
-  AdminUpdateStudentInfo
+  AdminCreateStudent
 > {
   const adminApiService = adminService();
 
   return {
-    update: (id, data) => adminApiService.student.updateStudentInfo(id, data),
-    getDetail: (id) => adminApiService.student.getStudentInfo(id),
+    create: (data) =>
+      adminApiService.student.createStudent(data, { showSuccess: true }),
   };
 }

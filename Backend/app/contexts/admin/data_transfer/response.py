@@ -5,6 +5,8 @@ from app.contexts.staff.data_transfer.responses import StaffReadDataDTO
 from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from typing import List, Optional
 from app.contexts.school.data_transfer.responses import ClassSectionDTO
+from app.contexts.student.data_transfer.responses import StudentBaseDataDTO
+
 import datetime as dt
 
 class BaseNameSelectDTO(BaseModel):
@@ -86,6 +88,22 @@ class AdminUserStaffDataDTO(BaseModel):
 
     user: IAMBaseDataDTO | None = None
     staff: StaffBaseDataDTO | None = None
+
+
+
+# =====================================================
+# USER + STUDENT
+# =====================================================
+class AdminCreateStudentDataDTO(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra="ignore",
+    )
+
+    user: IAMBaseDataDTO | None = None
+    student: StudentBaseDataDTO | None = None
+
+
 # =====================================================
 # SECTION 3: SUBJECT MANAGEMENT
 # =====================================================
