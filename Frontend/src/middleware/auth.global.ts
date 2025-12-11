@@ -1,6 +1,7 @@
+// ~/src/middleware/auth.global.ts
 import { useAuthStore } from "~/stores/authStore";
 import { Role } from "~/api/types/enums/role.enum";
-import type { RouteLocationNormalized } from "vue-router";
+import type { RouteLocationNormalizedLoaded } from "vue-router";
 
 const routeRoles: Record<string, Role[]> = {
   "/admin": [Role.ADMIN],
@@ -14,10 +15,17 @@ const routeRoles: Record<string, Role[]> = {
 };
 
 export default defineNuxtRouteMiddleware(
-  (to: RouteLocationNormalized, from: RouteLocationNormalized) => {
+  (to: RouteLocationNormalizedLoaded) => {
     if (!process.client) return;
 
     const auth = useAuthStore();
+
+    if (
+      !to.path.startsWith("/auth") &&
+      (to.path === "/" || to.path === "/home")
+    ) {
+      return navigateTo("/auth/login");
+    }
 
     if (!auth.isAuthenticated && !to.path.startsWith("/auth")) {
       return navigateTo("/auth/login");
