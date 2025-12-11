@@ -30,7 +30,6 @@ import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 
 import { useHeaderState } from "~/composables/useHeaderState";
 import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
@@ -633,46 +632,44 @@ const handlePageSizeChange = (size: number) => {
         </div>
       </template>
 
-      <ErrorBoundary>
-        <SmartTable
-          :data="gradeList"
-          :columns="gradeColumns"
-          :loading="loading"
-          :smartProps="{
-            border: true,
-            size: 'small',
-            'highlight-current-row': true,
-          }"
-        >
-          <template #operation="{ row }">
-            <ActionButtons
-              :rowId="row.id"
-              :detailContent="`Edit ${
-                row.type.charAt(0).toUpperCase() + row.type.slice(1)
-              }`"
-              :deleteContent="`Remove ${
-                row.type.charAt(0).toUpperCase() + row.type.slice(1)
-              }`"
-              @detail="openEditGradeDialog(row)"
-              @delete="handleDeleteGrade(row)"
-            />
-          </template>
-        </SmartTable>
-
-        <!-- Pagination -->
-        <div v-if="totalRows > 0" class="mt-4 flex justify-end">
-          <el-pagination
-            background
-            layout="prev, pager, next, jumper, sizes, total"
-            :current-page="currentPage"
-            :page-size="pageSize"
-            :page-sizes="[10, 20, 50]"
-            :total="totalRows"
-            @current-change="handlePageChange"
-            @size-change="handlePageSizeChange"
+      <SmartTable
+        :data="gradeList"
+        :columns="gradeColumns"
+        :loading="loading"
+        :smartProps="{
+          border: true,
+          size: 'small',
+          'highlight-current-row': true,
+        }"
+      >
+        <template #operation="{ row }">
+          <ActionButtons
+            :rowId="row.id"
+            :detailContent="`Edit ${
+              row.type.charAt(0).toUpperCase() + row.type.slice(1)
+            }`"
+            :deleteContent="`Remove ${
+              row.type.charAt(0).toUpperCase() + row.type.slice(1)
+            }`"
+            @detail="openEditGradeDialog(row)"
+            @delete="handleDeleteGrade(row)"
           />
-        </div>
-      </ErrorBoundary>
+        </template>
+      </SmartTable>
+
+      <!-- Pagination -->
+      <div v-if="totalRows > 0" class="mt-4 flex justify-end">
+        <el-pagination
+          background
+          layout="prev, pager, next, jumper, sizes, total"
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :page-sizes="[10, 20, 50]"
+          :total="totalRows"
+          @current-change="handlePageChange"
+          @size-change="handlePageSizeChange"
+        />
+      </div>
     </el-card>
 
     <!-- ADD GRADE DIALOG -->
@@ -700,4 +697,3 @@ const handlePageSizeChange = (size: number) => {
     />
   </div>
 </template>
-
