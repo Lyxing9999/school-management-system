@@ -1,9 +1,9 @@
 <!-- components/ErrorBoundary.vue -->
 <script setup lang="ts">
-import { ref, onErrorCaptured, defineProps, defineEmits } from "vue";
+import { ref, onErrorCaptured } from "vue";
 
 const props = defineProps<{
-  onError?: (err: Error) => void; // optional custom handler
+  onError?: (err: Error) => void;
 }>();
 
 const emit = defineEmits<{

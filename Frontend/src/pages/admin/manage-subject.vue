@@ -47,16 +47,15 @@ const activeFilter = ref<SubjectFilter>("all");
 /* ---------------------- paginated fetch (reusing composable) ---------------------- */
 
 const {
-  data: subjects, // current page items
-  loading: tableLoading, // loading state
-  error: tableError, // unused for now, but available
+  data: subjects,
+  loading: tableLoading,
+  error: tableError,
   currentPage,
   pageSize,
   totalRows,
   fetchPage,
   goPage,
 } = usePaginatedFetch<AdminSubjectDataDTO, SubjectFilter>(
-  // fetchFn: backend returns all; we filter + paginate on client
   async (filter, page, pageSize, _signal) => {
     const res: AdminSubjectListDTO | undefined =
       await adminApi.subject.getSubjects();
@@ -76,9 +75,9 @@ const {
 
     return { items, total };
   },
-  1, // initial page
-  10, // initial page size
-  activeFilter // reactive filter ref
+  1,
+  10,
+  activeFilter
 );
 
 /* ---------------------- grade options display helper ---------------------- */
@@ -95,7 +94,6 @@ function formatAllowedGrades(levels?: number[]) {
 
 /* ---------------------- CREATE FORM (dynamic) ---------------------- */
 
-// IMPORTANT: correct mode key must match your registry ("SUBJECT")
 const createMode = ref<"SUBJECT">("SUBJECT");
 
 const {
@@ -118,7 +116,7 @@ async function openCreateDialog() {
 
 async function handleSaveCreateForm(payload: Partial<AdminCreateSubject>) {
   await saveCreateForm(payload);
-  await fetchPage(1); // reload from first page after create
+  await fetchPage(1);
 }
 
 function handleCancelCreateForm() {
@@ -140,7 +138,6 @@ async function toggleSubjectActive(row: AdminSubjectDataDTO) {
   statusLoading.value[id] = true;
 
   try {
-    // v-model already flipped the value; call matching API
     if (row.is_active) {
       await adminApi.subject.activateSubject(id);
     } else {
@@ -186,7 +183,6 @@ const { headerState: subjectHeaderStats } = useHeaderState({
 /* ---------------------- watch filter ---------------------- */
 
 watch(activeFilter, () => {
-  // when user switches All / Active / Inactive, refetch from page 1
   fetchPage(1);
 });
 
@@ -199,7 +195,6 @@ onMounted(() => {
 
 <template>
   <div class="p-4 space-y-6">
-    <!-- OVERVIEW HEADER -->
     <OverviewHeader
       title="Subjects"
       description="Manage subjects and their availability across the school."
@@ -207,7 +202,6 @@ onMounted(() => {
       :showRefresh="false"
       :stats="subjectHeaderStats"
     >
-      <!-- Filters: status radio group -->
       <template #filters>
         <div class="flex flex-wrap items-center gap-3">
           <div class="flex items-center gap-2">
@@ -221,7 +215,6 @@ onMounted(() => {
         </div>
       </template>
 
-      <!-- Actions: Refresh + Add -->
       <template #actions>
         <BaseButton
           plain
@@ -238,15 +231,13 @@ onMounted(() => {
       </template>
     </OverviewHeader>
 
-    <!-- TABLE -->
-    <el-card>
-      <ErrorBoundary>
+    <ErrorBoundary>
+      <el-card>
         <SmartTable
           :data="subjects"
           :columns="subjectColumns"
           :loading="tableLoading"
         >
-          <!-- Description column -->
           <template #description="{ row }">
             <div class="description-cell">
               <span
@@ -263,12 +254,10 @@ onMounted(() => {
             </div>
           </template>
 
-          <!-- Allowed Grades column -->
           <template #allowedGrades="{ row }">
             <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
           </template>
 
-          <!-- Status / operation column -->
           <template #operation="{ row }">
             <ElSwitch
               v-model="row.is_active"
@@ -277,9 +266,9 @@ onMounted(() => {
             />
           </template>
         </SmartTable>
-      </ErrorBoundary>
-    </el-card>
-    <!-- PAGINATION -->
+      </el-card>
+    </ErrorBoundary>
+
     <el-row v-if="totalRows > 0" justify="end" class="m-4">
       <el-pagination
         :current-page="currentPage"
@@ -298,7 +287,6 @@ onMounted(() => {
       />
     </el-row>
 
-    <!-- CREATE SUBJECT DIALOG (SmartFormDialog + form-system) -->
     <ErrorBoundary>
       <SmartFormDialog
         :key="createDialogKey"
