@@ -16,7 +16,6 @@ definePageMeta({
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
@@ -392,92 +391,89 @@ const { headerState: userHeaderStats } = useHeaderState({
     </OverviewHeader>
 
     <!-- TABLE + INLINE EDIT -->
-    <ErrorBoundary>
-      <el-card>
-        <template #default>
-          <SmartTable
-            :data="data"
-            :columns="userColumns"
-            :loading="fetchLoading"
-            @save="handleSaveWrapper"
-            @cancel="cancel"
-            @auto-save="handleAutoSaveWrapper"
-          >
-            <template #operation="{ row }">
-              <ActionButtons
-                :rowId="row.id"
-                :role="row.role"
-                :detailContent="`Edit ${
-                  row.role.charAt(0).toUpperCase() + row.role.slice(1)
-                } details`"
-                :deleteContent="`Delete ${
-                  row.role.charAt(0).toUpperCase() + row.role.slice(1)
-                }`"
-                :detailLoading="
-                  inlineEditLoading[row.id] ?? detailLoading[row.id] ?? false
-                "
-                :deleteLoading="
-                  inlineEditLoading[row.id] ?? deleteLoading[row.id] ?? false
-                "
-                @detail="handleOpenEditForm(row)"
-                @delete="removeUser(row)"
-              />
-            </template>
 
-            <template #controlsSlot="{ row, field }">
-              <el-tooltip
-                :content="`Previous: ${getPreviousValue(row, field)}`"
-                placement="top"
+    <el-card>
+      <template #default>
+        <SmartTable
+          :data="data"
+          :columns="userColumns"
+          :loading="fetchLoading"
+          @save="handleSaveWrapper"
+          @cancel="cancel"
+          @auto-save="handleAutoSaveWrapper"
+        >
+          <template #operation="{ row }">
+            <ActionButtons
+              :rowId="row.id"
+              :role="row.role"
+              :detailContent="`Edit ${
+                row.role.charAt(0).toUpperCase() + row.role.slice(1)
+              } details`"
+              :deleteContent="`Delete ${
+                row.role.charAt(0).toUpperCase() + row.role.slice(1)
+              }`"
+              :detailLoading="
+                inlineEditLoading[row.id] ?? detailLoading[row.id] ?? false
+              "
+              :deleteLoading="
+                inlineEditLoading[row.id] ?? deleteLoading[row.id] ?? false
+              "
+              @detail="handleOpenEditForm(row)"
+              @delete="removeUser(row)"
+            />
+          </template>
+
+          <template #controlsSlot="{ row, field }">
+            <el-tooltip
+              :content="`Previous: ${getPreviousValue(row, field)}`"
+              placement="top"
+            >
+              <el-icon
+                class="cursor-pointer"
+                @click="handleRevertField(row, field)"
               >
-                <el-icon
-                  class="cursor-pointer"
-                  @click="handleRevertField(row, field)"
-                >
-                  <Refresh />
-                </el-icon>
-              </el-tooltip>
-            </template>
-          </SmartTable>
-        </template>
-      </el-card>
-    </ErrorBoundary>
+                <Refresh />
+              </el-icon>
+            </el-tooltip>
+          </template>
+        </SmartTable>
+      </template>
+    </el-card>
 
     <!-- PAGINATION -->
-    <ErrorBoundary>
-      <el-row v-if="totalRows > 0" justify="end" class="mt-6">
-        <el-pagination
-          :current-page="currentPage"
-          :page-size="pageSize"
-          :total="totalRows"
-          :page-sizes="[10, 15, 20, 50]"
-          layout="total, sizes, prev, pager, next, jumper"
-          background
-          @current-change="goPage"
-          @size-change="
+
+    <el-row v-if="totalRows > 0" justify="end" class="mt-6">
+      <el-pagination
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total="totalRows"
+        :page-sizes="[10, 15, 20, 50]"
+        layout="total, sizes, prev, pager, next, jumper"
+        background
+        @current-change="goPage"
+        @size-change="
             (size: number) => {
               pageSize = size;
               fetchPage(1);
             }
           "
-        />
-      </el-row>
-    </ErrorBoundary>
+      />
+    </el-row>
 
     <!-- CREATE DIALOG -->
-    <ErrorBoundary>
-      <SmartFormDialog
-        :key="`${selectedFormCreate}-${createFormKey}`"
-        v-model:visible="createFormVisible"
-        v-model="createFormData"
-        :fields="createFormSchema"
-        :title="`Add ${isStaffMode ? 'Staff' : 'User'}`"
-        :loading="createFormLoading"
-        @save="handleSaveCreateForm"
-        @cancel="handleCancelCreateForm"
-        :useElForm="true"
-        :width="createDialogWidth"
-      />
-    </ErrorBoundary>
+
+    <SmartFormDialog
+      :key="`${selectedFormCreate}-${createFormKey}`"
+      v-model:visible="createFormVisible"
+      v-model="createFormData"
+      :fields="createFormSchema"
+      :title="`Add ${isStaffMode ? 'Staff' : 'User'}`"
+      :loading="createFormLoading"
+      @save="handleSaveCreateForm"
+      @cancel="handleCancelCreateForm"
+      :useElForm="true"
+      :width="createDialogWidth"
+    />
 
     <!-- EDIT DIALOG -->
     <SmartFormDialog
