@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
-import BaseFooter from "~/components/Layout/BaseFooter.vue";
-import BaseHeader from "~/components/Layout/BaseHeader.vue";
-import BaseSideBar from "~/components/Layout/BaseSideBar.vue";
+import BaseFooter from "~/components/layout/BaseFooter.vue";
+import BaseHeader from "~/components/layout/BaseHeader.vue";
+import BaseSideBar from "~/components/layout/BaseSideBar.vue";
 import schoolLogo from "~/assets/image/school-logo.jpg";
 
 const route = useRoute();
