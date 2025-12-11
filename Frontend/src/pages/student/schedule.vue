@@ -31,9 +31,6 @@ const loadSchedule = async () => {
     // API shape: { items: ScheduleDTO[] }
     schedule.value = res.items ?? [];
   } catch (err: any) {
-    console.error(err);
-    errorMessage.value = err?.message ?? "Failed to load schedule.";
-    ElMessage.error(errorMessage.value);
   } finally {
     loading.value = false;
   }

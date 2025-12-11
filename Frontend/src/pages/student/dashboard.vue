@@ -78,9 +78,6 @@ const loadOverview = async () => {
       attendance.value = [];
     }
   } catch (err: any) {
-    console.error(err);
-    errorMessage.value = err?.message ?? "Failed to load dashboard data.";
-    ElMessage.error(errorMessage.value);
   } finally {
     loadingOverview.value = false;
   }

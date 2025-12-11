@@ -144,7 +144,6 @@ const handleOpenEditForm = async (row: AdminGetUserItemData) => {
     await nextTick();
     await openEditForm(row.id);
   } catch (error) {
-    console.error("Failed to open edit form:", error);
   } finally {
     detailLoading.value[row.id] = false;
   }
@@ -280,9 +279,7 @@ function handleSaveWrapper(
   field: keyof AdminGetUserItemData
 ) {
   if (field === "id") return;
-  save(row, field as keyof AdminUpdateUser).catch((err) => {
-    console.error(err);
-  });
+  save(row, field as keyof AdminUpdateUser).catch((err) => {});
 }
 
 function handleAutoSaveWrapper(

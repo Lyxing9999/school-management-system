@@ -45,10 +45,7 @@ const loadGrades = async () => {
     const res = await student.student.getMyGrades(params);
     // API shape: { items: GradeDTO[] }
     grades.value = res.items ?? [];
-  } catch (err: any) {
-    console.error(err);
-    errorMessage.value = err?.message ?? "Failed to load grades.";
-    ElMessage.error(errorMessage.value);
+  } catch (e) {
   } finally {
     loading.value = false;
   }
