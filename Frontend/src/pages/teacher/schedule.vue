@@ -10,7 +10,7 @@ import { teacherService } from "~/api/teacher";
 import type { TeacherScheduleListDTO } from "~/api/teacher/dto";
 
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
+
 import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
 import { useHeaderState } from "~/composables/useHeaderState";
 
@@ -180,82 +180,75 @@ const handlePageSizeChange = (size: number) => {
         </div>
       </template>
 
-      <ErrorBoundary>
-        <el-table
-          :data="schedule"
-          v-loading="loading"
-          style="width: 100%"
-          size="small"
-          border
-          highlight-current-row
-          :header-cell-style="{
-            background: '#f9fafb',
-            color: '#374151',
-            fontWeight: '600',
-            fontSize: '13px',
-          }"
-        >
-          <el-table-column type="index" label="#" width="60" align="center" />
+      <el-table
+        :data="schedule"
+        v-loading="loading"
+        style="width: 100%"
+        size="small"
+        border
+        highlight-current-row
+        :header-cell-style="{
+          background: '#f9fafb',
+          color: '#374151',
+          fontWeight: '600',
+          fontSize: '13px',
+        }"
+      >
+        <el-table-column type="index" label="#" width="60" align="center" />
 
-          <el-table-column
-            prop="class_name"
-            label="Class"
-            min-width="180"
-            show-overflow-tooltip
-          />
+        <el-table-column
+          prop="class_name"
+          label="Class"
+          min-width="180"
+          show-overflow-tooltip
+        />
 
-          <el-table-column
-            prop="day_label"
-            label="Day"
-            width="120"
-            align="center"
-          />
+        <el-table-column
+          prop="day_label"
+          label="Day"
+          width="120"
+          align="center"
+        />
 
-          <el-table-column label="Time" min-width="160" align="center">
-            <template #default="{ row }">
-              <span class="font-mono text-xs">
-                {{ row.start_time }} – {{ row.end_time }}
-              </span>
-            </template>
-          </el-table-column>
+        <el-table-column label="Time" min-width="160" align="center">
+          <template #default="{ row }">
+            <span class="font-mono text-xs">
+              {{ row.start_time }} – {{ row.end_time }}
+            </span>
+          </template>
+        </el-table-column>
 
-          <el-table-column
-            prop="room"
-            label="Room"
-            width="120"
-            align="center"
-          />
+        <el-table-column prop="room" label="Room" width="120" align="center" />
 
-          <el-table-column
-            prop="teacher_name"
-            label="Teacher"
-            min-width="160"
-            show-overflow-tooltip
-          />
-        </el-table>
+        <el-table-column
+          prop="teacher_name"
+          label="Teacher"
+          min-width="160"
+          show-overflow-tooltip
+        />
+      </el-table>
 
-        <!-- PAGINATION -->
-        <div v-if="totalLessons > 0" class="mt-4 flex justify-end">
-          <el-pagination
-            background
-            layout="prev, pager, next, jumper, sizes, total"
-            :current-page="currentPage"
-            :page-size="pageSize"
-            :page-sizes="[10, 20, 50]"
-            :total="totalLessons"
-            @current-change="handlePageChange"
-            @size-change="handlePageSizeChange"
-          />
-        </div>
+      <!-- PAGINATION -->
+      <div v-if="totalLessons > 0" class="mt-4 flex justify-end">
+        <el-pagination
+          background
+          layout="prev, pager, next, jumper, sizes, total"
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :page-sizes="[10, 20, 50]"
+          :total="totalLessons"
+          @current-change="handlePageChange"
+          @size-change="handlePageSizeChange"
+        />
+      </div>
 
-        <!-- EMPTY STATE -->
-        <div
-          v-if="!loading && !schedule?.length"
-          class="text-center text-gray-500 mt-4 text-sm"
-        >
-          You do not have any scheduled lessons yet.
-        </div>
-      </ErrorBoundary>
+      <!-- EMPTY STATE -->
+      <div
+        v-if="!loading && !schedule?.length"
+        class="text-center text-gray-500 mt-4 text-sm"
+      >
+        You do not have any scheduled lessons yet.
+      </div>
     </el-card>
   </div>
 </template>

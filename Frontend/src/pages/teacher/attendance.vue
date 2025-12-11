@@ -26,7 +26,7 @@ import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 
 import ActionButtons from "~/components/Button/ActionButtons.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
-import ErrorBoundary from "~/components/Error/ErrorBoundary.vue";
+
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
 import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
@@ -602,42 +602,40 @@ const { headerState } = useHeaderState({
         </div>
       </template>
 
-      <ErrorBoundary>
-        <SmartTable
-          :data="filteredAttendance"
-          :columns="attendanceColumns"
-          :loading="loading"
-          :smartProps="{
-            border: true,
-            size: 'small',
-            'highlight-current-row': true,
-          }"
-        >
-          <template #operation="{ row }">
-            <ActionButtons
-              :rowId="row.id"
-              :detailContent="`Edit ${row.status}`"
-              :deleteContent="`Remove record`"
-              @detail="openEditAttendanceDialog(row)"
-              @delete="handleDeleteAttendance(row)"
-            />
-          </template>
-        </SmartTable>
-
-        <!-- Pagination -->
-        <div v-if="totalRows > 0" class="mt-4 flex justify-end">
-          <el-pagination
-            background
-            layout="prev, pager, next, jumper, sizes, total"
-            :current-page="currentPage"
-            :page-size="pageSize"
-            :page-sizes="[10, 20, 50]"
-            :total="totalRows"
-            @current-change="handlePageChange"
-            @size-change="handlePageSizeChange"
+      <SmartTable
+        :data="filteredAttendance"
+        :columns="attendanceColumns"
+        :loading="loading"
+        :smartProps="{
+          border: true,
+          size: 'small',
+          'highlight-current-row': true,
+        }"
+      >
+        <template #operation="{ row }">
+          <ActionButtons
+            :rowId="row.id"
+            :detailContent="`Edit ${row.status}`"
+            :deleteContent="`Remove record`"
+            @detail="openEditAttendanceDialog(row)"
+            @delete="handleDeleteAttendance(row)"
           />
-        </div>
-      </ErrorBoundary>
+        </template>
+      </SmartTable>
+
+      <!-- Pagination -->
+      <div v-if="totalRows > 0" class="mt-4 flex justify-end">
+        <el-pagination
+          background
+          layout="prev, pager, next, jumper, sizes, total"
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :page-sizes="[10, 20, 50]"
+          :total="totalRows"
+          @current-change="handlePageChange"
+          @size-change="handlePageSizeChange"
+        />
+      </div>
     </el-card>
 
     <!-- CREATE / MARK ATTENDANCE DIALOG -->
