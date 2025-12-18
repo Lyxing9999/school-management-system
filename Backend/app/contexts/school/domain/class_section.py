@@ -1,17 +1,16 @@
 from __future__ import annotations
 from datetime import datetime
-from typing import Iterable
+from typing import Iterable, List, Optional
 from bson import ObjectId
 
 from app.contexts.school.errors.class_exceptions import (
     InvalidClassSectionNameError,
-    StudentCapacityExceededError,
+    ClassSectionFullException,
     InvalidMaxStudentsError,
-    DuplicateStudentEnrollmentError,
     InvalidSubjectIdError,
     InvalidTeacherIdError,
+    StudentCapacityExceededError
 )
-
 
 class ClassSection:
     """
@@ -21,13 +20,13 @@ class ClassSection:
     def __init__(
         self,
         name: str,
-        id: ObjectId | None = None,
-        teacher_id: ObjectId | None = None,
-        student_ids: Iterable[ObjectId] | None = None,
-        subject_ids: Iterable[ObjectId] | None = None,
-        max_students: int | None = None,
-        created_at: datetime | None = None,
-        updated_at: datetime | None = None,
+        id: Optional[ObjectId] = None,
+        teacher_id: Optional[ObjectId] = None,
+        subject_ids: Optional[Iterable[ObjectId]] = None,
+        enrolled_count: Optional[int] = 0, 
+        max_students: Optional[int] = None,
+        created_at: Optional[datetime] = None,
+        updated_at: Optional[datetime] = None,
         deleted: bool = False,
     ):
         if not name or not name.strip():
@@ -36,14 +35,17 @@ class ClassSection:
         self.id = id or ObjectId()
         self._name = name.strip()
         self._teacher_id = teacher_id
-        self._student_ids: list[ObjectId] = list(student_ids or [])
-        self._subject_ids: list[ObjectId] = list(subject_ids or [])
-        self._max_students = max_students
+        self._subject_ids: List[ObjectId] = list(subject_ids or [])
+        
+
+        self._enrolled_count = enrolled_count if enrolled_count is not None else 0
+        self._max_students = max_students or 30
 
         self.created_at = created_at or datetime.utcnow()
         self.updated_at = updated_at or datetime.utcnow()
         self.deleted = deleted
 
+        # Validate after setting everything
         self._validate_student_capacity()
 
     # -------- Properties --------
@@ -57,8 +59,8 @@ class ClassSection:
         return self._teacher_id
 
     @property
-    def student_ids(self) -> tuple[ObjectId, ...]:
-        return tuple(self._student_ids)
+    def enrolled_count(self) -> int:
+        return self._enrolled_count
 
     @property
     def subject_ids(self) -> tuple[ObjectId, ...]:
@@ -87,34 +89,28 @@ class ClassSection:
         self._teacher_id = None
         self._touch()
 
-    def enroll_student(self, student_id: ObjectId) -> None:
-        if not isinstance(student_id, ObjectId):
-            raise InvalidTeacherIdError(received_value=student_id)
-
-        if student_id in self._student_ids:
-            raise DuplicateStudentEnrollmentError(
-                student_id=student_id,
-                class_id=self.id,
-            )
-
-        self._student_ids.append(student_id)
-        self._validate_student_capacity()
+    def increment_enrollment(self):
+        # Fix 3: Use _enrolled_count (backing field) instead of property
+        # Also check capacity BEFORE incrementing
+        if self._max_students is not None and self._enrolled_count >= self._max_students:
+            raise ClassSectionFullException()
+        
+        self._enrolled_count += 1
         self._touch()
 
-    def unenroll_student(self, student_id: ObjectId) -> None:
-        if not isinstance(student_id, ObjectId):
-            raise InvalidTeacherIdError(received_value=student_id)
-
-        if student_id in self._student_ids:
-            self._student_ids.remove(student_id)
-            self._touch()
+    def decrement_enrollment(self):
+        # Fix 4: Use _enrolled_count and _touch()
+        if self._enrolled_count > 0:
+            self._enrolled_count -= 1
+        self._touch() 
 
     def set_max_students(self, max_students: int | None) -> None:
         if max_students is not None and max_students <= 0:
             raise InvalidMaxStudentsError(received_value=max_students)
 
         self._max_students = max_students
-        self._validate_student_capacity()
+        # If we lower the max limit below current count, this validation will raise Error
+        self._validate_student_capacity() 
         self._touch()
 
     def add_subject(self, subject_id: ObjectId) -> None:
@@ -143,12 +139,10 @@ class ClassSection:
         self.updated_at = datetime.utcnow()
 
     def _validate_student_capacity(self) -> None:
-        if (
-            self._max_students is not None
-            and len(self._student_ids) > self._max_students
-        ):
+        current = self._enrolled_count or 0
+        if self._max_students is not None and current > self._max_students:
             raise StudentCapacityExceededError(
-                class_name=self._name,
-                max_students=self._max_students,
-                current_count=len(self._student_ids),
+                class_name=self._name, 
+                max_students=self._max_students, 
+                current_count=current
             )

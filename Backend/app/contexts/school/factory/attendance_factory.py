@@ -1,11 +1,14 @@
 from __future__ import annotations
 from datetime import date as date_type, datetime
+from zoneinfo import ZoneInfo
+
+KH_TZ = ZoneInfo("Asia/Phnom_Penh")
+
 from bson import ObjectId
 
 from app.contexts.school.domain.attendance import AttendanceRecord, AttendanceStatus
 from app.contexts.school.errors.attendance_exceptions import (
     NotClassTeacherException,
-    StudentNotEnrolledInClassException,
     AttendanceAlreadyMarkedException,
 )
 from app.contexts.school.errors.class_exceptions import ClassNotFoundException 
@@ -67,14 +70,10 @@ class AttendanceFactory:
         # if not self.enrollment_read_model.is_student_enrolled(student_obj_id, class_obj_id):
         #     raise StudentNotEnrolledInClassException(student_obj_id, class_obj_id)
 
-        # Domain-level default: if no date is provided, use "today"
-        date_to_use = record_date or datetime.utcnow()
+        # Default to "today" in Cambodia (DATE only)
+        date_to_use: date_type = record_date or datetime.now(KH_TZ).date()
 
-        existing = self.attendance_read_model.get_by_student_class_date(
-            student_id=student_obj_id,
-            class_id=class_obj_id,
-            record_date=date_to_use,
-        )
+        existing = self.attendance_read_model.get_by_student_class_date(student_id=student_obj_id, class_id=class_obj_id, record_date=date_to_use)
         if existing:
             raise AttendanceAlreadyMarkedException(student_obj_id, class_obj_id, date_to_use)
         return AttendanceRecord(

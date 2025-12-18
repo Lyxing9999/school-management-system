@@ -7,7 +7,6 @@ from app.contexts.school.errors.class_exceptions import (
     InvalidClassSectionNameError,
     StudentCapacityExceededError,
     InvalidMaxStudentsError,
-    DuplicateStudentEnrollmentError,
     InvalidSubjectIdError,
     InvalidTeacherIdError,
 )

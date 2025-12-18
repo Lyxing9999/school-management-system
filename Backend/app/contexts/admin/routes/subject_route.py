@@ -7,7 +7,7 @@ from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
 from app.contexts.admin.data_transfer.request import AdminCreateSubjectSchema
-from app.contexts.admin.data_transfer.response import AdminSubjectListDTO, AdminSubjectNameSelectListDTO, AdminSubjectNameSelectDTO
+from app.contexts.admin.data_transfer.response import  AdminSubjectNameSelectListDTO, AdminSubjectNameSelectDTO
 from app.contexts.admin.mapper.school_admin_mapper import SchoolAdminMapper
 
 

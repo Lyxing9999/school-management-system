@@ -21,7 +21,7 @@ def log_operation(level="INFO"):
                 return result
             finally:
                 duration_ms = (time() - start_time) * 1000
-                extra["duration_ms"] = duration_ms
-                log_service.log(f"{func.__name__} - end", level=level, module=self.__class__.__name__, user_id=user_id, extra=extra)
+                extra_data = {**extra, "duration_ms": duration_ms}
+                log_service.log(f"{func.__name__} - end", level=level, module=self.__class__.__name__, user_id=user_id, extra=extra_data)
         return wrapper
     return decorator

@@ -1,44 +1,31 @@
 from pymongo.database import Database
-from typing import Dict, Any
 from bson import ObjectId
-from datetime import datetime
-from app.contexts.student.repositories.student_repository import MongoStudentRepository
-from app.contexts.student.domain.student import Student, Gender
-from app.contexts.shared.model_converter import mongo_converter
+from typing import List
+
+from app.contexts.student.services.student_service import StudentService
+from app.contexts.admin.data_transfer.request import AdminUpdateStudentSchema
+# import AdminCreateStudentSchema too
+from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 
 class StudentAdminService:
     def __init__(self, db: Database):
- 
-        self._student_repo = MongoStudentRepository(db['students'])
+        self._student_service = StudentService(db)
+        self._admin_read_model = AdminReadModel(db)
 
-    def _oid(self, id_: str | ObjectId) -> ObjectId:
-        return mongo_converter.convert_to_object_id(id_)
+    def admin_get_student_by_user_id(self, user_id: str | ObjectId):
+        return self._student_service.get_student_by_user_id(user_id)
 
-    def create_student_profile(self, payload: Any, user_id: ObjectId) -> Student:
-        
-
-        if self._student_repo.find_by_user_id(user_id):
-            raise Exception("Student profile already exists for this User ID")
-
-        
-        dob = payload.dob
-        if isinstance(dob, str):
-            dob = datetime.strptime(dob, "%Y-%m-%d").date()
-
-        # 3. Create Entity
-        student = Student(
+    def admin_create_student_profile(self, payload, user_id: str | ObjectId, created_by: str | ObjectId):
+        return self._student_service.create_student_profile(
+            payload=payload,
             user_id=user_id,
-            student_id_code=payload.student_id_code,
-            first_name_kh=payload.first_name_kh,
-            last_name_kh=payload.last_name_kh,
-            first_name_en=payload.first_name_en,
-            last_name_en=payload.last_name_en,
-            gender=payload.gender,
-            dob=dob,
-            current_grade_level=payload.current_grade_level,
-            # Add other fields...
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_by=created_by,
         )
 
-        return self._student_repo.insert(student)
+    def admin_update_student_profile(self, user_id: str | ObjectId, payload: AdminUpdateStudentSchema):
+        return self._student_service.update_student_profile(user_id=user_id, payload=payload)
+
+    
+    def admin_list_student_select_options(self) -> List[dict]:
+        return self._admin_read_model.admin_list_student_select()
+    

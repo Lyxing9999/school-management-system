@@ -6,7 +6,7 @@ from app.contexts.staff.data_transfer.responses import StaffBaseDataDTO
 from typing import List, Optional
 from app.contexts.school.data_transfer.responses import ClassSectionDTO
 from app.contexts.student.data_transfer.responses import StudentBaseDataDTO
-
+from app.contexts.shared.lifecycle.types import Status
 import datetime as dt
 
 class BaseNameSelectDTO(BaseModel):
@@ -34,6 +34,12 @@ class AdminCreateUserDataDTO(IAMBaseDataDTO):
 
 class AdminUpdateUserDataDTO(IAMUpdateDataDTO):
     pass
+
+class AdminSetUserStatusDTO(BaseModel):
+    status: Status
+    model_config = {
+        "extra": "allow"
+    }
 
 
 class AdminDeleteUserDTO(BaseModel):   
@@ -104,6 +110,7 @@ class AdminCreateStudentDataDTO(BaseModel):
     student: StudentBaseDataDTO | None = None
 
 
+
 # =====================================================
 # SECTION 3: SUBJECT MANAGEMENT
 # =====================================================
@@ -155,8 +162,18 @@ class AdminScheduleListDTO(BaseModel):
 # Student Management
 # =====================================================
 
-class AdminStudentNameSelectDTO(BaseNameSelectDTO):
-    username: str
+
+class AdminStudentNameSelectDTO(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra="ignore",
+    )
+    value: str
+    label: str
+    first_name_en: Optional[str] | None = None
+    last_name_en: Optional[str] | None = None
+    first_name_kh: Optional[str] | None = None
+    last_name_kh: Optional[str] | None = None
 
 
 class AdminStudentNameSelectListDTO(BaseModel):
@@ -172,8 +189,8 @@ class AdminStudentNameSelectListDTO(BaseModel):
 
 
 class AdminClassDataDTO(ClassSectionDTO):
-    student_count: int
     subject_count: int
+    enrolled_count: int
     teacher_id: Optional[str] = None
     teacher_name: str
     subject_labels: List[str] = []
@@ -211,8 +228,6 @@ class AdminSubjectNameSelectListDTO(BaseModel):
 # SECTION 6: ADMIN DASHBOARD
 # =====================================================
 
-import datetime as dt
-from pydantic import BaseModel
 
 class AdminOverviewDTO(BaseModel):
     total_students: int

@@ -5,12 +5,13 @@ from app.contexts.core.security.auth_utils import get_current_user_id
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.model_converter import pydantic_converter
-from app.contexts.admin.data_transfer.request import AdminCreateUserSchema, AdminUpdateUserSchema
+from app.contexts.admin.data_transfer.request import AdminCreateUserSchema, AdminUpdateUserSchema, AdminSetUserStatusSchema
 from app.contexts.admin.data_transfer.response import (
     PaginatedUsersDataDTO,
     AdminStudentNameSelectDTO,
     AdminStudentNameSelectListDTO,
-    AdminUserStaffDataDTO   
+    AdminUserStaffDataDTO,
+    AdminSetUserStatusDTO   
 )
 from app.contexts.common.base_response_dto import BaseResponseDTO
 from app.contexts.iam.mapper.iam_mapper import IAMMapper 
@@ -26,8 +27,10 @@ def admin_get_users_paginated():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 5))
     roles = request.args.getlist("role[]") or request.args.getlist("role")
+    search = request.args.get("search")
+
     cursor, total = g.admin.user_service.admin_get_users(
-        roles, page=page, page_size=page_size
+        roles, page=page, page_size=page_size, search=search
     )
     cursor = mongo_converter.list_to_dto(cursor, PaginatedUserItemDTO)
     return PaginatedUsersDataDTO(
@@ -36,9 +39,8 @@ def admin_get_users_paginated():
         page=page,
         page_size=page_size,
         total_pages=max((total + page_size - 1) // page_size, 1)
-    )
-
-
+        )
+        
 @admin_bp.route('/users', methods=['POST'])
 @role_required(["admin"])
 @wrap_response
@@ -57,6 +59,20 @@ def admin_update_user(user_id):
     user_schema = pydantic_converter.convert_to_model(request.json, AdminUpdateUserSchema)
     user_update_dto = g.admin.user_service.admin_update_user(user_id, user_schema)
     return IAMMapper.to_dto(user_update_dto)
+
+
+@admin_bp.route('/users/<user_id>/status', methods=['PATCH'])
+@role_required(["admin"])
+@wrap_response
+def admin_update_user_status(user_id):
+    payload = request.get_json(silent=True) or {}
+    if isinstance(payload.get("status"), dict) and isinstance(payload["status"].get("status"), str):
+        payload["status"] = payload["status"]["status"]
+    user_schema = pydantic_converter.convert_to_model(payload, AdminSetUserStatusSchema)
+    result = g.admin.user_service.admin_set_user_status(user_id, user_schema)
+    return AdminSetUserStatusDTO(status=result["status"])
+
+
 
 @admin_bp.route("/users/<user_id>", methods=["DELETE"])
 @role_required(["admin"])
@@ -90,6 +106,9 @@ def admin_soft_delete_user(user_id: str):
         staff=staff_dto,
     )
 
+
+
+
 @admin_bp.route('/users/<user_id>/hard', methods=['DELETE'])
 @role_required(["admin"])
 @wrap_response
@@ -101,11 +120,5 @@ def admin_hard_delete_user(user_id):
         success=True
     )
 
-@admin_bp.route('/users/student-select', methods=['GET'])
-@role_required(["admin"])
-@wrap_response
-def admin_list_student_select():
-    students = g.admin.user_service.admin_list_student_select()
-    students = mongo_converter.list_to_dto(students, AdminStudentNameSelectDTO)
-    return AdminStudentNameSelectListDTO(items=students)
+
 

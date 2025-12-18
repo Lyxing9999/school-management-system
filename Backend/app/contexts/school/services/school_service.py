@@ -1,7 +1,10 @@
 from __future__ import annotations
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, TYPE_CHECKING
 
 from bson import ObjectId
+from datetime import date as date_type
+
+
 from pymongo.database import Database
 
 from app.contexts.school.composition import build_school_factories
@@ -26,27 +29,22 @@ from app.contexts.school.mapper.schedule_mapper import ScheduleMapper
 
 from app.contexts.shared.model_converter import mongo_converter
 
-from app.contexts.school.errors.class_exceptions import ClassNotFoundException
+#domain exceptions
+from app.contexts.school.errors.class_exceptions import ClassNotFoundException, StudentAlreadyEnrolledException
 from app.contexts.school.errors.attendance_exceptions import AttendanceNotFoundException
 from app.contexts.school.errors.grade_exceptions import GradeNotFoundException
 from app.contexts.school.errors.subject_exceptions import SubjectNotFoundException
 from app.contexts.school.errors.schedule_exceptions import ScheduleNotFoundException ,ScheduleUpdateFailedException
+from app.contexts.student.errors.student_exceptions import StudentNotFoundException
+
+
+if TYPE_CHECKING:
+    from app.contexts.student.services.student_service import StudentService
+
 
 class SchoolService:
-    """
-    Application service façade for the School bounded context.
-
-    Other contexts (Admin, Teacher, Student) can call this service
-    instead of touching factories/repos directly.
-
-    Responsibilities:
-    - Coordinate factories + repositories
-    - Orchestrate use cases: create class, mark attendance, add grades, etc.
-    - Keep domain rules inside entities + factories
-    """
-
     def __init__(self, db: Database):
-        # 1) Build factories (they depend on read models)
+        # 1) Factories
         (
             self.class_factory,
             self.attendance_factory,
@@ -54,99 +52,70 @@ class SchoolService:
             self.subject_factory
         ) = build_school_factories(db)
 
-        # 2) Build repositories (write side)
-        self.class_repo = MongoClassSectionRepository(
-            collection=db["classes"],
-            mapper=ClassSectionMapper(),
-        )
+        self.db = db
+        # 2) Repositories
+        self.class_repo = MongoClassSectionRepository(db["classes"], ClassSectionMapper())
+        self.attendance_repo = MongoAttendanceRepository(db["attendance"], AttendanceMapper())
+        self.grade_repo = MongoGradeRepository(db["grades"], GradeMapper())
+        self.subject_repo = MongoSubjectRepository(db["subjects"], SubjectMapper())
+        self.schedule_repo = MongoScheduleRepository(db["schedule"], ScheduleMapper())
+        
+    @property
+    def _student_service(self) -> StudentService:
+        from app.contexts.student.services.student_service import StudentService
 
-        self.attendance_repo = MongoAttendanceRepository(
-            collection=db["attendance"],
-            mapper=AttendanceMapper(),
-        )
-
-        self.grade_repo = MongoGradeRepository(
-            collection=db["grades"],
-            mapper=GradeMapper(),
-        )
-
-        self.subject_repo = MongoSubjectRepository(
-            collection=db["subjects"],
-            mapper=SubjectMapper(),
-        )
-
-        self.schedule_repo = MongoScheduleRepository(
-            collection=db["schedule"],
-            mapper=ScheduleMapper(),
-        )
-    # ============================================================
-    # Class / Section use cases
-    # ============================================================
-
+        return StudentService(self.db)
     def create_class(
-        self,
-        name: str,
-        teacher_id: str | ObjectId | None = None,
-        subject_ids: Iterable[str | ObjectId] | None = None,
-        max_students: int | None = None,
-    ) -> ClassSection:
-        """
-        Admin / School use case:
-        - Validate via ClassFactory (name uniqueness, teacher load)
-        - Persist via MongoClassSectionRepository
-        """
-        section = self.class_factory.create_class(
-            name=name,
-            teacher_id=teacher_id,
-            subject_ids=subject_ids,
-            max_students=max_students,
-        )
-        return self.class_repo.insert(section)
-
-    def get_class_by_id(self, class_id: str | ObjectId) -> Optional[ClassSection]:
-        oid = mongo_converter.convert_to_object_id(class_id)
-        return self.class_repo.find_by_id(oid)
-
-    def get_class_by_name(self, name: str) -> Optional[ClassSection]:
-        return self.class_repo.find_by_name(name)
-
-    def soft_delete_class(self, class_id: str | ObjectId) -> bool:
-        oid = mongo_converter.convert_to_object_id(class_id)
-        return self.class_repo.soft_delete(oid)
-
-    # You can add helpers that delegate to the aggregate:
-    def assign_teacher_to_class(
-        self,
-        class_id: str | ObjectId,
-        teacher_id: str | ObjectId,
-    ) -> Optional[ClassSection]:
-        """
-        Load aggregate -> mutate -> save.
-        """
-        class_oid = mongo_converter.convert_to_object_id(class_id)
-        teacher_oid = mongo_converter.convert_to_object_id(teacher_id)
-
-        section = self.class_repo.find_by_id(class_oid)
-        if section is None:
-            raise ClassNotFoundException(class_id)
-
-        section.assign_teacher(teacher_oid)
-        return self.class_repo.update(section)
+            self,
+            name: str,
+            teacher_id: str | ObjectId | None = None,
+            subject_ids: Iterable[str | ObjectId] | None = None,
+            max_students: int | None = None,
+        ) -> ClassSection:
+            """
+            Admin / School use case:
+            - Validate via ClassFactory (name uniqueness, teacher load)
+            - Persist via MongoClassSectionRepository
+            """
+            section = self.class_factory.create_class(
+                name=name,
+                teacher_id=teacher_id,
+                subject_ids=subject_ids,
+                max_students=max_students,
+            )
+            return self.class_repo.insert(section)
 
     def enroll_student_to_class(
         self,
         class_id: str | ObjectId,
         student_id: str | ObjectId,
     ) -> Optional[ClassSection]:
+            
         class_oid = mongo_converter.convert_to_object_id(class_id)
         student_oid = mongo_converter.convert_to_object_id(student_id)
 
         section = self.class_repo.find_by_id(class_oid)
         if section is None:
             raise ClassNotFoundException(class_id)
+        student = self._student_service.get_student_by_id(student_oid)
+        if student is None:
+            raise StudentNotFoundException(student_id)
+        if student.current_class_id is not None:
+            raise StudentAlreadyEnrolledException(
+                student_id=student_oid,
+                current_class_id=student.current_class_id,
+                target_class_id=class_oid
+            )
+        section.increment_enrollment()
+        self.class_repo.update(section)
+        try:
+            self._student_service.join_class(class_id=class_oid, student_id=student_oid)
+        except Exception as e:
+            section.decrement_enrollment()
+            self.class_repo.update(section)
+            raise e
 
-        section.enroll_student(student_oid)
-        return self.class_repo.update(section)
+        return section
 
     def unenroll_student_from_class(
         self,
@@ -160,9 +129,12 @@ class SchoolService:
         if section is None:
             raise ClassNotFoundException(class_id)
 
-        section.unenroll_student(student_oid)
-        return self.class_repo.update(section)
+        section.decrement_enrollment()
+        self.class_repo.update(section)
 
+        self._student_service.leave_class(student_id=student_oid)
+        
+        return section
     # ============================================================
     # Attendance use cases
     # ============================================================

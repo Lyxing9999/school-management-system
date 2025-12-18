@@ -1,6 +1,6 @@
 # app/contexts/student/data_transfer/responses.py
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
 
@@ -25,12 +25,15 @@ class StudentBaseDataDTO(BaseModel):
     gender: str
     dob: Optional[date]
     current_grade_level: int
-    
-    photo_url: Optional[str]
     status: str
-    
+    history: List[Dict[str, Any]] = []
     created_at: datetime
     updated_at: datetime
+    current_class_id: Optional[str] = None
+    photo_url: str | None = None
+    phone_number: str | None = None
+    address: dict | None = None
+    guardians: List[str] | None = None
 
 
 

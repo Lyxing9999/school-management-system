@@ -13,6 +13,8 @@ from app.contexts.teacher.data_transfer.responses import (
     TeacherClassSectionDTO,
     TeacherClassSectionListDTO,
     TeacherClassSectionSummaryDTO,
+    TeacherStudentDTO,
+    TeacherStudentListDTO,
 )
 
 
@@ -35,3 +37,14 @@ def list_my_classes_with_summary():
     classes, summary = g.teacher_service.list_my_classes_with_summary(teacher_id)
     classes_dto = mongo_converter.list_to_dto(classes, TeacherClassSectionDTO)
     return TeacherClassSectionSummaryDTO(items=classes_dto, summary=summary)
+
+
+
+@teacher_bp.route("/me/classes/<class_id>/students", methods=["GET"])
+@role_required(["teacher"])
+@wrap_response
+def list_my_students_in_class(class_id: str):
+    teacher_id = get_current_staff_id()
+    students = g.teacher_service.list_my_students_in_class(class_id)
+    students_dto = mongo_converter.list_to_dto(students, TeacherStudentDTO)
+    return TeacherStudentListDTO(items=students_dto)

@@ -1,6 +1,7 @@
 from app.contexts.iam.domain.iam import IAM
 from app.contexts.iam.data_transfer.response import IAMBaseDataDTO
 from bson import ObjectId
+from app.contexts.shared.lifecycle.types import Status
 # -------------------------
 # Mapper
 # -------------------------
@@ -20,6 +21,7 @@ class IAMMapper:
             password=data.get("password"),
             role=IAM._validate_role(data["role"]),
             username=data.get("username"),
+            status = Status(data.get("status", "active")),
             created_by=data.get("created_by"),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at"),
@@ -36,6 +38,7 @@ class IAMMapper:
             "password": iam.password,
             "role": iam.role.value,
             "username": iam.username,
+            "status": iam.status.value,
             "created_by": iam.created_by,
             "created_at": iam.created_at,
             "updated_at": iam.updated_at,
@@ -51,6 +54,7 @@ class IAMMapper:
             "email": iam.email,
             "username": iam.username,
             "role": iam.role.value,
+            "status": iam.status.value,
             "created_by": str(iam.created_by),
             "created_at": iam.created_at,
             "updated_at": iam.updated_at,
@@ -65,6 +69,7 @@ class IAMMapper:
             email=iam.email,
             username=iam.username,
             role=iam.role.value,
+            status=iam.status.value,
             created_by=str(iam.created_by),
             created_at=iam.created_at,
             updated_at=iam.updated_at,

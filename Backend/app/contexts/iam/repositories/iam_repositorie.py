@@ -1,34 +1,52 @@
+from __future__ import annotations
 from bson import ObjectId
-from pymongo.database import Database
 from datetime import datetime
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
 from app.contexts.core.log.log_service import LogService
-from app.contexts.shared.decorators.mongo_wrappers import mongo_operation
+
+from pymongo.collection import Collection
+
+from app.contexts.iam.mapper.iam_mapper import IAMMapper
+from app.contexts.iam.domain.iam import IAM
 
 
-class IAMRepository(MongoErrorMixin):
-    def __init__(self, db: Database, collection_name: str = "users"):
-        self.collection = db[collection_name]
+
+
+
+
+
+
+
+class MongoIAMRepository(MongoErrorMixin):
+    def __init__(self, collection: Collection):
+        self.collection = collection
+        self._iam_mapper = IAMMapper()
         self.logger = LogService.get_instance()
         self.create_indexes()
 
-    @mongo_operation("find_one")
-    def find_one(self, query: dict) -> dict | None:
+
+
+    def find_one(self, id: ObjectId) -> IAM | None:
         """Find a single user matching the query."""
-        return self.collection.find_one(query)
+        raw_user = self.collection.find_one({"_id": id})
+        if not raw_user: return None
+        return self._iam_mapper.to_domain(raw_user)
 
-    @mongo_operation("insert")
-    def save(self, user_data: dict) -> ObjectId:
+
+    def save(self, user_data: dict) -> IAM:
         """Insert a new user into the collection."""
-        return self.collection.insert_one(user_data).inserted_id
+        inserted_id = self.collection.insert_one(user_data).inserted_id
+        iam = self.find_one(inserted_id)
+        return iam
 
-    @mongo_operation("update")
-    def update(self, user_id: ObjectId, user: dict) -> int:
+
+    def update(self, user_id: ObjectId, user: dict) -> IAM:
         """Update an existing user partially."""
-        result = self.collection.update_one({"_id": user_id}, {"$set": user})
-        return result.modified_count
+        self.collection.update_one({"_id": user_id}, {"$set": user})
+        iam = self.find_one(user_id)
+        return iam
 
-    @mongo_operation("soft_delete")
+
     def soft_delete(self, user_id: ObjectId, deleted_by: ObjectId | None = None) -> int:
         """Soft delete a user by marking it as deleted."""
         update_data = {"$set": { "deleted": True, "deleted_at": datetime.utcnow(),"updated_at": datetime.utcnow(),}}
@@ -41,25 +59,17 @@ class IAMRepository(MongoErrorMixin):
         )
         return result.modified_count
 
-    @mongo_operation("hard_delete")
+
     def hard_delete(self, user_id: ObjectId) -> int:
         """Permanently delete a user from the collection."""
         result = self.collection.delete_one({"_id": user_id})
         return result.deleted_count
 
-    
+
     def create_indexes(self):
         """Create necessary indexes for the collection."""
-        try:
-            self.collection.create_index(
-                [("role", 1), ("email", 1)],
-                unique=True,
-                background=True
-            )
-            self.logger.log(
-                "Indexes created for iam collection",
-                level="INFO",
-                module="IAMRepository"
-            )
-        except Exception as e:
-            self._handle_mongo_error("create_index", e)
+        self.collection.create_index(
+            [("role", 1), ("email", 1)],
+            unique=True,
+            background=True
+        )

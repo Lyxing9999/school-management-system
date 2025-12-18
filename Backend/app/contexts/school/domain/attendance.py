@@ -3,6 +3,11 @@ from datetime import datetime, date as date_type
 from enum import Enum
 from bson import ObjectId
 
+from zoneinfo import ZoneInfo
+
+KH_TZ = ZoneInfo("Asia/Phnom_Penh")
+
+
 from app.contexts.school.errors.attendance_exceptions import (
     InvalidAttendanceStatusException,
     AttendanceDateInFutureException,
@@ -41,10 +46,10 @@ class AttendanceRecord:
         self.student_id = student_id
         self.class_id = class_id
         self._status = self._validate_status(status)
-        self.date = record_date or datetime.utcnow().date()
+        self.date = record_date or datetime.now(KH_TZ).date()
         self.marked_by_teacher_id = marked_by_teacher_id
-        self.created_at = created_at or datetime.utcnow()
-        self.updated_at = updated_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(KH_TZ)
+        self.updated_at = updated_at or datetime.now(KH_TZ)
 
         # Validate business rules
         self._validate_date_not_too_far_future()
@@ -64,7 +69,7 @@ class AttendanceRecord:
     # -------- Internal helpers --------
 
     def _touch(self) -> None:
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(KH_TZ)
 
     @staticmethod
     def _validate_status(status: AttendanceStatus | str) -> AttendanceStatus:
@@ -78,6 +83,6 @@ class AttendanceRecord:
 
     def _validate_date_not_too_far_future(self) -> None:
         """Raise domain-specific exception if date is in the future."""
-        today = datetime.utcnow().date()
+        today = datetime.now(KH_TZ).date()
         if self.date > today:
             raise AttendanceDateInFutureException(self.date)

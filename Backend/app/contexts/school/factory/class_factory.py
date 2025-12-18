@@ -68,7 +68,6 @@ class ClassFactory:
         return ClassSection(
             name=name,
             teacher_id=teacher_obj_id,
-            student_ids=[],
             subject_ids=normalized_subject_ids,
             max_students=max_students,
         )

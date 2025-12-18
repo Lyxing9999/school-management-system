@@ -4,8 +4,10 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 from enum import Enum
 from app.contexts.shared.enum.roles import SystemRole
-from app.contexts.iam.error.iam_exception import InvalidRoleException
-from app.contexts.iam.error.iam_exception import UserDeletedException
+from app.contexts.iam.error.iam_exception import InvalidRoleException, UserDeletedException 
+
+from app.contexts.shared.lifecycle.types import Status
+
 
 # -------------------------
 # Domain Model
@@ -16,6 +18,7 @@ class IAM:
         email: str,
         password: str,
         role: SystemRole,
+        status: Status = Status.ACTIVE,
         id: ObjectId | None = None,
         username: str | None = None,
         created_by: ObjectId | None = None,
@@ -36,6 +39,7 @@ class IAM:
         self.deleted = deleted
         self.deleted_at = deleted_at
         self.deleted_by = deleted_by
+        self.status = status
 
     # ---------- Properties ----------
     @property
@@ -95,9 +99,16 @@ class IAM:
     def is_deleted(self) -> bool:
         return self.deleted
 
+
+    def is_inactive(self) -> bool:
+        return self.status == Status.INACTIVE
+
+
+
     def soft_delete(self, deleted_by: ObjectId):
         if self.deleted:
             return False
+        self.status = Status.INACTIVE
         self.deleted = True
         self.deleted_at = datetime.utcnow()
         self.deleted_by = deleted_by
@@ -106,6 +117,26 @@ class IAM:
 
     def ready_for_purge(self, days: int = 30) -> bool:
         return self.deleted and self.deleted_at and self.deleted_at < datetime.utcnow() - timedelta(days=days)
+
+
+    def set_status(self, status: Status):
+        if self.deleted:
+            raise UserDeletedException(self.id)
+        self.status = status
+        self._mark_updated()
+
+
+    def restore(self):
+        self.status = Status.ACTIVE
+        self.deleted = False
+        self.deleted_at = None
+        self.deleted_by = None
+        self._mark_updated()
+
+    def is_active(self) -> bool:
+        return self.status == Status.ACTIVE and not self.deleted
+
+
 
     @staticmethod
     def _validate_role(role: Enum | str) -> SystemRole:

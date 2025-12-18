@@ -21,7 +21,7 @@ class InvalidPasswordException(AppBaseException):
             message=f"Invalid password provided",
             severity=ErrorSeverity.HIGH,
             category=ErrorCategory.BUSINESS_LOGIC,
-            user_message="The provided password is invalid. Please choose another.",
+            user_message="The password is incorrect.",
             details={"field": "password", "value": password},
             hint="Password must meet the required complexity rules",
             recoverable=True 
@@ -71,13 +71,13 @@ class RoleNotAllowedException(AppBaseException):
 
 
 class NotFoundUserException(AppBaseException):
-    def __init__(self, user_id: str):
+    def __init__(self, identifier: str):
         super().__init__(
-            message=f"User with ID '{user_id}' not found",
+            message=f"User '{identifier}' not found",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.BUSINESS_LOGIC,
             user_message="The requested user does not exist.",
-            details={"field": "user_id", "value": user_id},
+            details={"field": "identifier", "value": identifier},
             hint="Verify the user ID or create the user if missing",
             recoverable=True
         )
@@ -204,13 +204,37 @@ class UserNotSavedException(AppBaseException):
 
 
 class UserDeletedException(AppBaseException):
-    def __init__(self, user_id: str):
+    def __init__(self, identifier: str):
         super().__init__(
-            message=f"User with ID '{user_id}' is deleted",
+            message=f"User '{identifier}' is deleted",
             severity=ErrorSeverity.HIGH,
             category=ErrorCategory.BUSINESS_LOGIC,
-            user_message="The requested user is deleted.",
-            details={"user_id": user_id},
-            hint="Verify the user ID or create the user if missing",
-            recoverable=True
+            user_message="This account is not available.",
+            details={"identifier": identifier},
+            hint="Restore the account if this is a mistake.",
+            recoverable=True,
+        )
+class UserInactiveException(AppBaseException):
+    def __init__(self, identifier: str, status: str = "inactive"):
+        super().__init__(
+            message=f"User '{identifier}' is inactive (status={status})",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Your account is inactive. Please contact an administrator.",
+            details={"identifier": identifier, "status": status},
+            hint="Set user status back to 'active' to allow login.",
+            recoverable=True,
+        )
+
+
+class UserSuspendedException(AppBaseException):
+    def __init__(self, identifier: str):
+        super().__init__(
+            message=f"User '{identifier}' is suspended",
+            severity=ErrorSeverity.HIGH,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Your account has been suspended. Please contact support.",
+            details={"identifier": identifier, "status": "suspended"},
+            hint="Remove suspension (set status to 'active') to allow login.",
+            recoverable=True,
         )

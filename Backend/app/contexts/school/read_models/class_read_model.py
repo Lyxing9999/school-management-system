@@ -26,6 +26,11 @@ class ClassReadModel:
         """
         return mongo_converter.convert_to_object_id(id_)
 
+    def _normalize_ids(self, ids: List[str | ObjectId]) -> List[ObjectId]:
+        """
+        Convert incoming ids to ObjectIds using shared converter.
+        """
+        return [self._normalize_id(id_) for id_ in ids]
     # ------------ public API: single fetches ------------
 
     def get_by_id(self, id_: str | ObjectId) -> Optional[Dict]:
@@ -62,6 +67,12 @@ class ClassReadModel:
             return None
         return doc.get("name")
 
+
+    def list_by_ids(self, class_ids: List[str | ObjectId]) -> List[Dict]:
+        oids = self._normalize_ids(class_ids)
+        if not oids:
+            return []
+        return list(self.collection.find({"_id": {"$in": oids}, "deleted": {"$ne": True}}))
     # ------------ public API: class lists ------------
 
     def list_all(self) -> List[Dict]:
@@ -85,28 +96,11 @@ class ClassReadModel:
             )
         )
 
-    def list_classes_for_student(self, student_id: str | ObjectId) -> List[Dict]:
-        """
-        Return all non-deleted class documents where the given student is enrolled.
-        """
-        oid = self._normalize_id(student_id)
-        return list(self.collection.find({"student_ids": oid, "deleted": {"$ne": True}}))
+
+
 
     # ------------ public API: ID lists ------------
 
-    def list_student_ids_for_class(self, class_id: str | ObjectId) -> List[ObjectId]:
-        """
-        Return the list of student_ids (ObjectId) enrolled in the given class.
-        """
-        oid = self._normalize_id(class_id)
-        doc = self.collection.find_one(
-            {"_id": oid, "deleted": {"$ne": True}},
-            {"student_ids": 1},
-        )
-        if not doc:
-            return []
-        student_ids = doc.get("student_ids") or []
-        return [self._normalize_id(sid) for sid in student_ids]
 
     def list_subject_ids_for_class(self, class_id: str | ObjectId) -> List[ObjectId]:
         """
@@ -207,9 +201,9 @@ class ClassReadModel:
 
         summary_dict:
         {
-          "total_classes": int,
-          "total_students": int,
-          "total_subjects": int
+        "total_classes": int,
+        "total_students": int,   # uses enrolled_count if available
+        "total_subjects": int
         }
         """
         try:
@@ -220,28 +214,26 @@ class ClassReadModel:
 
             docs: List[Dict] = list(self.collection.find(query))
 
-            # If you already store student_count / subject_count,
-            # use them; else fall back to len(student_ids) etc.
             total_classes = len(docs)
             total_students = 0
             total_subjects = 0
 
             for doc in docs:
-                # students
-                if "student_count" in doc and isinstance(doc["student_count"], int):
-                    total_students += doc["student_count"]
+                # ---------- students ----------
+                # EN: Prefer enrolled_count (fast + consistent)
+                # KH: ប្រើ enrolled_count ជាមុន (លឿន និង consistent)
+                enrolled_count = doc.get("enrolled_count")
+                if isinstance(enrolled_count, int):
+                    total_students += enrolled_count
                 else:
                     student_ids = doc.get("student_ids") or []
                     if isinstance(student_ids, list):
                         total_students += len(student_ids)
 
-                # subjects
-                if "subject_count" in doc and isinstance(doc["subject_count"], int):
-                    total_subjects += doc["subject_count"]
-                else:
-                    subject_ids = doc.get("subject_ids") or []
-                    if isinstance(subject_ids, list):
-                        total_subjects += len(subject_ids)
+                # ---------- subjects ----------
+                subject_ids = doc.get("subject_ids") or []
+                if isinstance(subject_ids, list):
+                    total_subjects += len(subject_ids)
 
             summary = {
                 "total_classes": total_classes,
@@ -253,10 +245,8 @@ class ClassReadModel:
 
         except Exception as e:
             self._handle_mongo_error("list_classes_for_teacher_with_summary", e)
-            # _handle_mongo_error already raises appropriate AppBaseException
             raise
 
-    
     def count_active_classes(self) -> int:
         """
         Return the count of active classes.

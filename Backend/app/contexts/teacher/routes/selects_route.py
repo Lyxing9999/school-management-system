@@ -30,7 +30,7 @@ def list_class_name_options_for_teacher():
     return TeacherClassNameSelectListDTO(items=items)
 
 
-@teacher_bp.route("/me/classes/<class_id>/students", methods=["GET"])
+@teacher_bp.route("/me/classes/<class_id>/students/name-select", methods=["GET"])
 @role_required(["teacher"])
 @wrap_response
 def list_student_names_in_class(class_id: str):
@@ -43,7 +43,7 @@ def list_student_names_in_class(class_id: str):
     return TeacherStudentSelectNameListDTO(items=items)
 
 
-@teacher_bp.route("/me/classes/<class_id>/subjects", methods=["GET"])
+@teacher_bp.route("/me/classes/<class_id>/subjects/name-select", methods=["GET"])
 @role_required(["teacher"])
 @wrap_response
 def list_subject_names_in_class(class_id: str):

@@ -3,6 +3,7 @@ from pydantic import BaseModel, RootModel, ConfigDict
 from app.contexts.shared.enum.roles import SystemRole
 from datetime import datetime
 from pydantic import ConfigDict
+from app.contexts.shared.lifecycle.types import Status
 
 # -------------------------
 # Base User DTO
@@ -18,6 +19,7 @@ class IAMBaseDataDTO(BaseModel):
     email: str 
     role: SystemRole 
     username: str 
+    status: Status 
     created_by: str 
     created_at: datetime 
     updated_at: datetime 

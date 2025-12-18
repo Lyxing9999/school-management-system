@@ -1,5 +1,3 @@
-from app.contexts.core.error.app_base_exception import AppBaseException
-
 from app.contexts.core.error.app_base_exception import (
     AppBaseException,
     ErrorCategory,

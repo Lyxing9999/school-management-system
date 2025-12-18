@@ -15,12 +15,11 @@ from app.contexts.school.domain.subject import Subject
 
 class ClassSectionDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
     id: str
     name: str
     teacher_id: Optional[str]
-    student_ids: list[str]
     subject_ids: list[str]
+    enrolled_count: int
     max_students: Optional[int]
     created_at: datetime
     updated_at: datetime

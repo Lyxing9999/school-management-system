@@ -1,7 +1,7 @@
 from pymongo.database import Database
 from bson import ObjectId
 from typing import Final, Optional
-from app.contexts.staff.services import StaffService
+from app.contexts.staff.services.staff_service import StaffService
 from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 from app.contexts.admin.data_transfer.request import (
     AdminCreateStaffSchema,

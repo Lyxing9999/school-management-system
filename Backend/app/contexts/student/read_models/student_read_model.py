@@ -1,22 +1,13 @@
 from __future__ import annotations
-
-from typing import List, Dict, Union, Any, Final, Iterable
+from typing import List, Dict, Any, Optional
 from bson import ObjectId
+from pydantic.v1.utils import Obj
 from pymongo.database import Database
-
+from pymongo.cursor import Cursor
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
-from app.contexts.iam.read_models.iam_read_model import IAMReadModel
-from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
-from app.contexts.school.read_models.class_read_model import ClassReadModel
-from app.contexts.school.read_models.attendance_read_model import AttendanceReadModel
-from app.contexts.school.read_models.grade_read_model import GradeReadModel
-from app.contexts.school.read_models.subject_read_model import SubjectReadModel
-from app.contexts.staff.read_model import StaffReadModel
 
 from app.contexts.shared.model_converter import mongo_converter
 
-
-from app.contexts.shared.services.display_name_service import DisplayNameService
 
 class StudentReadModel(MongoErrorMixin):
     """
@@ -31,23 +22,30 @@ class StudentReadModel(MongoErrorMixin):
     def __init__(self, db: Database):
         self.db = db
         self.collection = self.db["students"]
+        from app.contexts.iam.read_models.iam_read_model import IAMReadModel
+        self._iam_read_model = IAMReadModel(db)
 
-        # underlying read models
-        self._iam_read_model: Final[IAMReadModel] = IAMReadModel(self.db)
-        self._schedule_read_model: Final[ScheduleReadModel] = ScheduleReadModel(self.db)
-        self._class_read_model: Final[ClassReadModel] = ClassReadModel(self.db)
-        self._staff_read_model: Final[StaffReadModel] = StaffReadModel(self.db)
-        self._attendance_read_model: Final[AttendanceReadModel] = AttendanceReadModel(self.db)
-        self._grade_read_model: Final[GradeReadModel] = GradeReadModel(self.db)
-        self._subject_read_model: Final[SubjectReadModel] = SubjectReadModel(self.db)
-        # shared display-name helper (depends only on read models)
-        self._display_name_service: Final[DisplayNameService] = DisplayNameService(
-            iam_read_model=self._iam_read_model,
-            staff_read_model=self._staff_read_model,
-            class_read_model=self._class_read_model,
-            subject_read_model=self._subject_read_model,
-            student_read_model=self,
-        )
+
+
+    # -------------
+    # external helper methods
+    # -------------
+
+
+    def _normalize_ids(self, ids: Iterable[str | ObjectId | None]) -> list[ObjectId]:
+        normalized: list[ObjectId] = []
+
+        for raw_id in ids:
+            if raw_id is None:
+                continue
+
+            # Skip empty/whitespace strings
+            if isinstance(raw_id, str) and not raw_id.strip():
+                continue
+
+            normalized.append(mongo_converter.convert_to_object_id(raw_id))
+
+        return normalized
 
 
     # -------------
@@ -56,6 +54,8 @@ class StudentReadModel(MongoErrorMixin):
     def get_by_user_id(self, user_id: ObjectId):
             return self.collection.find_one({"user_id": user_id})
             
+    def get_by_id(self, student_id: ObjectId):
+            return self.collection.find_one({"_id": student_id})
     def get_me(self, user_id: ObjectId) -> dict | None:
         """
         Simple pass-through to IAM get_by_id.
@@ -65,175 +65,90 @@ class StudentReadModel(MongoErrorMixin):
     def get_by_student_code(self, code: str):
             return self.collection.find_one({"student_id_code": code})
 
-    def get_student_names_by_ids(self, student_ids: list) -> dict:
-            ids = [mongo_converter.convert_to_object_id(sid) for sid in student_ids if sid]
-            cursor = self.collection.find(
-                {"_id": {"$in": ids}},
-                {"first_name_en": 1, "last_name_en": 1}
-            )
-            names = {}
-            for doc in cursor:
-                full_name = f"{doc.get('first_name_en')} {doc.get('last_name_en')}"
-                names[doc["_id"]] = full_name
-            return names
-
-    # -------------
-    # classes
-    # -------------
-
-    def list_my_classes_enriched(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
-        """
-        Return the classes where this student is enrolled, with:
-        - ids converted to string
-        - teacher_name attached
-
-        Shape per item:
-        {
-          "id": "classId",
-          "name": "Grade 7A",
-          "teacher_id": "teacherUserId",
-          "teacher_name": "Mr. X",
-          "student_ids": ["...", "..."],
-          "subject_ids": ["...", "..."],
-          ...
-        }
-        """
-        oid = mongo_converter.convert_to_object_id(student_id)
-        raw_classes = self._class_read_model.list_classes_for_student(oid)  # raw Mongo docs
-        return self._display_name_service.enrich_classes(raw_classes)
-      
-
-    def list_my_subjects(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
-        """
-        Aggregate all subjects from the classes where this student is enrolled.
-        Dedupe by subject_id.
-
-        Return list of subject docs with:
-        - id: str
-        - label: "Name (CODE)" for selects
-        """
-        oid = mongo_converter.convert_to_object_id(student_id)
-        class_docs = self._class_read_model.list_classes_for_student(oid)
-        if not class_docs:
+    def list_students_by_current_class_ids(
+        self,
+        class_ids: List[str | ObjectId],
+        *,
+        projection: Optional[Dict[str, int]] = None,
+        active_only: bool = True,
+    ) -> List[Dict[str, Any]]:
+        print("get id from api ", class_ids)
+        oids = self._normalize_ids(class_ids)
+        if not oids:
             return []
+        print("after normalize", oids)
+        query: Dict[str, Any] = {"current_class_id": {"$in": oids}}
 
-        subject_ids: set[ObjectId] = set()
-        for c in class_docs:
-            for sid in c.get("subject_ids") or []:
-                subject_ids.add(mongo_converter.convert_to_object_id(sid))
+        if active_only:
+            query["deleted"] = {"$ne": True}
+            query["status"] = "Active"
 
-        if not subject_ids:
-            return []
-
-        subject_docs = self.subject.list_by_ids(list(subject_ids))
-
-        result: List[Dict[str, Any]] = []
-        for s in subject_docs:
-            doc = dict(s)
-            sid = doc.pop("_id", None)
-            if sid:
-                doc["id"] = str(sid)
-
-            # build label once here
-            name = doc.get("name") or ""
-            code = doc.get("code") or ""
-            if name and code:
-                doc["label"] = f"{name} ({code})"
-            else:
-                doc["label"] = name or code
-
-            result.append(doc)
-
-        # optional: sort alphabetically by label (nice for UI)
-        result.sort(key=lambda d: d.get("label") or d.get("name") or "")
-        return result
-
-    # -------------
-    # schedule
-    # -------------
+        return list(self.collection.find(query))
 
 
-
-    def list_my_schedule_enriched(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+    def list_students_by_current_class_id(
+        self,
+        class_id: str | ObjectId,
+        *,
+        projection: Optional[Dict[str, int]] = None,
+        active_only: bool = True,
+    ) -> List[Dict[str, Any]]:
         """
-        Build weekly schedule for a student by:
-
-        1) Fetching all classes the student is enrolled in
-        2) For those classes, fetching their schedule slots
-        3) Enriching each slot with:
-           - class_name
-           - teacher_name
-           - subject_label (if available in schedule docs)
+        Convenience wrapper for a single class_id.
+        Returns all students whose current_class_id == class_id.
         """
 
-        oid = mongo_converter.convert_to_object_id(student_id)
 
-        class_docs = self._class_read_model.list_classes_for_student(oid)
-        if not class_docs:
-            return []
-        class_ids: List[ObjectId] = []
-        for c in class_docs:
-            if "_id" in c:
-                class_ids.append(c["_id"])
-            elif "id" in c:
-                class_ids.append(mongo_converter.convert_to_object_id(c["id"]))
+        student = self.list_students_by_current_class_ids(
+            [class_id],
+            active_only=active_only,
+        )
+        return student
+    def list_student_ids_by_current_class_ids(self, class_ids: List[str | ObjectId], *, active_only: bool = True,) -> List[ObjectId]:
+        docs = self.list_students_by_current_class_ids(class_ids, projection={"_id": 1}, active_only=active_only)
+        return [d["_id"] for d in docs if d.get("_id")]
 
-        if not class_ids:
-            return []
-        schedule_docs = self._schedule_read_model.list_schedules_for_classes(class_ids)
 
-        schedule_enriched = self._display_name_service.enrich_schedules(schedule_docs)
-
-        schedule_enriched.sort(
-            key=lambda s: (
-                s.get("day_of_week", 0),
-                s.get("start_time", ""),
-            )
+    def find_active_students_by_ids(self, student_ids: List[ObjectId]) -> Cursor:
+        return self.collection.find(
+            {
+                "_id": {"$in": student_ids},
+                "status": "active",
+                "is_deleted": {"$ne": True}, 
+            }
         )
 
-        return schedule_enriched
+
+    def list_student_names_by_ids(self, student_ids: list) -> List[Dict[str, Any]]:
+        ids = self._normalize_ids(student_ids)
+        cursor = self.collection.find(
+            {"_id": {"$in": ids}},
+            {"first_name_en": 1, "last_name_en": 1, "first_name_kh": 1, "last_name_kh": 1}
+        )
+        return list(cursor)
+
+
     # -------------
-    # attendance & grades
+    # options select
     # -------------
 
-    def list_my_attendance_enriched(self, student_id: Union[str, ObjectId], class_ids: List[Union[str, ObjectId]]) -> List[Dict[str, Any]]:
-        """
-        Attendance records for this student, enriched with class_name
-        and ids converted to string.
+    def list_student_name_options(self, filter: dict = {}) -> List[Dict[str, Any]]:
+        cursor = self.collection.find(
+            filter=filter,
+            projection={
+                "_id": 1,
+                "first_name_en": 1,
+                "last_name_en": 1,
+                "first_name_kh": 1,
+                "last_name_kh": 1,
+            },
+        )
 
-        Shape per item:
-        {
-          "id": "attendanceId",
-          "student_id": "studentId",
-          "class_id": "classId",
-          "class_name": "Grade 7A",
-          "date": "...",
-          "status": "present|absent|excused",
-          ...
-        }
-        """
-        records = self._attendance_read_model.list_attendance_for_class_and_student(class_id=class_ids, student_id=student_id)
-        if not records:
-            return []
-        return self._display_name_service.enrich_attendance(records)
-
-
-    def list_my_grades_enriched(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
-        """
-        Optional helper: list all grades for this student, across classes.
-        You can enrich later with subject_name / class_name if needed.
-        """
-        oid = mongo_converter.convert_to_object_id(student_id)
-        records = self._grade_read_model.list_grades_for_student(oid)  
-        if not records:
-            return []
-        return self._display_name_service.enrich_grades(records)
-
-        
+        return cursor
 
 
     def count_active_students(self) -> int:
         """
         Return the count of active students.
         """
-        return self._iam.count_active_users("student")
+        return self._iam_read_model.count_active_users("student")

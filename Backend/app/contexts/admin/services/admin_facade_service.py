@@ -13,7 +13,7 @@ from app.contexts.admin.services.staff_service import StaffAdminService
 from app.contexts.admin.services.class_service import ClassAdminService
 from app.contexts.admin.services.subject_service import SubjectAdminService
 from app.contexts.admin.services.schedule_service import ScheduleAdminService
-from app.contexts.admin.services.student_service import StudentAdminService # ✅ Student Service
+from app.contexts.admin.services.student_service import StudentAdminService 
 
 # Imports Read Models & Domain
 from app.contexts.admin.read_models.admin_read_model import AdminReadModel
@@ -21,7 +21,7 @@ from app.contexts.iam.domain.iam import IAM
 from app.contexts.staff.domain import Staff
 
 # Imports Errors & Utils
-from app.contexts.admin.error.admin_exception import EmailAlreadyExistsException, CannotDeleteUserInUseException
+from app.contexts.admin.error.admin_exception import CannotDeleteUserInUseException
 from app.contexts.shared.model_converter import mongo_converter
 
 class AdminFacadeService:
@@ -31,7 +31,7 @@ class AdminFacadeService:
         self.class_service = ClassAdminService(db)
         self.subject_service = SubjectAdminService(db)
         self.schedule_service = ScheduleAdminService(db)
-        self.student_service = StudentAdminService(db) # ✅ Init Student Service
+        self.student_service = StudentAdminService(db)
         self.admin_read_model = AdminReadModel(db)
 
     # ---------- helper methods ----------
@@ -131,7 +131,7 @@ class AdminFacadeService:
                 email=payload.email,
                 password=payload.password,
                 username=payload.username,
-                role="student" # Force role to be student
+                role="student" 
             )
             
             # This returns the created User Domain Object (with .id)
@@ -140,9 +140,10 @@ class AdminFacadeService:
             # 2. CREATE STUDENT PROFILE
             # We pass the full payload (containing DOB, names, etc.)
             # And explicitly pass the new user.id to link them together
-            student = self.student_service.create_student_profile(
+            student = self.student_service.admin_create_student_profile(
                 payload=payload, 
-                user_id=user.id
+                user_id=user.id,
+                created_by=created_by
             )
 
             return {

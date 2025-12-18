@@ -28,7 +28,6 @@ class ClassAdminService:
         self.admin_read_model = AdminReadModel(db)
     # ---------- Commands ----------
 
-    @log_operation(level="INFO")
     def admin_create_class(
         self,
         payload: AdminCreateClassSchema,
@@ -44,7 +43,6 @@ class ClassAdminService:
             max_students=payload.max_students,
         )
 
-    @log_operation(level="INFO")
     def admin_assign_teacher(
         self,
         class_id: str,
@@ -56,7 +54,6 @@ class ClassAdminService:
             teacher_id=teacher_id,
         )
 
-    @log_operation(level="INFO")
     def admin_enroll_student(
         self,
         class_id: str,
@@ -67,7 +64,6 @@ class ClassAdminService:
             student_id=student_id,
         )
 
-    @log_operation(level="INFO")
     def admin_unenroll_student(
         self,
         class_id: str,
@@ -78,7 +74,7 @@ class ClassAdminService:
             student_id=student_id,
         )
 
-    @log_operation(level="INFO")
+
     def admin_soft_delete_class(self, class_id: str) -> bool:
         return self.school_service.soft_delete_class(class_id)
 
@@ -107,8 +103,8 @@ class ClassAdminService:
         """
         return self.admin_read_model.admin_list_class_select()
 
-
-
+    def admin_list_students_in_class_select_options(self, class_id: str) -> List[dict]:
+        return self.admin_read_model.admin_list_students_in_class_select_options(class_id)
     
     def admin_count_classes_for_teacher(self, teacher_id: str | ObjectId) -> int:
         return self.admin_read_model.admin_count_classes_for_teacher(teacher_id)

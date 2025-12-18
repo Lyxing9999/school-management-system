@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field, field_validator, ConfigDict, EmailStr
 from app.contexts.shared.enum.roles import SystemRole, StaffRole
-from typing import Optional , List
+from typing import Optional, List, Any, Dict
 from app.contexts.iam.data_transfer.request import IAMUpdateSchema
 from app.contexts.staff.data_transfer.requests import StaffUpdateSchema
 from app.contexts.school.domain.schedule import DayOfWeek
 from app.contexts.student.domain.student import Gender
-
+from app.contexts.shared.lifecycle.types import Status
 import datetime
 # from app.contexts.schools.data_transfer.requests.class_requests import SchoolClassUpdateSchema
 # from app.contexts.schools.data_transfer.requests.subject_requests import SubjectCreateSchema, SubjectUpdateSchema
@@ -26,6 +26,9 @@ class AdminCreateUserSchema(BaseModel):
 
 class AdminUpdateUserSchema(IAMUpdateSchema):
     pass
+
+class AdminSetUserStatusSchema(BaseModel):
+    status: Status
 
 # =====================================================
 # SECTION 2: STAFF MANAGEMENT
@@ -64,13 +67,38 @@ class AdminCreateStudentSchema(BaseModel):
     gender: Gender 
     dob: str 
     current_grade_level: int = Field(..., ge=1, le=12)
+    current_class_id: Optional[str] = None
     phone_number: Optional[str] = None
     address: Optional[dict] = None
+    photo_url: Optional[str] = None
     guardians: Optional[list] = []
 
     @field_validator("dob")
     def parse_dob(cls, v):
         return v
+
+class AdminUpdateStudentSchema(BaseModel):
+    first_name_kh: Optional[str] = None
+    last_name_kh: Optional[str] = None
+    first_name_en: Optional[str] = None
+    last_name_en: Optional[str] = None
+    
+    gender: Optional[Gender] = None
+    dob: Optional[str] = None 
+    
+    current_grade_level: Optional[int] = Field(None, ge=1, le=12)
+    current_class_id: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[dict] = None
+    photo_url: Optional[str] = None
+    guardians: Optional[list] = None
+
+
+    @field_validator("dob")
+    def parse_dob(cls, v):
+        if v is None: return None
+        return v
+
 
 # =====================================================
 # SECTION 4: SCHOOL MANAGEMENT Class

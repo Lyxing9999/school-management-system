@@ -14,23 +14,18 @@ from app.contexts.admin.data_transfer.request import (
     AdminUnAssignTeacherToClassSchema
 )
 from app.contexts.admin.mapper.school_admin_mapper import SchoolAdminMapper
-from app.contexts.admin.data_transfer.response import AdminClassSelectListDTO, AdminClassSelectDTO, AdminClassDataDTO, AdminClassListDTO   
+from app.contexts.admin.data_transfer.response import AdminClassSelectListDTO, AdminClassSelectDTO, AdminClassDataDTO, AdminClassListDTO, AdminStudentNameSelectDTO, AdminStudentNameSelectListDTO
 
 
 @admin_bp.route("/classes", methods=["POST"])
 @role_required(["admin"])
 @wrap_response
 def admin_create_class():
-    payload = pydantic_converter.convert_to_model(
-        request.json,
-        AdminCreateClassSchema,
-    )
+    payload = pydantic_converter.convert_to_model(request.json, AdminCreateClassSchema)
     admin_id = get_current_user_id()
 
-    section = g.admin.class_service.admin_create_class(
-        payload=payload,
-        created_by=admin_id,
-    )
+    section = g.admin.class_service.admin_create_class(payload=payload, created_by=admin_id)
+    
     return SchoolAdminMapper.class_to_dto(section)
 
 
@@ -55,14 +50,8 @@ def admin_get_class(class_id: str):
 @role_required(["admin"])
 @wrap_response
 def admin_assign_teacher_to_class(class_id: str):
-    payload = pydantic_converter.convert_to_model(
-        request.json,
-        AdminAssignTeacherToClassSchema,
-    )
-    section = g.admin.class_service.admin_assign_teacher(
-        class_id=class_id,
-        teacher_id=payload.teacher_id,
-    )
+    payload = pydantic_converter.convert_to_model(request.json, AdminAssignTeacherToClassSchema)
+    section = g.admin.class_service.admin_assign_teacher(class_id=class_id, teacher_id=payload.teacher_id)
     return SchoolAdminMapper.class_to_dto(section)
 
 
@@ -77,14 +66,8 @@ def admin_unassign_teacher_to_class(class_id: str):
 @role_required(["admin"])
 @wrap_response
 def admin_enroll_student_to_class(class_id: str):
-    payload = pydantic_converter.convert_to_model(
-        request.json,
-        AdminEnrollStudentToClassSchema,
-    )
-    section = g.admin.class_service.admin_enroll_student(
-        class_id=class_id,
-        student_id=payload.student_id,
-    )
+    payload = pydantic_converter.convert_to_model(request.json, AdminEnrollStudentToClassSchema)
+    section = g.admin.class_service.admin_enroll_student(class_id=class_id, student_id=payload.student_id)
     
     return SchoolAdminMapper.class_to_dto(section)
 
@@ -93,10 +76,7 @@ def admin_enroll_student_to_class(class_id: str):
 @role_required(["admin"])
 @wrap_response
 def admin_unenroll_student_from_class(class_id: str, student_id: str):
-    section = g.admin.class_service.admin_unenroll_student(
-        class_id=class_id,
-        student_id=student_id,
-    )
+    section = g.admin.class_service.admin_unenroll_student(class_id=class_id, student_id=student_id)
     return SchoolAdminMapper.class_to_dto(section)
 
 
@@ -104,9 +84,21 @@ def admin_unenroll_student_from_class(class_id: str, student_id: str):
 @role_required(["admin"])
 @wrap_response
 def admin_soft_delete_class(class_id: str):
-    g.admin.class_service.admin_soft_delete_class(class_id)
+    g.admin.class_service.admin_soft_delete_class(class_id=class_id)
     return {"message": "Class soft deleted"}
 
+
+
+# ---------------------------------------------------------
+# LIST Students in Class Select
+# ---------------------------------------------------------
+@admin_bp.route("/classes/<class_id>/students/", methods=["GET"])
+@role_required(["admin"])
+@wrap_response
+def admin_list_students_in_class_select_options(class_id: str):
+    students = g.admin.class_service.admin_list_students_in_class_select_options(class_id)
+    items = mongo_converter.list_to_dto(students, AdminStudentNameSelectDTO)
+    return AdminStudentNameSelectListDTO(items=items)
 
 
 # ---------------------------------------------------------

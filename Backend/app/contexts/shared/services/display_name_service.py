@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Iterable, Dict, List, TYPE_CHECKING
+from typing import Iterable, Dict, List, Any, TYPE_CHECKING
 from bson import ObjectId
 
 from app.contexts.iam.read_models.iam_read_model import IAMReadModel
@@ -87,14 +87,28 @@ class DisplayNameService:
                 mapping[_id] = name
         return mapping
 
-    def student_names_for_ids(
+    def student_names_for_student_ids(
         self,
-        user_ids: Iterable[ObjectId | str | dict | None],
+        student_ids: Iterable[ObjectId | str | dict | None],
+        lang: str = "en",
     ) -> Dict[ObjectId, str]:
-        oids = self._normalize_ids(user_ids)
+        oids = self._normalize_ids(student_ids)
         if not oids:
             return {}
-        return self.usernames_for_ids(oids, role="student")
+        docs =  self.student_read_model.list_student_names_by_ids(oids)
+        mapping: Dict[ObjectId, str] = {}
+        for doc in docs:
+            _id = doc.get("_id")
+            last_name_en = doc.get("last_name_en", "")
+            first_name_en = doc.get("first_name_en", "")
+            last_name_kh = doc.get("last_name_kh", "")
+            first_name_kh = doc.get("first_name_kh", "")
+            full_name = f"{first_name_en} {last_name_en}"
+            if lang == "kh":
+                full_name = f"{last_name_kh} {first_name_kh}"
+            if _id is not None:
+                mapping[_id] = full_name
+        return mapping
     # -----------------------------
     # STAFF (teachers)
     # -----------------------------
@@ -312,108 +326,6 @@ class DisplayNameService:
 
 
 
-    # -----------------------------
-    # GRADE ENRICHMENT
-    # -----------------------------
-
-    def enrich_grades(self, grade_docs: Iterable[dict]) -> List[dict]:
-        """
-        Take raw grade docs and attach:
-
-        - student_name (or "[deleted student]")
-        - class_name (or "[deleted class]")
-        - teacher_name (or "[deleted teacher]")
-        - subject_label (or "[deleted subject]")
-
-        Input example:
-        {
-          "_id": ObjectId(...),
-          "student_id": ObjectId(...),
-          "subject_id": ObjectId(...),
-          "class_id": ObjectId(...),
-          "teacher_id": ObjectId(...),
-          "term": "S1",
-          "type": "exam",
-          "score": 13,
-          ...
-        }
-        """
-
-        docs: List[dict] = [dict(d) for d in grade_docs]
-
-        student_ids: list[ObjectId | str | dict | None] = []
-        class_ids: list[ObjectId | str | dict | None] = []
-        teacher_ids: list[ObjectId | str | dict | None] = []
-        subject_ids: list[ObjectId | str | dict | None] = []
-
-        for d in docs:
-            sid_student = d.get("student_id")
-            cid_class = d.get("class_id")
-            tid_teacher = d.get("teacher_id")
-            sid_subject = d.get("subject_id")
-
-            if sid_student is not None:
-                student_ids.append(sid_student)
-            if cid_class is not None:
-                class_ids.append(cid_class)
-            if tid_teacher is not None:
-                teacher_ids.append(tid_teacher)
-            if sid_subject is not None:
-                subject_ids.append(sid_subject)
-
-        student_name_map = self.usernames_for_ids(student_ids, role="student")
-        class_name_map = self.class_names_for_ids(class_ids)
-        teacher_name_map = self.staff_names_for_ids(teacher_ids)
-        subject_label_map = self.subject_labels_for_ids(subject_ids)
-
-        student_name_map_str = {str(k): v for k, v in student_name_map.items()}
-        class_name_map_str = {str(k): v for k, v in class_name_map.items()}
-        teacher_name_map_str = {str(k): v for k, v in teacher_name_map.items()}
-        subject_label_map_str = {str(k): v for k, v in subject_label_map.items()}
-
-        for d in docs:
-            sid_student = d.get("student_id")
-            cid_class = d.get("class_id")
-            tid_teacher = d.get("teacher_id")
-            sid_subject = d.get("subject_id")
-
-            if sid_student is not None:
-                sname = (
-                    student_name_map.get(sid_student)
-                    or student_name_map_str.get(str(sid_student))
-                )
-                d["student_name"] = (
-                    sname if sname is not None else "[deleted student]"
-                )
-
-            if cid_class is not None:
-                cname = (
-                    class_name_map.get(cid_class)
-                    or class_name_map_str.get(str(cid_class))
-                )
-                d["class_name"] = (
-                    cname if cname is not None else "[deleted class]"
-                )
-
-            if tid_teacher is not None:
-                tname = (
-                    teacher_name_map.get(tid_teacher)
-                    or teacher_name_map_str.get(str(tid_teacher))
-                )
-                d["teacher_name"] = (
-                    tname if tname is not None else "[deleted teacher]"
-                )
-
-            if sid_subject is not None:
-                slabel = (
-                    subject_label_map.get(sid_subject)
-                    or subject_label_map_str.get(str(sid_subject))
-                )
-                d["subject_label"] = (
-                    slabel if slabel is not None else "[deleted subject]"
-                )
-        return docs
-
 
     # -----------------------------
     # ATTENDANCE ENRICHMENT
@@ -449,7 +361,7 @@ class DisplayNameService:
                 teacher_ids.append(tid)
 
         # Build maps
-        student_name_map = self.usernames_for_ids(student_ids, role="student")
+        student_name_map = self.student_names_for_student_ids(student_ids)
         class_name_map = self.class_names_for_ids(class_ids)
         teacher_name_map = self.staff_names_for_ids(teacher_ids)
 
@@ -522,9 +434,7 @@ class DisplayNameService:
 
         # Build maps using existing helpers
         # You need a helper on StudentReadModel like: list_names_by_ids([...]) -> {ObjectId: name}
-        student_name_map = self.usernames_for_ids(
-            self._normalize_ids(student_ids), role="student"
-        )
+        student_name_map = self.student_names_for_student_ids(self._normalize_ids(student_ids))
         class_name_map = self.class_names_for_ids(class_ids)
         teacher_name_map = self.staff_names_for_ids(teacher_ids)
         subject_label_map = self.subject_labels_for_ids(subject_ids)
@@ -563,3 +473,67 @@ class DisplayNameService:
                 )
 
         return docs
+
+
+
+    # -----------------------------
+    # Select Options
+    # -----------------------------
+
+    def student_select_options_for_ids(
+        self,
+        student_ids: Iterable[ObjectId | str | dict | None],
+        *,
+        include_label: bool = True,
+    ) -> List[Dict[str, Any]]:
+        """
+        Build UI-friendly select options for students:
+
+        [
+          {
+            "value": "ObjectIdString",
+            "full_name_en": "...",
+            "full_name_kh": "...",
+            "label": "...",
+          }
+        ]
+        """
+        oids = self._normalize_ids(student_ids)
+        if not oids:
+            return []
+
+        docs = self.student_read_model.list_student_names_by_ids(oids)
+
+        options: List[Dict[str, Any]] = []
+        for d in docs:
+            sid = d.get("_id")
+            if not sid:
+                continue
+
+            first_en = (d.get("first_name_en") or "").strip()
+            last_en = (d.get("last_name_en") or "").strip()
+            first_kh = (d.get("first_name_kh") or "").strip()
+            last_kh = (d.get("last_name_kh") or "").strip()
+
+            full_name_en = f"{first_en} {last_en}".strip()
+            full_name_kh = f"{last_kh} {first_kh}".strip()
+
+            label = full_name_en
+            if include_label and full_name_kh:
+                label = f"{full_name_en} / {full_name_kh}".strip(" /")
+
+            options.append(
+                {
+                    "value": str(sid),
+                    "full_name_en": full_name_en,
+                    "full_name_kh": full_name_kh,
+                    "label": label,
+                    "first_name_en": first_en,
+                    "last_name_en": last_en,
+                    "first_name_kh": first_kh,
+                    "last_name_kh": last_kh,
+                }
+            )
+
+        options.sort(key=lambda x: (x.get("full_name_en") or x.get("label") or "").lower())
+        return options

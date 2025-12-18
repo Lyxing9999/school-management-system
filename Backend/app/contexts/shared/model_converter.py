@@ -138,18 +138,34 @@ class AdvancedMongoConverter:
     @classmethod
     def convert_to_object_id(cls, value: Union[str, ObjectId, None]) -> ObjectId | None:
         try:
-            if(value is None):
+            if value is None:
                 return None
+
             if isinstance(value, ObjectId):
                 return value
+
             if not isinstance(value, str):
                 raise AppTypeError(
                     message="Expected string for ObjectId conversion",
                     cause=None,
-                    details={"received_value": value},
-                    hint="Provide a valid string representing an ObjectId"
+                    details={"received_type": type(value).__name__, "received_value": value},
+                    hint="Provide a valid Mongo ObjectId string (24 hex chars) or an ObjectId instance.",
                 )
-            return ObjectId(value)
+
+            v = value.strip()
+            if not v:
+                return None  # or raise if you prefer strict
+
+            if not ObjectId.is_valid(v):
+                raise AppTypeError(
+                    message="Invalid ObjectId string",
+                    cause=None,
+                    details={"received_value": v},
+                    hint="ObjectId must be a 24-character hex string (e.g., '507f1f77bcf86cd799439011').",
+                )
+
+            return ObjectId(v)
+
         except Exception as e:
             raise handle_exception(e)
 

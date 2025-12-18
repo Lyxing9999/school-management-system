@@ -1,7 +1,7 @@
 from __future__ import annotations
 from flask import request, g
 from app.contexts.student.routes import student_bp
-from app.contexts.core.security.auth_utils import get_current_user_id
+from app.contexts.core.security.auth_utils import get_current_student_id
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import mongo_converter
@@ -21,7 +21,7 @@ from app.contexts.student.data_transfer.responses import (
 @role_required(["student"])
 @wrap_response
 def get_my_classes():
-    student_id = get_current_user_id()
+    student_id = get_current_student_id()
     classes = g.student_service.get_my_classes(student_id)
     items = mongo_converter.list_to_dto(classes, StudentClassSectionDTO)
     return StudentClassListDTO(items=items)
@@ -31,7 +31,7 @@ def get_my_classes():
 @role_required(["student"])
 @wrap_response
 def get_my_attendance():
-    student_id = get_current_user_id()
+    student_id = get_current_student_id()
     class_id = request.args.get("class_id")
     attendance = g.student_service.get_my_attendance(
         student_id=student_id,
@@ -48,7 +48,7 @@ def get_my_attendance():
 @role_required(["student"])
 @wrap_response
 def get_my_grades():
-    student_id = get_current_user_id()
+    student_id = get_current_student_id()
     term = request.args.get("term")
     my_grades = g.student_service.get_my_grades(
         student_id=student_id,
@@ -62,7 +62,7 @@ def get_my_grades():
 @role_required(["student"])
 @wrap_response
 def get_my_schedule():
-    student_id = get_current_user_id()
+    student_id = get_current_student_id()
     schedule = g.student_service.get_my_schedule(student_id)
     items = mongo_converter.list_to_dto(schedule, StudentScheduleDTO)
     return StudentScheduleListDTO(items=items)

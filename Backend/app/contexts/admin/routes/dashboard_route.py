@@ -59,13 +59,7 @@ def admin_get_dashboard():
     date_from = _parse_date_arg(date_from_str)
     date_to = _parse_date_arg(date_to_str)
 
-    # Use the dashboard read model attached in AdminContext
-    raw = g.admin.dashboard_read_model.get_admin_dashboard(
-        date_from=date_from,
-        date_to=date_to,
-        term=term,
-    )
+    raw = g.admin.dashboard_read_model.get_admin_dashboard(date_from=date_from, date_to=date_to, term=term)
 
-    # Pydantic validates and shapes JSON
     dto = AdminDashboardDTO(**raw)
     return dto

@@ -160,7 +160,7 @@ class AdminDashboardReadModel(MongoErrorMixin):
             )
 
         student_ids = [ObjectId(row["student_id"]) for row in top_absent_raw]
-        student_name_map = self._display_names.student_names_for_ids(student_ids)
+        student_name_map = self._display_names.student_names_for_student_ids(student_ids)
 
         top_absent_students: List[Dict[str, Any]] = []
         for row in top_absent_raw:

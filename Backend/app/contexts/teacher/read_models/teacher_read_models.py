@@ -90,6 +90,24 @@ class TeacherReadModel(MongoErrorMixin):
 
     # ----------------- classes -----------------
 
+    def list_student_ids_for_teacher(
+        self,
+        teacher_id: Union[str, ObjectId],
+    ) -> List[ObjectId]:
+        """
+        Return the list of student_ids (ObjectId) enrolled in the given class.
+        - teacher_id: ObjectId
+        - return: Student Object ID Current Teacher Teach List[ObjectId]
+        """
+        t_oid = mongo_converter.convert_to_object_id(teacher_id)
+
+        class_docs = self.classes.list_classes_for_teacher(t_oid)
+        class_ids = [c["_id"] for c in class_docs if c.get("_id")]
+        if not class_ids:
+            return []
+
+        return self.student.list_student_ids_by_current_class_ids(class_ids)
+
     def list_my_classes_enriched(self, teacher_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
         """
         Classes for this teacher, with:
@@ -114,48 +132,34 @@ class TeacherReadModel(MongoErrorMixin):
         enriched_classes = self.display_names.enrich_classes(raw_classes)
         return enriched_classes
 
-    def list_student_ids_for_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
-        return self.classes.list_student_ids_for_class(class_id)
+
+
+
+
 
     def list_subject_ids_for_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
         return self.classes.list_subject_ids_for_class(class_id)
 
     # ----------------- select options (for dropdowns) -----------------
 
+
+    def list_my_students_in_class(self, class_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+        student = self.student.list_students_by_current_class_id(class_id)
+        return student
+
+
     def list_student_name_options_in_class(
         self,
         class_id: Union[str, ObjectId],
     ) -> List[Dict[str, Any]]:
-        """
-        Return student options for a given class, shaped for UI select:
-
-        [
-          { "id": "ObjectIdString", "username": "student1" },
-          { "id": "ObjectIdString", "username": "student2" },
-          ...
-        ]
-
-        NOTE: Currently uses IAM.username. Later you can switch to
-        student full_name via DisplayNameService if you want.
-        """
-        student_ids = self.list_student_ids_for_class(class_id)
+    
+        student_ids = self.student.list_student_ids_by_current_class_ids([class_id])
         if not student_ids:
             return []
+        return self.display_names.student_select_options_for_ids(student_ids)
 
-        # list_usernames_by_ids -> [{_id, username}, ...]
-        docs = self.iam.list_usernames_by_ids(user_ids=student_ids, role="student")
-        options: List[Dict[str, Any]] = []
-        for d in docs:
-            sid = d.get("_id")
-            if not sid:
-                continue
-            options.append(
-                {
-                    "id": str(sid),
-                    "username": d.get("username", ""),
-                }
-            )
-        return options
+
+
 
     def list_subject_name_options_in_class(
         self,

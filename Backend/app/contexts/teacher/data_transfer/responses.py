@@ -10,6 +10,8 @@ from app.contexts.school.domain.grade import GradeType
 from app.contexts.school.data_transfer.responses import ClassSectionDTO
 
 
+from app.contexts.student.data_transfer.responses import StudentBaseDataDTO
+
 
 
 
@@ -56,7 +58,7 @@ class TeacherGradeListDTO(BaseModel):
 
 
 class TeacherClassSectionDTO(ClassSectionDTO):
-    student_count: int
+    enrolled_count: int
     subject_count: int
     teacher_id: Optional[str] = None
     teacher_name: str
@@ -66,10 +68,24 @@ class TeacherClassSectionDTO(ClassSectionDTO):
 class TeacherClassSectionListDTO(BaseModel):
     items: List[TeacherClassSectionDTO]
 
+
+class TeacherStudentDTO(StudentBaseDataDTO):
+    pass
+
+
+class TeacherStudentListDTO(BaseModel):
+    items: List[TeacherStudentDTO]
 # student name
+
 class TeacherStudentNameSelectDTO(BaseModel):
-    id: str
-    username: str  # TODO: later switch to real student full_name
+    value: str
+    label: str | None = None
+    first_name_kh: Optional[str] = None
+    last_name_kh: Optional[str] = None
+    first_name_en: Optional[str] = None
+    last_name_en: Optional[str] = None
+    full_name_kh: Optional[str] = None
+    full_name_en: Optional[str] = None
     model_config = {"extra": "ignore"}
 
 

@@ -58,6 +58,26 @@ def get_current_staff_id() -> ObjectId:
     return staff_doc["_id"]   # staff._id
 
 
+
+
+# -----------------------------
+# Get current student ID (student._id)
+# -----------------------------
+def get_current_student_id() -> ObjectId:
+    # 1) IAM user ObjectId
+    user_oid = get_current_user_oid()
+    student_doc = g.admin.admin_read_model.admin_get_student_by_user_id(user_oid)
+    if not student_doc:
+        raise AppBaseException(
+            message="No student profile for current user",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.AUTHENTICATION,
+            status_code=403,
+            user_message="No student profile found",
+            recoverable=False,
+        )
+
+    return student_doc["_id"]
 # -----------------------------
 # Get full current user info (from JWT payload)
 # -----------------------------

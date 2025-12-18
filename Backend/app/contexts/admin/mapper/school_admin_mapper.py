@@ -7,12 +7,10 @@ from app.contexts.school.domain.class_section import ClassSection
 from app.contexts.school.domain.subject import Subject
 
 from app.contexts.admin.data_transfer.response import (
-    AdminClassDataDTO,
     AdminSubjectDataDTO,
     AdminScheduleSlotDataDTO,
     AdminSubjectListDTO,
     AdminScheduleListDTO,
-    AdminClassListDTO,
 )
 
 
@@ -26,8 +24,8 @@ class SchoolAdminMapper:
             id=str(section.id),
             name=section.name,
             teacher_id=str(section.teacher_id) if section.teacher_id else None,
-            student_ids=[str(sid) for sid in section.student_ids],
             subject_ids=[str(sid) for sid in section.subject_ids],
+            enrolled_count=section.enrolled_count,
             max_students=section.max_students,
             created_at=section.created_at,
             updated_at=section.updated_at,
@@ -41,8 +39,8 @@ class SchoolAdminMapper:
             id=str(doc["_id"]),
             name=doc["name"],
             teacher_id=str(doc["teacher_id"]) if doc.get("teacher_id") else None,
-            student_ids=[str(sid) for sid in doc.get("student_ids", [])],
             subject_ids=[str(sid) for sid in doc.get("subject_ids", [])],
+            enrolled_count=doc.get("enrolled_count"),
             max_students=doc.get("max_students"),
             created_at=doc.get("created_at"),
             updated_at=doc.get("updated_at"),

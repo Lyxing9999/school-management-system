@@ -41,7 +41,9 @@ class TeacherService:
 
     def list_my_classes_enriched(self, teacher_id: str | ObjectId) -> list[dict]:
         return self.teacher_read.list_my_classes_enriched(teacher_id)
-        
+
+    def list_my_students_in_class(self, class_id: str | ObjectId) -> list[dict]:
+        return self.teacher_read.list_my_students_in_class(class_id)
 
 
     # ---------- Attendance ----------
@@ -147,6 +149,10 @@ class TeacherService:
 
 
 
+
+    
+
+
     def list_student_name_options_in_class(
         self,
         class_id: Union[str, ObjectId],
@@ -157,6 +163,9 @@ class TeacherService:
             raise TeacherForbiddenException()
 
         return self.teacher_read.list_student_name_options_in_class(class_id)
+
+
+
 
     def list_subject_name_options_in_class(
         self,
