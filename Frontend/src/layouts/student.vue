@@ -1,9 +1,10 @@
+<!-- layouts/default.vue or app layout -->
 <script setup lang="ts">
 import { useRoute } from "vue-router";
 import BaseFooter from "~/components/layout/BaseFooter.vue";
 import BaseHeader from "~/components/layout/BaseHeader.vue";
 import BaseSideBar from "~/components/layout/BaseSideBar.vue";
-import schoolLogo from "~/assets/image/school-logo.jpg";
+import schoolLogoLight from "~/assets/image/school-logo-light.png";
 
 const route = useRoute();
 </script>
@@ -12,12 +13,12 @@ const route = useRoute();
   <el-container class="app-layout">
     <!-- Sidebar -->
     <el-aside width="240px" class="layout-aside">
-      <BaseSideBar :logoSrc="schoolLogo" />
+      <BaseSideBar :logoSrc="schoolLogoLight" />
     </el-aside>
 
     <!-- Main area -->
     <el-container direction="vertical" class="layout-main-container">
-      <!-- Header -->
+      <!-- Header shell -->
       <el-header v-if="!route.meta.noHeader" class="layout-header">
         <BaseHeader />
       </el-header>
@@ -41,9 +42,11 @@ const route = useRoute();
 .app-layout {
   min-height: 100vh;
 }
+
+/* Outer aside – BaseSideBar handles visuals */
 .layout-aside {
-  border-right: 1px solid var(--color-primary-light-6);
-  background-color: var(--color-card);
+  background-color: transparent;
+  border-right: none;
 }
 
 .layout-main-container {
@@ -52,26 +55,29 @@ const route = useRoute();
   flex: 1 1 auto;
 }
 
+/* Header shell */
 .layout-header {
   padding: 0;
-  background-color: var(--color-card);
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
 }
 
+/* Content */
 .layout-main {
   padding: 16px;
-  background-color: var(--color-bg);
-
+  background: var(--color-bg);
   flex: 1 1 auto;
   overflow: auto;
 }
 
+/* Footer */
 .layout-footer {
   padding: 8px 16px;
-  border-top: 1px solid #e5e7eb;
-  background-color: var(--color-card);
+  background: var(--footer-bg);
+  border-top: 1px solid var(--footer-border);
 }
 
+/* Page transition */
 .page-enter-active,
 .page-leave-active {
   transition: opacity 0.25s ease;
