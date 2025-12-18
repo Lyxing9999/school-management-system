@@ -1,0 +1,138 @@
+/* =========================================================
+   Element Plus: el-tag (system-token driven, clean)
+   - Light: subtle tint
+   - Dark : darker chips (no “too bright” look)
+========================================================= */
+
+.el-tag {
+    border-radius: var(--tag-radius, 9999px);
+    font-weight: var(--tag-font-weight, 650);
+
+    /* default accent (neutral) */
+    --_accent: var(--tag-neutral-accent, var(--muted-color));
+
+    /* Element Plus variables */
+    --el-tag-bg-color: var(--tag-soft-bg);
+    --el-tag-border-color: var(--tag-soft-border);
+    --el-tag-text-color: var(--tag-soft-text);
+
+    /* size */
+    height: 24px;
+    padding: 0 10px;
+    font-size: 12px;
+    line-height: 1;
+}
+
+/* sizes */
+.el-tag--small {
+    height: 20px;
+    padding: 0 8px;
+    font-size: 11px;
+}
+
+.el-tag--large {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 13px;
+}
+
+/* ---------------------------------------------------------
+   Semantic types -> system colors
+--------------------------------------------------------- */
+.el-tag--primary {
+    --_accent: var(--tag-primary-accent, var(--color-primary));
+}
+
+.el-tag--success {
+    --_accent: var(--tag-success-accent, var(--button-success-bg));
+}
+
+.el-tag--warning {
+    --_accent: var(--tag-warning-accent, var(--button-warning-bg));
+}
+
+.el-tag--danger {
+    --_accent: var(--tag-danger-accent, var(--button-danger-bg));
+}
+
+.el-tag--info {
+    --_accent: var(--tag-info-accent, var(--button-info-bg));
+}
+
+/* Light/default “tinted” type tags */
+.el-tag--primary,
+.el-tag--success,
+.el-tag--warning,
+.el-tag--danger,
+.el-tag--info {
+    --el-tag-bg-color: color-mix(in srgb, var(--color-card) 92%, var(--_accent) 8%);
+    --el-tag-border-color: color-mix(in srgb, var(--border-color) 78%, var(--_accent) 22%);
+    --el-tag-text-color: color-mix(in srgb, var(--text-color) 75%, var(--_accent) 25%);
+}
+
+/* ---------------------------------------------------------
+   Effects
+--------------------------------------------------------- */
+
+/* plain = transparent surface, colored border/text */
+.el-tag--plain {
+    --el-tag-bg-color: transparent;
+    --el-tag-border-color: color-mix(in srgb, var(--border-color) 55%, var(--_accent) 45%);
+    --el-tag-text-color: color-mix(in srgb, var(--text-color) 55%, var(--_accent) 45%);
+}
+
+/* dark = strong accent surface, readable text */
+.el-tag--dark {
+    --el-tag-bg-color: color-mix(in srgb, var(--_accent) 88%, transparent);
+    --el-tag-border-color: color-mix(in srgb, var(--_accent) 65%, var(--border-color) 35%);
+    --el-tag-text-color: var(--tag-on-accent, var(--color-bg));
+}
+
+/* hit = crisp border */
+.el-tag.is-hit {
+    border-color: color-mix(in srgb, var(--_accent) 45%, var(--border-color) 55%);
+}
+
+/* ---------------------------------------------------------
+   Close button (X)
+--------------------------------------------------------- */
+.el-tag .el-tag__close {
+    border-radius: 9999px;
+    color: color-mix(in srgb, var(--muted-color) 82%, var(--text-color) 18%);
+    transition:
+        background-color var(--transition-base),
+        color var(--transition-base),
+        transform var(--transition-base);
+}
+
+.el-tag .el-tag__close:hover {
+    background: var(--hover-bg);
+    color: var(--_accent);
+    transform: translateY(-0.5px);
+}
+
+.el-tag .el-tag__close:active {
+    transform: translateY(0);
+}
+
+.el-tag--dark .el-tag__close {
+    color: color-mix(in srgb, var(--tag-on-accent, var(--color-bg)) 85%, transparent);
+}
+
+.el-tag--dark .el-tag__close:hover {
+    background: color-mix(in srgb, var(--tag-on-accent, var(--color-bg)) 14%, transparent);
+    color: var(--tag-on-accent, var(--color-bg));
+}
+
+/* ---------------------------------------------------------
+   Dark mode: make typed tags darker (avoid bright chips)
+--------------------------------------------------------- */
+html[data-theme="dark"] .el-tag--primary,
+html[data-theme="dark"] .el-tag--success,
+html[data-theme="dark"] .el-tag--warning,
+html[data-theme="dark"] .el-tag--danger,
+html[data-theme="dark"] .el-tag--info {
+    --el-tag-bg-color: color-mix(in srgb, var(--color-card) 86%, var(--_accent) 14%);
+    --el-tag-border-color: color-mix(in srgb, var(--border-color) 72%, var(--_accent) 28%);
+    --el-tag-text-color: color-mix(in srgb, var(--text-color) 78%, var(--_accent) 22%);
+}

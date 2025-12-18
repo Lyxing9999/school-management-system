@@ -53,6 +53,11 @@ export const adminFormRegistryEdit: AdminFormRegistryEdit = {
     schema: userForm.userFormSchemaEdit,
     formData: () => userForm.getUserFormDataEdit(), // reactive object
   },
+  STUDENT: {
+    service: () => studentForm.useServiceFormStudent(),
+    schema: studentForm.StudentFormSchemaEdit,
+    formData: () => studentForm.getStudentFormDataEdit(), // reactive object
+  },
   STAFF: {
     service: () => staffForm.useServiceFormStaff(),
     schema: staffForm.staffFormSchemaEdit,

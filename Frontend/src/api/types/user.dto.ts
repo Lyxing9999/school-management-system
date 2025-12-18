@@ -1,5 +1,5 @@
 import { Role, UserRole, StaffRole } from "./enums/role.enum";
-
+import { Status } from "./enums/status.enum";
 /**
  * @description User Base Data
  * @example
@@ -7,7 +7,8 @@ import { Role, UserRole, StaffRole } from "./enums/role.enum";
  *  id: "1",
  *  username: "admin",
  *  email: "admin@admin.com",
- *  role: "admin",
+ *  role: Role.ADMIN,
+ *  status: Status.ACTIVE,
  *  created_by: "admin",
  *  created_at: "2022-01-01T00:00:00.000Z",
  *  updated_at: "2022-01-01T00:00:00.000Z"
@@ -21,6 +22,7 @@ export interface UserBaseDataDTO {
   id: string;
   username?: string;
   email: string;
+  status: Status;
   role: Role;
   created_by: string;
   created_at: string;

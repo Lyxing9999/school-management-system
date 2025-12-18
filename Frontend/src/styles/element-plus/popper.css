@@ -1,0 +1,80 @@
+/* =========================================================
+   POPPERS (Dropdown / Select / Tooltip / Popover)
+   Status: System-Synced / Dynamic Primary
+========================================================= */
+
+/* 1) The Shell (Container) 
+   - Forces card color and border from your system
+   - Handles both light and dark variations
+*/
+.el-popper,
+.el-select__popper,
+.el-dropdown__popper,
+.el-tooltip__popper,
+.el-popover {
+    background: var(--color-card) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-color) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25) !important;
+    /* Deep shadow for depth */
+    border-radius: calc(var(--border-radius-base) + 2px) !important;
+}
+
+/* 2) The Arrow (Critical Fix)
+   - Syncs the arrow "diamond" to match the border and card background
+   - Prevents the "White Arrow" bug in dark mode
+*/
+.el-popper__arrow::before {
+    background: var(--color-card) !important;
+    border: 1px solid var(--border-color) !important;
+    right: 0;
+}
+
+/* 3) Dropdown / Select Items
+   - Modern "Floating" look (padding + margin)
+*/
+.el-dropdown-menu__item,
+.el-select-dropdown__item {
+    color: var(--text-color) !important;
+    border-radius: var(--border-radius-base, 4px) !important;
+    margin: 2px 5px !important;
+    /* Floating effect inside the box */
+    width: auto !important;
+    /* Required for margin to work */
+    transition: all 0.15s ease-in-out;
+}
+
+/* 4) HOVER STATE (Dynamic System Sync)
+   - Instead of var(--hover-bg), we use your Primary Color at 10% opacity.
+   - This ensures the hover always matches your brand.
+*/
+.el-dropdown-menu__item:not(.is-disabled):hover,
+.el-select-dropdown__item:not(.is-disabled):hover {
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent) !important;
+    color: var(--color-primary) !important;
+}
+
+/* 5) ACTIVE / SELECTED STATE
+   - Primary Color at 15% opacity + Bold Text
+*/
+.el-dropdown-menu__item.is-active,
+.el-select-dropdown__item.is-selected {
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
+    color: var(--color-primary) !important;
+    font-weight: 700;
+}
+
+/* 6) Dividers (if used) */
+.el-dropdown-menu__item--divided {
+    border-top-color: var(--border-color) !important;
+    margin-top: 4px !important;
+}
+
+/* 7) Group Titles (Select) */
+.el-select-group__title {
+    color: var(--muted-color) !important;
+    font-size: 11px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-left: 12px !important;
+}

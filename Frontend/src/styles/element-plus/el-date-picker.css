@@ -1,0 +1,378 @@
+/* =========================================================
+   Element Plus: el-date-picker / el-date-editor / calendar panel
+   - System-token driven (light + dark)
+   - Clean, consistent, “senior” defaults
+========================================================= */
+
+/* ---------------------------------------------------------
+   1) Input shell (date editor)
+--------------------------------------------------------- */
+
+/* Most date-picker inputs render through .el-date-editor */
+.el-date-editor {
+    width: 100%;
+}
+
+/* Shared input wrapper */
+.el-date-editor .el-input__wrapper {
+    background: var(--input-bg, var(--color-card));
+    border: 1px solid var(--input-border, var(--border-color));
+    box-shadow: none;
+    border-radius: var(--border-radius-base);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base),
+        background-color var(--transition-base);
+}
+
+/* Hover */
+.el-date-editor .el-input__wrapper:hover {
+    border-color: color-mix(in srgb, var(--border-color) 60%, var(--color-primary) 40%);
+}
+
+/* Focus */
+.el-date-editor.is-focus .el-input__wrapper,
+.el-date-editor .el-input__wrapper:focus-within {
+    border-color: color-mix(in srgb, var(--border-color) 35%, var(--color-primary) 65%);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+/* Text + placeholder */
+.el-date-editor .el-input__inner {
+    color: var(--text-color);
+}
+
+.el-date-editor .el-input__inner::placeholder {
+    color: color-mix(in srgb, var(--muted-color) 85%, transparent);
+}
+
+/* Prefix / suffix icons */
+.el-date-editor .el-input__prefix,
+.el-date-editor .el-input__suffix {
+    color: var(--muted-color);
+}
+
+.el-date-editor .el-input__icon {
+    color: inherit;
+}
+
+/* Disabled */
+.el-date-editor.is-disabled .el-input__wrapper {
+    background: color-mix(in srgb, var(--color-card) 70%, var(--color-bg) 30%);
+    border-color: var(--border-color);
+    opacity: 0.85;
+    cursor: not-allowed;
+}
+
+.el-date-editor.is-disabled .el-input__inner {
+    color: color-mix(in srgb, var(--muted-color) 80%, transparent);
+}
+
+/* ---------------------------------------------------------
+   2) Popper panel surface
+--------------------------------------------------------- */
+
+.el-picker__popper,
+.el-date-picker,
+.el-date-range-picker {
+    background: var(--color-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 16px 34px var(--card-shadow);
+    color: var(--text-color);
+    overflow: hidden;
+}
+
+/* Popper arrow */
+.el-popper__arrow::before {
+    background: var(--color-card) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* Header + divider */
+.el-date-picker__header,
+.el-date-range-picker__header {
+    padding: 12px 14px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+/* Header labels */
+.el-date-picker__header-label,
+.el-date-range-picker__header-label {
+    color: var(--text-color);
+    font-weight: 650;
+}
+
+/* Header buttons (prev/next) */
+.el-date-picker__prev-btn,
+.el-date-picker__next-btn,
+.el-date-range-picker__prev-btn,
+.el-date-range-picker__next-btn {
+    color: var(--muted-color);
+}
+
+.el-date-picker__prev-btn:hover,
+.el-date-picker__next-btn:hover,
+.el-date-range-picker__prev-btn:hover,
+.el-date-range-picker__next-btn:hover {
+    color: var(--color-primary);
+}
+
+/* ---------------------------------------------------------
+   3) Calendar table typography
+--------------------------------------------------------- */
+
+.el-date-table {
+    font-size: 13px;
+}
+
+/* Week title (Mon Tue...) */
+.el-date-table th {
+    color: color-mix(in srgb, var(--muted-color) 80%, var(--text-color) 20%);
+    font-weight: 600;
+    padding: 8px 0;
+}
+
+/* Day cells default */
+.el-date-table td .el-date-table-cell {
+    border-radius: 10px;
+    transition: background-color var(--transition-base), color var(--transition-base),
+        transform var(--transition-base);
+}
+
+/* Day text */
+.el-date-table td .el-date-table-cell__text {
+    color: var(--text-color);
+}
+
+/* Hover day */
+.el-date-table td.available:hover .el-date-table-cell {
+    background: var(--hover-bg);
+}
+
+/* Today outline (not too loud) */
+.el-date-table td.today .el-date-table-cell__text {
+    color: var(--color-primary);
+    font-weight: 750;
+}
+
+/* Selected day */
+.el-date-table td.current:not(.disabled) .el-date-table-cell {
+    background: var(--active-bg);
+    border: 1px solid color-mix(in srgb, var(--border-color) 45%, var(--color-primary) 55%);
+}
+
+.el-date-table td.current:not(.disabled) .el-date-table-cell__text {
+    color: var(--color-primary);
+    font-weight: 750;
+}
+
+/* In range (date-range picker) */
+.el-date-table td.in-range .el-date-table-cell {
+    background: color-mix(in srgb, var(--active-bg) 70%, transparent);
+}
+
+/* Range start/end stronger */
+.el-date-table td.start-date .el-date-table-cell,
+.el-date-table td.end-date .el-date-table-cell {
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-card) 86%);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 40%, var(--border-color) 60%);
+}
+
+.el-date-table td.start-date .el-date-table-cell__text,
+.el-date-table td.end-date .el-date-table-cell__text {
+    color: var(--color-primary);
+    font-weight: 800;
+}
+
+/* Disabled day */
+.el-date-table td.disabled .el-date-table-cell__text {
+    color: color-mix(in srgb, var(--muted-color) 65%, transparent);
+}
+
+.el-date-table td.disabled .el-date-table-cell {
+    background: transparent;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Previous/next month days (dimmed) */
+.el-date-table td.next-month .el-date-table-cell__text,
+.el-date-table td.prev-month .el-date-table-cell__text {
+    color: color-mix(in srgb, var(--muted-color) 65%, transparent);
+}
+
+/* ---------------------------------------------------------
+   4) Month / Year / Time panels
+--------------------------------------------------------- */
+
+/* Month table cells */
+.el-month-table td .cell,
+.el-year-table td .cell {
+    border-radius: 10px;
+    color: var(--text-color);
+    transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+.el-month-table td .cell:hover,
+.el-year-table td .cell:hover {
+    background: var(--hover-bg);
+}
+
+/* Selected month/year */
+.el-month-table td.current .cell,
+.el-year-table td.current .cell {
+    background: var(--active-bg);
+    color: var(--color-primary);
+    font-weight: 750;
+    border: 1px solid color-mix(in srgb, var(--border-color) 45%, var(--color-primary) 55%);
+}
+
+/* Time panel (if enabled) */
+.el-time-panel {
+    background: var(--color-card);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 16px 34px var(--card-shadow);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.el-time-spinner__item {
+    color: color-mix(in srgb, var(--text-color) 86%, var(--muted-color) 14%);
+}
+
+.el-time-spinner__item:hover:not(.disabled) {
+    background: var(--hover-bg);
+    color: var(--text-color);
+}
+
+.el-time-spinner__item.active:not(.disabled) {
+    background: var(--active-bg);
+    color: var(--color-primary);
+    font-weight: 750;
+}
+
+/* ---------------------------------------------------------
+   5) Footer buttons (Now / Confirm etc.)
+--------------------------------------------------------- */
+
+.el-picker-panel__footer {
+    border-top: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+    background: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%);
+    padding: 10px 12px;
+}
+
+.el-picker-panel__footer .el-button {
+    border-radius: 10px;
+}
+
+/* Keep “text button” consistent */
+.el-picker-panel__footer .el-button.is-text {
+    color: var(--color-primary);
+}
+
+.el-picker-panel__footer .el-button.is-text:hover {
+    background: var(--hover-bg);
+}
+
+/* ---------------------------------------------------------
+   6) Dark-mode polish (avoid washed / too bright panel)
+--------------------------------------------------------- */
+
+html[data-theme="dark"] .el-picker__popper,
+html[data-theme="dark"] .el-date-picker,
+html[data-theme="dark"] .el-date-range-picker,
+html[data-theme="dark"] .el-time-panel {
+    background: color-mix(in srgb, var(--color-card) 96%, var(--color-bg) 4%);
+    border-color: color-mix(in srgb, var(--border-color) 80%, var(--color-primary) 20%);
+}
+
+html[data-theme="dark"] .el-picker-panel__footer {
+    background: color-mix(in srgb, var(--color-card) 94%, var(--color-bg) 6%);
+}
+
+/* Dark: range should not look too bright */
+html[data-theme="dark"] .el-date-table td.in-range .el-date-table-cell {
+    background: color-mix(in srgb, var(--color-card) 84%, var(--color-primary) 16%);
+}
+
+html[data-theme="dark"] .el-date-table td.start-date .el-date-table-cell,
+html[data-theme="dark"] .el-date-table td.end-date .el-date-table-cell {
+    background: color-mix(in srgb, var(--color-card) 78%, var(--color-primary) 22%);
+}
+
+
+
+
+/* =========================================================
+   PATCH: DateRange input chain with tooltip trigger wrapper
+   Fixes:
+   .el-date-editor--daterange .el-input__wrapper .el-range-editor--small
+   wrapped by .el-tooltip__trigger
+========================================================= */
+
+/* Make tooltip trigger behave like a normal inline wrapper */
+.el-tooltip__trigger {
+    display: inline-flex;
+    width: 100%;
+}
+
+/* Explicitly target daterange editor wrapper (Element Plus uses wrapper as input surface) */
+.el-date-editor.el-date-editor--daterange.el-range-editor {
+    width: 100%;
+}
+
+/* The true surface in daterange is: .el-range-editor.el-input__wrapper */
+.el-date-editor.el-date-editor--daterange.el-range-editor .el-range-editor.el-input__wrapper {
+    background: var(--input-bg, var(--color-card));
+    border: 1px solid var(--input-border, var(--border-color));
+    box-shadow: none;
+    border-radius: var(--border-radius-base);
+
+    transition: border-color var(--transition-base),
+        box-shadow var(--transition-base),
+        background-color var(--transition-base);
+}
+
+/* Hover (works even when hover happens on tooltip trigger) */
+.el-tooltip__trigger:hover .el-date-editor.el-date-editor--daterange.el-range-editor .el-range-editor.el-input__wrapper,
+.el-date-editor.el-date-editor--daterange.el-range-editor .el-range-editor.el-input__wrapper:hover {
+    border-color: color-mix(in srgb, var(--border-color) 60%, var(--color-primary) 40%);
+    background: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%);
+}
+
+/* Focus (Element Plus adds .is-focus on el-date-editor) */
+.el-date-editor.el-date-editor--daterange.el-range-editor.is-focus .el-range-editor.el-input__wrapper {
+    border-color: color-mix(in srgb, var(--border-color) 35%, var(--color-primary) 65%);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+    background: var(--input-bg, var(--color-card));
+}
+
+/* Text + placeholder inside range inputs */
+.el-date-editor.el-date-editor--daterange.el-range-editor .el-range-input {
+    color: var(--text-color);
+}
+
+.el-date-editor.el-date-editor--daterange.el-range-editor .el-range-input::placeholder {
+    color: color-mix(in srgb, var(--muted-color) 85%, transparent);
+}
+
+/* Separator + icons */
+.el-date-editor.el-date-editor--daterange.el-range-editor .el-range-separator,
+.el-date-editor.el-date-editor--daterange.el-range-editor .el-range__icon,
+.el-date-editor.el-date-editor--daterange.el-range-editor .el-icon {
+    color: var(--muted-color);
+}
+
+/* Disabled */
+.el-date-editor.el-date-editor--daterange.el-range-editor.is-disabled .el-range-editor.el-input__wrapper {
+    background: color-mix(in srgb, var(--color-card) 70%, var(--color-bg) 30%);
+    border-color: var(--border-color);
+    box-shadow: none;
+    opacity: 0.85;
+    cursor: not-allowed;
+}
+
+/* Dark mode: prevent hover from becoming too light */
+html[data-theme="dark"] .el-tooltip__trigger:hover .el-date-editor.el-date-editor--daterange.el-range-editor .el-range-editor.el-input__wrapper,
+html[data-theme="dark"] .el-date-editor.el-date-editor--daterange.el-range-editor .el-range-editor.el-input__wrapper:hover {
+    background: color-mix(in srgb, var(--color-card) 88%, var(--color-bg) 12%);
+}

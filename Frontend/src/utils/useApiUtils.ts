@@ -1,4 +1,4 @@
-import type { AxiosError } from "axios";
+import axios, { type AxiosError } from "axios";
 import { useAuthStore } from "~/stores/authStore";
 import { eventBus } from "~/composables/useGlobalEventBus";
 import type { ApiResponse } from "~/api/types/common/api-response.type";
@@ -53,6 +53,13 @@ export const useApiUtils = () => {
       return { data: apiRes.data ?? null, errors: {} };
     } catch (err) {
       const axiosErr = err as AxiosError<any>;
+      if (
+        axiosErr.code === "ERR_CANCELED" ||
+        (axiosErr as any).name === "CanceledError" ||
+        axios.isCancel?.(axiosErr)
+      ) {
+        return { data: null, errors: {} };
+      }
       const apiErrorData = axiosErr.response?.data as
         | ApiResponse<any>
         | undefined;

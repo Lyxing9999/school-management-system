@@ -35,7 +35,6 @@ export interface StudentBaseDataDTO {
 -------------------------------------------------------- */
 
 export interface AdminGetStudentData extends StudentBaseDataDTO {
-
   username?: string;
   email?: string;
 }
@@ -66,7 +65,7 @@ export interface AdminCreateStudent {
   first_name_en: string;
   last_name_en: string;
   gender: Gender;
-  dob: string; 
+  dob: string;
   current_grade_level: number;
 
   phone_number?: string;
@@ -89,23 +88,31 @@ export interface AdminUpdateStudent {
    SELECT / DROPDOWN OPTIONS
 -------------------------------------------------------- */
 
-export interface AdminStudentSelectDTO {
-  id: string;
-  student_id_code: string;
-  full_name_en: string; // Helper field for display
-  full_name_kh?: string;
+export interface AdminStudentNameSelectDTO {
+  value: string;
+  label: string;
+
+  first_name_kh?: string | null;
+  last_name_kh?: string | null;
+  first_name_en?: string | null;
+  last_name_en?: string | null;
+  full_name_kh?: string | null;
+  full_name_en?: string | null;
 }
 
 export interface AdminStudentListSelectDTO {
-  items: AdminStudentSelectDTO[];
+  items: AdminStudentNameSelectDTO[];
 }
 
 /* --------------------------------------------------------
    RESPONSE TYPES
 -------------------------------------------------------- */
 export type AdminGetStudentResponse = AdminApiResponse<AdminGetStudentData>;
-export type AdminCreateStudentResponse = AdminApiResponse<AdminGetStudentData>; 
+export type AdminCreateStudentResponse = AdminApiResponse<AdminGetStudentData>;
 export type AdminGetPageStudentResponse =
   AdminApiResponse<AdminGetPageStudentData>;
 export type AdminStudentListSelectResponse =
   AdminApiResponse<AdminStudentListSelectDTO>;
+export type StudentBaseDataResponse = AdminApiResponse<StudentBaseDataDTO>;
+export type AdminStudentNameSelectResponse =
+  AdminApiResponse<AdminStudentNameSelectDTO>;

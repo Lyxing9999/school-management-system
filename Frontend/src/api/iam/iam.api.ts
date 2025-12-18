@@ -28,4 +28,13 @@ export class AuthApi {
   loginWithGoogle(apiBase: string) {
     window.location.href = `${apiBase}/auth/google/login`;
   }
+  // TODO return current profile
+  // change password
+
+  async getMyProfile() {
+    const response = await this.$api.get<UserLoginResponse>(
+      `${this.baseURL}/profile`
+    );
+    return response.data;
+  }
 }

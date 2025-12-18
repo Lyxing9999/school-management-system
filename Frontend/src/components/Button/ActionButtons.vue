@@ -80,39 +80,44 @@ defineSlots<{
 .button-detail {
   border-radius: 10px;
   font-size: 13px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
+  font-weight: 650;
   border: 1px solid var(--color-primary-light-6);
-  transition: transform 0.2s ease;
+  color: var(--color-primary);
+  background: transparent;
+  transition: transform var(--transition-base),
+    background-color var(--transition-base), border-color var(--transition-base),
+    color var(--transition-base);
 }
+
 .button-detail:hover {
+  background-color: var(--color-primary-light-9);
+  border-color: var(--color-primary-light-4);
   transform: translateY(-0.8px);
 }
 .button-detail:active {
   transform: translateY(0);
+  background-color: var(--color-primary-light-8);
 }
 
 .button-delete {
   border-radius: 10px;
   font-size: 13px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
+  font-weight: 650;
+  border: 1px solid color-mix(in srgb, var(--el-color-danger) 25%, transparent);
   color: var(--el-color-danger);
-  border-color: var(--el-color-danger-light-7);
-  transition: transform 0.2s ease;
+  background: transparent;
+  transition: transform var(--transition-base),
+    background-color var(--transition-base), border-color var(--transition-base),
+    color var(--transition-base);
 }
+
 .button-delete:hover {
-  color: var(--el-color-danger);
-  background-color: var(--el-color-danger-light-9);
+  background-color: color-mix(in srgb, var(--el-color-danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--el-color-danger) 40%, transparent);
   transform: translateY(-0.5px);
 }
 .button-delete:active {
   transform: translateY(0);
+  background-color: color-mix(in srgb, var(--el-color-danger) 18%, transparent);
 }
 </style>

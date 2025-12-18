@@ -2,10 +2,9 @@ import type { AxiosInstance } from "axios";
 import type {
   AdminCreateStudent,
   AdminCreateStudentResponse,
-  AdminGetStudentResponse,
   AdminUpdateStudent,
-  AdminGetPageStudentResponse,
-  AdminStudentListSelectResponse,
+  AdminStudentNameSelectResponse,
+  StudentBaseDataResponse,
 } from "~/api/admin/student/student.dto";
 
 export class StudentApi {
@@ -13,6 +12,24 @@ export class StudentApi {
     private $api: AxiosInstance,
     private baseURL = "/api/admin/students"
   ) {}
+
+  async getStudentUserId(id: string): Promise<StudentBaseDataResponse> {
+    const res = await this.$api.get<StudentBaseDataResponse>(
+      `${this.baseURL}/user/${id}`
+    );
+    return res.data;
+  }
+
+  async updateStudentUserId(
+    id: string,
+    payload: AdminUpdateStudent
+  ): Promise<StudentBaseDataResponse> {
+    const res = await this.$api.patch<StudentBaseDataResponse>(
+      `${this.baseURL}/user/${id}`,
+      payload
+    );
+    return res.data;
+  }
 
   /**
    * Create a new student (IAM + Profile)
@@ -26,7 +43,12 @@ export class StudentApi {
     );
     return res.data;
   }
-
+  async listStudentNamesSelect(): Promise<AdminStudentNameSelectResponse> {
+    const res = await this.$api.get<AdminStudentNameSelectResponse>(
+      `${this.baseURL}/student-select`
+    );
+    return res.data;
+  }
   /**
    * Get single student info
    */

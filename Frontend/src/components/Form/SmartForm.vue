@@ -1,5 +1,13 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { reactive, ref, watch, onMounted, computed } from "vue";
+import {
+  reactive,
+  ref,
+  watch,
+  onMounted,
+  computed,
+  toValue,
+  type MaybeRefOrGetter,
+} from "vue";
 import type { Field } from "../types/form";
 import { ElUpload, type UploadUserFile, type FormInstance } from "element-plus";
 import FormRow from "./FormRow.vue";
@@ -7,12 +15,12 @@ import FormField from "./FormField.vue";
 
 const props = defineProps<{
   modelValue: Partial<T>;
-  fields: Field<T>[];
+  fields: MaybeRefOrGetter<Field<T>[]>;
   useElForm: boolean;
   formProps?: Record<string, any>;
   loading?: boolean; // parent-controlled (API save, etc.)
 }>();
-
+const resolvedFields = computed(() => toValue(props.fields) ?? []);
 const emit = defineEmits<{
   (e: "save", form: T): void;
   (e: "cancel"): void;
@@ -92,19 +100,20 @@ const handleUploadRemove = (key: string, file: UploadUserFile) => {
   );
 };
 
-onMounted(() => {
-  props.fields.forEach((field) => {
-    const fieldsToCheck = field.row ?? [field];
-    fieldsToCheck.forEach((f) => {
-      if (!f.key) return;
-      const key = f.key as keyof T;
-      if (f.component === ElUpload && getFormValue(key)) {
-        fileList.value[f.key as string] = getUploadFileList(getFormValue(key));
-      }
+watch(
+  resolvedFields,
+  (fields) => {
+    fields.forEach((field) => {
+      const fieldsToCheck = field.row ?? [field];
+      fieldsToCheck.forEach((f) => {
+        if (!f.key) return;
+        if (f.component === ElUpload && form[f.key as string]) {
+        }
+      });
     });
-  });
-});
-
+  },
+  { immediate: true }
+);
 const elFormRef = ref<FormInstance | null>(null);
 
 const handleSave = async () => {
@@ -141,7 +150,7 @@ const handleSave = async () => {
     ref="elFormRef"
     v-bind="props.formProps"
   >
-    <template v-for="(field, index) in props.fields" :key="index">
+    <template v-for="(field, index) in resolvedFields" :key="index">
       <FormRow
         v-if="field.row"
         :rowFields="field.row"
@@ -179,7 +188,7 @@ const handleSave = async () => {
 
   <!-- Plain div mode (no Element Plus validation) -->
   <div v-else>
-    <template v-for="(field, index) in props.fields" :key="index">
+    <template v-for="(field, index) in resolvedFields" :key="index">
       <FormRow
         v-if="field.row"
         :rowFields="field.row"

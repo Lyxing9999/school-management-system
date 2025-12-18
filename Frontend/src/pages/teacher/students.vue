@@ -1,29 +1,89 @@
+<!-- ~/pages/teacher/students/index.vue -->
 <script setup lang="ts">
-definePageMeta({
-  layout: "teacher",
-});
+definePageMeta({ layout: "teacher" });
 
 import { ref, computed, watch, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 
 import { teacherService } from "~/api/teacher";
 import type { ClassSectionDTO } from "~/api/types/school.dto";
-import type { TeacherStudentNameDTO } from "~/api/teacher/dto";
 
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
+import TeacherClassSelect from "~/components/Selects/TeacherClassSelect.vue";
+import TableCard from "~/components/Cards/TableCard.vue";
 import { useHeaderState } from "~/composables/useHeaderState";
 
 const teacher = teacherService();
 
-// state
+/* ----------------- types (backend -> UI adapter) ----------------- */
+
+type BackendStudentDTO = {
+  id: string;
+  user_id?: string;
+  student_id_code?: string;
+  first_name_kh?: string;
+  last_name_kh?: string;
+  first_name_en?: string;
+  last_name_en?: string;
+  gender?: string;
+  dob?: string; // "YYYY-MM-DD"
+  status?: string;
+  phone_number?: string;
+  current_class_id?: string;
+};
+
+type StudentRow = {
+  id: string;
+  code: string;
+  name: string;
+  gender: string;
+  dob: string;
+  status: string;
+  phone: string;
+};
+
+const buildStudentName = (s: BackendStudentDTO) => {
+  const en = `${s.first_name_en ?? ""} ${s.last_name_en ?? ""}`.trim();
+  if (en) return en;
+
+  const kh = `${s.first_name_kh ?? ""} ${s.last_name_kh ?? ""}`.trim();
+  if (kh) return kh;
+
+  return s.student_id_code ?? "Unknown Student";
+};
+
+const toStudentRow = (s: BackendStudentDTO): StudentRow => ({
+  id: s.id,
+  code: s.student_id_code ?? "-",
+  name: buildStudentName(s),
+  gender: s.gender ?? "-",
+  dob: s.dob ?? "-",
+  status: s.status ?? "-",
+  phone: s.phone_number ?? "-",
+});
+
+const formatDob = (dob: string) => {
+  return dob && dob !== "-" ? dob : "-";
+};
+
+const statusTagType = (status: string) => {
+  const v = (status || "").toLowerCase();
+  if (v === "active") return "success";
+  if (v === "inactive") return "info";
+  if (v === "suspended") return "warning";
+  return "default";
+};
+
+/* ----------------- state ----------------- */
+
 const loadingClasses = ref(false);
 const loadingStudents = ref(false);
 const errorMessage = ref<string | null>(null);
 
 const classes = ref<ClassSectionDTO[]>([]);
 const selectedClassId = ref<string | null>(null);
-const students = ref<TeacherStudentNameDTO[]>([]);
+const students = ref<StudentRow[]>([]);
 
 // UI helpers
 const searchTerm = ref("");
@@ -34,22 +94,24 @@ const selectedClass = computed(
 );
 
 const totalClasses = computed(() => classes.value.length);
-const totalStudentsInSelected = computed(
-  () => selectedClass.value?.student_ids?.length ?? 0
-);
+const totalStudentsInSelected = computed(() => students.value.length);
 
 /* ----------------- filter + pagination ----------------- */
 
-// filter first
 const filteredStudents = computed(() => {
   const term = searchTerm.value.trim().toLowerCase();
   if (!term) return students.value;
-  return students.value.filter((s) =>
-    (s.username || "").toString().toLowerCase().includes(term)
-  );
+
+  return students.value.filter((s) => {
+    return (
+      s.name.toLowerCase().includes(term) ||
+      s.code.toLowerCase().includes(term) ||
+      s.phone.toLowerCase().includes(term) ||
+      s.id.toLowerCase().includes(term)
+    );
+  });
 });
 
-// then paginate
 const currentPage = ref(1);
 const pageSize = ref(10);
 
@@ -59,7 +121,6 @@ const pagedStudents = computed(() => {
   return filteredStudents.value.slice(start, end);
 });
 
-// when search changes, reset to first page
 watch(
   () => searchTerm.value,
   () => {
@@ -102,10 +163,12 @@ const loadStudentsForClass = async (classId: string | null) => {
   errorMessage.value = null;
 
   try {
-    const res = await teacher.teacher.listStudentNamesInClass(classId, {
+    const res = await teacher.teacher.listStudentsInClass(classId, {
       showError: false,
     });
-    students.value = res.items ?? [];
+
+    const raw = (res.items ?? []) as BackendStudentDTO[];
+    students.value = raw.map(toStudentRow);
   } catch (err: any) {
     const msg = err?.message ?? "Failed to load students.";
     errorMessage.value = msg;
@@ -115,22 +178,16 @@ const loadStudentsForClass = async (classId: string | null) => {
   }
 };
 
-/* ----------------- watch + lifecycle ----------------- */
-
-// react when class changes
 watch(selectedClassId, (newVal) => {
   loadStudentsForClass(newVal);
 });
 
-// initial
 onMounted(async () => {
   await loadClasses();
   if (selectedClassId.value) {
     await loadStudentsForClass(selectedClassId.value);
   }
 });
-
-/* ----------------- handlers ----------------- */
 
 const handleRefresh = async () => {
   await loadClasses();
@@ -148,7 +205,7 @@ const handlePageSizeChange = (size: number) => {
   currentPage.value = 1;
 };
 
-/* ----------------- stats for header (useHeaderState) ----------------- */
+/* ----------------- header stats ----------------- */
 
 const { headerState } = useHeaderState({
   items: [
@@ -163,8 +220,7 @@ const { headerState } = useHeaderState({
     },
     {
       key: "students",
-      // only show when a class is selected; otherwise value=0 and hidden
-      getValue: () => (selectedClass.value ? totalStudentsInSelected.value : 0),
+      getValue: () => totalStudentsInSelected.value,
       singular: "student",
       plural: "students",
       suffix: "in this class",
@@ -177,8 +233,7 @@ const { headerState } = useHeaderState({
 </script>
 
 <template>
-  <div class="p-4 space-y-4">
-    <!-- Page header -->
+  <div class="p-4 space-y-6">
     <OverviewHeader
       title="My Students"
       description="Quickly see which students belong to each of your classes."
@@ -186,6 +241,33 @@ const { headerState } = useHeaderState({
       :showRefresh="false"
       :stats="headerState"
     >
+      <template #filters>
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Class select pill -->
+          <div
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm"
+            style="
+              background: var(--color-card);
+              border-color: var(--color-primary-light-7);
+            "
+          >
+            <span
+              class="text-xs font-medium"
+              style="color: var(--color-primary)"
+            >
+              Class:
+            </span>
+
+            <TeacherClassSelect
+              v-model="selectedClassId"
+              placeholder="Select class"
+              style="min-width: 220px"
+              class="header-class-select"
+            />
+          </div>
+        </div>
+      </template>
+
       <template #actions>
         <BaseButton
           plain
@@ -198,7 +280,6 @@ const { headerState } = useHeaderState({
       </template>
     </OverviewHeader>
 
-    <!-- Error -->
     <transition name="el-fade-in">
       <el-alert
         v-if="errorMessage"
@@ -211,88 +292,15 @@ const { headerState } = useHeaderState({
       />
     </transition>
 
-    <!-- Main card -->
-    <el-card
-      shadow="never"
-      :body-style="{ padding: '20px' }"
-      class="border border-gray-200/60 rounded-2xl shadow-sm bg-white"
+    <TableCard
+      title="Student list"
+      :description="
+        selectedClass
+          ? `Students enrolled in: ${selectedClass.name ?? 'Selected class'}`
+          : 'Students enrolled in the selected class.'
+      "
+      :rightText="`Showing ${pagedStudents.length} / ${filteredStudents.length} students`"
     >
-      <template #header>
-        <div class="flex flex-col gap-4">
-          <!-- Title row -->
-          <div
-            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-          >
-            <div class="space-y-1">
-              <div class="text-base font-semibold text-gray-800">
-                Class overview
-              </div>
-              <p class="text-sm text-gray-500">
-                Choose a class, then optionally search by student name.
-              </p>
-            </div>
-          </div>
-
-          <!-- Filters row -->
-          <div class="flex flex-col md:flex-row gap-3">
-            <div class="flex flex-col gap-1 flex-1 md:max-w-xs">
-              <span class="text-xs font-medium text-gray-600">Class</span>
-              <el-select
-                v-model="selectedClassId"
-                placeholder="Select a class..."
-                size="default"
-                class="w-full"
-                :disabled="!classes.length || loadingClasses"
-                clearable
-                filterable
-              >
-                <el-option
-                  v-for="c in classes"
-                  :key="c.id"
-                  :label="c.name"
-                  :value="c.id"
-                />
-              </el-select>
-            </div>
-
-            <div class="flex flex-col gap-1 flex-1 md:max-w-sm">
-              <span class="text-xs font-medium text-gray-600"
-                >Search students</span
-              >
-              <el-input
-                v-model="searchTerm"
-                size="default"
-                placeholder="Type a student name..."
-                clearable
-                :disabled="!students.length"
-                class="w-full"
-                prefix-icon="Search"
-              />
-            </div>
-          </div>
-
-          <!-- Class info -->
-          <div
-            v-if="selectedClass && students.length"
-            class="flex flex-wrap items-center gap-3 text-xs text-gray-600 bg-gray-50 rounded-lg p-2.5 border border-gray-100"
-          >
-            <div class="flex items-center gap-1.5">
-              <span class="font-medium text-gray-700">Class:</span>
-              <span>{{ selectedClass.name }}</span>
-            </div>
-            <div class="h-4 w-px bg-gray-300" />
-            <div class="flex items-center gap-1.5">
-              <span class="font-medium text-gray-700">Showing:</span>
-              <span>
-                {{ pagedStudents.length }} / {{ filteredStudents.length }}
-                students
-              </span>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <!-- Table / empty states -->
       <el-table
         v-if="filteredStudents.length || loadingClasses || loadingStudents"
         v-loading="loadingClasses || loadingStudents"
@@ -300,50 +308,81 @@ const { headerState } = useHeaderState({
         size="default"
         stripe
         highlight-current-row
-        class="rounded-lg overflow-hidden"
-        :style="{ width: '100%' }"
+        class="rounded-lg overflow-hidden w-full"
         :header-cell-style="{
-          background: '#f9fafb',
-          color: '#374151',
+          background: 'var(--color-card)',
+          color: 'var(--text-color)',
           fontWeight: '600',
           fontSize: '13px',
+          borderBottom: '1px solid var(--border-color)',
         }"
       >
         <el-table-column type="index" label="#" width="70" align="center" />
 
-        <el-table-column
-          prop="username"
-          label="Student"
-          min-width="220"
-          show-overflow-tooltip
-        >
+        <!-- Student (name + code) -->
+        <el-table-column label="Student" min-width="280" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="flex items-center gap-2">
               <div
-                class="w-7 h-7 rounded-full flex items-center justify-center bg-[var(--color-primary-light-7)] text-[var(--color-primary)] text-xs font-semibold"
+                class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
+                style="
+                  background: var(--color-primary-light-7);
+                  color: var(--color-primary);
+                "
               >
-                {{ (row.username || "?").charAt(0).toUpperCase() }}
+                {{ (row.name || "?").charAt(0).toUpperCase() }}
               </div>
-              <span class="text-gray-800 font-medium">{{ row.username }}</span>
+
+              <div class="flex flex-col leading-tight">
+                <span class="font-medium" style="color: var(--text-color)">
+                  {{ row.name }}
+                </span>
+                <span class="text-xs" style="color: var(--muted-color)">
+                  {{ row.code }}
+                </span>
+              </div>
             </div>
           </template>
         </el-table-column>
 
+        <el-table-column prop="gender" label="Gender" width="120" />
+
+        <el-table-column label="DOB" width="140">
+          <template #default="{ row }">
+            <span style="color: var(--muted-color)">{{
+              formatDob(row.dob)
+            }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Status" width="140">
+          <template #default="{ row }">
+            <el-tag :type="statusTagType(row.status)" effect="light">
+              {{ row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
         <el-table-column
-          prop="id"
-          label="Student ID"
+          prop="phone"
+          label="Phone"
+          min-width="160"
+          show-overflow-tooltip
+        />
+
+        <el-table-column
+          label="Record ID"
           min-width="260"
           show-overflow-tooltip
         >
           <template #default="{ row }">
-            <span class="text-gray-500 font-mono text-xs">
+            <span class="font-mono text-xs" style="color: var(--muted-color)">
               {{ row.id }}
             </span>
           </template>
         </el-table-column>
       </el-table>
 
-      <!-- Pagination: only when there is at least one filtered student -->
       <div v-if="filteredStudents.length > 0" class="mt-4 flex justify-end">
         <el-pagination
           background
@@ -357,14 +396,9 @@ const { headerState } = useHeaderState({
         />
       </div>
 
-      <!-- Empty states -->
       <div v-else class="py-10">
         <el-empty
-          v-if="
-            !loadingStudents &&
-            selectedClassId &&
-            (students.length === 0 || filteredStudents.length === 0)
-          "
+          v-if="!loadingStudents && selectedClassId"
           :description="
             students.length === 0
               ? 'No students enrolled yet'
@@ -373,7 +407,10 @@ const { headerState } = useHeaderState({
           :image-size="120"
         >
           <template #extra>
-            <p class="text-sm text-gray-500 max-w-md mx-auto">
+            <p
+              class="text-sm max-w-md mx-auto"
+              style="color: var(--muted-color)"
+            >
               {{
                 students.length === 0
                   ? "Students will appear here once they are added to this class."
@@ -383,29 +420,15 @@ const { headerState } = useHeaderState({
           </template>
         </el-empty>
       </div>
-    </el-card>
+    </TableCard>
   </div>
 </template>
 
 <style scoped>
-.el-table {
-  transition: all 0.2s ease;
-}
-
-/* Focus styles for inputs and selects to match your theme */
 :deep(.el-input__wrapper:focus-within) {
-  box-shadow: 0 0 0 1px var(--color-primary-light) inset;
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
 }
-
 :deep(.el-select:focus-within .el-input__wrapper) {
-  box-shadow: 0 0 0 1px var(--color-primary-light) inset;
-}
-
-/* Slight hover for the main card */
-.el-card {
-  transition: box-shadow 0.2s ease, transform 0.1s ease;
-}
-.el-card:hover {
-  box-shadow: 0 4px 14px rgba(126, 87, 194, 0.12);
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
 }
 </style>

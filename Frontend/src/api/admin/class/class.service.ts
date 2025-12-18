@@ -4,6 +4,7 @@ import type {
   AdminClassDataDTO,
   AdminClassListDTO,
   AdminClassNameSelectListDTO,
+  AdminStudentsInClassSelectDTO,
 } from "./class.dto";
 import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
 import { ClassApi } from "./class.api";
@@ -36,6 +37,12 @@ export class ClassService {
   async listClassNameSelect() {
     const data = await this.callApi<AdminClassNameSelectListDTO>(() =>
       this.classApi.listClassNameSelect()
+    );
+    return data!;
+  }
+  async listStudentsInClass(classID: string) {
+    const data = await this.callApi<AdminStudentsInClassSelectDTO>(() =>
+      this.classApi.listStudentsInClass(classID)
     );
     return data!;
   }

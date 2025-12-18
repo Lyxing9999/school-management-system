@@ -32,6 +32,7 @@ import type {
   AdminCreateClass,
   AdminClassDataDTO,
   AdminClassListDTO,
+  AdminStudentsInClassSelectDTO,
 } from "~/api/admin/class/class.dto";
 
 import type { Field } from "~/components/types/form";
@@ -66,7 +67,7 @@ type ShowDeletedFilter = "all" | "active" | "deleted";
 
 // extend row with computed fields for table display
 type AdminClassRow = AdminClassDataDTO & {
-  student_count: number;
+  enrolled_count: number;
   subject_count: number;
 };
 
@@ -97,10 +98,10 @@ const {
 
     const rawItems = res?.items ?? [];
 
-    // add student_count and subject_count
+    // add enrolled_count and subject_count
     const displayClasses: AdminClassRow[] = rawItems.map((c) => ({
       ...c,
-      student_count: c.student_ids?.length ?? 0,
+      enrolled_count: c.student_ids?.length ?? 0,
       subject_count: c.subject_ids?.length ?? 0,
     }));
 
@@ -191,14 +192,11 @@ async function openCreateDialog() {
 }
 
 async function handleSaveCreateForm(payload: Partial<AdminCreateClass>) {
-  try {
-    await saveCreateForm(payload);
-    cancelCreateForm();
-    await fetchPage(1); // after create, go back to page 1
-  } catch (err) {
-    console.error("Failed to create class", err);
-    ElMessage.error("Failed to create class");
+  const created = await saveCreateForm(payload);
+  if (!created) {
+    return;
   }
+  await fetchPage(1);
 }
 
 function handleCancelCreateForm() {
@@ -219,33 +217,31 @@ const manageRelationsForm = ref<ManageClassRelationsForm>({
   student_ids: [],
   teacher_id: null,
 });
-
-const manageRelationsFields: Field<ManageClassRelationsForm>[] = [
-  {
-    key: "student_ids",
-    label: "Students",
-    component: StudentSelect,
-    formItemProps: {
+const manageRelationsFields = computed<Field<ManageClassRelationsForm>[]>(
+  () => [
+    {
+      key: "student_ids",
       label: "Students",
+      component: StudentSelect,
+      formItemProps: { label: "Students" },
+      componentProps: {
+        multiple: true,
+        placeholder: "Select students to enroll",
+        loading: studentsInClassLoading.value,
+
+        // ✅ IMPORTANT: StudentSelect expects `options` prop
+        options: studentSelectPreloaded, // Ref<array> is fine
+      },
     },
-    componentProps: {
-      multiple: true,
-      placeholder: "Select students to enroll",
-    },
-  },
-  {
-    key: "teacher_id",
-    label: "Teacher",
-    component: TeacherSelect,
-    formItemProps: {
+    {
+      key: "teacher_id",
       label: "Teacher",
+      component: TeacherSelect,
+      formItemProps: { label: "Teacher" },
+      componentProps: { placeholder: "Select teacher", clearable: true },
     },
-    componentProps: {
-      placeholder: "Select teacher",
-      clearable: true,
-    },
-  },
-];
+  ]
+);
 
 const currentClassForStudents = ref<AdminClassRow | null>(null);
 const originalStudentIds = ref<string[]>([]);
@@ -254,30 +250,35 @@ const originalTeacherId = ref<string | null>(null);
 const detailLoading = ref<Record<string | number, boolean>>({});
 const deleteLoading = ref<Record<string | number, boolean>>({});
 const saveStudentsLoading = ref(false);
+const studentSelectPreloaded = ref<{ value: string; label: string }[]>([]);
+const studentsInClassLoading = ref(false);
 
 async function openManageStudentsDialog(row: AdminClassRow) {
+  currentClassForStudents.value = row;
+  studentSelectPreloaded.value = [];
+  manageRelationsForm.value = {
+    student_ids: [],
+    teacher_id: (row.teacher_id as string | null) ?? null,
+  };
+
+  studentsInClassLoading.value = true;
   detailLoading.value[row.id] = true;
+  manageStudentsVisible.value = true;
+
   try {
-    currentClassForStudents.value = row;
+    const res = await adminApi.class.listStudentsInClass(row.id);
 
-    const students = row.student_ids ?? [];
-    const teacher = (row.teacher_id as string | null) ?? null;
-
-    originalStudentIds.value = [...students];
-    originalTeacherId.value = teacher;
+    studentSelectPreloaded.value = res.items ?? [];
 
     manageRelationsForm.value = {
-      student_ids: [...students],
-      teacher_id: teacher,
+      student_ids: studentSelectPreloaded.value.map((x) => x.value),
+      teacher_id: (row.teacher_id as string | null) ?? null,
     };
-
-    await nextTick();
-    manageStudentsVisible.value = true;
   } finally {
+    studentsInClassLoading.value = false;
     detailLoading.value[row.id] = false;
   }
 }
-
 function cancelManageStudents() {
   manageStudentsVisible.value = false;
 }
@@ -335,7 +336,6 @@ async function saveManageStudents(payload: Partial<ManageClassRelationsForm>) {
     await fetchPage(currentPage.value || 1);
   } catch (err) {
     console.error("Failed to update class", err);
-    ElMessage.error("Failed to update class");
   } finally {
     saveStudentsLoading.value = false;
   }

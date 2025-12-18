@@ -1,0 +1,57 @@
+/* =========================================================
+   RADIO BUTTON GROUP (Element Plus)
+========================================================= */
+.el-radio-button .el-radio-button__inner {
+    border-color: var(--border-color) !important;
+    color: var(--text-color) !important;
+    background: var(--color-card) !important;
+    transition:
+        background-color var(--transition-base),
+        border-color var(--transition-base),
+        color var(--transition-base),
+        transform var(--transition-base);
+}
+
+.el-radio-button .el-radio-button__inner:hover {
+    border-color: var(--color-primary) !important;
+    background: var(--hover-bg) !important;
+}
+
+.el-radio-button.is-active .el-radio-button__inner {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: var(--color-light) !important;
+    box-shadow: -1px 0 0 0 var(--color-primary);
+}
+
+.el-radio-group .el-radio-button:not(:first-child) .el-radio-button__inner {
+    margin-left: -1px;
+}
+
+.el-radio-group .el-radio-button:first-child.is-active .el-radio-button__inner {
+    border-left-color: var(--color-primary) !important;
+}
+
+/* focus ring */
+.el-radio-button.is-focus .el-radio-button__inner {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+html[data-theme="purple"] .el-radio-button.is-focus .el-radio-button__inner {
+    box-shadow: 0 0 0 3px rgba(107, 63, 160, 0.16) !important;
+}
+
+html[data-theme="dark"] .el-radio-button.is-focus .el-radio-button__inner {
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18) !important;
+}
+
+/* disabled */
+.el-radio-button.is-disabled .el-radio-button__inner {
+    border-color: var(--border-color) !important;
+    color: var(--muted-color) !important;
+    background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+html[data-theme="dark"] .el-radio-button.is-disabled .el-radio-button__inner {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}

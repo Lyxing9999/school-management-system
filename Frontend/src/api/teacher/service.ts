@@ -66,9 +66,12 @@ export class TeacherService {
     return data!;
   }
 
-  async listStudentNamesInClass(classId: string, options?: ApiCallOptions) {
+  async listStudentNamesOptionsClass(
+    classId: string,
+    options?: ApiCallOptions
+  ) {
     const data = await this.callApi<TeacherStudentNameListDTO>(
-      () => this.teacherApi.listStudentNamesInClass(classId),
+      () => this.teacherApi.listStudentNamesOptionsClass(classId),
       options
     );
     return data!;

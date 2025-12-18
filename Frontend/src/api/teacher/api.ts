@@ -55,16 +55,16 @@ export class TeacherApi {
     );
     return res.data;
   }
-  async listStudentNamesInClass(classId: string) {
+  async listStudentNamesOptionsClass(classId: string) {
     const res = await this.$api.get<TeacherStudentNameListResponse>(
-      `${this.baseURL}/me/classes/${classId}/students`
+      `${this.baseURL}/me/classes/${classId}/students/name-select`
     );
     return res.data;
   }
 
   async listSubjectsInClass(classId: string) {
     const res = await this.$api.get<TeacherSubjectsSelectNameListResponse>(
-      `${this.baseURL}/me/classes/${classId}/subjects`
+      `${this.baseURL}/me/classes/${classId}/subjects/name-select`
     );
     return res.data;
   }

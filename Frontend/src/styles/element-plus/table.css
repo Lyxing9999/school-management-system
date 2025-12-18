@@ -1,0 +1,261 @@
+/* =========================================================
+   TABLE (Element Plus) — CTO / production-grade
+   Goals:
+   - Theme-safe (light/dark)
+   - FIXED: Sticky/Fixed column opacity (No text bleed)
+   - Opaque cells everywhere
+   - Zebra + hover + current (main + fixed)
+   - Empty overlay covers body
+========================================================= */
+
+/* ---------------------------------------------------------
+   1) Base table shell + Element Plus variable sync
+--------------------------------------------------------- */
+.el-table {
+    /* Sync EP table vars to your tokens */
+    --el-table-border-color: var(--border-color);
+    --el-table-text-color: var(--text-color);
+    --el-table-header-text-color: var(--text-color);
+
+    /* Prevent EP default light hover/current in dark */
+    --el-table-row-hover-bg-color: var(--hover-bg) !important;
+    --el-table-current-row-bg-color: var(--active-bg) !important;
+
+    background: var(--color-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: calc(var(--border-radius-base) + 4px) !important;
+    overflow: hidden;
+}
+
+/* Keep the table “surface” consistent everywhere */
+.el-table__inner-wrapper,
+.el-table__header-wrapper,
+.el-table__body-wrapper {
+    background: var(--color-card) !important;
+}
+
+/* ---------------------------------------------------------
+   2) Header
+--------------------------------------------------------- */
+.el-table th.el-table__cell {
+    background: linear-gradient(90deg,
+            color-mix(in srgb, var(--color-primary) 10%, var(--color-card) 90%),
+            var(--color-card)) !important;
+
+    color: var(--text-color) !important;
+    font-weight: 700;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* Sort caret */
+.el-table .caret-wrapper i {
+    color: var(--muted-color) !important;
+}
+
+.el-table th.is-sortable:hover .caret-wrapper i {
+    color: var(--color-primary) !important;
+}
+
+/* ---------------------------------------------------------
+   3) Body cells (IMPORTANT: always opaque)
+--------------------------------------------------------- */
+.el-table td.el-table__cell {
+    color: var(--text-color) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent) !important;
+
+    /* Critical: avoid transparent cells generally */
+    background: var(--color-card) !important;
+}
+
+.el-table td.el-table__cell>.cell {
+    background: inherit !important;
+}
+
+/* Border mode vertical dividers */
+.el-table--border .el-table__cell {
+    border-right: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent) !important;
+}
+
+/* ---------------------------------------------------------
+   4) Zebra rows (Stripe)
+--------------------------------------------------------- */
+/* When stripe prop is used (EP adds .el-table__row--striped) */
+.el-table__body tr.el-table__row--striped:not(.hover-row):not(.current-row)>td.el-table__cell,
+.el-table__fixed-body-wrapper tr.el-table__row--striped:not(.hover-row):not(.current-row)>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr.el-table__row--striped:not(.hover-row):not(.current-row)>td.el-table__cell {
+    background: color-mix(in srgb, var(--color-card) 85%, var(--color-bg) 15%) !important;
+}
+
+/* When stripe prop is NOT used (CSS fallback) */
+.el-table__body tr.el-table__row:nth-child(even):not(.hover-row):not(.current-row)>td.el-table__cell,
+.el-table__fixed-body-wrapper tr:nth-child(even):not(.hover-row):not(.current-row)>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr:nth-child(even):not(.hover-row):not(.current-row)>td.el-table__cell {
+    background: color-mix(in srgb, var(--color-card) 85%, var(--color-bg) 15%) !important;
+}
+
+/* ---------------------------------------------------------
+   5) Normal Hover + Current (Main Body)
+--------------------------------------------------------- */
+.el-table__body tr.hover-row>td.el-table__cell,
+.el-table__fixed-body-wrapper tr.hover-row>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr.hover-row>td.el-table__cell {
+    background: var(--hover-bg) !important;
+}
+
+.el-table__body tr.current-row>td.el-table__cell,
+.el-table__fixed-body-wrapper tr.current-row>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr.current-row>td.el-table__cell {
+    background: var(--active-bg) !important;
+}
+
+/* ---------------------------------------------------------
+   6) FIXED / STICKY COLUMNS (Left & Right) — UNIVERSAL FIX
+   Targets both old "Fixed Wrapper" and new "Sticky Cell" modes.
+--------------------------------------------------------- */
+
+/* A. Sticky Mode (Newer Element Plus) */
+.el-table__body tr>td.el-table-fixed-column--right,
+.el-table__body tr>td.el-table-fixed-column--left {
+    position: sticky !important;
+    z-index: 20 !important;
+    background: var(--color-card) !important;
+    /* Base opacity */
+}
+
+/* Hover: Use Gradient trick to layer Tint + Opaque Base */
+.el-table__body tr.hover-row>td.el-table-fixed-column--right,
+.el-table__body tr.hover-row>td.el-table-fixed-column--left {
+    background: linear-gradient(var(--hover-bg), var(--hover-bg)), var(--color-card) !important;
+    background-repeat: no-repeat !important;
+}
+
+/* Current: Layer Tint + Opaque Base */
+.el-table__body tr.current-row>td.el-table-fixed-column--right,
+.el-table__body tr.current-row>td.el-table-fixed-column--left {
+    background: linear-gradient(var(--active-bg), var(--active-bg)), var(--color-card) !important;
+    background-repeat: no-repeat !important;
+}
+
+
+/* B. Fixed Wrapper Mode (Older Element Plus / Legacy) */
+.el-table__fixed,
+.el-table__fixed-right {
+    z-index: 200 !important;
+    background: var(--color-card) !important;
+}
+
+.el-table__fixed td.el-table__cell,
+.el-table__fixed-right td.el-table__cell {
+    background: var(--color-card) !important;
+    position: relative;
+    z-index: 202 !important;
+}
+
+/* Wrapper Hover Fix */
+.el-table__fixed .el-table__fixed-body-wrapper tr.hover-row>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr.hover-row>td.el-table__cell {
+    background: linear-gradient(var(--hover-bg), var(--hover-bg)), var(--color-card) !important;
+}
+
+/* Wrapper Current Fix */
+.el-table__fixed .el-table__fixed-body-wrapper tr.current-row>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr.current-row>td.el-table__cell {
+    background: linear-gradient(var(--active-bg), var(--active-bg)), var(--color-card) !important;
+}
+
+/* ---------------------------------------------------------
+   7) Scrollbar
+--------------------------------------------------------- */
+.el-table__body-wrapper::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+}
+
+.el-table__body-wrapper::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--muted-color) 25%, transparent);
+    border-radius: 999px;
+}
+
+.el-table__body-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ---------------------------------------------------------
+   8) Selection checkbox
+--------------------------------------------------------- */
+.el-checkbox__input.is-checked .el-checkbox__inner,
+.el-checkbox__input.is-indeterminate .el-checkbox__inner {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+}
+
+.el-checkbox__inner:hover {
+    border-color: var(--color-primary) !important;
+}
+
+/* ---------------------------------------------------------
+   9) Empty State
+--------------------------------------------------------- */
+.el-table .el-table__empty-block {
+    background: var(--color-card) !important;
+}
+
+.el-table .el-table__empty-text {
+    color: var(--muted-color) !important;
+    font-weight: 600;
+}
+
+
+
+/* =========================================================
+   TABLE — unified hover/current for normal + striped + fixed
+   Fix: fixed right/left columns match hover on striped rows
+========================================================= */
+
+/* 1) Define reusable row surfaces */
+.el-table {
+    --table-row-bg: var(--color-card);
+    --table-row-striped-bg: color-mix(in srgb, var(--color-card) 85%, var(--color-bg) 15%);
+}
+
+/* 2) Ensure sticky fixed columns use the SAME base as the row */
+.el-table__body tr.el-table__row--striped>td.el-table-fixed-column--left,
+.el-table__body tr.el-table__row--striped>td.el-table-fixed-column--right {
+    background: var(--table-row-striped-bg) !important;
+}
+
+/* (fallback stripe when you rely on nth-child even) */
+.el-table__body tr:nth-child(even)>td.el-table-fixed-column--left,
+.el-table__body tr:nth-child(even)>td.el-table-fixed-column--right {
+    background: var(--table-row-striped-bg) !important;
+}
+
+/* 3) Use OVERLAY hover (so it looks identical on all bases) */
+.el-table__body tr.hover-row>td.el-table__cell,
+.el-table__fixed-body-wrapper tr.hover-row>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr.hover-row>td.el-table__cell {
+    background: linear-gradient(var(--hover-bg), var(--hover-bg)), var(--table-row-bg) !important;
+    background-repeat: no-repeat !important;
+}
+
+/* Hover overlay specifically for striped rows */
+.el-table__body tr.el-table__row--striped.hover-row>td.el-table__cell,
+.el-table__fixed-body-wrapper tr.el-table__row--striped.hover-row>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr.el-table__row--striped.hover-row>td.el-table__cell {
+    background: linear-gradient(var(--hover-bg), var(--hover-bg)), var(--table-row-striped-bg) !important;
+}
+
+/* 4) Same approach for current-row */
+.el-table__body tr.current-row>td.el-table__cell,
+.el-table__fixed-body-wrapper tr.current-row>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr.current-row>td.el-table__cell {
+    background: linear-gradient(var(--active-bg), var(--active-bg)), var(--table-row-bg) !important;
+    background-repeat: no-repeat !important;
+}
+
+.el-table__body tr.el-table__row--striped.current-row>td.el-table__cell,
+.el-table__fixed-body-wrapper tr.el-table__row--striped.current-row>td.el-table__cell,
+.el-table__fixed-right .el-table__fixed-body-wrapper tr.el-table__row--striped.current-row>td.el-table__cell {
+    background: linear-gradient(var(--active-bg), var(--active-bg)), var(--table-row-striped-bg) !important;
+}

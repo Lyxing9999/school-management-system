@@ -162,19 +162,22 @@ const menuItems = computed(
     })) ?? []
 );
 
-const activeMenu = computed(
-  () =>
-    menuItems.value.find((item) => route.path.startsWith(item.route))?.route ??
-    ""
-);
+const activeMenu = computed(() => {
+  const hit = menuItems.value.find(
+    (item) =>
+      route.path === item.route || route.path.startsWith(item.route + "/")
+  );
+  return hit?.route ?? "";
+});
 </script>
 
 <template>
   <div class="app-aside">
     <div class="logo-section">
-      <img :src="logoSrc" alt="Logo" class="logo-image" />
+      <div class="logo-badge">
+        <img :src="logoSrc" class="logo-image" alt="Logo" />
+      </div>
     </div>
-
     <el-menu router :default-active="activeMenu" class="app-menu">
       <el-menu-item
         v-for="item in menuItems"

@@ -1,0 +1,69 @@
+/* =========================================================
+   Element Plus: el-check-tag (balanced, token driven)
+   - Softer text + softer primary tint
+   - Dark mode stays NOT bright
+========================================================= */
+
+.el-check-tag {
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 9999px;
+
+    display: inline-flex;
+    align-items: center;
+
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+
+    /* slightly softer surface than pure card */
+    background: color-mix(in srgb, var(--color-card) 96%, var(--color-bg) 4%);
+    border: 1px solid var(--border-color);
+
+    /* softer text (not fully black/white) */
+    color: color-mix(in srgb, var(--text-color) 78%, var(--muted-color) 22%);
+
+    transition: background-color var(--transition-base),
+        border-color var(--transition-base), color var(--transition-base);
+}
+
+/* Hover: subtle tint (not strong purple wash) */
+.el-check-tag:hover {
+    background: color-mix(in srgb, var(--hover-bg) 55%, var(--color-card) 45%);
+    border-color: color-mix(in srgb, var(--border-color) 70%, var(--color-primary) 30%);
+}
+
+/* Checked: lighter primary feel + calmer text */
+.el-check-tag.is-checked {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-card) 90%);
+    border-color: color-mix(in srgb, var(--color-primary) 40%, var(--border-color) 60%);
+    color: color-mix(in srgb, var(--color-primary) 82%, var(--text-color) 18%);
+}
+
+/* Checked hover: slightly stronger, still controlled */
+.el-check-tag.is-checked:hover {
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-card) 86%);
+    border-color: color-mix(in srgb, var(--color-primary) 52%, var(--border-color) 48%);
+}
+
+/* Dark mode: keep chips darker (avoid “too light”) */
+html[data-theme="dark"] .el-check-tag {
+    background: color-mix(in srgb, var(--color-card) 90%, var(--color-bg) 10%);
+    color: color-mix(in srgb, var(--text-color) 84%, var(--muted-color) 16%);
+}
+
+html[data-theme="dark"] .el-check-tag:hover {
+    background: color-mix(in srgb, var(--color-card) 86%, var(--color-bg) 14%);
+    border-color: color-mix(in srgb, var(--border-color) 72%, var(--color-primary) 28%);
+}
+
+html[data-theme="dark"] .el-check-tag.is-checked {
+    background: color-mix(in srgb, var(--color-card) 76%, var(--color-primary) 24%);
+    border-color: color-mix(in srgb, var(--border-color) 62%, var(--color-primary) 38%);
+    color: color-mix(in srgb, var(--color-primary) 88%, var(--text-color) 12%);
+}
+
+html[data-theme="dark"] .el-check-tag.is-checked:hover {
+    background: color-mix(in srgb, var(--color-card) 70%, var(--color-primary) 30%);
+    border-color: color-mix(in srgb, var(--border-color) 55%, var(--color-primary) 45%);
+}

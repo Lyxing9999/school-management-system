@@ -1,0 +1,108 @@
+/* =========================================================
+   INPUT (Element Plus) + PASSWORD ICON
+========================================================= */
+.el-input__wrapper {
+    border-radius: 10px;
+    background: var(--input-bg) !important;
+    box-shadow: 0 0 0 1px var(--input-border) inset !important;
+    transition:
+        box-shadow var(--transition-base),
+        background-color var(--transition-base),
+        transform var(--transition-base);
+}
+
+.el-input__wrapper:hover {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--input-border) 40%, var(--color-primary) 60%) inset !important;
+}
+
+.el-input__wrapper.is-focus {
+    box-shadow: 0 0 0 1px var(--color-primary) inset !important;
+    transform: translateY(-0.5px);
+}
+
+.el-input.is-disabled .el-input__wrapper {
+    background: color-mix(in srgb, var(--input-bg) 65%, var(--color-bg) 35%) !important;
+    box-shadow: 0 0 0 1px var(--border-color) inset !important;
+    cursor: not-allowed;
+}
+
+.el-input__inner {
+    color: var(--text-color) !important;
+}
+
+.el-input__inner::placeholder {
+    color: color-mix(in srgb, var(--muted-color) 75%, transparent) !important;
+}
+
+.el-input__prefix,
+.el-input__suffix {
+    color: var(--muted-color) !important;
+}
+
+.el-input__wrapper.is-focus .el-input__prefix,
+.el-input__wrapper.is-focus .el-input__suffix {
+    color: var(--color-primary) !important;
+}
+
+.el-input__suffix .el-input__clear {
+    color: var(--muted-color) !important;
+}
+
+.el-input__suffix .el-input__clear:hover {
+    color: var(--color-primary) !important;
+}
+
+.el-form-item.is-error .el-input__wrapper {
+    box-shadow: 0 0 0 1px #f97373 inset !important;
+}
+
+.el-form-item.is-error .el-input__inner {
+    color: #b91c1c !important;
+}
+
+/* PASSWORD EYE ICON */
+.el-input__suffix .el-input__suffix-inner i,
+.el-input__suffix .el-icon {
+    color: var(--muted-color) !important;
+    transition: color var(--transition-base);
+}
+
+.el-input__wrapper.is-focus .el-input__suffix-inner i,
+.el-input__wrapper.is-focus .el-input__suffix .el-icon {
+    color: var(--color-primary) !important;
+}
+
+.el-form-item.is-error .el-input__suffix-inner i,
+.el-form-item.is-error .el-input__suffix .el-icon {
+    color: #b91c1c !important;
+}
+
+/* =========================================================
+   5) INPUTS / SELECT (theme-safe)
+========================================================= */
+.el-input__wrapper,
+.el-select__wrapper {
+    border-radius: 10px;
+    background: var(--input-bg);
+    box-shadow: 0 0 0 1px var(--input-border) inset;
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.el-input__wrapper:hover,
+.el-select__wrapper.is-hovering:not(.is-focused) {
+    box-shadow: 0 0 0 1px var(--color-primary-light-6) inset;
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused {
+    box-shadow: 0 0 0 1px var(--color-primary) inset;
+    transform: translateY(-0.5px);
+}
+
+.el-input__inner {
+    color: var(--text-color);
+}
+
+.el-input__inner::placeholder {
+    color: var(--muted-color);
+}

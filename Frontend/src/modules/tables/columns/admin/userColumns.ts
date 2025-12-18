@@ -44,6 +44,13 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     ],
   },
   {
+    field: "status",
+    label: "Status",
+    width: "130px",
+    useSlots: true,
+    slotName: "status",
+  },
+  {
     field: "role",
     label: "Role",
     width: "120px",
@@ -56,6 +63,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
       return h(ElTag, { type }, role);
     },
   },
+
   {
     field: "created_by_name",
     label: "Created By",
@@ -67,36 +75,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     render: (row: AdminGetUserItemData, field: keyof AdminGetUserItemData) =>
       h("span", { style: { color: "#999" } }, row[field]),
   },
-  {
-    field: "created_at",
-    label: "Created At",
-    inlineEditActive: true,
-    minWidth: "160px",
-    component: ElDatePicker,
-    componentProps: {
-      style: "width: 100%",
-      readonly: true,
-      disabled: true,
-      format: "DD-MM-YYYY HH:mm:ss",
-      type: "datetime",
-      valueFormat: "YYYY-MM-DD HH:mm:ss",
-    },
-  },
-  {
-    field: "updated_at",
-    label: "Updated At",
-    inlineEditActive: true,
-    minWidth: "160px",
-    component: ElDatePicker,
-    componentProps: {
-      style: "width: 100%",
-      readonly: true,
-      disabled: true,
-      format: "DD-MM-YYYY HH:mm:ss",
-      type: "datetime",
-      valueFormat: "YYYY-MM-DD HH:mm:ss",
-    },
-  },
+
   {
     field: "id",
     operation: true,
@@ -105,9 +84,6 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     fixed: "right",
     align: "center",
     width: "220px",
-    smartProps: {
-      headerStyle: { background: "#6B3FA0", color: "#fff" },
-      columnClass: "operation-column",
-    },
+    smartProps: {},
   },
 ];

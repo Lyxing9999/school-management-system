@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="I extends Record<string, any>">
-import { computed } from "vue";
+import { computed, toValue, type MaybeRefOrGetter } from "vue";
 import type { FormProps } from "element-plus";
 import type { Field } from "../types/form";
 import SmartForm from "~/components/Form/SmartForm.vue";
@@ -9,7 +9,7 @@ const props = defineProps<{
   modelValue: Partial<I>;
   visible: boolean;
   title?: string;
-  fields: Field<I>[];
+  fields: MaybeRefOrGetter<Field<I>[]>;
   useElForm?: boolean;
   width?: string;
   /**
@@ -36,7 +36,7 @@ const localForm = computed<Partial<I>>({
   get: () => props.modelValue,
   set: (val) => emit("update:modelValue", val),
 });
-
+const resolvedFields = computed(() => toValue(props.fields) ?? []);
 const handleCancel = () => {
   emit("cancel");
   emit("update:visible", false);
@@ -66,12 +66,17 @@ const colSkeleton = computed(() => {
 });
 
 const rowSkeleton = computed(() => {
-  const totalFields = props.fields?.length ?? 0;
+  const totalFields = resolvedFields.value.length ?? 0;
   const cols = colSkeleton.value || 1;
   if (totalFields === 0) return 3;
   const rowsByFields = Math.ceil(totalFields / cols);
   return Math.max(3, rowsByFields);
 });
+const handleBeforeClose = (done: () => void) => {
+  if (props.loading || props.initialLoading) return;
+  handleCancel();
+  done();
+};
 </script>
 
 <template>
@@ -80,9 +85,10 @@ const rowSkeleton = computed(() => {
     :title="title || 'Form'"
     :width="width || '800px'"
     class="smart-dialog"
-    :close-on-click-modal="!loading && !initialLoading"
-    :close-on-press-escape="!loading && !initialLoading"
-    @close="handleCancel"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+    :show-close="true"
+    :before-close="handleBeforeClose"
   >
     <!-- INITIAL LOAD SKELETON (edit: fetching detail) -->
     <div v-if="initialLoading" class="p-4">
@@ -93,7 +99,7 @@ const rowSkeleton = computed(() => {
     <SmartForm
       v-else
       :model-value="localForm"
-      :fields="fields"
+      :fields="resolvedFields"
       :use-el-form="true"
       :form-props="{
         statusIcon: true,

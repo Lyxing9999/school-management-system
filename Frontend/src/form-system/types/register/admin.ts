@@ -22,7 +22,10 @@ import type {
   AdminUpdateScheduleSlot,
 } from "~/api/admin/schedule/schedule.dto";
 
-import type { AdminCreateStudent } from "~/api/admin/student/student.dto";
+import type {
+  AdminCreateStudent,
+  AdminUpdateStudent,
+} from "~/api/admin/student/student.dto";
 
 export type AdminFormRegistryCreate = {
   USER: FormRegistryCreateItem<AdminCreateUser, never>;
@@ -39,6 +42,7 @@ export type AdminFormRegistryCreate = {
 export type AdminFormRegistryEdit = {
   USER: FormRegistryEditItem<never, AdminUpdateUser>;
   STAFF: FormRegistryEditItem<never, AdminUpdateStaff>;
+  STUDENT: FormRegistryEditItem<never, AdminUpdateStudent>;
   SCHEDULE_SLOT: FormRegistryEditItem<never, AdminUpdateScheduleSlot>;
 };
 

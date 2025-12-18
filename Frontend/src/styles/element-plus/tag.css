@@ -1,0 +1,14 @@
+/* =========================================================
+   TAGS (info)
+========================================================= */
+.el-tag.el-tag--info {
+    background: var(--hover-bg) !important;
+    border-color: color-mix(in srgb, var(--border-color) 55%, var(--color-primary) 45%) !important;
+    color: var(--color-primary) !important;
+}
+
+.el-tag.el-tag--info.is-plain {
+    background: transparent !important;
+    border-color: color-mix(in srgb, var(--border-color) 55%, var(--color-primary) 45%) !important;
+    color: var(--color-primary) !important;
+}

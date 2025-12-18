@@ -1,0 +1,80 @@
+/* =========================================================
+   Element Plus: Form labels (CTO-level, system-token driven)
+   - Clear hierarchy (label vs helper/error)
+   - Predictable states (focus, error, success, disabled)
+   - No random colors; uses your tokens / Element Plus tokens
+========================================================= */
+
+/* ---------- Label ---------- */
+.el-form-item__label {
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.25;
+
+    /* slightly softer than main text, but still readable */
+    color: color-mix(in srgb, var(--text-color) 86%, var(--muted-color) 14%);
+
+    /* spacing aligns better with Element Plus inputs */
+    padding-bottom: 6px;
+
+    transition: color var(--transition-base);
+}
+
+/* Required marker */
+.el-form-item.is-required .el-form-item__label::before {
+    color: var(--color-primary);
+    font-weight: 800;
+}
+
+/* Focus: label becomes primary (same mental model everywhere) */
+.el-form-item:focus-within>.el-form-item__label {
+    color: var(--color-primary);
+}
+
+/* Disabled: label fades */
+.el-form-item.is-disabled>.el-form-item__label {
+    color: color-mix(in srgb, var(--muted-color) 78%, transparent);
+}
+
+/* Success: keep it subtle; don’t “paint it green” unless your UI wants that */
+.el-form-item.is-success>.el-form-item__label {
+    color: color-mix(in srgb, var(--text-color) 78%, var(--color-primary) 22%);
+}
+
+/* Error: use Element Plus danger token (fallback included) */
+.el-form-item.is-error>.el-form-item__label {
+    color: var(--el-color-danger, #dc2626) !important;
+}
+
+/* ---------- Helper / Error text (this is what “senior” systems always unify) ---------- */
+.el-form-item__error {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.25;
+    color: var(--el-color-danger, #dc2626);
+}
+
+/* If you use form-item "extra" text */
+.el-form-item__extra {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.25;
+    color: color-mix(in srgb, var(--muted-color) 86%, transparent);
+}
+
+/* ---------- Size polish ---------- */
+.el-form--small .el-form-item__label {
+    font-size: 12px;
+    padding-bottom: 4px;
+}
+
+.el-form--large .el-form-item__label {
+    font-size: 14px;
+    padding-bottom: 8px;
+}
+
+/* ---------- Optional: make label spacing consistent in top-label forms ---------- */
+.el-form--label-top .el-form-item__label {
+    margin-bottom: 0;
+    /* Element Plus sometimes adds extra margin; keep it tight */
+}

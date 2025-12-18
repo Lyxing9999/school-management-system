@@ -1,0 +1,90 @@
+/* =========================================================
+   CARD (Element Plus)
+========================================================= */
+.el-card {
+    background-color: var(--color-card) !important;
+    border-radius: calc(var(--border-radius-base) + 2px) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 6px 18px var(--card-shadow) !important;
+    transition:
+        transform var(--transition-base),
+        box-shadow var(--transition-base),
+        border-color var(--transition-base),
+        background-color var(--transition-base);
+}
+
+.el-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 26px var(--card-shadow) !important;
+    border-color: color-mix(in srgb, var(--border-color) 45%, var(--color-primary) 55%) !important;
+}
+
+/* =========================================================
+   CARD HEADER — force slot content to full width
+   Fix: header content stays “middle” / not stretching
+========================================================= */
+
+/* Keep your existing header styles, but guarantee width behavior */
+.el-card__header {
+    width: 100% !important;
+}
+
+/* Critical: the slot wrapper inside header should stretch */
+.el-card__header>* {
+    width: 100% !important;
+    flex: 1 1 auto !important;
+}
+
+/* If your header slot contains your custom component layout */
+.el-card__header .table-card__header {
+    width: 100% !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Ensure left side can grow, right side stays right */
+.el-card__header .table-card__left {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.el-card__header .table-card__right {
+    flex: 0 0 auto;
+}
+.el-card__body {
+    padding: 14px 16px !important;
+    background-color: var(--color-card) !important;
+    color: var(--text-color) !important;
+}
+
+/* KPI Stat cards */
+.el-card.stat-card {
+    border-radius: calc(var(--border-radius-base) + 4px) !important;
+    border: 1px solid color-mix(in srgb, var(--border-color) 50%, var(--color-primary) 50%) !important;
+    background: radial-gradient(circle at 0 0,
+            color-mix(in srgb, var(--color-primary) 10%, var(--color-card) 90%),
+            var(--color-card) 58%) !important;
+    box-shadow: 0 10px 28px var(--card-shadow) !important;
+}
+
+.el-card.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px var(--card-shadow) !important;
+}
+
+.el-card.stat-card .el-card__body {
+    padding: 12px 16px !important;
+}
+
+.card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.card-subtitle {
+    font-size: 11px;
+    color: var(--muted-color);
+}

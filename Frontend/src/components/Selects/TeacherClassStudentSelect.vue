@@ -2,12 +2,13 @@
 <script setup lang="ts">
 import RemoteSelect from "~/components/Selects/RemoteSelect.vue";
 import { teacherService } from "~/api/teacher";
+import { computed } from "vue";
 
 const teacherApi = teacherService();
 
 const props = defineProps<{
   modelValue: string | string[] | null;
-  classId: string; // selected class
+  classId: string;
   placeholder?: string;
   disabled?: boolean;
   multiple?: boolean;
@@ -20,16 +21,16 @@ const emit = defineEmits<{
 
 const fetchStudents = async () => {
   if (!props.classId) return [];
-  const res = await teacherApi.teacher.listStudentNamesInClass(props.classId);
-
-  // expected backend DTO: [{ id, name }, ...]
+  const res = await teacherApi.teacher.listStudentNamesOptionsClass(
+    props.classId
+  );
   return res?.items ?? [];
 };
-
 const innerValue = computed({
   get: () => props.modelValue,
   set: (v) => emit("update:modelValue", v),
 });
+
 </script>
 
 <template>
@@ -37,8 +38,8 @@ const innerValue = computed({
     v-model="innerValue"
     :fetcher="fetchStudents"
     :reload-key="classId"
-    label-key="name"
-    value-key="id"
+    label-key="label"
+    value-key="value"
     :placeholder="placeholder ?? 'Select student'"
     :disabled="disabled || !classId"
     :multiple="multiple"

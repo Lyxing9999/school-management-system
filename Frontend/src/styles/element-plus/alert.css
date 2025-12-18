@@ -1,0 +1,45 @@
+/* =========================================================
+   ALERT (Element Plus)
+========================================================= */
+.el-alert {
+    border-radius: calc(var(--border-radius-base) + 2px) !important;
+    border: 1px solid var(--border-color) !important;
+    background: var(--color-card) !important;
+    color: var(--text-color) !important;
+    box-shadow: 0 10px 26px var(--card-shadow) !important;
+}
+
+.el-alert__title {
+    color: var(--text-color) !important;
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.el-alert__description {
+    color: var(--muted-color) !important;
+    font-weight: 500;
+}
+
+.el-alert__close-btn {
+    color: var(--muted-color) !important;
+}
+
+.el-alert__close-btn:hover {
+    color: var(--color-primary) !important;
+}
+
+.el-alert--success {
+    border-color: color-mix(in srgb, var(--border-color) 55%, var(--el-color-success) 45%) !important;
+}
+
+.el-alert--warning {
+    border-color: color-mix(in srgb, var(--border-color) 55%, var(--el-color-warning) 45%) !important;
+}
+
+.el-alert--error {
+    border-color: color-mix(in srgb, var(--border-color) 55%, var(--el-color-danger) 45%) !important;
+}
+
+.el-alert--info {
+    border-color: color-mix(in srgb, var(--border-color) 55%, var(--el-color-info) 45%) !important;
+}

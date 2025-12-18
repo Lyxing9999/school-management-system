@@ -161,7 +161,7 @@ export const studentFormSchema: Field<AdminCreateStudent>[] = [
 // We exclude Username/Password/Email/StudentCode because usually
 // these are handled separately or read-only in basic edit.
 
-export const StudentSchemaEdit: Field<AdminUpdateStudent>[] = [
+export const StudentFormSchemaEdit: Field<AdminUpdateStudent>[] = [
   // --- ROW 1: KHMER NAMES ---
   {
     row: [

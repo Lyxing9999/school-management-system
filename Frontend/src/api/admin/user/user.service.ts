@@ -5,11 +5,10 @@ import type {
   AdminUpdateUser,
   AdminGetUserData,
   AdminGetPageUserData,
-  AdminStudentListNameSelectDTO,
 } from "./user.dto";
 import { UserApi } from "./user.api";
 import { Role } from "~/api/types/enums/role.enum";
-
+import { Status } from "~/api/types/enums/status.enum";
 export class UserService {
   private callApi = useApiUtils().callApi;
 
@@ -19,19 +18,13 @@ export class UserService {
     roles: Role | Role[],
     page: number,
     pageSize: number,
+    query?: string,
+    signal?: AbortSignal,
     options?: ApiCallOptions
   ) {
     const data = await this.callApi<AdminGetPageUserData>(
-      () => this.userApi.getUserPage(roles, page, pageSize),
+      () => this.userApi.getUserPage(roles, page, pageSize, query, signal),
       { showSuccess: false, ...(options ?? {}) }
-    );
-    return data!;
-  }
-
-  async listStudentNamesSelect(options?: ApiCallOptions) {
-    const data = await this.callApi<AdminStudentListNameSelectDTO>(
-      () => this.userApi.listStudentNamesSelect(),
-      options
     );
     return data!;
   }
@@ -68,6 +61,14 @@ export class UserService {
     const data = await this.callApi<any>(
       () => this.userApi.hardDeleteUser(id),
       { showSuccess: true, showError: true, ...(options ?? {}) }
+    );
+    return data!;
+  }
+
+  async setUserStatus(id: string, status: Status) {
+    const data = await this.callApi<AdminGetUserData>(
+      () => this.userApi.setUserStatus(id, status),
+      { showSuccess: true, showError: true }
     );
     return data!;
   }

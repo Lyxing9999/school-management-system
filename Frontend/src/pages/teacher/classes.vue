@@ -3,27 +3,19 @@
 import { ref, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
+import TableCard from "~/components/Cards/TableCard.vue";
 import { teacherService } from "~/api/teacher";
 import type { ClassSectionDTO } from "~/api/types/school.dto";
 
-definePageMeta({
-  layout: "teacher",
-});
+definePageMeta({ layout: "teacher" });
 
 const teacher = teacherService();
 
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
-/**
- * Extend DTO with enriched fields from backend:
- *  - student_count
- *  - subject_count
- *  - teacher_name
- *  - subject_labels
- */
 type TeacherClassEnriched = ClassSectionDTO & {
-  student_count?: number;
+  enrolled_count?: number;
   subject_count?: number;
   teacher_name?: string;
   subject_labels?: string[];
@@ -31,18 +23,14 @@ type TeacherClassEnriched = ClassSectionDTO & {
 
 const classes = ref<TeacherClassEnriched[]>([]);
 
-// summary stats
 const totalClasses = ref(0);
 const totalStudents = ref(0);
 const totalSubjects = ref(0);
 
-// add derived counts for table display (use backend counts first)
 const displayClasses = computed(() =>
   classes.value.map((c) => ({
     ...c,
-    studentCount:
-      c.student_count ??
-      (Array.isArray(c.student_ids) ? c.student_ids.length : 0),
+    studentCount: c.enrolled_count ?? 0,
     subjectCount:
       c.subject_count ??
       (Array.isArray(c.subject_ids) ? c.subject_ids.length : 0),
@@ -53,10 +41,7 @@ const recomputeSummary = () => {
   totalClasses.value = classes.value.length;
 
   totalStudents.value = classes.value.reduce(
-    (sum, c) =>
-      sum +
-      (c.student_count ??
-        (Array.isArray(c.student_ids) ? c.student_ids.length : 0)),
+    (sum, c) => sum + (c.enrolled_count ?? 0),
     0
   );
 
@@ -88,7 +73,6 @@ const loadClasses = async () => {
       ElMessage.info("You don't have any classes yet.");
     }
   } catch (err: any) {
-    console.error(err);
     const msg = err?.message ?? "Failed to load classes.";
     errorMessage.value = msg;
     ElMessage.error(msg);
@@ -101,8 +85,7 @@ onMounted(loadClasses);
 </script>
 
 <template>
-  <div class="p-4 space-y-4">
-    <!-- Header (consistent with other teacher pages) -->
+  <div class="p-4 space-y-6">
     <OverviewHeader
       title="My Classes"
       description="Overview of every class you are responsible for, with capacity and subject coverage."
@@ -128,7 +111,6 @@ onMounted(loadClasses);
       @refresh="loadClasses"
     />
 
-    <!-- Error -->
     <transition name="el-fade-in">
       <el-alert
         v-if="errorMessage"
@@ -136,51 +118,43 @@ onMounted(loadClasses);
         type="error"
         show-icon
         closable
-        class="mb-2 rounded-xl border border-red-200/60 shadow-sm"
+        class="rounded-xl border border-red-200/60 shadow-sm"
         @close="errorMessage = null"
       />
     </transition>
 
-    <!-- Main table -->
-    <el-card
-      shadow="never"
-      :body-style="{ padding: '20px' }"
-      class="rounded-2xl border border-gray-200/60 shadow-sm bg-white"
+    <TableCard
+      title="Class list"
+      description="Click a row to see more details about that class."
+      :rightText="`Showing ${displayClasses.length} / ${totalClasses} classes`"
     >
-      <template #header>
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
-        >
-          <div>
-            <div class="text-base font-semibold text-gray-800">Class list</div>
-            <p class="text-xs text-gray-500">
-              Click a row to see more details about that class.
-            </p>
-          </div>
-        </div>
-      </template>
-
       <el-table
         :data="displayClasses"
         v-loading="loading"
-        style="width: 100%"
         highlight-current-row
-        class="rounded-lg overflow-hidden"
+        class="rounded-lg overflow-hidden w-full"
         :header-cell-style="{
-          background: '#f9fafb',
-          color: '#374151',
+          background: 'var(--color-card)',
+          color: 'var(--text-color)',
           fontWeight: '600',
           fontSize: '13px',
+          borderBottom: '1px solid var(--border-color)',
+        }"
+        :row-style="{
+          color: 'var(--text-color)',
         }"
       >
         <!-- Class info + subject labels -->
         <el-table-column label="Class" min-width="320">
           <template #default="{ row }">
             <div class="flex flex-col gap-1">
-              <div class="font-medium text-gray-800">
+              <div class="font-medium" style="color: var(--text-color)">
                 {{ row.name }}
               </div>
-              <div class="text-[11px] text-gray-400">ID: {{ row.id }}</div>
+
+              <div class="text-[11px]" style="color: var(--muted-color)">
+                ID: {{ row.id }}
+              </div>
 
               <div
                 v-if="row.subject_labels?.length"
@@ -203,7 +177,7 @@ onMounted(loadClasses);
         <!-- Teacher -->
         <el-table-column label="Teacher" min-width="160">
           <template #default="{ row }">
-            <span class="text-gray-700">
+            <span style="color: var(--muted-color)">
               {{ row.teacher_name || "Me" }}
             </span>
           </template>
@@ -212,7 +186,7 @@ onMounted(loadClasses);
         <!-- Subjects count -->
         <el-table-column label="Subjects" min-width="130">
           <template #default="{ row }">
-            <span class="font-medium text-gray-800">
+            <span class="font-medium" style="color: var(--text-color)">
               {{ row.subjectCount }}
             </span>
           </template>
@@ -222,9 +196,10 @@ onMounted(loadClasses);
         <el-table-column label="Students" min-width="200">
           <template #default="{ row }">
             <div class="flex flex-col gap-1">
-              <span class="font-medium text-gray-800">
+              <span class="font-medium" style="color: var(--text-color)">
                 {{ row.studentCount }} / {{ row.max_students || "∞" }}
               </span>
+
               <el-progress
                 v-if="row.max_students"
                 :percentage="
@@ -247,14 +222,27 @@ onMounted(loadClasses);
           :image-size="120"
         >
           <template #extra>
-            <p class="text-sm text-gray-500 max-w-md mx-auto">
+            <p
+              class="text-sm max-w-md mx-auto"
+              style="color: var(--muted-color)"
+            >
               Classes assigned to you will appear here automatically.
             </p>
           </template>
         </el-empty>
       </div>
-    </el-card>
+    </TableCard>
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+/* Make table hover match your theme */
+:deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: var(--hover-bg) !important;
+}
+
+/* Optional: remove Element Plus header “gray” in some themes */
+:deep(.el-table thead th.el-table__cell) {
+  background: var(--color-card) !important;
+}
+</style>

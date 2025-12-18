@@ -33,7 +33,7 @@ import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
 import { useHeaderState } from "~/composables/useHeaderState";
 import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
-
+import TableCard from "~/components/Cards/TableCard.vue";
 const teacherApi = teacherService();
 
 /**
@@ -239,8 +239,6 @@ const addGradeFields = computed<Field<GradeFormModel>[]>(() => [
     componentProps: {
       classId: selectedClassId.value || "",
       reload: true,
-      valueKey: "id",
-      labelKey: "username",
       multiple: false,
       placeholder: "Select student",
       disabled: !selectedClassId.value,
@@ -556,11 +554,19 @@ const handlePageSizeChange = (size: number) => {
       <template #filters>
         <div class="flex flex-wrap items-center gap-3">
           <div
-            class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 border border-[var(--color-primary-light-7)] shadow-sm"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm"
+            style="
+              background: var(--color-card);
+              border-color: var(--color-primary-light-7);
+            "
           >
-            <span class="text-xs font-medium text-[color:var(--color-primary)]">
+            <span
+              class="text-xs font-medium"
+              style="color: var(--color-primary)"
+            >
               Class:
             </span>
+
             <TeacherClassSelect
               v-model="selectedClassId"
               placeholder="Select class"
@@ -570,7 +576,6 @@ const handlePageSizeChange = (size: number) => {
           </div>
         </div>
       </template>
-
       <!-- Right-side actions -->
       <template #actions>
         <BaseButton
@@ -608,30 +613,11 @@ const handlePageSizeChange = (size: number) => {
     </transition>
 
     <!-- TABLE CARD -->
-    <el-card
-      shadow="never"
-      :body-style="{ padding: '20px' }"
-      class="rounded-2xl border border-gray-200/60 shadow-sm bg-white"
+    <TableCard
+      title="Grade list"
+      description="Each row represents one grade item (exam or assignment)."
+      :rightText="`Showing ${gradeList.length} / ${totalGrades} records`"
     >
-      <template #header>
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
-        >
-          <div>
-            <div class="text-base font-semibold text-gray-800">Grade list</div>
-            <p class="text-xs text-gray-500">
-              Each row represents one grade item (exam or assignment).
-            </p>
-          </div>
-
-          <div class="flex items-center gap-2 text-xs text-gray-500">
-            <span>
-              Showing {{ gradeList.length }} / {{ totalGrades }} records
-            </span>
-          </div>
-        </div>
-      </template>
-
       <SmartTable
         :data="gradeList"
         :columns="gradeColumns"
@@ -655,22 +641,21 @@ const handlePageSizeChange = (size: number) => {
             @delete="handleDeleteGrade(row)"
           />
         </template>
+        <!-- Pagination -->
+        <div v-if="totalRows > 0" class="mt-4 flex justify-end">
+          <el-pagination
+            background
+            layout="prev, pager, next, jumper, sizes, total"
+            :current-page="currentPage"
+            :page-size="pageSize"
+            :page-sizes="[10, 20, 50]"
+            :total="totalRows"
+            @current-change="handlePageChange"
+            @size-change="handlePageSizeChange"
+          />
+        </div>
       </SmartTable>
-
-      <!-- Pagination -->
-      <div v-if="totalRows > 0" class="mt-4 flex justify-end">
-        <el-pagination
-          background
-          layout="prev, pager, next, jumper, sizes, total"
-          :current-page="currentPage"
-          :page-size="pageSize"
-          :page-sizes="[10, 20, 50]"
-          :total="totalRows"
-          @current-change="handlePageChange"
-          @size-change="handlePageSizeChange"
-        />
-      </div>
-    </el-card>
+    </TableCard>
 
     <!-- ADD GRADE DIALOG -->
     <SmartFormDialog

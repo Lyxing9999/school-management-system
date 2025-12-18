@@ -1,0 +1,117 @@
+/* =========================================================
+   PAGINATION (Element Plus) — theme-safe
+========================================================= */
+
+.el-pagination {
+    padding: 4px 0;
+    color: var(--text-color);
+    font-size: 13px;
+}
+
+.el-pagination button {
+    border-radius: 8px;
+    border: 1px solid transparent;
+    color: var(--text-color);
+    background: transparent;
+    transition:
+        background-color var(--transition-base),
+        border-color var(--transition-base),
+        color var(--transition-base);
+}
+
+.el-pagination button:not(:disabled):hover {
+    background: var(--hover-bg);
+    border-color: var(--border-color);
+    color: var(--color-primary);
+}
+
+.el-pagination .el-pager li {
+    border-radius: 8px;
+    margin: 0 2px;
+    min-width: 30px;
+    height: 30px;
+    line-height: 30px;
+    color: var(--text-color);
+    background: transparent;
+    border: 1px solid transparent;
+    transition:
+        background-color var(--transition-base),
+        border-color var(--transition-base),
+        color var(--transition-base),
+        transform var(--transition-base);
+}
+
+.el-pagination .el-pager li:hover {
+    background: var(--hover-bg);
+    border-color: var(--border-color);
+    color: var(--color-primary);
+}
+
+/* ACTIVE (single source of truth) */
+.el-pagination .el-pager li.is-active,
+.el-pagination.is-background .el-pager li.is-active {
+    background: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: var(--pagination-active-text) !important;
+    font-weight: 800;
+    transform: translateY(-1px);
+}
+
+.el-pagination.is-background .el-pager li {
+    background: color-mix(in srgb, var(--color-card) 70%, var(--color-bg) 30%) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.el-pagination__total,
+.el-pagination__jump {
+    color: var(--muted-color);
+}
+
+.el-pagination__sizes .el-select .el-input__wrapper,
+.el-pagination__jump .el-input .el-input__wrapper {
+    border-radius: 8px;
+}
+
+.el-pagination__sizes .el-select .el-input__wrapper:hover,
+.el-pagination__jump .el-input .el-input__wrapper:hover {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
+}
+
+
+
+/* =========================================================
+   PAGINATION — disabled next/prev buttons (dark-mode safe)
+========================================================= */
+
+.el-pagination .btn-prev,
+.el-pagination .btn-next,
+.el-pagination button {
+    color: var(--text-color);
+}
+
+/* Disabled */
+.el-pagination .btn-prev:disabled,
+.el-pagination .btn-next:disabled,
+.el-pagination button:disabled,
+.el-pagination button[disabled] {
+    cursor: not-allowed;
+    opacity: 0.55;
+    color: color-mix(in srgb, var(--muted-color) 85%, transparent) !important;
+    background: color-mix(in srgb, var(--color-card) 70%, var(--color-bg) 30%) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Prevent any hover styling from “waking up” disabled buttons */
+.el-pagination .btn-prev:disabled:hover,
+.el-pagination .btn-next:disabled:hover,
+.el-pagination button:disabled:hover {
+    color: color-mix(in srgb, var(--muted-color) 85%, transparent) !important;
+    background: color-mix(in srgb, var(--color-card) 70%, var(--color-bg) 30%) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Ensure SVG icon follows the disabled color */
+.el-pagination .btn-prev:disabled .el-icon,
+.el-pagination .btn-next:disabled .el-icon {
+    color: inherit !important;
+}

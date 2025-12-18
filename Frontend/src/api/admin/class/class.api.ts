@@ -4,6 +4,7 @@ import type {
   AdminGetClassListResponse,
   AdminGetClassResponse,
   AdminClassNameSelectListResponse,
+  AdminStudentsInClassSelectResponse,
 } from "./class.dto";
 
 export class ClassApi {
@@ -35,6 +36,12 @@ export class ClassApi {
     return res.data;
   }
 
+  async listStudentsInClass(classID: string) {
+    const res = await this.$api.get<AdminStudentsInClassSelectResponse>(
+      `${this.baseURL}/${classID}/students`
+    );
+    return res.data;
+  }
   // ============
   // COMMANDS
   // ============

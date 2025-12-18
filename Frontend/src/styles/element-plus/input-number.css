@@ -1,0 +1,29 @@
+/* =========================================================
+   INPUT NUMBER (+ / -) — theme-safe
+========================================================= */
+.el-input-number__increase,
+.el-input-number__decrease {
+    color: var(--muted-color) !important;
+    background: var(--input-bg) !important;
+    border-left-color: var(--border-color) !important;
+    transition: color var(--transition-base), background-color var(--transition-base);
+}
+
+.el-input-number__increase:hover,
+.el-input-number__decrease:hover {
+    color: var(--color-primary) !important;
+    background: var(--hover-bg) !important;
+}
+
+.el-input-number__increase:active,
+.el-input-number__decrease:active {
+    background: var(--active-bg) !important;
+}
+
+/* disabled */
+.el-input-number.is-disabled .el-input-number__increase,
+.el-input-number.is-disabled .el-input-number__decrease {
+    color: color-mix(in srgb, var(--muted-color) 70%, transparent) !important;
+    background: color-mix(in srgb, var(--input-bg) 70%, var(--color-bg) 30%) !important;
+    cursor: not-allowed;
+}

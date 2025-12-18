@@ -16,12 +16,12 @@ export const classColumns: ColumnConfig<AdminClassDataDTO>[] = [
       h("span", row.teacher_name || "No teacher"),
   },
   {
-    label: "Students",
-    field: "student_ids",
+    label: "Enrolled",
+    field: "enrolled_count",
     align: "center",
     width: "110px",
     render: (row: AdminClassDataDTO) =>
-      h("span", (row.student_ids?.length ?? 0).toString()),
+      h("span", row.enrolled_count?.toString() || "0"),
   },
   {
     label: "Subjects",

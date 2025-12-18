@@ -1,0 +1,16 @@
+/* =========================================================
+   LOADING (el-loading)
+========================================================= */
+.el-loading-mask {
+    background-color: color-mix(in srgb, var(--color-bg) 55%, transparent) !important;
+    backdrop-filter: blur(2px);
+}
+
+.el-loading-spinner .path {
+    stroke: var(--color-primary) !important;
+}
+
+.el-loading-text {
+    color: var(--muted-color) !important;
+    font-weight: 600;
+}

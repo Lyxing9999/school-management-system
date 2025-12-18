@@ -20,7 +20,8 @@ export const attendanceColumns: ColumnConfig<AttendanceEnriched>[] = [
     key: "record_date",
     label: "Date",
     field: "record_date",
-    render: (row: AttendanceEnriched) => formatDate(row.record_date as any),
+    render: (row: AttendanceEnriched) =>
+      formatDate(row.record_date, "YYYY-MM-DD"),
   },
   {
     key: "status",
@@ -34,6 +35,30 @@ export const attendanceColumns: ColumnConfig<AttendanceEnriched>[] = [
         effect: "plain",
       },
       value: row.status,
+    }),
+  },
+  {
+    key: "created_at",
+    label: "Created",
+    field: "created_at",
+    render: (row: AttendanceEnriched) => ({
+      component: "span",
+      componentProps: {
+        style: "font-size: 12px; color: var(--muted-color);",
+      },
+      value: formatDate(row.created_at),
+    }),
+  },
+  {
+    key: "updated_at",
+    label: "Updated",
+    field: "updated_at",
+    render: (row: AttendanceEnriched) => ({
+      component: "span",
+      componentProps: {
+        style: "font-size: 12px; color: var(--muted-color);",
+      },
+      value: formatDate(row.updated_at),
     }),
   },
   {

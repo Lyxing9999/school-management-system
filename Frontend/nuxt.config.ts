@@ -9,13 +9,7 @@ export default defineNuxtConfig({
   modules: ["@element-plus/nuxt", "@pinia/nuxt"],
   devtools: true,
 
-  css: [
-    "~/styles/main.css",
-    "~/styles/element-overrides.css",
-    "~/styles/element-overrides-dark.css",
-    "~/styles/sidebar.scss",
-    "element-plus/dist/index.css",
-  ],
+  css: ["~/styles/main.css", "~/styles/sidebar.scss"],
 
   vite: {
     plugins: [tailwindcss(), visualizer({ open: false })],
@@ -53,17 +47,16 @@ export default defineNuxtConfig({
   },
 
   app: {
-    baseURL: "/",
     head: {
       script: [
         {
-          children: `(function() {
-            try {
-              if (localStorage.getItem('dark') === 'true') {
-                document.documentElement.classList.add('dark');
-              }
-            } catch(_) {}
-          })();`,
+          children: `(function(){try{
+          var t=localStorage.getItem('theme')||'light';
+          var r=(t==='light')?'dark':t;
+          var el=document.documentElement;
+          el.setAttribute('data-theme', r);
+          if(r==='dark') el.classList.add('dark'); else el.classList.remove('dark');
+        }catch(e){}})();`,
         },
       ],
     },

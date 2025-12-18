@@ -1,0 +1,102 @@
+/* =========================================================
+   GLOBAL LAYOUT & SCROLL
+========================================================= */
+.el-container {
+    height: 100vh;
+}
+
+.el-main,
+.smart-table-wrapper {
+    overscroll-behavior: contain;
+}
+
+/* =========================================================
+   3) LAYOUT (header/footer/sidebar) CONSISTENT
+========================================================= */
+.app-layout {
+    min-height: 100vh;
+}
+
+.layout-aside {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
+}
+
+.layout-header {
+    padding: 0;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--header-border);
+}
+
+.layout-main {
+    padding: 16px;
+    background: var(--color-bg);
+    flex: 1 1 auto;
+    overflow: auto;
+}
+
+.layout-footer {
+    padding: 10px 16px;
+    background: var(--footer-bg);
+    border-top: 1px solid var(--footer-border);
+}
+
+/* =========================================================
+   4) HEADER INNER (center alignment + consistent colors)
+========================================================= */
+.header-inner {
+    height: var(--header-height);
+    width: 100%;
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+
+    background: var(--header-bg);
+    color: var(--text-color);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.header-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-search {
+    width: 100%;
+    max-width: 560px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 260px;
+}
+
+/* header icon buttons */
+.icon-button {
+    color: var(--text-color);
+}
+
+.user-name {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+/* Element Plus “text button hover” consistent */
+:deep(.el-button.is-text:not(.is-disabled):hover) {
+    background-color: var(--hover-bg);
+}
+
+:deep(.el-button.is-text:not(.is-disabled):active) {
+    background-color: var(--active-bg);
+}

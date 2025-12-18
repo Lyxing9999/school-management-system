@@ -1,86 +1,404 @@
 @import "tailwindcss";
-@import 'element-plus/dist/index.css';
+@import "element-plus/dist/index.css";
 
-/* =========================
-   Root Variables - Light Purple Theme
-   ========================= */
+
+/* element-plus overrides next (grouped) */
+
+@import "./element-plus/layout.css";
+@import "./element-plus/radio.css";
+@import "./element-plus/card.css";
+@import "./element-plus/pagination.css";
+@import "./element-plus/form.css";
+@import "./element-plus/input.css";
+@import "./element-plus/select.css";
+@import "./element-plus/tag.css";
+@import "./element-plus/table.css";
+@import "./element-plus/popper.css";
+@import "./element-plus/loading.css";
+@import "./element-plus/skeleton.css";
+@import "./element-plus/alert.css";
+@import "./element-plus/input-number.css";
+@import "./element-plus/el-tag.css";
+@import "./element-plus/el-check-tag.css";
+@import "./element-plus/el-date-picker.css";
+
+/* =========================================================
+   0) BASE TOKENS (ALWAYS AVAILABLE)
+========================================================= */
 :root {
-  /* Colors */
-  --color-primary: #6B3FA0;
-  --color-primary-light: #7E57C2;
-  --color-primary-light-1: #8F63D1;
-  --color-primary-light-2: #A17FE0;
-  --color-primary-light-3: #B39CF0;
-  --color-primary-light-4: #C5B3F7;
-  --color-primary-light-5: #D6C9FA;
-  --color-primary-light-6: #E8DEFD;
-  --color-primary-light-7: #F0E6FF;
-  --color-primary-light-8: #F5EFFF;
-  --color-primary-light-9: #FAF5FF;
-  --color-bg: #F3F4F8;
-  --color-card: #ffffff;
-  --color-dark: #333333;
-  --color-light: #ffffff;
+  --font-family-base: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --border-radius-base: 10px;
+  --transition-base: 0.2s ease;
+  --el-font-family: var(--font-family-base);
+  --header-height: 56px;
+  --sidebar-width: 240px;
+  --el-font-size-base: 14px;
 
-  /* Typography */
-  --font-family-base: 'Poppins', sans-serif;
 
-  /* Spacing & Transition */
-  --border-radius-base: 6px;
-  --transition-base: 0.3s ease-in-out;
-
-  /* Input / Card */
-  --input-border: #ddd;
-  --input-bg: #fff;
-  --card-shadow: rgba(126, 87, 194, 0.2);
-
-  /* Button colors */
-  --button-primary-bg: #6B3FA0;
-  --button-primary-text: #ffffff;
-  --button-primary-hover-bg: #7E57C2;
-  --button-primary-hover-text: #ffffff;
-
-  --button-danger-bg: #e53935;
-  --button-danger-text: #ffffff;
-  --button-danger-hover-bg: #f44336;
-  --button-danger-hover-text: #ffffff;
-
-  --button-success-bg: #43a047;
-  --button-success-text: #ffffff;
-  --button-success-hover-bg: #4caf50;
-  --button-success-hover-text: #ffffff;
-
-  --button-info-bg: #1e88e5;
-  --button-info-text: #ffffff;
-  --button-info-hover-bg: #2196f3;
-  --button-info-hover-text: #ffffff;
-
-  --button-warning-bg: #fb8c00;
-  --button-warning-text: #ffffff;
-  --button-warning-hover-bg: #ffa726;
-  --button-warning-hover-text: #ffffff;
-
-  --button-default-bg: #e0e0e0;
-  --button-default-text: #333333;
-  --button-default-hover-bg: #eeeeee;
-  --button-default-hover-text: #333333;
-
-  --button-text-bg: transparent;
-  --button-text-text: #6B3FA0;
-  --button-text-hover-bg: rgba(107, 63, 160, 0.1);
-  --button-text-hover-text: #7E57C2;
+    --text-base-size: 14px;
+    --text-leading: 1.55;
+    --text-tracking: -0.01em;
 }
 
-/* =========================
-   Global Defaults
-   ========================= */
+/* =========================================================
+   1) THEMES
+   - light: normal + subtle purple accent
+   - dark : modern dark + same accent
+========================================================= */
+
+/* ------------------------- LIGHT ------------------------- */
+html[data-theme="light"] {
+  /* Brand accent (purple) */
+  --color-primary: #6b3fa0;
+  --color-primary-light: #7e57c2;
+
+  /* Purple scale (used everywhere in your UI) */
+  --color-primary-light-1: #7447a9;
+  --color-primary-light-2: #8154b7;
+  --color-primary-light-3: #8f63c6;
+  --color-primary-light-4: #a074d6;
+  --color-primary-light-5: #b18ceb;
+  --color-primary-light-6: #cdb6f7;
+  --color-primary-light-7: #e2d7fd;
+  --color-primary-light-8: #f1ebff;
+  --color-primary-light-9: #f8f4ff;
+
+  /* Surfaces */
+  --color-bg: #f6f7fb;
+  /* app background */
+  --color-card: #ffffff;
+  /* panels */
+
+  /* Text */
+  --color-dark: #111827;
+  /* main text */
+  --color-light: #ffffff;
+
+  /* Inputs / borders */
+  --input-border: #e5e7eb;
+  --input-bg: #ffffff;
+
+  /* Shadows */
+  --card-shadow: rgba(17, 24, 39, 0.08);
+
+  /* Buttons (keep your existing naming) */
+  --button-primary-bg: var(--color-primary);
+  --button-primary-text: #ffffff;
+  --button-primary-hover-bg: var(--color-primary-light);
+  --button-primary-hover-text: #ffffff;
+
+  --button-danger-bg: #dc2626;
+  --button-danger-text: #ffffff;
+  --button-danger-hover-bg: #b91c1c;
+  --button-danger-hover-text: #ffffff;
+
+  --button-success-bg: #16a34a;
+  --button-success-text: #ffffff;
+  --button-success-hover-bg: #15803d;
+  --button-success-hover-text: #ffffff;
+
+  --button-info-bg: #0ea5e9;
+  --button-info-text: #ffffff;
+  --button-info-hover-bg: #0284c7;
+  --button-info-hover-text: #ffffff;
+
+  --button-warning-bg: #f59e0b;
+  --button-warning-text: #111827;
+  --button-warning-hover-bg: #d97706;
+  --button-warning-hover-text: #ffffff;
+
+  --button-default-bg: #e5e7eb;
+  --button-default-text: #111827;
+  --button-default-hover-bg: #d1d5db;
+  --button-default-hover-text: #111827;
+
+  --button-text-bg: transparent;
+  --button-text-text: var(--color-primary);
+  --button-text-hover-bg: rgba(107, 63, 160, 0.10);
+  --button-text-hover-text: var(--color-primary-light);
+
+  /* “Senior” semantic tokens */
+  --border-color: #e5e7eb;
+  --text-color: var(--color-dark);
+  --muted-color: #6b7280;
+
+  --header-bg: var(--color-card);
+  --footer-bg: var(--color-card);
+  --sidebar-bg: var(--color-card);
+
+  --header-border: var(--border-color);
+  --footer-border: var(--border-color);
+  --sidebar-border: var(--border-color);
+
+  --hover-bg: rgba(107, 63, 160, 0.06);
+  --active-bg: rgba(107, 63, 160, 0.10);
+
+  /* Element Plus sync */
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-light-3: var(--color-primary-light-3);
+  --el-color-primary-light-5: var(--color-primary-light-5);
+  --el-color-primary-light-7: var(--color-primary-light-7);
+
+  --el-border-color: var(--border-color);
+  --el-text-color-primary: var(--text-color);
+  --el-text-color-regular: var(--text-color);
+  --el-text-color-secondary: var(--muted-color);
+
+  --el-bg-color: var(--color-card);
+  --el-fill-color-blank: var(--color-card);
+
+
+    /* =========================================================
+         Button system tokens (BaseButton / el-button)
+      ========================================================= */
+      --btn-radius: 10px;
+      --btn-font-weight: 650;
+    
+      /* default button border (for type="default") */
+      --btn-border: color-mix(in srgb, var(--border-color) 70%, var(--color-primary) 30%);
+      --btn-border-hover: color-mix(in srgb, var(--border-color) 45%, var(--color-primary) 55%);
+      --btn-border-active: color-mix(in srgb, var(--border-color) 35%, var(--color-primary) 65%);
+    
+      /* disabled */
+      --btn-disabled-bg: color-mix(in srgb, var(--color-card) 70%, var(--color-bg) 30%);
+      --btn-disabled-text: color-mix(in srgb, var(--muted-color) 80%, transparent);
+      --btn-disabled-border: var(--border-color);
+    
+      /* focus ring */
+      --btn-focus-ring: 0 0 0 3px rgba(107, 63, 160, 0.18);
+    
+      /* micro interaction */
+      --btn-lift-hover: -0.5px;
+      --btn-lift-active: 0px;
+
+        /* Palette: stable across the app */
+          --chart-1: var(--color-primary);
+          /* brand purple */
+          --chart-2: #16a34a;
+          /* green */
+          --chart-3: #f59e0b;
+          /* amber */
+          --chart-4: #06b6d4;
+          /* cyan */
+          --chart-5: #ef4444;
+          /* red */
+          --chart-6: #3b82f6;
+          /* blue */
+          --chart-7: #a855f7;
+          /* violet */
+          --chart-8: #64748b;
+          /* slate */
+        
+          /* Semantic series colors (always consistent) */
+          --chart-present: var(--chart-2);
+          --chart-absent: var(--chart-5);
+          --chart-excused: var(--chart-3);
+        
+          /* Chart grid + area tint */
+          --chart-grid: var(--border-color);
+          --chart-area: rgba(107, 63, 160, 0.08);
+
+
+  --skeleton-bg: color-mix(in srgb, var(--color-card) 60%, var(--color-bg) 40%);
+--pagination-active-text: var(--color-light);/* Element Plus border variants (derived from your system border) */
+  --el-border-color: var(--border-color);
+  --el-border-color-light: color-mix(in srgb, var(--border-color) 75%, var(--color-card) 25%);
+  --el-border-color-lighter: color-mix(in srgb, var(--border-color) 60%, var(--color-card) 40%);
+  --el-border-color-extra-light: color-mix(in srgb, var(--border-color) 45%, var(--color-card) 55%);
+
+
+  
+}
+
+
+
+/* -------------------------- DARK ------------------------- */
+html[data-theme="dark"] {
+  /* Same brand accent */
+  --color-primary: #a78bfa;
+  --color-primary-light: #c4b5fd;
+
+  /* Purple scale for dark: keep 1..4 as solids, 5..9 as overlays */
+  --color-primary-light-1: #b29bff;
+  --color-primary-light-2: #c4b5fd;
+  --color-primary-light-3: #d7ccff;
+  --color-primary-light-4: #e9e2ff;
+
+  --color-primary-light-5: rgba(167, 139, 250, 0.20);
+  --color-primary-light-6: rgba(167, 139, 250, 0.16);
+  --color-primary-light-7: rgba(167, 139, 250, 0.12);
+  --color-primary-light-8: rgba(167, 139, 250, 0.08);
+  --color-primary-light-9: rgba(167, 139, 250, 0.06);
+
+  /* Surfaces */
+  --color-bg: #0b1220;
+  --color-card: #0f172a;
+
+  /* Text */
+  --color-dark: #e5e7eb;
+  --color-light: #ffffff;
+
+  /* Inputs / borders */
+  --input-border: #243041;
+  --input-bg: #0b1220;
+
+  /* Shadows */
+  --card-shadow: rgba(0, 0, 0, 0.45);
+
+  /* Buttons */
+  --button-primary-bg: var(--color-primary);
+  --button-primary-text: #0b1220;
+  --button-primary-hover-bg: var(--color-primary-light);
+  --button-primary-hover-text: #0b1220;
+
+  --button-danger-bg: #ef4444;
+  --button-danger-text: #0b1220;
+  --button-danger-hover-bg: #f87171;
+  --button-danger-hover-text: #0b1220;
+
+  --button-success-bg: #22c55e;
+  --button-success-text: #0b1220;
+  --button-success-hover-bg: #4ade80;
+  --button-success-hover-text: #0b1220;
+
+  --button-info-bg: #38bdf8;
+  --button-info-text: #0b1220;
+  --button-info-hover-bg: #7dd3fc;
+  --button-info-hover-text: #0b1220;
+
+  --button-warning-bg: #fbbf24;
+  --button-warning-text: #0b1220;
+  --button-warning-hover-bg: #fcd34d;
+  --button-warning-hover-text: #0b1220;
+
+  --button-default-bg: #1f2937;
+  --button-default-text: #e5e7eb;
+  --button-default-hover-bg: #374151;
+  --button-default-hover-text: #ffffff;
+
+  --button-text-bg: transparent;
+  --button-text-text: #e9d5ff;
+  --button-text-hover-bg: rgba(233, 213, 255, 0.10);
+  --button-text-hover-text: #ffffff;
+
+  /* Semantic tokens */
+  --border-color: #243041;
+  --text-color: var(--color-dark);
+  --muted-color: #94a3b8;
+
+  --header-bg: var(--color-card);
+  --footer-bg: var(--color-card);
+  --sidebar-bg: var(--color-card);
+
+  --header-border: var(--border-color);
+  --footer-border: var(--border-color);
+  --sidebar-border: var(--border-color);
+
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --active-bg: rgba(255, 255, 255, 0.10);
+
+  /* Element Plus sync */
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-light-3: var(--color-primary-light-5);
+  --el-color-primary-light-5: var(--color-primary-light-7);
+  --el-color-primary-light-7: var(--color-primary-light-9);
+
+  --el-border-color: var(--border-color);
+  --el-text-color-primary: var(--text-color);
+  --el-text-color-regular: var(--text-color);
+  --el-text-color-secondary: var(--muted-color);
+
+  --el-bg-color: var(--color-card);
+  --el-fill-color-blank: var(--color-card);
+
+  /* =========================================================
+       Button system tokens (better for dark)
+    ========================================================= */
+  /* ========= Button System (Dark) ========= */
+    --btn-radius: 10px;
+    --btn-font-weight: 650;
+  
+    --btn-border: var(--border-color);
+    --btn-border-hover: color-mix(in srgb, var(--border-color) 65%, var(--color-primary) 35%);
+    --btn-border-active: color-mix(in srgb, var(--border-color) 55%, var(--color-primary) 45%);
+  
+    /* Plain needs stronger tint in dark */
+    --btn-plain-hover-pct: 16%;
+    --btn-plain-active-pct: 24%;
+  
+    /* Filled buttons active mix should use surface (NOT #000) */
+    --btn-filled-active-mix: var(--color-bg);
+  
+    --btn-disabled-bg: color-mix(in srgb, var(--color-card) 88%, #000 12%);
+    --btn-disabled-text: color-mix(in srgb, var(--muted-color) 85%, transparent);
+    --btn-disabled-border: var(--border-color);
+  
+    --btn-focus-ring: 0 0 0 3px rgba(167, 139, 250, 0.26);
+  
+    --btn-lift-hover: -0.5px;
+    --btn-lift-active: 0px;
+
+      /* Palette: tuned for dark surfaces */
+        --chart-1: var(--color-primary);
+        /* #a78bfa */
+        --chart-2: #22c55e;
+        --chart-3: #fbbf24;
+        --chart-4: #22d3ee;
+        --chart-5: #fb7185;
+        --chart-6: #60a5fa;
+        --chart-7: #c084fc;
+        --chart-8: #94a3b8;
+      
+        --chart-present: var(--chart-2);
+        --chart-absent: var(--chart-5);
+        --chart-excused: var(--chart-3);
+      
+        --chart-grid: rgba(255, 255, 255, 0.10);
+        --chart-area: rgba(167, 139, 250, 0.12);
+
+
+          --skeleton-bg: color-mix(in srgb, var(--color-card) 80%, var(--color-bg) 20%);
+
+          
+        --pagination-active-text: var(--color-bg);
+  /* Element Plus border variants (derived from your system border) */
+    --el-border-color: var(--border-color);
+    --el-border-color-light: color-mix(in srgb, var(--border-color) 85%, var(--color-card) 15%);
+    --el-border-color-lighter: color-mix(in srgb, var(--border-color) 72%, var(--color-card) 28%);
+    --el-border-color-extra-light: color-mix(in srgb, var(--border-color) 60%, var(--color-card) 40%);
+
+
+    --tag-on-accent: var(--color-bg);
+    
+      /* neutral accent */
+      --tag-neutral-accent: color-mix(in srgb, var(--muted-color) 88%, var(--text-color) 12%);
+    
+      /* softer + darker than before (was too white) */
+      --tag-soft-bg: color-mix(in srgb, var(--color-card) 92%, #ffffff 8%);
+      --tag-soft-border: color-mix(in srgb, var(--border-color) 88%, #ffffff 12%);
+      --tag-soft-text: color-mix(in srgb, var(--text-color) 90%, var(--muted-color) 10%);
+    
+      --tag-plain-bg: transparent;
+    
+      /* semantic accents */
+      --tag-primary-accent: var(--color-primary);
+      --tag-success-accent: var(--button-success-bg);
+      --tag-warning-accent: var(--button-warning-bg);
+      --tag-danger-accent: var(--button-danger-bg);
+      --tag-info-accent: var(--button-info-bg);
+}
+/* =========================================================
+   2) GLOBAL BASE STYLES
+========================================================= */
 body {
-  font-family: var(--font-family-base);
   margin: 0;
   padding: 0;
   background-color: var(--color-bg);
-  color: var(--color-dark);
+  color: var(--text-color);
   line-height: 1.5;
+    font-size: var(--text-base-size);
+    line-height: var(--text-leading);
+    letter-spacing: var(--text-tracking);
 }
 
 a {
@@ -92,236 +410,26 @@ a {
 a:hover {
   color: var(--color-primary-light);
 }
-
-button {
-  cursor: pointer;
-  transition: var(--transition-base);
-  border-radius: var(--border-radius-base);
-  font-family: inherit;
+h1,
+h2,
+h3,
+.page-title,
+.section-title {
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+html,
+body {
+  font-family: var(--font-family-base);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+.el-table,
+.el-form,
+.el-dialog,
+.el-drawer,
+.el-card {
+  font-family: var(--el-font-family);
 }
-
-input,
-textarea,
-select {
-  font-family: inherit;
-  outline: none;
-  border-radius: var(--border-radius-base);
-  border: 1px solid var(--input-border);
-  padding: 0.5rem 0.75rem;
-  background-color: var(--input-bg);
-  color: var(--color-dark);
-  transition:
-    border-color var(--transition-base),
-    box-shadow var(--transition-base);
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--color-primary);
-}
-
-.card {
-  background-color: var(--color-card);
-  border-radius: var(--border-radius-base);
-  box-shadow: 0 2px 6px var(--card-shadow);
-  padding: 1rem;
-  transition: box-shadow var(--transition-base);
-}
-
-.card:hover {
-  box-shadow: 0 4px 12px var(--card-shadow);
-}
-
-/* =========================
-   Button Styles
-   ========================= */
-.btn-primary {
-  background-color: var(--button-primary-bg);
-  color: var(--button-primary-text);
-  border: 1px solid var(--button-primary-bg);
-  border-radius: var(--border-radius-base);
-  cursor: pointer;
-  font-weight: 500;
-  min-width: auto;
-  transition: all var(--transition-base);
-}
-
-.btn-primary:hover {
-  background-color: var(--button-primary-hover-bg);
-  color: var(--button-primary-hover-text);
-  transform: translateY(-1px);
-}
-
-.btn-danger {
-  background-color: var(--button-danger-bg);
-  color: var(--button-danger-text);
-  border: 1px solid var(--button-danger-bg);
-  border-radius: var(--border-radius-base);
-  cursor: pointer;
-  font-weight: 500;
-  min-width: auto;
-  transition: all var(--transition-base);
-}
-
-.btn-danger:hover {
-  background-color: var(--button-danger-hover-bg);
-  color: var(--button-danger-hover-text);
-  transform: translateY(-1px);
-}
-
-.btn-success {
-  background-color: var(--button-success-bg);
-  color: var(--button-success-text);
-  border: 1px solid var(--button-success-bg);
-  border-radius: var(--border-radius-base);
-  cursor: pointer;
-  font-weight: 500;
-  min-width: auto;
-  transition: all var(--transition-base);
-}
-
-.btn-success:hover {
-  background-color: var(--button-success-hover-bg);
-  color: var(--button-success-hover-text);
-  transform: translateY(-1px);
-}
-
-.btn-info {
-  background-color: var(--button-info-bg);
-  color: var(--button-info-text);
-  border: 1px solid var(--button-info-bg);
-  border-radius: var(--border-radius-base);
-  cursor: pointer;
-  font-weight: 500;
-  min-width: auto;
-  transition: all var(--transition-base);
-}
-
-.btn-info:hover {
-  background-color: var(--button-info-hover-bg);
-  color: var(--button-info-hover-text);
-  transform: translateY(-1px);
-}
-
-.btn-warning {
-  background-color: var(--button-warning-bg);
-  color: var(--button-warning-text);
-  border: 1px solid var(--button-warning-bg);
-  border-radius: var(--border-radius-base);
-  cursor: pointer;
-  font-weight: 500;
-  min-width: auto;
-  transition: all var(--transition-base);
-}
-
-.btn-warning:hover {
-  background-color: var(--button-warning-hover-bg);
-  color: var(--button-warning-hover-text);
-  transform: translateY(-1px);
-}
-
-.btn-default {
-  background-color: var(--button-default-bg);
-  color: var(--button-default-text);
-  border: 1px solid var(--button-default-bg);
-  border-radius: var(--border-radius-base);
-  cursor: pointer;
-  font-weight: 500;
-  min-width: auto;
-  transition: all var(--transition-base);
-}
-
-.btn-default:hover {
-  background-color: var(--button-default-hover-bg);
-  color: var(--button-default-hover-text);
-  transform: translateY(-1px);
-}
-
-.btn-text {
-  background-color: var(--button-text-bg);
-  color: var(--button-text-text);
-  border: none;
-  padding: 0;
-  min-width: auto;
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.btn-text:hover {
-  background-color: var(--button-text-hover-bg);
-  color: var(--button-text-hover-text);
-  transform: translateY(-1px);
-}
-
-/* =========================
-   Button Sizes
-   ========================= */
-.btn-small {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-.btn-medium {
-  padding: 6px 12px;
-  font-size: 14px;
-}
-
-.btn-large {
-  padding: 8px 16px;
-  font-size: 16px;
-}
-
-/* =========================
-   Utility Classes
-   ========================= */
-.bg-primary {
-  background-color: var(--color-primary);
-}
-
-.bg-primary-light {
-  background-color: var(--color-primary-light);
-}
-
-.text-primary {
-  color: var(--color-primary);
-}
-
-.text-primary-light {
-  color: var(--color-primary-light);
-}
-
-.bg-bg {
-  background-color: var(--color-bg);
-}
-
-.text-dark {
-  color: var(--color-dark);
-}
-
-.text-light {
-  color: var(--color-light);
-}
-
-.rounded {
-  border-radius: var(--border-radius-base);
-}
-
-.shadow {
-  box-shadow: 0 2px 6px var(--card-shadow);
-}
-
-.shadow-md {
-  box-shadow: 0 4px 12px var(--card-shadow);
-}
-
-.transition {
-  transition: all var(--transition-base);
-}
-
-

@@ -1,8 +1,13 @@
 import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
 import { StudentApi } from "./student.api";
 
-// Import DTOs ថ្មីដែលយើងបានបង្កើត
-import type { AdminCreateStudent, AdminGetStudentData } from "./student.dto";
+import type {
+  AdminCreateStudent,
+  AdminGetStudentData,
+  AdminUpdateStudent,
+  StudentBaseDataDTO,
+  AdminStudentNameSelectDTO,
+} from "./student.dto";
 
 export class StudentService {
   private callApi = useApiUtils().callApi;
@@ -21,6 +26,32 @@ export class StudentService {
     return data!;
   }
 
+  async getStudentUserId(id: string, options?: ApiCallOptions) {
+    const data = await this.callApi<StudentBaseDataDTO>(
+      () => this.studentApi.getStudentUserId(id),
+      options
+    );
+    return data!;
+  }
+
+  async updateStudentUserId(
+    id: string,
+    payload: AdminUpdateStudent,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<StudentBaseDataDTO>(
+      () => this.studentApi.updateStudentUserId(id, payload),
+      options
+    );
+    return data!;
+  }
+  async listStudentNamesSelect(options?: ApiCallOptions) {
+    const data = await this.callApi<AdminStudentNameSelectDTO>(
+      () => this.studentApi.listStudentNamesSelect(),
+      options
+    );
+    return data!;
+  }
   // ==========================================================
   // READ (Get Single)
   // ==========================================================

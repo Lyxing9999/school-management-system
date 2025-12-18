@@ -1,0 +1,13 @@
+/* =========================================================
+   SKELETON
+========================================================= */
+.el-skeleton__item {
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-card) 60%, var(--color-bg) 40%) !important;
+}
+.el-skeleton.is-animated .el-skeleton__item {
+    background-image: linear-gradient(90deg,
+            transparent,
+            color-mix(in srgb, var(--color-primary) 10%, transparent),
+            transparent) !important;
+}

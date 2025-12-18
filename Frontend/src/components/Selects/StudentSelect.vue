@@ -12,40 +12,51 @@ const props = defineProps<{
   placeholder?: string;
   disabled?: boolean;
   multiple?: boolean;
+  loading?: boolean;
+
+  // passed via componentProps.options from your Field renderer
+  options?:
+    | { value: string; label: string }[]
+    | (() => { value: string; label: string }[]);
 }>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: StudentValue): void;
 }>();
 
-// simple in-memory cache so subsequent dialogs are instant
-let cachedStudents: any[] | null = null;
+let cachedAll: { value: string; label: string }[] | null = null;
 
-const fetchStudents = async () => {
-  if (cachedStudents) {
-    return cachedStudents;
-  }
+const fetchAllStudents = async () => {
+  if (cachedAll) return cachedAll;
 
-  const res = await adminApi.user.listStudentNamesSelect();
-  cachedStudents = res?.items ?? [];
-  return cachedStudents;
+  const res = await adminApi.student.listStudentNamesSelect();
+  cachedAll = res?.items ?? [];
+  return cachedAll;
 };
 
 const innerValue = computed({
   get: () => props.modelValue,
-  set: (v) => emit("update:modelValue", v),
+  set: (v: StudentValue) => emit("update:modelValue", v),
+});
+
+const resolvedPreloaded = computed(() => {
+  if (!props.options) return [];
+  return typeof props.options === "function" ? props.options() : props.options;
 });
 </script>
 
 <template>
-  <RemoteSelect
-    v-model="innerValue"
-    :fetcher="fetchStudents"
-    label-key="username"
-    value-key="id"
-    :placeholder="placeholder ?? 'Select student'"
-    :disabled="disabled"
-    :multiple="multiple"
-    clearable
-  />
+  <div class="relative" v-loading="!!props.loading">
+    <RemoteSelect
+      v-model="innerValue"
+      :fetcher="fetchAllStudents"
+      :preloaded-options="resolvedPreloaded"
+      label-key="label"
+      value-key="value"
+      :placeholder="placeholder ?? 'Select student'"
+      :disabled="disabled || !!props.loading"
+      :multiple="multiple"
+      clearable
+    />
+  </div>
 </template>

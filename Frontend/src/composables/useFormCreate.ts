@@ -28,42 +28,38 @@ export function useFormCreate<
     formDialogVisible.value = true;
   };
 
-  const saveForm = async (payload?: Partial<I>) => {
-    if (!service.value.create) return;
-    loading.value = true;
+  const saveForm = async (payload?: Partial<I>): Promise<I | null> => {
+    if (!service.value.create) return null;
 
+    loading.value = true;
     try {
       if (payload) Object.assign(formData, payload);
+
       const filteredData: Partial<I> = {};
       const collectKeys = (fields: Field<I>[]) => {
         fields.forEach((f) => {
           if (f.row) collectKeys(f.row);
-          else if (f.key != null)
+          else if (f.key != null) {
             filteredData[f.key] =
               (formData as Record<string, any>)[f.key] ?? null;
+          }
         });
       };
       collectKeys(unref(getFields()));
 
-      let response: I | null = null;
-      try {
-        response = await service.value.create(filteredData as I);
-      } catch (err) {
-        console.error("Create failed:", err);
-        return;
-      }
+      const response = await service.value.create(filteredData as I);
 
-      if (response) {
-        resetFormData(response);
-        formDialogVisible.value = false;
-      }
+      resetFormData(response);
+      formDialogVisible.value = false;
+
+      return response;
     } catch (err) {
       console.error("Create failed:", err);
+      return null;
     } finally {
       loading.value = false;
     }
   };
-
   const cancelForm = () => {
     formDialogVisible.value = false;
     resetFormData();

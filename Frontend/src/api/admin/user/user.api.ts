@@ -4,10 +4,11 @@ import type {
   AdminCreateUser,
   AdminGetUserResponse,
   AdminUpdateUser,
-  AdminStudentListNameSelectResponse,
+  AdminUpdateUserStatus,
 } from "./user.dto";
-import { Role } from "~/api/types/enums/role.enum";
 
+import { Role } from "~/api/types/enums/role.enum";
+import { Status } from "~/api/types/enums/status.enum";
 export class UserApi {
   constructor(
     private $api: AxiosInstance,
@@ -17,20 +18,23 @@ export class UserApi {
   async getUserPage(
     roles: Role | Role[],
     page: number,
-    pageSize: number
+    pageSize: number,
+    q?: string,
+    signal?: AbortSignal
   ): Promise<AdminGetPageUserResponse> {
-    const params = { page, page_size: pageSize } as Record<string, any>;
+    const params: Record<string, any> = { page, page_size: pageSize };
+
     if (Array.isArray(roles)) params["role[]"] = roles;
     else params.role = roles;
+
+    const search = String(q ?? "").trim();
+    if (search) params.search = search;
+
     const res = await this.$api.get<AdminGetPageUserResponse>(this.baseURL, {
       params,
+      signal,
     });
-    return res.data;
-  }
-  async listStudentNamesSelect(): Promise<AdminStudentListNameSelectResponse> {
-    const res = await this.$api.get<AdminStudentListNameSelectResponse>(
-      `${this.baseURL}/student-select`
-    );
+
     return res.data;
   }
 
@@ -63,6 +67,14 @@ export class UserApi {
   async hardDeleteUser(id: string): Promise<AdminGetUserResponse> {
     const res = await this.$api.delete<AdminGetUserResponse>(
       `${this.baseURL}/${id}/hard`
+    );
+    return res.data;
+  }
+
+  async setUserStatus(id: string, status: Status) {
+    const res = await this.$api.patch<AdminGetUserResponse>(
+      `${this.baseURL}/${id}/status`,
+      { status }
     );
     return res.data;
   }
