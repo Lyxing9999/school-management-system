@@ -76,3 +76,62 @@ class AttendanceNotFoundException(AppBaseException):
             hint="Check the attendance ID or create the attendance before using it."
         )
     
+
+
+
+
+
+class AttendanceTeacherInactiveException(AppBaseException):
+    """Raised when a teacher account is not active (inactive/disabled/deleted)."""
+    def __init__(self, teacher_id: ObjectId, status: Optional[str] = None):
+        super().__init__(
+            message=f"Teacher {teacher_id} cannot mark attendance (status={status}).",
+            error_code="ATTENDANCE_TEACHER_INACTIVE",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            details={"teacher_id": str(teacher_id), "status": status},
+            hint="Activate the teacher account or use an active teacher to mark attendance.",
+            recoverable=True,
+        )
+
+
+class AttendanceClassInactiveException(AppBaseException):
+    """Raised when a class/section is not active (archived/inactive/deleted)."""
+    def __init__(self, class_id: ObjectId, status: Optional[str] = None):
+        super().__init__(
+            message=f"Class {class_id} cannot accept attendance marks (status={status}).",
+            error_code="ATTENDANCE_CLASS_INACTIVE",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            details={"class_id": str(class_id), "status": status},
+            hint="Set the class status to active before marking attendance.",
+            recoverable=True,
+        )
+
+
+class AttendanceStudentInactiveException(AppBaseException):
+    """Raised when a student is not active (inactive/disabled/deleted)."""
+    def __init__(self, student_id: ObjectId, status: Optional[str] = None):
+        super().__init__(
+            message=f"Student {student_id} cannot be marked for attendance (status={status}).",
+            error_code="ATTENDANCE_STUDENT_INACTIVE",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            details={"student_id": str(student_id), "status": status},
+            hint="Activate the student or restore the account before marking attendance.",
+            recoverable=True,
+        )
+
+
+class AttendanceRecordDeletedException(AppBaseException):
+    """Raised when attempting to update/mark an attendance record that is soft-deleted."""
+    def __init__(self, attendance_id: ObjectId):
+        super().__init__(
+            message=f"Attendance record {attendance_id} is deleted and cannot be modified.",
+            error_code="ATTENDANCE_RECORD_DELETED",
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            details={"attendance_id": str(attendance_id)},
+            hint="Restore the attendance record before modifying it, or create a new record.",
+            recoverable=True,
+        )

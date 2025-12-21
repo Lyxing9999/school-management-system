@@ -1,4 +1,3 @@
-from __future__ import annotations
 from bson import ObjectId
 from pymongo.database import Database
 from contexts.student.services.student_lifecycle_service import StudentLifecycleService

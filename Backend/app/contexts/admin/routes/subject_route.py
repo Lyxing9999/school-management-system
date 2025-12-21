@@ -1,13 +1,11 @@
-from __future__ import annotations
 from flask import request, g
-
 from app.contexts.admin.routes import admin_bp
 from app.contexts.core.security.auth_utils import get_current_user_id
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
-from app.contexts.admin.data_transfer.request import AdminCreateSubjectSchema
-from app.contexts.admin.data_transfer.response import  AdminSubjectNameSelectListDTO, AdminSubjectNameSelectDTO
+from app.contexts.admin.data_transfer.requests import AdminCreateSubjectSchema
+from app.contexts.admin.data_transfer.responses import  AdminSubjectNameSelectListDTO, AdminSubjectNameSelectDTO
 from app.contexts.admin.mapper.school_admin_mapper import SchoolAdminMapper
 
 

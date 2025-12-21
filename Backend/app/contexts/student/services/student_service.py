@@ -15,7 +15,7 @@ from app.contexts.student.repositories.student_repository import MongoStudentRep
 from app.contexts.student.domain.student import Student
 from app.contexts.student.factory.student_factory import StudentFactory
 
-from app.contexts.admin.data_transfer.request import AdminCreateStudentSchema, AdminUpdateStudentSchema
+from app.contexts.admin.data_transfer.requests import AdminCreateStudentSchema, AdminUpdateStudentSchema
 from app.contexts.student.errors.student_exceptions import StudentNotFoundException, StudentUserNotFoundException, StudentUpdateFailedException
 
 
@@ -28,8 +28,8 @@ class StudentService:
     def __init__(self, db: Database):
         self.db = db
 
-        self._student_read: Final[StudentReadModel] = StudentReadModel(db)          # basic student reads
-        self._student_stats: Final[StudentStatsReadModel] = StudentStatsReadModel(db)  # cross-collection UI reads
+        self._student_read: Final[StudentReadModel] = StudentReadModel(db)          
+        self._student_stats: Final[StudentStatsReadModel] = StudentStatsReadModel(db)
 
         self._iam_read: Final[IAMReadModel] = IAMReadModel(db)
 

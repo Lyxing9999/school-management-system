@@ -3,6 +3,7 @@ from app.contexts.core.error.app_base_exception import (
     ErrorCategory,
     ErrorSeverity
 )
+from bson import ObjectId
 
 class InvalidDayOfWeekException(AppBaseException):
     def __init__(self, received_value):
@@ -74,4 +75,18 @@ class ScheduleUpdateFailedException(AppBaseException):
             recoverable=True,
             context={"schedule_id": str(oid)},
             hint="Verify the schedule ID and try again."
+        )
+
+
+
+class ScheduleSlotDeletedException(AppBaseException):
+    def __init__(self, slot_id: ObjectId):
+        super().__init__(
+            message=f"Schedule slot {slot_id} is deleted and cannot be modified.",
+            error_code="SCHEDULE_SLOT_DELETED",
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            details={"slot_id": str(slot_id)},
+            hint="Restore the schedule slot before modifying it, or create a new one.",
+            recoverable=True,
         )

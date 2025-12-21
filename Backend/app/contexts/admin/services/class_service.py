@@ -1,6 +1,3 @@
-# app/contexts/admin/services/class_service.py
-
-from __future__ import annotations
 from typing import Optional, List
 
 from bson import ObjectId
@@ -9,8 +6,7 @@ from pymongo.database import Database
 from app.contexts.school.services.school_service import SchoolService
 from app.contexts.school.domain.class_section import ClassSection
 from app.contexts.school.read_models.class_read_model import ClassReadModel
-from app.contexts.admin.data_transfer.request import AdminCreateClassSchema
-from app.contexts.shared.decorators.logging_decorator import log_operation
+from app.contexts.admin.data_transfer.requests import AdminCreateClassSchema
 from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 
 class ClassAdminService:
@@ -75,8 +71,8 @@ class ClassAdminService:
         )
 
 
-    def admin_soft_delete_class(self, class_id: str) -> bool:
-        return self.school_service.soft_delete_class(class_id)
+    def admin_soft_delete_class(self, class_id: str, actor_id: str) -> bool:
+        return self.school_service.soft_delete_class(class_id, actor_id)
 
     # ---------- Queries ----------
 
@@ -103,8 +99,15 @@ class ClassAdminService:
         """
         return self.admin_read_model.admin_list_class_select()
 
-    def admin_list_students_in_class_select_options(self, class_id: str) -> List[dict]:
-        return self.admin_read_model.admin_list_students_in_class_select_options(class_id)
     
     def admin_count_classes_for_teacher(self, teacher_id: str | ObjectId) -> int:
         return self.admin_read_model.admin_count_classes_for_teacher(teacher_id)
+
+
+
+    def admin_list_students_in_class_select_options(self, class_id: str) -> List[dict]:
+        return self.admin_read_model.admin_list_students_in_class_select_options(class_id)
+
+
+    def admin_list_enrollment_student_select(self, class_id: str) -> List[dict]:
+        return self.admin_read_model.admin_list_enrollment_student_select(class_id)

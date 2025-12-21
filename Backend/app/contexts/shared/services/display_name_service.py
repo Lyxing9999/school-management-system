@@ -3,7 +3,7 @@ from typing import Iterable, Dict, List, Any, TYPE_CHECKING
 from bson import ObjectId
 
 from app.contexts.iam.read_models.iam_read_model import IAMReadModel
-from app.contexts.staff.read_model import StaffReadModel
+from app.contexts.staff.read_models.staff_read_model import StaffReadModel
 from app.contexts.school.read_models.class_read_model import ClassReadModel
 from app.contexts.school.read_models.subject_read_model import SubjectReadModel
 

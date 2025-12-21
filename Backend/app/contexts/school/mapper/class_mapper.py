@@ -1,31 +1,39 @@
+from __future__ import annotations
 
-from app.contexts.school.domain.class_section import ClassSection
+from app.contexts.school.domain.class_section import ClassSection, ClassSectionStatus
+from app.contexts.shared.lifecycle.domain import Lifecycle
 
 
 class ClassSectionMapper:
-    """
-    Handles conversion between ClassSection domain model and MongoDB dict.
-    """
-
     @staticmethod
     def to_domain(data: dict | ClassSection) -> ClassSection:
         if isinstance(data, ClassSection):
             return data
 
+        lc_raw = data.get("lifecycle") or {}
+        lifecycle = Lifecycle(
+            created_at=lc_raw.get("created_at"),
+            updated_at=lc_raw.get("updated_at"),
+            deleted_at=lc_raw.get("deleted_at"),
+            deleted_by=lc_raw.get("deleted_by"),
+        )
+
+        status_raw = data.get("status") or ClassSectionStatus.ACTIVE.value
+
         return ClassSection(
-            id=data.get("_id"),
             name=data["name"],
+            id=data.get("_id"),
             teacher_id=data.get("teacher_id"),
             enrolled_count=data.get("enrolled_count", 0),
             subject_ids=data.get("subject_ids", []),
             max_students=data.get("max_students"),
-            created_at=data.get("created_at"),
-            updated_at=data.get("updated_at"),
-            deleted=data.get("deleted", False),
+            status=status_raw,  # domain will normalize
+            lifecycle=lifecycle,
         )
 
     @staticmethod
     def to_persistence(cls: ClassSection) -> dict:
+        lc = cls.lifecycle
         return {
             "_id": cls.id,
             "name": cls.name,
@@ -33,7 +41,11 @@ class ClassSectionMapper:
             "enrolled_count": cls.enrolled_count,
             "subject_ids": list(cls.subject_ids),
             "max_students": cls.max_students,
-            "created_at": cls.created_at,
-            "updated_at": cls.updated_at,
-            "deleted": cls.deleted,
+            "status": cls.status.value,
+            "lifecycle": {
+                "created_at": lc.created_at,
+                "updated_at": lc.updated_at,
+                "deleted_at": lc.deleted_at,
+                "deleted_by": lc.deleted_by,
+            },
         }

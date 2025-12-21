@@ -8,10 +8,7 @@ from app.contexts.iam.error.iam_exception import (
     NotFoundUserException,
     UserDeletedException,
     InvalidPasswordException,
-    UserSuspendedException,
     UserInactiveException,
-
-
 )
 class IAMService:
     """Identity & Access Management Service"""
@@ -22,8 +19,6 @@ class IAMService:
         self._iam_read_model = IAMReadModel(db) 
         self._auth_service = AuthService()  # auth helper (hash, token)
         self._iam_mapper = IAMMapper()  # map raw dict <-> domain <-> DTO
-
-
 
     # -------------------------
     # Login IAM User
@@ -37,7 +32,6 @@ class IAMService:
             raise UserDeletedException(email)  # deleted check
         if iam_model.is_inactive():
             raise UserInactiveException(email)  # inactive check
-
         if not iam_model.check_password(password, self._auth_service):  # password check
             raise InvalidPasswordException(password)
         safe_dict = self._iam_mapper.to_safe_dict(iam_model)  # prepare safe dict

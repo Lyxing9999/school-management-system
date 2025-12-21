@@ -4,10 +4,10 @@ from typing import List , Tuple , Union, Dict, Final, Any
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
 from bson import ObjectId
 from app.contexts.shared.model_converter import mongo_converter
-from app.contexts.staff.read_model import StaffReadModel
+from app.contexts.staff.read_models.staff_read_model import StaffReadModel
 
 
-from app.contexts.shared.lifecycle.filters import not_deleted, active
+from app.contexts.shared.lifecycle.filters import not_deleted
 
 
 class IAMReadModel(MongoErrorMixin):
@@ -88,19 +88,14 @@ class IAMReadModel(MongoErrorMixin):
             # -------------------------
             role_filter = roles if isinstance(roles, str) else {"$in": roles}
 
-            query: dict = {
-                "deleted": {"$ne": True},
-                "role": role_filter,
-            }
-
-            if search:
-                s = search.strip()
-                if s:
-                    query["$or"] = [
-                        {"username": {"$regex": s, "$options": "i"}},
-                        {"email": {"$regex": s, "$options": "i"}},
-                        {"phone": {"$regex": s, "$options": "i"}},
-                    ]
+            base: Dict[str, Any] = {"role": role_filter}
+            if search and (s := search.strip()):
+                query["$or"] = [
+                    {"username": {"$regex": s, "$options": "i"}},
+                    {"email": {"$regex": s, "$options": "i"}},
+                    {"phone": {"$regex": s, "$options": "i"}},
+                ]
+            query = not_deleted(base)
             projection = {"password": 0}
 
             # -------------------------

@@ -4,12 +4,12 @@ from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
 from app.contexts.core.security.auth_utils import get_current_user_id
-from app.contexts.admin.data_transfer.request import (
+from app.contexts.admin.data_transfer.requests import (
     AdminCreateStaffSchema, AdminUpdateStaffSchema
 )
 from app.contexts.iam.mapper.iam_mapper import IAMMapper
-from app.contexts.staff.domain import StaffMapper
-from app.contexts.admin.data_transfer.response import AdminCreateStaffDataDTO, AdminTeacherSelectListDTO, AdminTeacherSelectDTO
+from app.contexts.staff.mapper.staff_mapper import StaffMapper
+from app.contexts.admin.data_transfer.responses import AdminUserStaffDataDTO, AdminTeacherSelectListDTO, AdminTeacherSelectDTO
 
 
 @admin_bp.route("/staff", methods=["POST"])
@@ -22,7 +22,7 @@ def admin_add_staff():
     user_dto, staff_dto = g.admin.facade.admin_create_staff_workflow(payload, admin_id)
     user_dto = IAMMapper.to_dto(user_dto)
     staff_dto = StaffMapper.to_dto(staff_dto)
-    return AdminCreateStaffDataDTO(**{**user_dto.model_dump(), **staff_dto.model_dump()})
+    return AdminUserStaffDataDTO(**{**user_dto.model_dump(), **staff_dto.model_dump()})
 
 
 @admin_bp.route("/staff/<user_id>", methods=["PATCH"])

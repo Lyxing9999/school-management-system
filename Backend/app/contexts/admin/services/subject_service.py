@@ -1,15 +1,10 @@
-from __future__ import annotations
 from typing import Optional
-
 from bson import ObjectId
 from pymongo.database import Database
 
 from app.contexts.school.services.school_service import SchoolService
 from app.contexts.school.domain.subject import Subject
-from app.contexts.admin.data_transfer.request import AdminCreateSubjectSchema
-from app.contexts.shared.decorators.logging_decorator import log_operation
-
-
+from app.contexts.admin.data_transfer.requests import AdminCreateSubjectSchema
 from app.contexts.school.read_models.subject_read_model import SubjectReadModel
 
 class SubjectAdminService:
@@ -21,7 +16,7 @@ class SubjectAdminService:
     def __init__(self, db: Database):
         self.school_service = SchoolService(db)
         self.subject_read = SubjectReadModel(db)
-    @log_operation(level="INFO")
+
     def admin_create_subject(
         self,
         payload: AdminCreateSubjectSchema,
@@ -37,11 +32,11 @@ class SubjectAdminService:
 
 
 
-    @log_operation(level="INFO")
+
     def admin_deactivate_subject(self, subject_id: str) -> Optional[Subject]:
         return self.school_service.deactivate_subject(subject_id)
 
-    @log_operation(level="INFO")
+
     def admin_activate_subject(self, subject_id: str) -> Optional[Subject]:
         return self.school_service.activate_subject(subject_id)
 

@@ -204,3 +204,47 @@ class ClassNotFoundException(AppBaseException):
             context={"class_id": str(class_id)},
             hint="Check the class ID and try again.",
         )
+
+
+class ClassSectionDeletedException(AppBaseException):
+    def __init__(self, class_id: ObjectId):
+        super().__init__(
+            message=f"Class section {class_id} is deleted and cannot be modified.",
+            error_code="CLASS_SECTION_DELETED",
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            details={"class_id": str(class_id)},
+            hint="Restore the class section before modifying it.",
+            recoverable=True,
+        )
+
+class InvalidClassSectionStatusError(AppBaseException):
+    def __init__(self, received_value):
+        super().__init__(
+            message=f"Invalid class section status: {received_value}.",
+            error_code="CLASS_SECTION_INVALID_STATUS",
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            received_value=received_value,
+            hint="Status must be one of: active, inactive, archived.",
+            recoverable=True,
+        )
+
+
+
+
+
+class ClassSectionNotActiveException(AppBaseException):
+    """Raised when an operation requires an active class section but the class is inactive/archived/deleted."""
+
+    def __init__(self, class_id: ObjectId, status: str | None = None):
+        super().__init__(
+            message=f"Class section {class_id} is not active (status={status}).",
+            error_code="CLASS_SECTION_NOT_ACTIVE",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This class is not active. Please contact an administrator.",
+            details={"class_id": str(class_id), "status": status},
+            hint="Set class status to 'active' (or restore it) before performing this action.",
+            recoverable=True,
+        )

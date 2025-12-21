@@ -7,14 +7,13 @@ from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.auth.jwt_utils import role_required
 from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
 
-from app.contexts.admin.data_transfer.request import (
+from app.contexts.admin.data_transfer.requests import (
     AdminCreateClassSchema,
     AdminAssignTeacherToClassSchema,
     AdminEnrollStudentToClassSchema,
-    AdminUnAssignTeacherToClassSchema
 )
 from app.contexts.admin.mapper.school_admin_mapper import SchoolAdminMapper
-from app.contexts.admin.data_transfer.response import AdminClassSelectListDTO, AdminClassSelectDTO, AdminClassDataDTO, AdminClassListDTO, AdminStudentNameSelectDTO, AdminStudentNameSelectListDTO
+from app.contexts.admin.data_transfer.responses import AdminClassSelectListDTO, AdminClassSelectDTO, AdminClassDataDTO, AdminClassListDTO, AdminStudentNameSelectDTO, AdminStudentNameSelectListDTO
 
 
 @admin_bp.route("/classes", methods=["POST"])
@@ -84,7 +83,8 @@ def admin_unenroll_student_from_class(class_id: str, student_id: str):
 @role_required(["admin"])
 @wrap_response
 def admin_soft_delete_class(class_id: str):
-    g.admin.class_service.admin_soft_delete_class(class_id=class_id)
+    admin_id = get_current_user_id()
+    g.admin.class_service.admin_soft_delete_class(class_id=class_id, actor_id=admin_id)
     return {"message": "Class soft deleted"}
 
 
@@ -113,3 +113,10 @@ def admin_list_classes_select():
     return AdminClassSelectListDTO(items=items)
 
 
+@admin_bp.route("/classes/<class_id>/enrollment-student-select", methods=["GET"])
+@role_required(["admin"])
+@wrap_response
+def admin_list_enrollment_student_select(class_id: str):
+    students = g.admin.class_service.admin_list_enrollment_student_select(class_id)
+    items = mongo_converter.list_to_dto(students, AdminStudentNameSelectDTO)
+    return AdminStudentNameSelectListDTO(items=items)

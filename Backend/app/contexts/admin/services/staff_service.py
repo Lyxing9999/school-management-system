@@ -3,11 +3,11 @@ from bson import ObjectId
 from typing import Final, Optional
 from app.contexts.staff.services.staff_service import StaffService
 from app.contexts.admin.read_models.admin_read_model import AdminReadModel
-from app.contexts.admin.data_transfer.request import (
+from app.contexts.admin.data_transfer.requests import (
     AdminCreateStaffSchema,
     AdminUpdateStaffSchema,
 )
-from app.contexts.staff.domain import Staff
+from app.contexts.staff.domain.staff import Staff
 class StaffAdminService:
     def __init__(self, db: Database):
         self.db = db

@@ -77,3 +77,16 @@ class SubjectNotFoundException(AppBaseException):
             recoverable=True,
             hint="Check the subject ID or create the subject before using it."
         )
+
+
+class SubjectDeletedException(AppBaseException):
+    def __init__(self, subject_id: ObjectId):
+        super().__init__(
+            message=f"Subject {subject_id} is deleted and cannot be modified.",
+            error_code="SUBJECT_DELETED",
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            details={"subject_id": str(subject_id)},
+            hint="Restore the subject before modifying it, or create a new one.",
+            recoverable=True,
+        )

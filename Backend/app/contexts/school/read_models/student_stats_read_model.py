@@ -12,7 +12,7 @@ from app.contexts.school.read_models.schedule_read_model import ScheduleReadMode
 from app.contexts.school.read_models.attendance_read_model import AttendanceReadModel
 from app.contexts.school.read_models.grade_read_model import GradeReadModel
 from app.contexts.school.read_models.subject_read_model import SubjectReadModel
-from app.contexts.staff.read_model import StaffReadModel
+from app.contexts.staff.read_models.staff_read_model import StaffReadModel
 from app.contexts.student.read_models.student_read_model import StudentReadModel
 
 from app.contexts.shared.model_converter import mongo_converter

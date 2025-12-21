@@ -1,12 +1,15 @@
 from pymongo.database import Database
-from typing import Tuple, Optional, Union
+from typing import Tuple
 from bson import ObjectId
 
 # Imports DTOs/Schemas
-from app.contexts.admin.data_transfer.request import AdminCreateStudentSchema, AdminCreateUserSchema
+from app.contexts.admin.data_transfer.requests import (
+    AdminCreateStudentSchema,
+    AdminCreateUserSchema
+
+)
 from app.contexts.staff.data_transfer.requests import StaffCreateSchema
 from app.contexts.iam.data_transfer.response import IAMBaseDataDTO
-
 # Imports Services
 from app.contexts.admin.services.user_service import UserAdminService
 from app.contexts.admin.services.staff_service import StaffAdminService
@@ -18,7 +21,7 @@ from app.contexts.admin.services.student_service import StudentAdminService
 # Imports Read Models & Domain
 from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 from app.contexts.iam.domain.iam import IAM
-from app.contexts.staff.domain import Staff
+from app.contexts.staff.domain.staff import Staff
 
 # Imports Errors & Utils
 from app.contexts.admin.error.admin_exception import CannotDeleteUserInUseException
@@ -43,7 +46,7 @@ class AdminFacadeService:
             pass
         try:
             if user:
-                self.user_service.admin_hard_delete_user(user.id)
+                self.user_service._rollback_purge_user(user.id)
         except Exception:
             pass
 
@@ -74,43 +77,6 @@ class AdminFacadeService:
             self._rollback(user, staff)
             raise
 
-    # ---------- SOFT DELETE USER ----------
-    def admin_soft_delete_user_workflow(
-        self,
-        user_id: Union[str, ObjectId],
-        deleted_by: Union[str, ObjectId],
-    ) -> Tuple[Optional[dict], Optional[dict]]:
-        
-        user_oid: ObjectId = mongo_converter.convert_to_object_id(user_id)
-
-        user_doc: Optional[dict] = self.admin_read_model.get_user_by_id(user_oid)
-        if user_doc is None:
-            return None, None
-
-        staff_doc: Optional[dict] = self.admin_read_model.get_staff_by_user_id(user_oid)
-
-        staff_deleted_doc: Optional[dict] = staff_doc
-        user_deleted_doc: Optional[dict] = user_doc
-
-        if staff_doc:
-            teacher_id: ObjectId = staff_doc["_id"]
-            
-            # Check dependencies
-            schedule_count = self.schedule_service.admin_count_schedules_for_teacher(teacher_id)
-            if schedule_count > 0:
-                raise CannotDeleteUserInUseException("schedules", schedule_count)
-
-            class_count = self.class_service.admin_count_classes_for_teacher(teacher_id)
-            if class_count > 0:
-                raise CannotDeleteUserInUseException("classes", class_count)
-            
-            # Delete Staff
-            self.staff_service.admin_soft_delete_staff(user_oid, deleted_by)
-            
-        # Delete User
-        self.user_service.admin_soft_delete_user(user_oid)
-
-        return user_deleted_doc, staff_deleted_doc
 
     # ---------- STUDENT WORKFLOW (COMPLETED) ----------
     def admin_create_student_workflow(
@@ -156,5 +122,5 @@ class AdminFacadeService:
             # If Profile creation fails (e.g. duplicate student ID), 
             # we must delete the User we just created to avoid orphan accounts.
             if user:
-                self.user_service.admin_hard_delete_user(user.id)
+                self.user_service._rollback_purge_user(user.id)
             raise e

@@ -3,8 +3,7 @@ from bson import ObjectId
 from typing import List
 
 from app.contexts.student.services.student_service import StudentService
-from app.contexts.admin.data_transfer.request import AdminUpdateStudentSchema
-# import AdminCreateStudentSchema too
+from app.contexts.admin.data_transfer.requests import AdminUpdateStudentSchema
 from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 
 class StudentAdminService:

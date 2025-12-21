@@ -3,7 +3,7 @@ from app.contexts.core.error.app_base_exception import (
     ErrorCategory,
     ErrorSeverity
 )
-
+from bson import ObjectId
 
 class InvalidGradeTypeException(AppBaseException):
     def __init__(self, received_value: str):
@@ -136,4 +136,30 @@ class GradeNotFoundException(AppBaseException):
             recoverable=True,
             context={"grade_id": grade_id},
             hint="Check the grade ID or create the grade before using it."
+        )
+
+
+class GradeRecordDeletedException(AppBaseException):
+    def __init__(self, grade_id: ObjectId):
+        super().__init__(
+            message=f"Grade record {grade_id} is deleted and cannot be modified.",
+            error_code="GRADE_RECORD_DELETED",
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            details={"grade_id": str(grade_id)},
+            hint="Restore the grade record before modifying it, or create a new one.",
+            recoverable=True,
+        )
+
+class InvalidTermException(AppBaseException):
+    def __init__(self, received_value, expected: str):
+        super().__init__(
+            message=f"Invalid term: {received_value}",
+            error_code="GRADE_INVALID_TERM",
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.VALIDATION,
+            user_message="Invalid term format.",
+            details={"term": str(received_value), "expected": expected},
+            hint=f"Use term format: {expected}",
+            recoverable=True,
         )

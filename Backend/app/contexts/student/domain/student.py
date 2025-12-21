@@ -55,6 +55,7 @@ class Student:
         address: Optional[Dict] = None,
         guardians: Optional[List[Dict]] = None,
         status: StudentStatus | str = StudentStatus.ACTIVE,
+        delete: bool = False,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
         history: Optional[List[Dict[str, Any]]] = None,
@@ -85,6 +86,7 @@ class Student:
         
         # Meta
         self.status = StudentStatus(status) if isinstance(status, str) else status
+        self.delete = delete 
         self.created_at = created_at or datetime.utcnow()
         self.updated_at = updated_at or datetime.utcnow()
         self.history: List[Dict[str, Any]] = history or []
@@ -197,6 +199,10 @@ class Student:
 
         self._log_history("CLASS_LEFT",{"from_class_id": str(prev_class_id) if prev_class_id else None})
         self.touch()
+
+
+
+        
     def promote_grade(self):
         if self.current_grade_level < 12:
             self.current_grade_level += 1

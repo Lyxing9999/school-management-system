@@ -17,7 +17,7 @@ class ScheduleReadModel(MongoErrorMixin):
     """
 
     def __init__(self, db: Database):
-        self.collection: Collection = db["schedule"]
+        self.collection: Collection = db["schedules"]
 
     # ------------ internal helpers ------------
 
@@ -63,7 +63,7 @@ class ScheduleReadModel(MongoErrorMixin):
             cursor = self.collection.find(
                 {
                     "class_id": oid,
-                    "deleted": {"$ne": True},
+    
                 }
             )
             return list(cursor)
@@ -87,7 +87,6 @@ class ScheduleReadModel(MongoErrorMixin):
             cursor = self.collection.find(
                 {
                     "class_id": {"$in": normalized_ids},
-                    "deleted": {"$ne": True},
                 }
             )
             return list(cursor)
@@ -104,7 +103,6 @@ class ScheduleReadModel(MongoErrorMixin):
             cursor = self.collection.find(
                 {
                     "teacher_id": oid,
-                    "deleted": {"$ne": True},
                 }
             )
             return list(cursor)
@@ -121,7 +119,6 @@ class ScheduleReadModel(MongoErrorMixin):
             cursor = self.collection.find(
                 {
                     "subject_id": oid,
-                    "deleted": {"$ne": True},
                 }
             )
             return list(cursor)
@@ -142,7 +139,6 @@ class ScheduleReadModel(MongoErrorMixin):
 
         query = {
             "day_of_week": weekday,
-            "deleted": {"$ne": True},
         }
 
         try:
@@ -162,7 +158,6 @@ class ScheduleReadModel(MongoErrorMixin):
 
         query = {
             "teacher_id": oid,
-            "deleted": {"$ne": True},
         }
 
         try:
@@ -179,7 +174,6 @@ class ScheduleReadModel(MongoErrorMixin):
 
         query = {
             "teacher_id": oid,
-            "deleted": {"$ne": True},
         }
 
         try:
@@ -204,7 +198,6 @@ class ScheduleReadModel(MongoErrorMixin):
         pipeline = [
             {
                 "$match": {
-                    "deleted": {"$ne": True},
                 }
             },
             {
@@ -247,7 +240,6 @@ class ScheduleReadModel(MongoErrorMixin):
         pipeline = [
             {
                 "$match": {
-                    "deleted": {"$ne": True},
                 }
             },
             {

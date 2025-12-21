@@ -80,7 +80,6 @@ class StudentFactory:
                 },
             }
         ]
-        print("history", history)
         return Student(
             user_id=user_oid,
             student_id_code=student_id_code,

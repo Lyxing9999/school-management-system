@@ -6,11 +6,10 @@ from app.contexts.shared.model_converter import pydantic_converter, mongo_conver
 from app.contexts.core.security.auth_utils import get_current_staff_id
 
 # Import Schemas & DTOs
-from app.contexts.admin.data_transfer.request import AdminCreateStudentSchema, AdminUpdateStudentSchema
+from app.contexts.admin.data_transfer.requests import AdminCreateStudentSchema, AdminUpdateStudentSchema
 from app.contexts.iam.mapper.iam_mapper import IAMMapper
 from app.contexts.student.mapper.student_mapper import StudentMapper
-from app.contexts.admin.data_transfer.response import AdminCreateStudentDataDTO
-from app.contexts.admin.data_transfer.response import AdminStudentNameSelectDTO, AdminStudentNameSelectListDTO
+from app.contexts.admin.data_transfer.responses import AdminCreateStudentDataDTO, AdminStudentNameSelectDTO, AdminStudentNameSelectListDTO
 
 # ---------------------------------------------------------
 # ADMIN STUDENT MANAGEMENT

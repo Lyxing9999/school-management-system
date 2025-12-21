@@ -17,15 +17,15 @@ class StaffAlreadyExistsAppException(AppBaseException):
 
 
 class StaffPermissionException(AppBaseException):
-    def __init__(self, role: str):
+    def __init__(self, staff_id: str):
         super().__init__(
             user_message=f"Staff with ID '{staff_id}' does not have permission to perform this action",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.BUSINESS_LOGIC,
             message="You do not have permission to perform this action.",
             details={"field": "staff_id", "value": staff_id},
-            hint="Ensure the staff ID is unique and correctly formatted",
-            recoverable=True
+            hint="Check the staff role/permissions and try again.",
+            recoverable=True,
         )
 
 
@@ -37,7 +37,16 @@ class InvalidStaffRoleException(AppBaseException):
             category=ErrorCategory.BUSINESS_LOGIC,
             user_message="The role assigned is invalid."
         )
-
+class StaffRoleNotAllowedException(AppBaseException):
+    def __init__(self, role: str, allowed: list[str]):
+        super().__init__(
+            message=f"Role '{role}' not allowed for Staff. Allowed roles: {', '.join(allowed)}",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="The role assigned is not allowed for staff.",
+            details={"role": role, "allowed": allowed},
+            recoverable=True,
+        )
 
     
 

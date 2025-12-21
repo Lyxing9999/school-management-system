@@ -1,7 +1,3 @@
-# app/contexts/admin/read_models/admin_dashboard_read_model.py
-
-from __future__ import annotations
-
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -18,7 +14,7 @@ from app.contexts.school.read_models.subject_read_model import SubjectReadModel
 from app.contexts.student.read_models.student_read_model import StudentReadModel
 from app.contexts.shared.services.display_name_service import DisplayNameService
 from app.contexts.iam.read_models.iam_read_model import IAMReadModel
-from app.contexts.staff.read_model import StaffReadModel
+from app.contexts.staff.read_models.staff_read_model import StaffReadModel
 
 
 class AdminDashboardReadModel(MongoErrorMixin):

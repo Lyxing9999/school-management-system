@@ -1,86 +1,64 @@
-# app/contexts/school/mapper/attendance_mapper.py
-
 from __future__ import annotations
-from datetime import date as date_type, datetime, time
 
-from app.contexts.school.domain.attendance import (
-    AttendanceRecord,
-    AttendanceStatus,
-)
+from datetime import date as date_type
+from app.contexts.school.domain.attendance import AttendanceRecord, AttendanceStatus
+from app.contexts.shared.lifecycle.domain import Lifecycle
 
 
 class AttendanceMapper:
     """
-    Handles conversion between AttendanceRecord domain model and MongoDB dict.
+    Persistence decisions:
+    - store attendance date as ISO string 'YYYY-MM-DD' to avoid timezone bugs
+    - store lifecycle nested
     """
 
     @staticmethod
     def to_domain(data: dict | AttendanceRecord) -> AttendanceRecord:
         if isinstance(data, AttendanceRecord):
             return data
-
         raw_date = data.get("record_date")
-        if isinstance(raw_date, datetime):
-            record_date = raw_date.date()
-        elif isinstance(raw_date, date_type):
-            record_date = raw_date
-        elif raw_date is None:
-            record_date = None
-        else:
-            record_date = datetime.fromisoformat(raw_date).date()
+        record_date = date_type.fromisoformat(raw_date) if isinstance(raw_date, str) else None
 
-        raw_status = data.get("status", AttendanceStatus.PRESENT)
-        if isinstance(raw_status, AttendanceStatus):
-            status = raw_status
-        else:
-            try:
-                status = AttendanceStatus(raw_status)
-            except ValueError:
-                status = AttendanceStatus.PRESENT
+        # Status
+        raw_status = data.get("status", AttendanceStatus.PRESENT.value)
+        try:
+            status = AttendanceStatus(raw_status) if not isinstance(raw_status, AttendanceStatus) else raw_status
+        except ValueError:
+            status = AttendanceStatus.PRESENT
+
+        # Lifecycle
+        lc_raw = data.get("lifecycle") or {}
+        lifecycle = Lifecycle(
+            created_at=lc_raw.get("created_at"),
+            updated_at=lc_raw.get("updated_at"),
+            deleted_at=lc_raw.get("deleted_at"),
+            deleted_by=lc_raw.get("deleted_by"),
+        )
 
         return AttendanceRecord(
             id=data.get("_id"),
             student_id=data["student_id"],
             class_id=data["class_id"],
             status=status,
-            record_date=record_date,              # keep domain param name as your model expects
+            record_date=record_date,
             marked_by_teacher_id=data.get("marked_by_teacher_id"),
-            created_at=data.get("created_at"),
-            updated_at=data.get("updated_at"),
+            lifecycle=lifecycle,
         )
 
     @staticmethod
     def to_persistence(record: AttendanceRecord) -> dict:
-        """
-        Ensure record_date is a datetime for MongoDB (not a date).
-        Try both `record.record_date` and `record.date` to match your domain model.
-        """
-        # Try the main name
-        raw_date = getattr(record, "record_date", None)
-        # Fallback to `date` if your domain class uses that
-        if raw_date is None:
-            raw_date = getattr(record, "date", None)
-
-        if isinstance(raw_date, datetime):
-            mongo_record_date = raw_date
-        elif isinstance(raw_date, date_type):
-            mongo_record_date = datetime.combine(raw_date, time.min)
-        elif raw_date is None:
-            mongo_record_date = None
-        else:
-            mongo_record_date = datetime.fromisoformat(raw_date)
-
+        lc = record.lifecycle
         return {
             "_id": record.id,
             "student_id": record.student_id,
             "class_id": record.class_id,
-            "status": (
-                record.status.value
-                if isinstance(record.status, AttendanceStatus)
-                else record.status
-            ),
-            "record_date": mongo_record_date,
+            "status": record.status.value,
+            "record_date": record.date.isoformat(),
             "marked_by_teacher_id": record.marked_by_teacher_id,
-            "created_at": record.created_at,
-            "updated_at": record.updated_at,
+            "lifecycle": {
+                "created_at": lc.created_at,
+                "updated_at": lc.updated_at,
+                "deleted_at": lc.deleted_at,
+                "deleted_by": lc.deleted_by,
+            },
         }

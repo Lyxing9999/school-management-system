@@ -6,7 +6,7 @@ from app.contexts.school.domain.schedule import ScheduleSlot
 from app.contexts.school.domain.class_section import ClassSection
 from app.contexts.school.domain.subject import Subject
 
-from app.contexts.admin.data_transfer.response import (
+from app.contexts.admin.data_transfer.responses import (
     AdminSubjectDataDTO,
     AdminScheduleSlotDataDTO,
     AdminSubjectListDTO,
@@ -27,9 +27,7 @@ class SchoolAdminMapper:
             subject_ids=[str(sid) for sid in section.subject_ids],
             enrolled_count=section.enrolled_count,
             max_students=section.max_students,
-            created_at=section.created_at,
-            updated_at=section.updated_at,
-            deleted=section.deleted,
+            lifecycle=section.lifecycle,
         )
 
     @staticmethod
@@ -42,9 +40,7 @@ class SchoolAdminMapper:
             subject_ids=[str(sid) for sid in doc.get("subject_ids", [])],
             enrolled_count=doc.get("enrolled_count"),
             max_students=doc.get("max_students"),
-            created_at=doc.get("created_at"),
-            updated_at=doc.get("updated_at"),
-            deleted=doc.get("deleted", False),
+            lifecycle=doc.get("lifecycle"),
         )
 
     @staticmethod
@@ -70,8 +66,7 @@ class SchoolAdminMapper:
             description=subject.description,
             allowed_grade_levels=list(subject.allowed_grade_levels),
             is_active=subject.is_active,
-            created_at=subject.created_at,
-            updated_at=subject.updated_at,
+            lifecycle=subject.lifecycle,
         )
 
     @staticmethod
@@ -84,8 +79,7 @@ class SchoolAdminMapper:
             description=doc.get("description"),
             allowed_grade_levels=list(doc.get("allowed_grade_levels", [])),
             is_active=doc.get("is_active", True),
-            created_at=doc.get("created_at"),
-            updated_at=doc.get("updated_at"),
+            lifecycle=doc.get("lifecycle"),
         )
 
     @staticmethod
@@ -109,8 +103,7 @@ class SchoolAdminMapper:
             start_time=slot.start_time,
             end_time=slot.end_time,
             room=slot.room,
-            created_at=slot.created_at,
-            updated_at=slot.updated_at,
+            lifecycle=slot.lifecycle,
         )
 
     @staticmethod
@@ -124,8 +117,7 @@ class SchoolAdminMapper:
             start_time=doc["start_time"],   
             end_time=doc["end_time"],
             room=doc.get("room"),
-            created_at=doc.get("created_at"),
-            updated_at=doc.get("updated_at"),
+            lifecycle=doc.get("lifecycle"),
         )
 
     @staticmethod

@@ -1,82 +1,87 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Dict, Optional, Literal
-from app.contexts.shared.lifecycle.types import FIELDS, Status
+from bson import ObjectId
 
 ShowDeleted = Literal["all", "active", "deleted"]
-ShowStatus = Literal["all", "active", "inactive", "suspended"]
 
+
+@dataclass(frozen=True)
+class LifecycleFields:
+    prefix: str = "lifecycle"
+    created_at: str = "created_at"
+    updated_at: str = "updated_at"
+    deleted_at: str = "deleted_at"
+    deleted_by: str = "deleted_by"
+
+    def k(self, name: str) -> str:
+        return f"{self.prefix}.{name}"
+
+
+FIELDS = LifecycleFields()
+
+
+def now_utc() -> datetime:
+    return datetime.utcnow()
+
+
+# ---------------- Filters ----------------
 
 def not_deleted(extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """
-    Default for most queries.
-    Includes docs where deleted is False OR missing.
-    """
-    q: Dict[str, Any] = {FIELDS.deleted: {"$ne": True}}
+    q: Dict[str, Any] = {FIELDS.k(FIELDS.deleted_at): None}
     if extra:
         q.update(extra)
     return q
 
 
 def active(extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """
-    Operational "active" records only.
-    status=active AND deleted != true
-    """
-    q: Dict[str, Any] = {
-        FIELDS.status: Status.ACTIVE.value,
-        FIELDS.deleted: {"$ne": True},
-    }
-    if extra:
-        q.update(extra)
-    return q
+    return not_deleted(extra)
 
 
 def by_show_deleted(show: ShowDeleted, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """
-    Admin filter helper:
-      - all: no delete filter
-      - active: deleted != true
-      - deleted: deleted == true
-    """
     if show == "all":
         q: Dict[str, Any] = {}
     elif show == "deleted":
-        q = {FIELDS.deleted: True}
+        q = {FIELDS.k(FIELDS.deleted_at): {"$ne": None}}
     else:
-        q = {FIELDS.deleted: {"$ne": True}}
+        q = {FIELDS.k(FIELDS.deleted_at): None}
 
     if extra:
         q.update(extra)
     return q
 
 
-def by_show_status(show: ShowStatus, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """
-    Optional if you want admin status filters too.
-    """
-    if show == "all":
-        q: Dict[str, Any] = {}
-    else:
-        q = {FIELDS.status: show}
-
-    if extra:
-        q.update(extra)
-    return q
-
-
-# --------- Optional guard filters for safe updates ---------
+# ---------------- Guards ----------------
 
 def guard_not_deleted(entity_id: Any) -> Dict[str, Any]:
-    """
-    Useful for preventing updates on deleted docs:
-    update_one(guard_not_deleted(id), {"$set": ...})
-    """
-    return {"_id": entity_id, FIELDS.deleted: {"$ne": True}}
+    return {"_id": entity_id, FIELDS.k(FIELDS.deleted_at): None}
 
 
-def guard_active(entity_id: Any) -> Dict[str, Any]:
-    """
-    Prevent updates unless entity is active and not deleted.
-    """
-    return {"_id": entity_id, FIELDS.status: Status.ACTIVE.value, FIELDS.deleted: {"$ne": True}}
+def guard_deleted(entity_id: Any) -> Dict[str, Any]:
+    return {"_id": entity_id, FIELDS.k(FIELDS.deleted_at): {"$ne": None}}
+
+
+# ---------------- Updates ----------------
+
+def apply_soft_delete_update(actor_id: ObjectId) -> Dict[str, Any]:
+    n = now_utc()
+    return {
+        "$set": {
+            FIELDS.k(FIELDS.deleted_at): n,
+            FIELDS.k(FIELDS.deleted_by): actor_id,
+            FIELDS.k(FIELDS.updated_at): n,
+        }
+    }
+
+
+def apply_restore_update() -> Dict[str, Any]:
+    n = now_utc()
+    return {
+        "$set": {
+            FIELDS.k(FIELDS.deleted_at): None,
+            FIELDS.k(FIELDS.deleted_by): None,
+            FIELDS.k(FIELDS.updated_at): n,
+        }
+    }

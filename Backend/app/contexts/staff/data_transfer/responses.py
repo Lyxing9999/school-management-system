@@ -1,38 +1,46 @@
-
-from pydantic import RootModel ,ConfigDict 
-from typing import List
-from pydantic import BaseModel
-from app.contexts.shared.enum.roles import SystemRole
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, RootModel
+
+from app.contexts.shared.enum.roles import SystemRole
+
+class LifecycleDTO(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
+    deleted_by: Optional[str] = None
+
+    @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None
+
 
 class StaffBaseDataDTO(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
-        enum_values_as_str=True
-
+        use_enum_values=True,
+        extra="ignore",
     )
+
     id: str
     user_id: Optional[str] = None
+
     staff_name: str
     staff_id: str
-    role: SystemRole
-    phone_number: str | None = None  
-    permissions: list[str] = []  
-    address: str | None = None
-    created_at: datetime | None = None
-    created_by: str | None = None
-    updated_at: datetime | None = None
-    deleted: bool = False
-    deleted_by: str | None = None
+    role: SystemRole  
+    phone_number: Optional[str] = None
+    permissions: List[str] = Field(default_factory=list)
+    address: Optional[str] = None
+    created_by: Optional[str] = None
+
+    lifecycle: LifecycleDTO = Field(default_factory=LifecycleDTO)
 
 
-class StaffReadDataDTO(StaffBaseDataDTO):   
-    pass
-
-class StaffReadDataDTOList(RootModel[List[StaffReadDataDTO]]):   
+class StaffReadDataDTO(StaffBaseDataDTO):
     pass
 
 
-
-
+class StaffReadDataDTOList(RootModel[List[StaffReadDataDTO]]):
+    pass

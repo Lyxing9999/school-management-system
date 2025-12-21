@@ -24,6 +24,7 @@ class AdminContext:
     - subject_service: subject CRUD
     - schedule_service: schedule CRUD
     - staff_service: staff CRUD
+    - user_service: user CRUD
     """
     def __init__(self, db: Database) -> None:
         self.class_service = ClassAdminService(db)

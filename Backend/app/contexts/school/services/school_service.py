@@ -1,12 +1,11 @@
 from __future__ import annotations
-from typing import Iterable, List, Optional, TYPE_CHECKING
 
+from typing import Iterable, Optional, TYPE_CHECKING
 from bson import ObjectId
 from datetime import date as date_type
-
-
 from pymongo.database import Database
 
+# factories
 from app.contexts.school.composition import build_school_factories
 from app.contexts.school.domain.class_section import ClassSection
 from app.contexts.school.domain.attendance import AttendanceRecord, AttendanceStatus
@@ -14,22 +13,25 @@ from app.contexts.school.domain.grade import GradeRecord, GradeType
 from app.contexts.school.domain.schedule import ScheduleSlot, DayOfWeek
 from app.contexts.school.domain.subject import Subject
 
+# repositories
 from app.contexts.school.repositories.class_repository import MongoClassSectionRepository
 from app.contexts.school.repositories.attendance_repository import MongoAttendanceRepository
 from app.contexts.school.repositories.grade_repository import MongoGradeRepository
 from app.contexts.school.repositories.subject_repository import MongoSubjectRepository
 from app.contexts.school.repositories.schedule_repository import MongoScheduleRepository
+from app.contexts.school.repositories.teacher_assignment_repository import TeacherAssignmentRepository
 
+# mappers
 from app.contexts.school.mapper.class_mapper import ClassSectionMapper
 from app.contexts.school.mapper.attendance_mapper import AttendanceMapper
 from app.contexts.school.mapper.grade_mapper import GradeMapper
 from app.contexts.school.mapper.subject_mapper import SubjectMapper
 from app.contexts.school.mapper.schedule_mapper import ScheduleMapper
 
-
+# model converter
 from app.contexts.shared.model_converter import mongo_converter
 
-#domain exceptions
+# domain exceptions
 from app.contexts.school.errors.class_exceptions import ClassNotFoundException, StudentAlreadyEnrolledException
 from app.contexts.school.errors.attendance_exceptions import AttendanceNotFoundException
 from app.contexts.school.errors.grade_exceptions import GradeNotFoundException
@@ -37,6 +39,10 @@ from app.contexts.school.errors.subject_exceptions import SubjectNotFoundExcepti
 from app.contexts.school.errors.schedule_exceptions import ScheduleNotFoundException ,ScheduleUpdateFailedException
 from app.contexts.student.errors.student_exceptions import StudentNotFoundException
 
+# lifecycle services
+from app.contexts.school.services.class_lifecycle_service import ClassLifecycleService
+from app.contexts.school.services.subject_lifecycle_service import SubjectLifecycleService
+from app.contexts.school.services.schedule_lifecycle_service import ScheduleLifecycleService
 
 if TYPE_CHECKING:
     from app.contexts.student.services.student_service import StudentService
@@ -58,13 +64,21 @@ class SchoolService:
         self.attendance_repo = MongoAttendanceRepository(db["attendance"], AttendanceMapper())
         self.grade_repo = MongoGradeRepository(db["grades"], GradeMapper())
         self.subject_repo = MongoSubjectRepository(db["subjects"], SubjectMapper())
-        self.schedule_repo = MongoScheduleRepository(db["schedule"], ScheduleMapper())
-        
+        self.schedule_repo = MongoScheduleRepository(db["schedules"], ScheduleMapper())
+        self.teacher_assignment_repo = TeacherAssignmentRepository(db["teacher_subject_assignments"])
+        self.class_lifecycle = ClassLifecycleService(db)
+        self.subject_lifecycle = SubjectLifecycleService(db)
+        self.schedule_lifecycle = ScheduleLifecycleService(db)
+    
     @property
     def _student_service(self) -> StudentService:
         from app.contexts.student.services.student_service import StudentService
-
         return StudentService(self.db)
+
+    
+    def _oid(self, id: str | ObjectId) -> ObjectId:
+        return mongo_converter.convert_to_object_id(id)
+
     def create_class(
             self,
             name: str,
@@ -85,14 +99,39 @@ class SchoolService:
             )
             return self.class_repo.insert(section)
 
+
+    def assign_teacher_to_subject_in_class(
+        self,
+        teacher_id: str | ObjectId,
+        class_id: str | ObjectId,
+        subject_id: str | ObjectId,
+        actor_id: str | ObjectId | None = None,
+    ) -> bool:
+        teacher_oid = self._oid(teacher_id)
+        class_oid = self._oid(class_id)
+        subject_oid = self._oid(subject_id)
+        actor_oid = self._oid(actor_id) if actor_id else None
+
+        # (Optional guards) ensure class exists, subject exists, etc.
+        if self.class_repo.find_by_id(class_oid) is None:
+            raise ClassNotFoundException(class_id)
+        if self.subject_repo.find_by_id(subject_oid) is None:
+            raise SubjectNotFoundException(subject_id)
+
+        self.teacher_assignment_repo.assign(
+            teacher_id=teacher_oid,
+            class_id=class_oid,
+            subject_id=subject_oid,
+            actor_id=actor_oid,
+        )
+        return True
     def enroll_student_to_class(
         self,
         class_id: str | ObjectId,
         student_id: str | ObjectId,
     ) -> Optional[ClassSection]:
-            
-        class_oid = mongo_converter.convert_to_object_id(class_id)
-        student_oid = mongo_converter.convert_to_object_id(student_id)
+        class_oid = self._oid(class_id)
+        student_oid = self._oid(student_id)
 
         section = self.class_repo.find_by_id(class_oid)
         if section is None:
@@ -122,8 +161,8 @@ class SchoolService:
         class_id: str | ObjectId,
         student_id: str | ObjectId,
     ) -> Optional[ClassSection]:
-        class_oid = mongo_converter.convert_to_object_id(class_id)
-        student_oid = mongo_converter.convert_to_object_id(student_id)
+        class_oid = self._oid(class_id)
+        student_oid = self._oid(student_id)
 
         section = self.class_repo.find_by_id(class_oid)
         if section is None:
@@ -135,6 +174,27 @@ class SchoolService:
         self._student_service.leave_class(student_id=student_oid)
         
         return section
+
+    def soft_delete_class(self, class_id: str | ObjectId, actor_id: str | ObjectId) -> bool:
+        class_oid = self._oid(class_id)
+        actor_oid = self._oid(actor_id)
+
+        self.class_lifecycle.soft_delete_class(class_oid, actor_oid)
+        return True
+
+    def restore_class(self, class_id: str | ObjectId, actor_id: str | ObjectId) -> bool:
+        class_oid = self._oid(class_id)
+        actor_oid = self._oid(actor_id)
+
+        self.class_lifecycle.restore_class(class_oid, actor_oid)
+        return True
+
+    def hard_delete_class(self, class_id: str | ObjectId, actor_id: str | ObjectId) -> bool:
+        class_oid = self._oid(class_id)
+        actor_oid = self._oid(actor_id)
+
+        self.class_lifecycle.hard_delete_class(class_oid, actor_oid)
+        return True
     # ============================================================
     # Attendance use cases
     # ============================================================
@@ -185,7 +245,7 @@ class SchoolService:
     def get_attendance_by_id(
         self, attendance_id: str | ObjectId
     ) -> Optional[AttendanceRecord]:
-        oid = mongo_converter.convert_to_object_id(attendance_id)
+        oid = self._oid(attendance_id)
         return self.attendance_repo.find_by_id(oid)
 
     # ============================================================
@@ -233,7 +293,7 @@ class SchoolService:
         """
         Load grade aggregate, use domain rule to update score, then persist.
         """
-        oid = mongo_converter.convert_to_object_id(grade_id)
+        oid = self._oid(grade_id)
         existing = self.grade_repo.find_by_id(oid)
         if existing is None:
             raise GradeNotFoundException(grade_id)
@@ -249,7 +309,7 @@ class SchoolService:
         """
         Will raise GradeTypeChangeForbiddenException if score already set.
         """
-        oid = mongo_converter.convert_to_object_id(grade_id)
+        oid = self._oid(grade_id)
         existing = self.grade_repo.find_by_id(oid)
         if existing is None:
             raise GradeNotFoundException(grade_id)
@@ -260,7 +320,7 @@ class SchoolService:
     def get_grade_by_id(
         self, grade_id: str | ObjectId
     ) -> Optional[GradeRecord]:
-        oid = mongo_converter.convert_to_object_id(grade_id)
+        oid = self._oid(grade_id)
         return self.grade_repo.find_by_id(oid)
 
     # ===========================
@@ -284,7 +344,7 @@ class SchoolService:
 
 
     def get_subject_by_id(self, subject_id: str | ObjectId) -> Subject | None:
-        oid = mongo_converter.convert_to_object_id(subject_id)
+        oid = self._oid(subject_id)
         return self.subject_repo.find_by_id(oid)
 
 
@@ -292,7 +352,7 @@ class SchoolService:
         return self.subject_repo.find_by_code(code)
 
     def deactivate_subject(self, subject_id: str | ObjectId) -> Subject | None:
-        oid = mongo_converter.convert_to_object_id(subject_id)
+        oid = self._oid(subject_id)
         subject = self.subject_repo.find_by_id(oid)
         if subject is None:
             raise SubjectNotFoundException(subject_id)
@@ -300,13 +360,37 @@ class SchoolService:
         return self.subject_repo.update(subject)
 
     def activate_subject(self, subject_id: str | ObjectId) -> Subject | None:
-        oid = mongo_converter.convert_to_object_id(subject_id)
+        oid = self._oid(subject_id)
         subject = self.subject_repo.find_by_id(oid)
         if subject is None:
             raise SubjectNotFoundException(subject_id)
         subject.activate()
         return self.subject_repo.update(subject)
 
+
+    def soft_delete_subject(self, subject_id: str | ObjectId, actor_id: str | ObjectId) -> bool:
+        oid = self._oid(subject_id)
+        actor_oid = self._oid(actor_id)
+
+        self.subject_lifecycle.soft_delete_subject(oid, actor_oid)
+        return True
+
+    def restore_subject(self, subject_id: str | ObjectId) -> bool:
+        oid = self._oid(subject_id)
+        self.subject_lifecycle.restore_subject(oid)
+        return True
+
+    def hard_delete_subject(self, subject_id: str | ObjectId, actor_id: str | ObjectId) -> bool:
+        oid = self._oid(subject_id)
+        actor_oid = self._oid(actor_id)
+
+        self.subject_lifecycle.hard_delete_subject(oid, actor_oid)
+        return True
+
+    def set_subject_active(self, subject_id: str | ObjectId, is_active: bool) -> bool:
+        oid = self._oid(subject_id)
+        self.subject_lifecycle.set_subject_active(oid, is_active)
+        return True
     # ============================================================
     # Schedule use cases
     # ============================================================
@@ -327,8 +411,8 @@ class SchoolService:
         - You can add conflict checks in a separate service/read model later
         """
 
-        class_oid = mongo_converter.convert_to_object_id(class_id)
-        teacher_oid = mongo_converter.convert_to_object_id(teacher_id)
+        class_oid = self._oid(class_id)
+        teacher_oid = self._oid(teacher_id)
 
         # Ensure class exists (good guard)
         section = self.class_repo.find_by_id(class_oid)
@@ -357,7 +441,7 @@ class SchoolService:
         Admin use case:
         - Move existing schedule slot to a new day/time
         """
-        oid = mongo_converter.convert_to_object_id(slot_id)
+        oid = self._oid(slot_id)
         slot = self.schedule_repo.find_by_id(oid)
         if slot is None:
             raise ScheduleNotFoundException(oid)
@@ -374,6 +458,32 @@ class SchoolService:
         return updated
 
     def delete_schedule_slot(self, slot_id: str | ObjectId) -> bool:
-        oid = mongo_converter.convert_to_object_id(slot_id)
+        oid = self._oid(slot_id)
         return self.schedule_repo.delete(oid)
 
+    def assign_teacher_to_class(self, class_id: str | ObjectId, teacher_id: str | ObjectId) -> bool:
+        section = self.class_repo.find_by_id(class_id)
+        if section is None:
+            raise ClassNotFoundException(class_id)
+        section.assign_teacher(teacher_id)
+        return self.class_repo.update(section)
+
+
+    def soft_delete_schedule_slot(self, slot_id: str | ObjectId, actor_id: str | ObjectId) -> bool:
+        oid = self._oid(slot_id)
+        actor_oid = self._oid(actor_id)
+
+        self.schedule_lifecycle.soft_delete_slot(oid, actor_oid)
+        return True
+
+    def restore_schedule_slot(self, slot_id: str | ObjectId) -> bool:
+        oid = self._oid(slot_id)
+        self.schedule_lifecycle.restore_slot(oid)
+        return True
+
+    def hard_delete_schedule_slot(self, slot_id: str | ObjectId, actor_id: str | ObjectId) -> bool:
+        oid = self._oid(slot_id)
+        actor_oid = self._oid(actor_id)
+
+        self.schedule_lifecycle.hard_delete_slot(oid, actor_oid)
+        return True

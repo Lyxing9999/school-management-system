@@ -4,29 +4,27 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 from enum import Enum
 from app.contexts.shared.enum.roles import SystemRole
-from app.contexts.iam.error.iam_exception import InvalidRoleException, UserDeletedException 
+from app.contexts.iam.error.iam_exception import InvalidRoleException, UserDeletedException
+from app.contexts.shared.lifecycle.domain import Lifecycle  
 
-from app.contexts.shared.lifecycle.types import Status
+
+class IAMStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DISABLED = "disabled"
 
 
-# -------------------------
-# Domain Model
-# -------------------------
 class IAM:
     def __init__(
         self,
         email: str,
         password: str,
         role: SystemRole,
-        status: Status = Status.ACTIVE,
         id: ObjectId | None = None,
         username: str | None = None,
         created_by: ObjectId | None = None,
-        created_at: datetime | None = None,
-        updated_at: datetime | None = None,
-        deleted: bool = False,
-        deleted_at: datetime | None = None,
-        deleted_by: ObjectId | None = None
+        status: IAMStatus | str = IAMStatus.ACTIVE,
+        lifecycle: Lifecycle | None = None,
     ):
         self.id = id or ObjectId()
         self._email = email
@@ -34,12 +32,8 @@ class IAM:
         self._role = self._validate_role(role)
         self._username = username
         self.created_by = created_by or "self_created"
-        self.created_at = created_at or datetime.utcnow()
-        self.updated_at = updated_at or datetime.utcnow()
-        self.deleted = deleted
-        self.deleted_at = deleted_at
-        self.deleted_by = deleted_by
-        self.status = status
+        self.status = IAMStatus(status) if isinstance(status, str) else status
+        self.lifecycle = lifecycle or Lifecycle()
 
     # ---------- Properties ----------
     @property
@@ -73,16 +67,26 @@ class IAM:
         self._role = self._validate_role(value)
         self._mark_updated()
 
-    # ---------- Methods ----------
-    def _mark_updated(self):
-        self.updated_at = datetime.utcnow()
+    # ---------- Lifecycle-backed timestamps ----------
+    @property
+    def created_at(self) -> datetime:
+        return self.lifecycle.created_at
 
+    @property
+    def updated_at(self) -> datetime:
+        return self.lifecycle.updated_at
+
+    def _mark_updated(self):
+        self.lifecycle.touch()
+
+    # ---------- Business ----------
     def check_password(self, password: str, auth_service) -> bool:
         return auth_service.verify_password(password, self._password)
 
     def update_info(self, email: str | None = None, username: str | None = None, password: str | None = None):
         if self.is_deleted():
             raise UserDeletedException(self.id)
+
         updated = False
         if email is not None:
             self._email = email
@@ -93,57 +97,41 @@ class IAM:
         if password is not None:
             self._password = password
             updated = True
+
         if updated:
             self._mark_updated()
 
+    # ---------- Delete / Restore ----------
     def is_deleted(self) -> bool:
-        return self.deleted
+        return self.lifecycle.is_deleted()
 
-
-    def is_inactive(self) -> bool:
-        return self.status == Status.INACTIVE
-
-
-
-    def soft_delete(self, deleted_by: ObjectId):
-        if self.deleted:
-            return False
-        self.status = Status.INACTIVE
-        self.deleted = True
-        self.deleted_at = datetime.utcnow()
-        self.deleted_by = deleted_by
-        self._mark_updated()
-        return True
-
-    def ready_for_purge(self, days: int = 30) -> bool:
-        return self.deleted and self.deleted_at and self.deleted_at < datetime.utcnow() - timedelta(days=days)
-
-
-    def set_status(self, status: Status):
-        if self.deleted:
-            raise UserDeletedException(self.id)
-        self.status = status
-        self._mark_updated()
-
+    def soft_delete(self, actor_id: ObjectId):
+        self.lifecycle.soft_delete(actor_id)
 
     def restore(self):
-        self.status = Status.ACTIVE
-        self.deleted = False
-        self.deleted_at = None
-        self.deleted_by = None
+        self.lifecycle.restore()
+
+    # ---------- Status (IAM domain, not lifecycle) ----------
+    def is_active(self) -> bool:
+        return (not self.is_deleted()) and self.status == IAMStatus.ACTIVE
+
+    def is_inactive(self) -> bool:
+        return self.status == IAMStatus.DISABLED
+
+    def set_status(self, status: IAMStatus | str):
+        if self.is_deleted():
+            raise UserDeletedException(self.id)
+        self.status = IAMStatus(status) if isinstance(status, str) else status
         self._mark_updated()
 
-    def is_active(self) -> bool:
-        return self.status == Status.ACTIVE and not self.deleted
-
-
+    # ---------- Purge helper ----------
+    def ready_for_purge(self, days: int = 30) -> bool:
+        if not self.is_deleted() or self.lifecycle.deleted_at is None:
+            return False
+        return self.lifecycle.deleted_at < datetime.utcnow() - timedelta(days=days)
 
     @staticmethod
     def _validate_role(role: Enum | str) -> SystemRole:
-        """
-        Accept SystemRole, UserRole, StaffRole, or string.
-        Normalize into SystemRole.
-        """
         try:
             if isinstance(role, SystemRole):
                 return role
@@ -154,6 +142,3 @@ class IAM:
             raise InvalidRoleException(role)
         except ValueError:
             raise InvalidRoleException(role)
-
-
-

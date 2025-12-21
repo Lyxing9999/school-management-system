@@ -5,7 +5,7 @@ from pymongo.database import Database
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
 
 from app.contexts.iam.read_models.iam_read_model import IAMReadModel
-from app.contexts.staff.read_model import StaffReadModel
+from app.contexts.staff.read_models.staff_read_model import StaffReadModel
 from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
 from app.contexts.school.read_models.subject_read_model import SubjectReadModel
 from app.contexts.school.read_models.class_read_model import ClassReadModel
@@ -135,12 +135,36 @@ class AdminReadModel(MongoErrorMixin):
 
         items.sort(key=lambda x: (x["label"] or "").lower())
         return items
+
+    def admin_list_enrollment_student_select(self, class_id: str | ObjectId) -> List[dict]:
+        coid = mongo_converter.convert_to_object_id(class_id)
+
+        filter_ = {
+            "deleted": {"$ne": True},
+            "status": "Active",
+            "$or": [
+                {"current_class_id": coid},             # already in this class
+                {"current_class_id": {"$exists": False}}, # not enrolled
+                {"current_class_id": None},              # not enrolled
+            ],
+        }
+
+        docs = self._student_read_model.list_student_name_options(filter=filter_, projection={"_id": 1})
+        student_ids = [d["_id"] for d in docs if d.get("_id")]
+        return self._display_name_service.student_select_options_for_ids(student_ids)
     
     def admin_list_students_in_class_select_options(self, class_id: str | ObjectId) -> List[dict]:
-        student_ids = self._student_read_model.list_student_ids_by_current_class_ids([class_id])
+        """
+        Return students who are Active and NOT enrolled in any class (current_class_id missing or null).
+        """
+        coid = mongo_converter.convert_to_object_id(class_id)
+        docs = self._student_read_model.list_students_by_current_class_id(class_id=coid, projection={"_id": 1})
+        student_ids = [d["_id"] for d in docs if d.get("_id")]
         return self._display_name_service.student_select_options_for_ids(student_ids)
 
+
     def admin_list_class_select(self) -> List[dict]:
+
         """
         For class dropdowns: returns [{_id, name}, ...] for classes.
         """

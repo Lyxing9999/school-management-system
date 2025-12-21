@@ -10,7 +10,7 @@ from app.contexts.iam.read_models.iam_read_model import IAMReadModel
 from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
 from app.contexts.student.read_models.student_read_model import StudentReadModel
 from app.contexts.school.read_models.subject_read_model import SubjectReadModel
-from app.contexts.staff.read_model import StaffReadModel
+from app.contexts.staff.read_models.staff_read_model import StaffReadModel
 
 from app.contexts.shared.model_converter import mongo_converter
 

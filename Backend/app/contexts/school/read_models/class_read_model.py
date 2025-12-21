@@ -40,7 +40,7 @@ class ClassReadModel:
         """
         oid = self._normalize_id(id_)
         doc = self.collection.find_one(
-            {"_id": oid, "deleted": {"$ne": True}}
+            {"_id": oid}
         )
         return doc
 
@@ -50,7 +50,7 @@ class ClassReadModel:
         Used by ClassFactory to enforce unique class names.
         """
         doc = self.collection.find_one(
-            {"name": name, "deleted": {"$ne": True}}
+            {"name": name}
         )
         return doc
 
@@ -60,7 +60,7 @@ class ClassReadModel:
         """
         oid = self._normalize_id(class_id)
         doc = self.collection.find_one(
-            {"_id": oid, "deleted": {"$ne": True}},
+            {"_id": oid},
             {"name": 1},
         )
         if not doc:
@@ -72,26 +72,25 @@ class ClassReadModel:
         oids = self._normalize_ids(class_ids)
         if not oids:
             return []
-        return list(self.collection.find({"_id": {"$in": oids}, "deleted": {"$ne": True}}))
+        return list(self.collection.find({"_id": {"$in": oids}}))
     # ------------ public API: class lists ------------
 
     def list_all(self) -> List[Dict]:
         """
-        Return all non-deleted class documents as plain dicts.
+        Return all class documents as plain dicts.
         """
-        cursor = self.collection.find({"deleted": {"$ne": True}})
+        cursor = self.collection.find({})
         return list(cursor)
 
     def list_classes_for_teacher(self, teacher_id: str | ObjectId) -> List[Dict]:
         """
-        Return all non-deleted class documents where the given teacher is assigned.
+        Return all class documents where the given teacher is assigned.
         """
         oid = self._normalize_id(teacher_id)
         return list(
             self.collection.find(
                 {
                     "teacher_id": oid,
-                    "deleted": {"$ne": True},
                 }
             )
         )
@@ -108,7 +107,7 @@ class ClassReadModel:
         """
         oid = self._normalize_id(class_id)
         doc = self.collection.find_one(
-            {"_id": oid, "deleted": {"$ne": True}},
+            {"_id": oid},
             {"subject_ids": 1},
         )
         if not doc:
@@ -120,11 +119,11 @@ class ClassReadModel:
 
     def list_class_names(self) -> List[Dict]:
         """
-        Return all non-deleted classes with only the name field projected.
+        Return all classes with only the name field projected.
         Each dict will contain at least `_id` and `name`.
         """
         cursor = self.collection.find(
-            {"deleted": {"$ne": True}},
+        
             {"name": 1},
         )
         return list(cursor)
@@ -137,7 +136,7 @@ class ClassReadModel:
         if not class_ids:
             return {}
         cursor = self.collection.find(
-            {"_id": {"$in": class_ids}, "deleted": {"$ne": True}},
+            {"_id": {"$in": class_ids}},
             {"_id": 1, "name": 1},
         )
         result: Dict[ObjectId, str] = {}
@@ -187,7 +186,6 @@ class ClassReadModel:
         return self.collection.count_documents(
             {
                 "teacher_id": oid,
-                "deleted": {"$ne": True},
             }
         )
 
@@ -209,7 +207,6 @@ class ClassReadModel:
         try:
             query = {
                 "teacher_id": teacher_id,
-                "deleted": {"$ne": True},
             }
 
             docs: List[Dict] = list(self.collection.find(query))
@@ -249,6 +246,6 @@ class ClassReadModel:
 
     def count_active_classes(self) -> int:
         """
-        Return the count of active classes.
+        Return the count of all classes.
         """
-        return self.collection.count_documents({"deleted": {"$ne": True}})
+        return self.collection.count_documents({})
