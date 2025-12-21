@@ -11,7 +11,7 @@ export interface AdminGetUserItemData extends UserBaseDataDTO {
   created_by_name: string;
 }
 export interface AdminGetPageUserData {
-  users: AdminGetUserItemData[];
+  items: AdminGetUserItemData[];
   page: number;
   page_size: number;
   total: number;

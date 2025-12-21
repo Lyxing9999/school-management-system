@@ -43,12 +43,12 @@ const menus: Record<RoleKey, MenuItem[]> = {
       icon: "Calendar",
       route: ROUTES.ADMIN.MANAGE_SCHEDULES,
     },
-    { title: "Notifications", icon: "Bell", route: ROUTES.ADMIN.NOTIFICATIONS },
     {
       title: "System Events",
       icon: "Tickets",
       route: ROUTES.ADMIN.SYSTEM_EVENTS,
     },
+    { title: "Notifications", icon: "Bell", route: ROUTES.ADMIN.NOTIFICATIONS },
     { title: "Settings", icon: "Setting", route: ROUTES.ADMIN.SETTINGS },
   ],
   TEACHER: [

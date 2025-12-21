@@ -30,8 +30,8 @@ const innerValue = computed({
   <RemoteSelect
     v-model="innerValue"
     :fetcher="fetchTeachers"
-    label-key="staff_name"
-    value-key="id"
+    label-key="label"
+    value-key="value"
     :placeholder="placeholder ?? 'Select teacher'"
     :disabled="disabled"
     clearable

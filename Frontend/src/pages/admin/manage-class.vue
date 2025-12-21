@@ -10,7 +10,7 @@ import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
-import StudentSelect from "~/components/Selects/StudentSelect.vue";
+import StudentEnrollmentSelect from "~/components/Selects/StudentEnrollmentSelect.vue.vue";
 import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
@@ -222,15 +222,14 @@ const manageRelationsFields = computed<Field<ManageClassRelationsForm>[]>(
     {
       key: "student_ids",
       label: "Students",
-      component: StudentSelect,
+      component: StudentEnrollmentSelect,
       formItemProps: { label: "Students" },
       componentProps: {
+        classId: currentClassForStudents.value?.id ?? "", // ✅ add this
         multiple: true,
         placeholder: "Select students to enroll",
         loading: studentsInClassLoading.value,
-
-        // ✅ IMPORTANT: StudentSelect expects `options` prop
-        options: studentSelectPreloaded, // Ref<array> is fine
+        options: studentSelectPreloaded,
       },
     },
     {
@@ -267,7 +266,7 @@ async function openManageStudentsDialog(row: AdminClassRow) {
 
   try {
     const res = await adminApi.class.listStudentsInClass(row.id);
-
+    console.log(res);
     studentSelectPreloaded.value = res.items ?? [];
 
     manageRelationsForm.value = {

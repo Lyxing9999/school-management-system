@@ -6,7 +6,6 @@ definePageMeta({ layout: "admin" });
 /* ------------------------------------
  * Base components
  * ---------------------------------- */
-
 import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
@@ -52,16 +51,13 @@ import { useHeaderState } from "~/composables/useHeaderState";
 const adminApi = adminService();
 
 /* ---------------------- mode ---------------------- */
-
 const viewMode = ref<"class" | "teacher">("class");
 
 /* ---------------------- selection state ---------------------- */
-
 const selectedClassId = ref<string>("");
 const selectedTeacherId = ref<string>("");
 
 /* ---------------------- pagination filter model ---------------------- */
-
 type ScheduleFilter = {
   mode: "class" | "teacher";
   classId?: string;
@@ -88,7 +84,6 @@ watch(
 );
 
 /* ---------------------- paginated fetch ---------------------- */
-
 const {
   data: slots,
   loading: tableLoading,
@@ -137,7 +132,6 @@ const {
 const filteredSlots = computed(() => slots.value);
 
 /* ---------------------- filters / visibility ---------------------- */
-
 const hasSelectedFilter = computed(
   () =>
     (scheduleFilter.value.mode === "class" && !!scheduleFilter.value.classId) ||
@@ -164,7 +158,6 @@ const showInitialEmptyState = computed(
 );
 
 /* ---------------------- dropdown options ---------------------- */
-
 const classOptions = ref<{ value: string; label: string }[]>([]);
 const teacherOptions = ref<{ value: string; label: string }[]>([]);
 const optionsLoading = ref({ classes: false, teachers: false });
@@ -194,7 +187,7 @@ async function fetchClassOptions() {
 async function fetchTeacherOptions() {
   optionsLoading.value.teachers = true;
   try {
-    const res: any = await adminApi.staff.getTeacherSelect();
+    const res: any = await adminApi.staff.listTeacherSelect();
     const items = res?.items ?? [];
 
     teacherOptions.value = items
@@ -213,11 +206,9 @@ async function fetchTeacherOptions() {
 }
 
 /* ---------------------- columns ---------------------- */
-
 const scheduleColumns = createScheduleColumns(teacherLabelMap);
 
 /* ---------------------- dynamic create form ---------------------- */
-
 type CreateMode = "SCHEDULE_SLOT";
 const formEntity = ref<CreateMode>("SCHEDULE_SLOT");
 
@@ -264,7 +255,6 @@ const handleCancelCreateForm = () => {
 };
 
 /* ---------------------- dynamic edit form ---------------------- */
-
 const {
   formDialogVisible: editFormVisible,
   formData: editFormData,
@@ -292,7 +282,6 @@ const handleOpenEditForm = async (row: AdminScheduleSlotData) => {
 };
 
 const handleSaveEditForm = (payload: Partial<any>) => {
-  // fixed: remove stray "saveForm:" here
   saveEditForm(payload, "PUT");
 };
 
@@ -301,7 +290,6 @@ const handleCancelEditForm = () => {
 };
 
 /* ---------------------- delete ---------------------- */
-
 const deleteLoading = ref<Record<string | number, boolean>>({});
 
 async function handleSoftDelete(row: AdminScheduleSlotData) {
@@ -328,31 +316,24 @@ async function handleSoftDelete(row: AdminScheduleSlotData) {
 }
 
 /* ---------------------- schedule fetch wrapper ---------------------- */
-
 async function fetchSchedule(page: number = currentPage.value || 1) {
   if (!hasSelectedFilter.value) return;
   await fetchPage(page);
 }
 
 /* ---------------------- lifecycle ---------------------- */
-
 onMounted(async () => {
   await Promise.all([fetchClassOptions(), fetchTeacherOptions()]);
   await fetchSchedule(1);
 });
 
 /* ---------------------- watch: viewMode / filters ---------------------- */
-
 watch(viewMode, async (newMode) => {
   if (newMode === "class") {
-    if (classOptions.value.length === 0) {
-      await fetchClassOptions();
-    }
+    if (classOptions.value.length === 0) await fetchClassOptions();
     selectedTeacherId.value = "";
   } else {
-    if (teacherOptions.value.length === 0) {
-      await fetchTeacherOptions();
-    }
+    if (teacherOptions.value.length === 0) await fetchTeacherOptions();
     selectedClassId.value = "";
   }
 
@@ -368,7 +349,6 @@ watch([selectedClassId, selectedTeacherId], async () => {
 });
 
 /* ---------------------- header stats ---------------------- */
-
 const totalSlots = computed(() => totalRows.value ?? 0);
 
 const { headerState: scheduleHeaderStats } = useHeaderState({
@@ -404,27 +384,24 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
       :showRefresh="false"
       :stats="scheduleHeaderStats"
     >
-      <!-- Filters: mode + selector -->
       <template #filters>
         <div
           class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 w-full"
         >
           <!-- Mode toggle -->
           <div class="flex flex-col gap-1">
-            <span class="text-xs text-gray-500">View by:</span>
+            <span class="text-xs schedule-muted">View by:</span>
             <ElRadioGroup v-model="viewMode" size="small">
-              <ElRadioButton label="class" class="mr-2">
-                By Class
-              </ElRadioButton>
-              <ElRadioButton label="teacher" class="ml-2">
-                By Teacher
-              </ElRadioButton>
+              <ElRadioButton label="class" class="mr-2">By Class</ElRadioButton>
+              <ElRadioButton label="teacher" class="ml-2"
+                >By Teacher</ElRadioButton
+              >
             </ElRadioGroup>
           </div>
 
-          <!-- Selector (class / teacher) -->
+          <!-- Selector -->
           <div class="flex flex-col gap-1 w-full md:w-auto md:max-w-xs">
-            <span class="text-xs text-gray-500">
+            <span class="text-xs schedule-muted">
               {{ viewMode === "class" ? "Class:" : "Teacher:" }}
             </span>
 
@@ -459,7 +436,6 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
         </div>
       </template>
 
-      <!-- Actions: Refresh + Add Slot -->
       <template #actions>
         <BaseButton
           plain
@@ -481,13 +457,13 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
       </template>
     </OverviewHeader>
 
-    <!-- MAIN CARD -->
-    <div
-      class="mx-0 md:mx-1 p-4 bg-white rounded-2xl shadow-sm border border-gray-200/60"
-    >
-      <!-- Small contextual label instead of a second big header -->
+    <!-- MAIN CARD (token-driven: works in light + dark) -->
+    <div class="mx-0 md:mx-1 p-4 rounded-2xl schedule-surface">
+      <!-- Small contextual label -->
       <div class="mb-3 flex items-center justify-between">
-        <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">
+        <span
+          class="text-xs font-medium uppercase tracking-wide schedule-muted"
+        >
           {{ viewMode === "class" ? "Class schedule" : "Teacher schedule" }}
         </span>
       </div>
@@ -520,6 +496,7 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
           </SmartTable>
         </template>
       </el-card>
+
       <!-- Pagination -->
       <el-row v-if="showTable && totalRows > 0" justify="end" class="mt-4">
         <el-pagination
@@ -574,7 +551,6 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
     />
 
     <!-- EDIT DIALOG -->
-
     <SmartFormDialog
       :key="editFormDataKey"
       v-model:visible="editFormVisible"
@@ -590,7 +566,33 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
 </template>
 
 <style scoped>
+/* Token-driven card surface */
+.schedule-surface {
+  background: var(--color-card);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 22px var(--card-shadow);
+  color: var(--text-color);
+}
+
+/* Muted text aligned with your system */
+.schedule-muted {
+  color: var(--muted-color);
+}
+
+/* Your existing append padding */
 :deep(.el-input-group__append) {
   padding: 0 10px;
+}
+
+/* Make inner el-card not fight your outer surface */
+:deep(.el-card) {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+  box-shadow: none;
+}
+
+:deep(.el-card__body) {
+  background: transparent;
+  padding: 12px;
 }
 </style>

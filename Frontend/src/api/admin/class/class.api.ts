@@ -42,6 +42,12 @@ export class ClassApi {
     );
     return res.data;
   }
+  async listStudentsForEnrollmentSelect(classID: string) {
+    const res = await this.$api.get<any>(
+      `${this.baseURL}/${classID}/enrollment-student-select`
+    );
+    return res.data;
+  }
   // ============
   // COMMANDS
   // ============

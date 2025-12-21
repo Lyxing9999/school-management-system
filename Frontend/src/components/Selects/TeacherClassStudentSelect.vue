@@ -30,7 +30,6 @@ const innerValue = computed({
   get: () => props.modelValue,
   set: (v) => emit("update:modelValue", v),
 });
-
 </script>
 
 <template>

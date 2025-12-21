@@ -23,12 +23,12 @@ export interface AdminUpdateStaff {
 }
 
 export interface AdminStaffNameSelectData {
-  id: string;
-  staff_name: string;
+  value: string;
+  label: string;
 }
 export interface AdminTeacherNameSelectData {
-  id: string;
-  staff_name: string;
+  value: string;
+  label: string;
 }
 export interface AdminTeacherSelectListData {
   items: AdminTeacherNameSelectData[];

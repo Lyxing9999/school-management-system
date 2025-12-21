@@ -8,13 +8,13 @@ const adminApi = adminService();
 type StudentValue = string | string[] | null;
 
 const props = defineProps<{
+  classId: string;
   modelValue: StudentValue;
   placeholder?: string;
   disabled?: boolean;
   multiple?: boolean;
   loading?: boolean;
 
-  // passed via componentProps.options from your Field renderer
   options?:
     | { value: string; label: string }[]
     | (() => { value: string; label: string }[]);
@@ -23,16 +23,18 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "update:modelValue", value: StudentValue): void;
 }>();
-
-let cachedAll: { value: string; label: string }[] | null = null;
-
+watch(
+  () => props.classId,
+  () => {
+    fetchAllStudents();
+  }
+);
 const fetchAllStudents = async () => {
-  if (cachedAll) return cachedAll;
-
-  const res = await adminApi.student.listStudentNamesSelect();
-
-  cachedAll = res?.items ?? [];
-  return cachedAll;
+  if (!props.classId) return [];
+  const res = await adminApi.class.listStudentsForEnrollmentSelect(
+    props.classId
+  );
+  return res?.items ?? [];
 };
 
 const innerValue = computed({
@@ -45,7 +47,6 @@ const resolvedPreloaded = computed(() => {
   return typeof props.options === "function" ? props.options() : props.options;
 });
 </script>
-
 <template>
   <div class="relative" v-loading="!!props.loading">
     <RemoteSelect

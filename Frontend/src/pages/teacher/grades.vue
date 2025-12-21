@@ -171,6 +171,10 @@ const gradeColumns: ColumnConfig<GradeEnriched>[] = [
       };
     },
   },
+
+
+
+  
   {
     key: "type",
     label: "Type",

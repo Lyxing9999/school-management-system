@@ -46,7 +46,12 @@ export class ClassService {
     );
     return data!;
   }
-
+  async listStudentsForEnrollmentSelect(classID: string) {
+    const data = await this.callApi<AdminStudentSelectDTO[]>(() =>
+      this.classApi.listStudentsForEnrollmentSelect(classID)
+    );
+    return data!;
+  }
   // ============
   // COMMANDS
   // ============

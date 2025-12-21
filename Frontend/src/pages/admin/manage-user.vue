@@ -233,7 +233,7 @@ const fetchUsers = async (
     signal
   );
 
-  const items = res?.users ?? [];
+  const items = res?.items ?? [];
   const total = res?.total ?? 0;
 
   setInlineData(items);
