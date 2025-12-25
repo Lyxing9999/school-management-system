@@ -3,9 +3,7 @@ from typing import List, Union, Dict, Any
 from bson import ObjectId
 from pymongo.database import Database
 
-from app.contexts.school.services.school_service import SchoolService
-
-
+from app.contexts.school.services.legacy.school_service import SchoolService
 from app.contexts.teacher.data_transfer.requests import (
     TeacherMarkAttendanceRequest,
     TeacherChangeAttendanceStatusRequest,

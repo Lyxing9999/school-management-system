@@ -1,9 +1,9 @@
 from flask import request, g
 from app.contexts.admin.routes import admin_bp
 from app.contexts.shared.decorators.response_decorator import wrap_response
-from app.contexts.auth.jwt_utils import role_required
+from app.contexts.iam.auth.jwt_utils import role_required
 from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
-from app.contexts.core.security.auth_utils import get_current_user_id
+from app.contexts.core.security.auth_utils import get_current_staff_id
 from app.contexts.admin.data_transfer.requests import (
     AdminCreateStaffSchema, AdminUpdateStaffSchema
 )
@@ -17,7 +17,7 @@ from app.contexts.admin.data_transfer.responses import AdminUserStaffDataDTO, Ad
 @wrap_response
 def admin_add_staff():
     payload = pydantic_converter.convert_to_model(request.json, AdminCreateStaffSchema)
-    admin_id = get_current_user_id()
+    admin_id = get_current_staff_id()
 
     user_dto, staff_dto = g.admin.facade.admin_create_staff_workflow(payload, admin_id)
     user_dto = IAMMapper.to_dto(user_dto)

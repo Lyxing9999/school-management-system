@@ -1,7 +1,7 @@
 
 from app.contexts.iam.domain.iam import IAM
 from app.contexts.shared.enum.roles import SystemRole
-from app.contexts.auth.services import get_auth_service
+from app.contexts.iam.auth.services import get_auth_service
 from app.contexts.iam.policies.iam_uniqueness_policy import IAMUniquenessPolicy
 from app.contexts.iam.read_models.iam_read_model import IAMReadModel
 # -------------------------

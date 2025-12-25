@@ -1,6 +1,5 @@
 from __future__ import annotations
 from bson import ObjectId
-from datetime import datetime
 
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
 from pymongo.collection import Collection

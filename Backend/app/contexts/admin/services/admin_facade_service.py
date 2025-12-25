@@ -23,9 +23,7 @@ from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 from app.contexts.iam.domain.iam import IAM
 from app.contexts.staff.domain.staff import Staff
 
-# Imports Errors & Utils
-from app.contexts.admin.error.admin_exception import CannotDeleteUserInUseException
-from app.contexts.shared.model_converter import mongo_converter
+
 
 class AdminFacadeService:
     def __init__(self, db: Database):

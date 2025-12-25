@@ -2,7 +2,7 @@ from typing import Optional
 from bson import ObjectId
 from pymongo.database import Database
 
-from app.contexts.school.services.school_service import SchoolService
+from app.contexts.school.services.legacy.school_service import SchoolService
 from app.contexts.school.domain.subject import Subject
 from app.contexts.admin.data_transfer.requests import AdminCreateSubjectSchema
 from app.contexts.school.read_models.subject_read_model import SubjectReadModel

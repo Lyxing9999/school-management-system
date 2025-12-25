@@ -4,6 +4,7 @@ from app.contexts.shared.enum.roles import SystemRole
 from datetime import datetime
 from pydantic import ConfigDict
 from app.contexts.iam.domain.iam import IAMStatus
+from app.contexts.shared.lifecycle.dto import LifecycleDTO 
 
 # -------------------------
 # Base User DTO
@@ -21,11 +22,7 @@ class IAMBaseDataDTO(BaseModel):
     username: str 
     status: IAMStatus 
     created_by: str 
-    created_at: datetime 
-    updated_at: datetime 
-    deleted: bool | None = False 
-    deleted_at: datetime | None  = None
-    deleted_by: str | None = None 
+    lifecycle: LifecycleDTO
 
 
 # -------------------------

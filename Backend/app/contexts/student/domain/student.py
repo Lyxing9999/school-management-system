@@ -14,6 +14,8 @@ from app.contexts.student.errors.student_exceptions import (
     StudentCannotJoinClassWhenNotActiveException
 )
 
+from app.contexts.shared.lifecycle.domain import Lifecycle
+
 # --- Enums ---
 class Gender(str, Enum):
     MALE = "Male"
@@ -54,10 +56,8 @@ class Student:
         phone_number: Optional[str] = None,
         address: Optional[Dict] = None,
         guardians: Optional[List[Dict]] = None,
-        status: StudentStatus | str = StudentStatus.ACTIVE,
-        delete: bool = False,
-        created_at: Optional[datetime] = None,
-        updated_at: Optional[datetime] = None,
+        status: StudentStatus | str = StudentStatus.ACTIVE, 
+        lifecycle: Optional[Lifecycle] = None,
         history: Optional[List[Dict[str, Any]]] = None,
     ):
         self.id = id or ObjectId()
@@ -86,14 +86,12 @@ class Student:
         
         # Meta
         self.status = StudentStatus(status) if isinstance(status, str) else status
-        self.delete = delete 
-        self.created_at = created_at or datetime.utcnow()
-        self.updated_at = updated_at or datetime.utcnow()
+        self.lifecycle = lifecycle or Lifecycle()
         self.history: List[Dict[str, Any]] = history or []
 
     # --- Utility Methods ---
     def touch(self):
-        self.updated_at = datetime.utcnow()
+        self.lifecycle.touch()
 
     @property
     def full_name_en(self) -> str:

@@ -13,7 +13,7 @@ from app.contexts.admin.data_transfer.requests import (
     AdminUpdateUserSchema,
     AdminSetUserStatusSchema,
 )
-from app.contexts.auth.services import AuthService
+from app.contexts.iam.auth.services import AuthService
 from app.contexts.iam.error.iam_exception import NotFoundUserException
 
 from app.contexts.iam.domain.iam import IAM

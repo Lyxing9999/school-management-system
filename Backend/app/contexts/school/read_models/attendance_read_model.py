@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime, date as date_type, time
 from typing import Optional, List, Dict, Union, Any
 
@@ -6,12 +8,16 @@ from pymongo.database import Database
 from pymongo.collection import Collection
 
 from app.contexts.shared.model_converter import mongo_converter
+from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
 
 
-class AttendanceReadModel:
+class AttendanceReadModel(MongoErrorMixin):
     """
     Read model to check existing attendance records
-    and list attendance by various filters.
+    and list/aggregate attendance by various filters.
+
+    Canonical date field: `record_date` (datetime).
+    Backward-compatible with legacy field: `date` (datetime).
     """
 
     def __init__(self, db: Database):
@@ -19,6 +25,52 @@ class AttendanceReadModel:
 
     def _normalize_id(self, id_: Union[str, ObjectId]) -> ObjectId:
         return mongo_converter.convert_to_object_id(id_)
+
+    def _to_midnight_dt(self, d: Union[date_type, datetime]) -> datetime:
+        """
+        Normalize a date or datetime to a datetime at 00:00:00.
+        """
+        if isinstance(d, date_type) and not isinstance(d, datetime):
+            return datetime.combine(d, time.min)
+        # if it is datetime already, keep as-is (caller can pass midnight if desired)
+        return d
+
+    def _normalized_record_date_add_fields_stage(self) -> Dict[str, Any]:
+        """
+        Adds `record_date_dt` as a safe datetime converted from `record_date` or legacy `date`.
+        """
+        return {
+            "$addFields": {
+                "record_date_dt": {
+                    "$convert": {
+                        "input": {"$ifNull": ["$record_date", "$date"]},
+                        "to": "date",
+                        "onError": None,
+                        "onNull": None,
+                    }
+                }
+            }
+        }
+
+    def _normalized_record_date_match_stage(self) -> Dict[str, Any]:
+        """
+        Ensures `record_date_dt` exists and is a valid datetime.
+        """
+        return {"$match": {"record_date_dt": {"$ne": None}}}
+
+    def _range_match_on_normalized_date(
+        self,
+        date_from: datetime | None,
+        date_to: datetime | None,
+    ) -> Dict[str, Any] | None:
+        if not (date_from or date_to):
+            return None
+        rng: Dict[str, Any] = {}
+        if date_from:
+            rng["$gte"] = date_from
+        if date_to:
+            rng["$lte"] = date_to
+        return {"$match": {"record_date_dt": rng}}
 
     def get_by_student_class_date(
         self,
@@ -29,16 +81,13 @@ class AttendanceReadModel:
         """
         Find an attendance record for (student, class, date).
 
-        If record_date is None, treat it as "today" (UTC),
-        mirroring the factory's 'default to today' behavior.
+        If record_date is None, treat it as "today" (UTC).
+        Backward-compatible: matches either `record_date` or legacy `date`.
         """
         if record_date is None:
             record_date = datetime.utcnow().date()
 
-        if isinstance(record_date, date_type) and not isinstance(record_date, datetime):
-            record_dt = datetime.combine(record_date, time.min)
-        else:
-            record_dt = record_date  # already datetime
+        record_dt = self._to_midnight_dt(record_date)
 
         sid = self._normalize_id(student_id)
         cid = self._normalize_id(class_id)
@@ -47,7 +96,10 @@ class AttendanceReadModel:
             {
                 "student_id": sid,
                 "class_id": cid,
-                "date": record_dt,
+                "$or": [
+                    {"record_date": record_dt},
+                    {"date": record_dt},  # legacy field
+                ],
             }
         )
 
@@ -69,7 +121,7 @@ class AttendanceReadModel:
         student_id: Optional[Union[str, ObjectId]] = None,
     ) -> List[Dict]:
         cid = self._normalize_id(class_id)
-        query: Dict = {"class_id": cid}
+        query: Dict[str, Any] = {"class_id": cid}
 
         if student_id is not None:
             sid = self._normalize_id(student_id)
@@ -77,13 +129,10 @@ class AttendanceReadModel:
 
         return list(self._collection.find(query))
 
-    
-
-
     def aggregate_status_summary(
         self,
-        date_from: str | None = None,
-        date_to: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
         class_id: ObjectId | None = None,
     ) -> List[Dict[str, Any]]:
         """
@@ -93,37 +142,27 @@ class AttendanceReadModel:
           { "status": "absent", "count": 45 },
           ...
         ]
+
+        Uses normalized date field `record_date_dt` (record_date or legacy date).
         """
         try:
-            match: Dict[str, Any] = {}
-            if date_from or date_to:
-                match["record_date"] = {}
-                if date_from:
-                    match["record_date"]["$gte"] = date_from
-                if date_to:
-                    match["record_date"]["$lte"] = date_to
-            if class_id:
-                match["class_id"] = class_id
+            pipeline: List[Dict[str, Any]] = [
+                self._normalized_record_date_add_fields_stage(),
+                self._normalized_record_date_match_stage(),
+            ]
 
-            pipeline = []
-            if match:
-                pipeline.append({"$match": match})
+            range_stage = self._range_match_on_normalized_date(date_from, date_to)
+            if range_stage:
+                pipeline.append(range_stage)
+
+            if class_id:
+                pipeline.append({"$match": {"class_id": class_id}})
 
             pipeline.extend(
                 [
-                    {
-                        "$group": {
-                            "_id": "$status",
-                            "count": {"$sum": 1},
-                        }
-                    },
-                    {
-                        "$project": {
-                            "_id": 0,
-                            "status": "$_id",
-                            "count": 1,
-                        }
-                    },
+                    {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+                    {"$project": {"_id": 0, "status": "$_id", "count": 1}},
+                    {"$sort": {"count": -1}},
                 ]
             )
 
@@ -138,344 +177,149 @@ class AttendanceReadModel:
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         class_id: ObjectId | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """
         [
-        { "date": "2025-11-25", "present": 45, "absent": 3, "excused": 2 },
-        ...
+          { "date": "2025-11-25", "present": 45, "absent": 3, "excused": 2 },
+          ...
         ]
+
+        Uses normalized date field `record_date_dt` (record_date or legacy date),
+        preventing `$dateToString` failures when the field is missing/invalid.
         """
         try:
-            match: dict[str, Any] = {}
-            if date_from or date_to:
-                match["record_date"] = {}
-                if date_from:
-                    match["record_date"]["$gte"] = date_from
-                if date_to:
-                    match["record_date"]["$lte"] = date_to
+            pipeline: List[Dict[str, Any]] = [
+                self._normalized_record_date_add_fields_stage(),
+                self._normalized_record_date_match_stage(),
+            ]
+
+            range_stage = self._range_match_on_normalized_date(date_from, date_to)
+            if range_stage:
+                pipeline.append(range_stage)
 
             if class_id:
-                match["class_id"] = class_id
+                pipeline.append({"$match": {"class_id": class_id}})
 
-            pipeline: list[dict[str, Any]] = []
-            if match:
-                pipeline.append({"$match": match})
-
-            pipeline.extend([
-                {
-                    "$group": {
-                        "_id": {
-                            "date": {
-                                "$dateToString": {
-                                    "format": "%Y-%m-%d",
-                                    "date": "$record_date",
-                                }
+            pipeline.extend(
+                [
+                    {
+                        "$group": {
+                            "_id": {
+                                "date": {
+                                    "$dateToString": {
+                                        "format": "%Y-%m-%d",
+                                        "date": "$record_date_dt",
+                                    }
+                                },
+                                "status": "$status",
                             },
-                            "status": "$status",
-                        },
-                        "count": {"$sum": 1},
-                    }
-                },
-                {
-                    "$group": {
-                        "_id": "$_id.date",
-                        "counts": {
-                            "$push": {
-                                "status": "$_id.status",
-                                "count": "$count",
-                            }
-                        },
-                    }
-                },
-                {
-                    "$project": {
-                        "_id": 0,
-                        "date": "$_id",
-                        "present": {
-                            "$let": {
-                                "vars": {
-                                    "found": {
-                                        "$first": {
-                                            "$filter": {
-                                                "input": "$counts",
-                                                "as": "c",
-                                                "cond": {"$eq": ["$$c.status", "present"]},
-                                            }
-                                        }
-                                    }
-                                },
-                                "in": {"$ifNull": ["$$found.count", 0]},
-                            }
-                        },
-                        "absent": {
-                            "$let": {
-                                "vars": {
-                                    "found": {
-                                        "$first": {
-                                            "$filter": {
-                                                "input": "$counts",
-                                                "as": "c",
-                                                "cond": {"$eq": ["$$c.status", "absent"]},
-                                            }
-                                        }
-                                    }
-                                },
-                                "in": {"$ifNull": ["$$found.count", 0]},
-                            }
-                        },
-                        "excused": {
-                            "$let": {
-                                "vars": {
-                                    "found": {
-                                        "$first": {
-                                            "$filter": {
-                                                "input": "$counts",
-                                                "as": "c",
-                                                "cond": {"$eq": ["$$c.status", "excused"]},
-                                            }
-                                        }
-                                    }
-                                },
-                                "in": {"$ifNull": ["$$found.count", 0]},
-                            }
-                        },
-                    }
-                },
-                {"$sort": {"date": 1}},
-            ])
+                            "count": {"$sum": 1},
+                        }
+                    },
+                    {
+                        "$group": {
+                            "_id": "$_id.date",
+                            "counts": {
+                                # build key/value pairs directly so we can $arrayToObject
+                                "$push": {"k": "$_id.status", "v": "$count"}
+                            },
+                        }
+                    },
+                    {
+                        "$project": {
+                            "_id": 0,
+                            "date": "$_id",
+                            "countsObj": {"$arrayToObject": "$counts"},
+                        }
+                    },
+                    {
+                        "$project": {
+                            "date": 1,
+                            "present": {"$ifNull": ["$countsObj.present", 0]},
+                            "absent": {"$ifNull": ["$countsObj.absent", 0]},
+                            "excused": {"$ifNull": ["$countsObj.excused", 0]},
+                        }
+                    },
+                    {"$sort": {"date": 1}},
+                ]
+            )
 
             return list(self._collection.aggregate(pipeline))
+
         except Exception as e:
             self._handle_mongo_error("aggregate_daily_status_counts", e)
             raise
-
-    def aggregate_daily_status_counts(
-        self,
-        date_from: datetime | None = None,
-        date_to: datetime | None = None,
-        class_id: ObjectId | None = None,
-    ) -> list[dict[str, Any]]:
-        """
-        [
-        { "date": "2025-11-25", "present": 45, "absent": 3, "excused": 2 },
-        ...
-        ]
-        """
-        try:
-            match: dict[str, Any] = {}
-            if date_from or date_to:
-                match["record_date"] = {}
-                if date_from:
-                    match["record_date"]["$gte"] = date_from
-                if date_to:
-                    match["record_date"]["$lte"] = date_to
-
-            if class_id:
-                match["class_id"] = class_id
-
-            pipeline: list[dict[str, Any]] = []
-            if match:
-                pipeline.append({"$match": match})
-
-            pipeline.extend([
-                {
-                    "$group": {
-                        "_id": {
-                            "date": {
-                                "$dateToString": {
-                                    "format": "%Y-%m-%d",
-                                    "date": "$record_date",
-                                }
-                            },
-                            "status": "$status",
-                        },
-                        "count": {"$sum": 1},
-                    }
-                },
-                {
-                    "$group": {
-                        "_id": "$_id.date",
-                        "counts": {
-                            "$push": {
-                                "status": "$_id.status",
-                                "count": "$count",
-                            }
-                        },
-                    }
-                },
-                {
-                    "$project": {
-                        "_id": 0,
-                        "date": "$_id",
-                        "present": {
-                            "$let": {
-                                "vars": {
-                                    "found": {
-                                        "$first": {
-                                            "$filter": {
-                                                "input": "$counts",
-                                                "as": "c",
-                                                "cond": {"$eq": ["$$c.status", "present"]},
-                                            }
-                                        }
-                                    }
-                                },
-                                "in": {"$ifNull": ["$$found.count", 0]},
-                            }
-                        },
-                        "absent": {
-                            "$let": {
-                                "vars": {
-                                    "found": {
-                                        "$first": {
-                                            "$filter": {
-                                                "input": "$counts",
-                                                "as": "c",
-                                                "cond": {"$eq": ["$$c.status", "absent"]},
-                                            }
-                                        }
-                                    }
-                                },
-                                "in": {"$ifNull": ["$$found.count", 0]},
-                            }
-                        },
-                        "excused": {
-                            "$let": {
-                                "vars": {
-                                    "found": {
-                                        "$first": {
-                                            "$filter": {
-                                                "input": "$counts",
-                                                "as": "c",
-                                                "cond": {"$eq": ["$$c.status", "excused"]},
-                                            }
-                                        }
-                                    }
-                                },
-                                "in": {"$ifNull": ["$$found.count", 0]},
-                            }
-                        },
-                    }
-                },
-                {"$sort": {"date": 1}},
-            ])
-
-            return list(self._collection.aggregate(pipeline))
-        except Exception as e:
-            self._handle_mongo_error("aggregate_daily_status_counts", e)
-            raise
-
 
     def aggregate_status_by_class(
         self,
         date_from: datetime | None = None,
         date_to: datetime | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """
         [
-        {
+          {
             "class_id": "69253bc39e97249bcea9ae28",
             "present": 30,
             "absent": 5,
             "excused": 2,
             "total": 37
-        },
-        ...
+          },
+          ...
         ]
+
+        Uses normalized date field `record_date_dt` (record_date or legacy date).
         """
         try:
-            match: dict[str, Any] = {}
-            if date_from or date_to:
-                match["record_date"] = {}
-                if date_from:
-                    match["record_date"]["$gte"] = date_from
-                if date_to:
-                    match["record_date"]["$lte"] = date_to
+            pipeline: List[Dict[str, Any]] = [
+                self._normalized_record_date_add_fields_stage(),
+                self._normalized_record_date_match_stage(),
+            ]
 
-            pipeline: list[dict[str, Any]] = []
-            if match:
-                pipeline.append({"$match": match})
+            range_stage = self._range_match_on_normalized_date(date_from, date_to)
+            if range_stage:
+                pipeline.append(range_stage)
 
-            pipeline.extend([
-                {
-                    "$group": {
-                        "_id": {
-                            "class_id": "$class_id",
-                            "status": "$status",
-                        },
-                        "count": {"$sum": 1},
-                    }
-                },
-                {
-                    "$group": {
-                        "_id": "$_id.class_id",
-                        "counts": {
-                            "$push": {
-                                "status": "$_id.status",
-                                "count": "$count",
-                            }
-                        },
-                        "total": {"$sum": "$count"},
-                    }
-                },
-                {
-                    "$project": {
-                        "_id": 0,
-                        "class_id": {"$toString": "$_id"},
-                        "total": 1,
-                        "present": {
-                            "$let": {
-                                "vars": {
-                                    "found": {
-                                        "$first": {
-                                            "$filter": {
-                                                "input": "$counts",
-                                                "as": "c",
-                                                "cond": {"$eq": ["$$c.status", "present"]},
-                                            }
-                                        }
-                                    }
-                                },
-                                "in": {"$ifNull": ["$$found.count", 0]},
-                            }
-                        },
-                        "absent": {
-                            "$let": {
-                                "vars": {
-                                    "found": {
-                                        "$first": {
-                                            "$filter": {
-                                                "input": "$counts",
-                                                "as": "c",
-                                                "cond": {"$eq": ["$$c.status", "absent"]},
-                                            }
-                                        }
-                                    }
-                                },
-                                "in": {"$ifNull": ["$$found.count", 0]},
-                            }
-                        },
-                        "excused": {
-                            "$let": {
-                                "vars": {
-                                    "found": {
-                                        "$first": {
-                                            "$filter": {
-                                                "input": "$counts",
-                                                "as": "c",
-                                                "cond": {"$eq": ["$$c.status", "excused"]},
-                                            }
-                                        }
-                                    }
-                                },
-                                "in": {"$ifNull": ["$$found.count", 0]},
-                            }
-                        },
-                    }
-                },
-            ])
+            pipeline.extend(
+                [
+                    {
+                        "$group": {
+                            "_id": {
+                                "class_id": "$class_id",
+                                "status": "$status",
+                            },
+                            "count": {"$sum": 1},
+                        }
+                    },
+                    {
+                        "$group": {
+                            "_id": "$_id.class_id",
+                            "counts": {"$push": {"k": "$_id.status", "v": "$count"}},
+                            "total": {"$sum": "$count"},
+                        }
+                    },
+                    {
+                        "$project": {
+                            "_id": 0,
+                            "class_id": {"$toString": "$_id"},
+                            "total": 1,
+                            "countsObj": {"$arrayToObject": "$counts"},
+                        }
+                    },
+                    {
+                        "$project": {
+                            "class_id": 1,
+                            "total": 1,
+                            "present": {"$ifNull": ["$countsObj.present", 0]},
+                            "absent": {"$ifNull": ["$countsObj.absent", 0]},
+                            "excused": {"$ifNull": ["$countsObj.excused", 0]},
+                        }
+                    },
+                    {"$sort": {"total": -1}},
+                ]
+            )
 
             return list(self._collection.aggregate(pipeline))
+
         except Exception as e:
             self._handle_mongo_error("aggregate_status_by_class", e)
             raise
@@ -486,60 +330,69 @@ class AttendanceReadModel:
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         class_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """
         Returns rows like:
         {
-            "student_id": "....",
-            "class_id"  : "....",
-            "absent_count": 4,
-            "total_records": 4, 
+          "student_id": "...",
+          "class_id": "...",
+          "absent_count": 4,
+          "total_records": 4
         }
+
+        Uses normalized date field `record_date_dt` (record_date or legacy date).
         """
-        match: dict[str, Any] = {"status": "absent"}
+        try:
+            pipeline: List[Dict[str, Any]] = [
+                self._normalized_record_date_add_fields_stage(),
+                self._normalized_record_date_match_stage(),
+                {"$match": {"status": "absent"}},
+            ]
 
-        if date_from is not None:
-            match.setdefault("date", {})
-            match["date"]["$gte"] = date_from
+            range_stage = self._range_match_on_normalized_date(date_from, date_to)
+            if range_stage:
+                pipeline.append(range_stage)
 
-        if date_to is not None:
-            match.setdefault("date", {})
-            match["date"]["$lte"] = date_to
+            if class_id:
+                pipeline.append({"$match": {"class_id": ObjectId(class_id)}})
 
-        if class_id:
-            match["class_id"] = ObjectId(class_id)
-
-        pipeline: list[dict[str, Any]] = [
-            {"$match": match},
-            {
-                "$group": {
-                    "_id": {
-                        "student_id": "$student_id",
-                        "class_id": "$class_id",
+            pipeline.extend(
+                [
+                    {
+                        "$group": {
+                            "_id": {
+                                "student_id": "$student_id",
+                                "class_id": "$class_id",
+                            },
+                            "absent_count": {"$sum": 1},
+                        }
                     },
-                    "absent_count": {"$sum": 1},
-                }
-            },
-            {"$sort": {"absent_count": -1}},
-            {"$limit": limit},
-        ]
-
-        docs = list(self._collection.aggregate(pipeline))
-
-        results: list[dict[str, Any]] = []
-        for doc in docs:
-            _id = doc["_id"]
-            sid = _id["student_id"]
-            cid = _id.get("class_id")
-
-            results.append(
-                {
-                    "student_id": str(sid),
-                    "class_id": str(cid) if cid else None,
-                    "absent_count": int(doc.get("absent_count", 0)),
-                    # for now: total_records same as absent_count
-                    "total_records": int(doc.get("absent_count", 0)),
-                }
+                    {"$sort": {"absent_count": -1}},
+                    {"$limit": int(limit)},
+                ]
             )
 
-        return results
+            docs = list(self._collection.aggregate(pipeline))
+
+            results: List[Dict[str, Any]] = []
+            for doc in docs:
+                _id = doc.get("_id", {})
+                sid = _id.get("student_id")
+                cid = _id.get("class_id")
+
+                absent_count = int(doc.get("absent_count", 0))
+
+                results.append(
+                    {
+                        "student_id": str(sid) if sid is not None else None,
+                        "class_id": str(cid) if cid is not None else None,
+                        "absent_count": absent_count,
+                        "total_records": absent_count,
+                    }
+                )
+
+            return results
+
+        except Exception as e:
+            self._handle_mongo_error("aggregate_top_absent_students", e)
+            raise

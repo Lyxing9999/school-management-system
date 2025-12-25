@@ -34,10 +34,6 @@ class IClassSectionRepository(ABC):
     def find_by_name(self, name: str) -> Optional[ClassSection]:
         ...
 
-    @abstractmethod
-    def soft_delete(self, id: ObjectId) -> bool:
-        ...
-
 
 
 
@@ -46,7 +42,6 @@ class MongoClassSectionRepository(IClassSectionRepository):
     MongoDB implementation of IClassSectionRepository.
 
     - Uses ClassSectionMapper to go domain <-> Mongo dict
-    - Respects `deleted` flag for soft delete
     """
 
     def __init__(
@@ -64,30 +59,24 @@ class MongoClassSectionRepository(IClassSectionRepository):
         self.collection.insert_one(payload)
         return section
 
-    def update(self, section: ClassSection) -> Optional[ClassSection]:
+    def update(self, section: ClassSection) -> bool:
         payload = self.mapper.to_persistence(section)
         _id = payload.pop("_id")
 
+        result = self.collection.update_one({"_id": _id}, {"$set": payload})
+        return result.matched_count > 0
+    def set_class_if_empty(self, student_id: ObjectId, class_id: ObjectId, session=None) -> bool:
         result = self.collection.update_one(
-            {"_id": _id, "deleted": {"$ne": True}},
-            {"$set": payload},
+            {"_id": student_id, "current_class_id": None},
+            {"$set": {"current_class_id": class_id}},
+            session=session,
         )
-        if result.matched_count == 0:
-            return None
-        return section
-
-    def soft_delete(self, id: ObjectId) -> bool:
-        result = self.collection.update_one(
-            {"_id": id},
-            {"$set": {"deleted": True}},
-        )
-        return result.matched_count == 1
-
+        return result.modified_count == 1
     # ---------- Read methods ----------
 
     def find_by_id(self, id: ObjectId) -> Optional[ClassSection]:
         doc = self.collection.find_one(
-            {"_id": id, "deleted": {"$ne": True}}
+            {"_id": id}
         )
         if not doc:
             return None
@@ -95,7 +84,7 @@ class MongoClassSectionRepository(IClassSectionRepository):
 
     def find_by_name(self, name: str) -> Optional[ClassSection]:
         doc = self.collection.find_one(
-            {"name": name, "deleted": {"$ne": True}}
+            {"name": name}
         )
         if not doc:
             return None

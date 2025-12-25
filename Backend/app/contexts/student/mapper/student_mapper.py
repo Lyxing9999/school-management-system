@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, date as date_type, time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
+
+from bson import ObjectId
 
 from app.contexts.student.data_transfer.responses import StudentBaseDataDTO
 from app.contexts.student.domain.student import Student, Gender, StudentStatus
@@ -12,10 +14,18 @@ from app.contexts.student.errors.student_exceptions import (
     StudentMapperInvalidEnumValueException,
 )
 
+from app.contexts.shared.lifecycle.domain import Lifecycle
+
 
 class StudentMapper:
     """
-    Handles conversion between Student domain model, MongoDB dict, and DTOs.
+    Converts between:
+    - Mongo dict <-> Student domain
+    - Student domain -> DTO
+
+    Lifecycle handling:
+    - Preferred Mongo shape: doc["lifecycle"] = { created_at, updated_at, deleted_at, deleted_by }
+    - Backward-compatible: top-level created_at/updated_at/deleted_at/deleted_by
     """
 
     REQUIRED_FIELDS = [
@@ -31,34 +41,65 @@ class StudentMapper:
         "current_grade_level",
     ]
 
+    # -------------------------
+    # Helpers
+    # -------------------------
     @staticmethod
     def _require(data: Dict[str, Any], field: str) -> Any:
         if field not in data:
-            raise StudentMapperRequiredFieldMissingException(field=field, available_keys=data.keys())
+            raise StudentMapperRequiredFieldMissingException(
+                field=field,
+                available_keys=data.keys(),
+            )
         return data[field]
+
+    @staticmethod
+    def _parse_object_id(raw: Any) -> Optional[ObjectId]:
+        if raw is None:
+            return None
+        if isinstance(raw, ObjectId):
+            return raw
+        try:
+            return ObjectId(str(raw))
+        except Exception:
+            return None
+
+    @staticmethod
+    def _parse_datetime(raw: Any) -> Optional[datetime]:
+        if raw is None:
+            return None
+        if isinstance(raw, datetime):
+            return raw
+        if isinstance(raw, str):
+            try:
+                # supports "...Z"
+                return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except Exception:
+                return None
+        return None
 
     @staticmethod
     def _parse_dob(raw_dob: Any) -> date_type:
         if raw_dob is None:
             raise StudentMapperDobParseException(raw_value=raw_dob, reason="dob is None")
 
-        # stored as datetime in Mongo
         if isinstance(raw_dob, datetime):
             return raw_dob.date()
 
-        # stored as python date
         if isinstance(raw_dob, date_type):
             return raw_dob
 
-        # stored as string
         if isinstance(raw_dob, str):
             try:
-                # accepts "YYYY-MM-DD" and full ISO strings
+                # if you store "YYYY-MM-DD" this works, and ISO also works
                 return datetime.fromisoformat(raw_dob).date()
             except ValueError as e:
                 raise StudentMapperDobParseException(raw_value=raw_dob, reason=str(e))
 
-        raise StudentMapperDobParseException(raw_value=raw_dob, reason=f"unsupported type: {type(raw_dob).__name__}")
+        raise StudentMapperDobParseException(
+            raw_value=raw_dob,
+            reason=f"unsupported type: {type(raw_dob).__name__}",
+        )
 
     @staticmethod
     def _parse_enum(enum_cls, field: str, raw_value: Any, *, strict: bool):
@@ -67,10 +108,48 @@ class StudentMapper:
         except Exception:
             if strict:
                 allowed = [e.value for e in enum_cls]  # type: ignore
-                raise StudentMapperInvalidEnumValueException(field=field, value=raw_value, allowed=allowed)
-            # fallback (non-strict)
+                raise StudentMapperInvalidEnumValueException(
+                    field=field,
+                    value=raw_value,
+                    allowed=allowed,
+                )
             return list(enum_cls)[0]
 
+    @staticmethod
+    def _parse_lifecycle(data: Dict[str, Any]) -> Lifecycle:
+        """
+        Supports:
+        - nested lifecycle dict
+        - legacy top-level lifecycle fields
+        """
+        lc = data.get("lifecycle")
+        if isinstance(lc, dict):
+            return Lifecycle(
+                created_at=StudentMapper._parse_datetime(lc.get("created_at")),
+                updated_at=StudentMapper._parse_datetime(lc.get("updated_at")),
+                deleted_at=StudentMapper._parse_datetime(lc.get("deleted_at")),
+                deleted_by=StudentMapper._parse_object_id(lc.get("deleted_by")),
+            )
+
+        return Lifecycle(
+            created_at=StudentMapper._parse_datetime(data.get("created_at")),
+            updated_at=StudentMapper._parse_datetime(data.get("updated_at")),
+            deleted_at=StudentMapper._parse_datetime(data.get("deleted_at")),
+            deleted_by=StudentMapper._parse_object_id(data.get("deleted_by")),
+        )
+
+    @staticmethod
+    def _lifecycle_to_dict(lc: Lifecycle) -> Dict[str, Any]:
+        return {
+            "created_at": lc.created_at,
+            "updated_at": lc.updated_at,
+            "deleted_at": lc.deleted_at,
+            "deleted_by": lc.deleted_by,
+        }
+
+    # -------------------------
+    # Public API
+    # -------------------------
     @staticmethod
     def to_domain(data: Dict[str, Any], *, strict: bool = True) -> Optional[Student]:
         if not data:
@@ -81,9 +160,15 @@ class StudentMapper:
             StudentMapper._require(data, f)
 
         dob = StudentMapper._parse_dob(data.get("dob"))
-
         gender = StudentMapper._parse_enum(Gender, "gender", data.get("gender"), strict=strict)
-        status = StudentMapper._parse_enum(StudentStatus, "status", data.get("status", StudentStatus.ACTIVE.value), strict=strict)
+        status = StudentMapper._parse_enum(
+            StudentStatus,
+            "status",
+            data.get("status", StudentStatus.ACTIVE.value),
+            strict=strict,
+        )
+
+        lifecycle = StudentMapper._parse_lifecycle(data)
 
         return Student(
             id=data.get("_id"),
@@ -102,17 +187,13 @@ class StudentMapper:
             address=data.get("address", {}),
             guardians=data.get("guardians", []),
             status=status,
-            created_at=data.get("created_at"),
-            updated_at=data.get("updated_at"),
-
+            lifecycle=lifecycle,
             history=data.get("history", []),
         )
 
     @staticmethod
     def to_persistence(student: Student) -> Dict[str, Any]:
-        dob_dt = None
-        if student.dob:
-            dob_dt = datetime.combine(student.dob, time.min)
+        dob_dt = datetime.combine(student.dob, time.min) if student.dob else None
 
         return {
             "_id": student.id,
@@ -131,14 +212,17 @@ class StudentMapper:
             "address": student.address,
             "guardians": student.guardians,
             "status": student.status.value,
-            "created_at": student.created_at,
-            "updated_at": student.updated_at,
+            # IMPORTANT: store lifecycle as dict (Mongo-friendly)
+            "lifecycle": StudentMapper._lifecycle_to_dict(student.lifecycle),
             "history": student.history,
         }
+
     @staticmethod
     def to_dto(student: Student) -> Optional[StudentBaseDataDTO]:
         if not student:
             return None
+
+        lifecycle_payload = StudentMapper._lifecycle_to_dict(student.lifecycle)
 
         return StudentBaseDataDTO(
             id=str(student.id),
@@ -151,12 +235,12 @@ class StudentMapper:
             gender=student.gender.value if hasattr(student.gender, "value") else str(student.gender),
             dob=student.dob,
             current_grade_level=student.current_grade_level,
-            current_class_id=str(student.current_class_id),
+            # IMPORTANT: do NOT return "None" string
+            current_class_id=str(student.current_class_id) if student.current_class_id else None,
             photo_url=student.photo_url,
             phone_number=student.phone_number,
             address=student.address,
             guardians=student.guardians,
             status=student.status.value if hasattr(student.status, "value") else str(student.status),
-            created_at=student.created_at,
-            updated_at=student.updated_at,
+            lifecycle=lifecycle_payload,  
         )

@@ -4,7 +4,7 @@ from bson import ObjectId
 from pymongo.database import Database
 
 from app.contexts.shared.lifecycle.policy_result import PolicyResult
-from app.contexts.shared.lifecycle.types import not_deleted
+from app.contexts.shared.lifecycle.filters import not_deleted
 from app.contexts.student.policies.student_policy import StudentPolicy
 from app.contexts.staff.policies.staff_policy import StaffPolicy
 

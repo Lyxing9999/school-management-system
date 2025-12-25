@@ -153,9 +153,10 @@ class TeacherReadModel(MongoErrorMixin):
         class_id: Union[str, ObjectId],
     ) -> List[Dict[str, Any]]:
     
-        student_ids = self.student.list_student_ids_by_current_class_ids([class_id])
-        if not student_ids:
+        students = self.student.list_students_by_current_class_ids([class_id])
+        if not students:
             return []
+        student_ids = [s["_id"] for s in students if s.get("_id")]
         return self.display_names.student_select_options_for_ids(student_ids)
 
 

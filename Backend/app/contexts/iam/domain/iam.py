@@ -11,7 +11,7 @@ from app.contexts.shared.lifecycle.domain import Lifecycle
 class IAMStatus(str, Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
-    DISABLED = "disabled"
+    SUSPENDED = "suspended"
 
 
 class IAM:
@@ -116,7 +116,7 @@ class IAM:
         return (not self.is_deleted()) and self.status == IAMStatus.ACTIVE
 
     def is_inactive(self) -> bool:
-        return self.status == IAMStatus.DISABLED
+        return self.status == IAMStatus.INACTIVE
 
     def set_status(self, status: IAMStatus | str):
         if self.is_deleted():

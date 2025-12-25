@@ -4,7 +4,7 @@ from flask import request, g
 from app.contexts.admin.routes import admin_bp
 from app.contexts.core.security.auth_utils import get_current_user_id
 from app.contexts.shared.decorators.response_decorator import wrap_response
-from app.contexts.auth.jwt_utils import role_required
+from app.contexts.iam.auth.jwt_utils import role_required
 from app.contexts.shared.model_converter import pydantic_converter, mongo_converter
 
 from app.contexts.admin.data_transfer.requests import (
@@ -95,8 +95,8 @@ def admin_soft_delete_class(class_id: str):
 @admin_bp.route("/classes/<class_id>/students/", methods=["GET"])
 @role_required(["admin"])
 @wrap_response
-def admin_list_students_in_class_select_options(class_id: str):
-    students = g.admin.class_service.admin_list_students_in_class_select_options(class_id)
+def admin_list_students_in_class_select(class_id: str):
+    students = g.admin.class_service.admin_list_students_in_class_select(class_id)
     items = mongo_converter.list_to_dto(students, AdminStudentNameSelectDTO)
     return AdminStudentNameSelectListDTO(items=items)
 

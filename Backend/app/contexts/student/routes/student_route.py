@@ -2,7 +2,7 @@ from __future__ import annotations
 from flask import request, g
 from app.contexts.student.routes import student_bp
 from app.contexts.core.security.auth_utils import get_current_student_id
-from app.contexts.auth.jwt_utils import role_required
+from app.contexts.iam.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.student.data_transfer.responses import (

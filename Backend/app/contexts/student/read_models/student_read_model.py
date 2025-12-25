@@ -66,32 +66,7 @@ class StudentReadModel(MongoErrorMixin):
     def get_by_student_code(self, code: str):
             return self.collection.find_one({"student_id_code": code})
 
-    def list_students_by_current_class_ids(self,class_ids: List[str | ObjectId],*,projection: Optional[Dict[str, int]] = None,active_only: bool = True,
-        extra_filter: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
-        oids = self._normalize_ids(class_ids)
-        if not oids:
-            return []
-        class_filter: Dict[str, Any] = {"current_class_id": {"$in": oids}}
-        lifecycle_filter: Dict[str, Any] = student_active() if active_only else student_not_deleted()
-        parts: List[Dict[str, Any]] = [lifecycle_filter, class_filter]
-        if extra_filter:
-            parts.append(extra_filter)
-        query: Dict[str, Any] = {"$and": parts} if len(parts) > 1 else parts[0]
-        return list(self.collection.find(query, projection))
 
-    def list_students_by_current_class_id(self,class_id: str | ObjectId,*,projection: Optional[Dict[str, int]] = None,active_only: bool = True,extra_filter: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
-        """
-        Convenience wrapper for a single class_id.
-        Returns all students whose current_class_id == class_id.
-        """
-        return self.list_students_by_current_class_ids(
-            [class_id],
-            projection=projection,
-            active_only=active_only,
-            extra_filter=extra_filter,
-        )
 
     def find_active_students_by_ids(self, student_ids: List[ObjectId]) -> Cursor:
         query = {"$and": [student_active(), {"_id": {"$in": student_ids}}]}

@@ -4,7 +4,7 @@ from typing import  List
 from bson import ObjectId
 from pymongo.database import Database
 
-from app.contexts.school.services.school_service import SchoolService
+from app.contexts.school.services.legacy.school_service import SchoolService
 from app.contexts.school.domain.schedule import ScheduleSlot
 
 from app.contexts.admin.data_transfer.requests import (

@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import request, g
 
 from app.contexts.admin.routes import admin_bp
-from app.contexts.auth.jwt_utils import role_required
+from app.contexts.iam.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.admin.data_transfer.responses import AdminDashboardDTO
 

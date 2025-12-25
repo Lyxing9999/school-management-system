@@ -6,7 +6,6 @@ from bson import ObjectId
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.staff.read_models.staff_read_model import StaffReadModel
 
-
 from app.contexts.shared.lifecycle.filters import not_deleted
 
 
@@ -15,6 +14,8 @@ class IAMReadModel(MongoErrorMixin):
         self.db = db
         self.collection = db["iam"]
         self._staff_read_model: Final[StaffReadModel] = StaffReadModel(db)
+
+
 
 
 
@@ -75,68 +76,61 @@ class IAMReadModel(MongoErrorMixin):
         return result
 
 
+
     def get_page_by_role(
-            self,
-            roles: Union[str, list[str]],
-            page: int = 1,
-            page_size: int = 5,
-            search: str | None = None,
-        ) -> Tuple[List[dict], int]:
+        self,
+        roles: Union[str, list[str]],
+        page: int = 1,
+        page_size: int = 5,
+        search: str | None = None,
+    ) -> Tuple[List[dict], int]:
 
-            # -------------------------
-            # 1) Base filter
-            # -------------------------
-            role_filter = roles if isinstance(roles, str) else {"$in": roles}
+        role_filter = roles if isinstance(roles, str) else {"$in": roles}
 
-            base: Dict[str, Any] = {"role": role_filter}
-            if search and (s := search.strip()):
-                query["$or"] = [
-                    {"username": {"$regex": s, "$options": "i"}},
-                    {"email": {"$regex": s, "$options": "i"}},
-                    {"phone": {"$regex": s, "$options": "i"}},
-                ]
-            query = not_deleted(base)
-            projection = {"password": 0}
+        base: Dict[str, Any] = {"role": role_filter}
 
-            # -------------------------
-            # 3) Count + pagination
-            # -------------------------
-            total = self.collection.count_documents(query)
-            skip = (page - 1) * page_size
-
-            users: List[Dict[str, Any]] = list(
-                self.collection.find(query, projection)
-                .sort("created_at", -1)
-                .skip(skip)
-                .limit(page_size)
-            )
-
-            if not users:
-                return users, total
-
-            # -------------------------
-            # 4) Attach created_by_name
-            # -------------------------
-            creator_ids_raw = [u.get("created_by") for u in users if u.get("created_by")]
-            creator_ids_raw = list({cid for cid in creator_ids_raw})
-
-            creator_oids = [
-                mongo_converter.convert_to_object_id(cid)
-                for cid in creator_ids_raw
-                if cid is not None
+        if search and (s := search.strip()):
+            base["$or"] = [
+                {"username": {"$regex": s, "$options": "i"}},
+                {"email": {"$regex": s, "$options": "i"}},
+                {"phone": {"$regex": s, "$options": "i"}},
             ]
 
-            staff_map: Dict[str, str] = {}
-            if creator_oids:
-                name_map = self._staff_read_model.list_names_by_ids(creator_oids)
-                staff_map = {str(user_id): name for user_id, name in name_map.items()}
+        query = not_deleted(base)
+        projection = {"password": 0}
 
-            for user in users:
-                creator_id = user.get("created_by")
-                creator_key = str(creator_id) if creator_id else None
-                user["created_by_name"] = staff_map.get(creator_key, "Unknown")
+        total = self.collection.count_documents(query)
+        skip = (page - 1) * page_size
 
+        users: List[Dict[str, Any]] = list(
+            self.collection.find(query, projection)
+            .sort("created_at", -1)
+            .skip(skip)
+            .limit(page_size)
+        )
+        if not users:
             return users, total
+
+        creator_ids_raw = [u.get("created_by") for u in users if u.get("created_by")]
+        creator_ids_raw = list({cid for cid in creator_ids_raw})
+
+        creator_oids = [
+            mongo_converter.convert_to_object_id(cid)
+            for cid in creator_ids_raw
+            if cid is not None
+        ]
+
+        staff_map: Dict[str, str] = {}
+        if creator_oids:
+            name_map = self._staff_read_model.list_names_by_ids(creator_oids)
+            staff_map = {str(user_id): name for user_id, name in name_map.items()}
+
+        for user in users:
+            creator_id = user.get("created_by")
+            creator_key = str(creator_id) if creator_id else None
+            user["created_by_name"] = staff_map.get(creator_key, "Unknown")
+
+        return users, total
 
     def count_active_users(self, role: str | list[str]) -> int:
         return self.collection.count_documents(active({"role": role}))

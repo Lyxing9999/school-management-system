@@ -3,7 +3,7 @@ from typing import Optional, List
 from bson import ObjectId
 from pymongo.database import Database
 
-from app.contexts.school.services.school_service import SchoolService
+from app.contexts.school.services.legacy.school_service import SchoolService
 from app.contexts.school.domain.class_section import ClassSection
 from app.contexts.school.read_models.class_read_model import ClassReadModel
 from app.contexts.admin.data_transfer.requests import AdminCreateClassSchema
@@ -105,8 +105,8 @@ class ClassAdminService:
 
 
 
-    def admin_list_students_in_class_select_options(self, class_id: str) -> List[dict]:
-        return self.admin_read_model.admin_list_students_in_class_select_options(class_id)
+    def admin_list_students_in_class_select(self, class_id: str) -> List[dict]:
+        return self.admin_read_model.admin_list_students_in_class_select(class_id)
 
 
     def admin_list_enrollment_student_select(self, class_id: str) -> List[dict]:

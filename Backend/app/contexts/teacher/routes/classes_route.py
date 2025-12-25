@@ -5,7 +5,7 @@ from flask import g
 
 from app.contexts.teacher.routes import teacher_bp
 from app.contexts.core.security.auth_utils import get_current_staff_id
-from app.contexts.auth.jwt_utils import role_required
+from app.contexts.iam.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import mongo_converter
 
