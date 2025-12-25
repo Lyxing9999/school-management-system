@@ -35,7 +35,10 @@ export function useInlineEdit<
   const service = inlineEditService.value;
 
   const data = ref<TGet[]>([...initialData]);
-  const inlineEditLoading = ref<Record<string | number, boolean>>({});
+
+  /** `${id}:${field}` -> boolean */
+  const inlineEditLoading = ref<Record<string, boolean>>({});
+
   const deleteLoading = ref<Record<string | number, boolean>>({});
   const originalRows = ref<Record<string | number, TGet>>({});
   const previousValues = ref<
@@ -43,41 +46,54 @@ export function useInlineEdit<
   >({});
   const revertedFields = ref<Record<string | number, Set<keyof TGet>>>({});
 
-  // Helper to cast safely
   const fieldToGetKey = (field: keyof TUpdate): keyof TGet =>
     field as unknown as keyof TGet;
+
+  const cellKey = (id: string | number, field: PropertyKey) =>
+    `${String(id)}:${String(field)}`;
+
+  const isCellSaving = (row: TGet, field: keyof TUpdate) =>
+    inlineEditLoading.value[cellKey(row.id, field)] ?? false;
+
+  const isRowSaving = (row: TGet) => {
+    const prefix = `${String(row.id)}:`;
+    return Object.entries(inlineEditLoading.value).some(
+      ([k, v]) => v && k.startsWith(prefix)
+    );
+  };
 
   const save = async (row: TGet, field: keyof TUpdate, autoSave = false) => {
     const rowKey = getKey(row.id);
     const key = fieldToGetKey(field);
+
+    // If this same cell is saving already, ignore (prevents double-click races)
+    if (isCellSaving(row, field)) return;
+
     const currentValue = row[key] as any;
 
-    // Validate
+    // Validate "empty"
     if (currentValue === "" || currentValue == null) {
       row[key] = originalRows.value[rowKey]?.[key] ?? currentValue;
       ElMessage.info("This field cannot be empty.");
       return;
     }
 
-    inlineEditLoading.value[rowKey] = true;
+    const ck = cellKey(row.id, field);
+    inlineEditLoading.value = { ...inlineEditLoading.value, [ck]: true };
 
     try {
-      // Store previous value if autoSave
+      // store previous value if autoSave
       if (autoSave) {
         previousValues.value[rowKey] = previousValues.value[rowKey] || {};
         previousValues.value[rowKey][key] =
           previousValues.value[rowKey][key] || [];
-        previousValues.value[rowKey][key].push(
+        previousValues.value[rowKey][key]!.push(
           originalRows.value[rowKey]?.[key] ?? currentValue
         );
       }
 
-      // Update payload
-      const payload: Partial<TUpdate> = {
-        [field]: currentValue,
-      } as Partial<TUpdate>;
+      const payload: Partial<TUpdate> = { [field]: currentValue } as any;
 
-      // updated is typed as TUpdate (because toInlineEditUpdateService guarantees it)
       const updated = await service.update(row.id.toString(), payload);
 
       if (!updated) {
@@ -86,30 +102,31 @@ export function useInlineEdit<
         return;
       }
 
-      // Merge updated values (cast updated -> Partial<TGet>)
       const index = data.value.findIndex((r) => r.id === row.id);
       if (index !== -1) {
         data.value[index] = {
           ...data.value[index],
-          ...(updated as unknown as Partial<TGet>), // safe, minimal cast
+          ...(updated as unknown as Partial<TGet>),
         };
       }
 
       revertedFields.value[rowKey] = revertedFields.value[rowKey] || new Set();
-      revertedFields.value[rowKey].delete(key);
-      originalRows.value[rowKey] = { ...(data.value[index] ?? row) } as TGet; // assert stored original
-    } catch (err) {
+      revertedFields.value[rowKey]!.delete(key);
+      originalRows.value[rowKey] = { ...(data.value[index] ?? row) } as TGet;
+    } catch {
       row[key] = originalRows.value[rowKey]?.[key] ?? currentValue;
     } finally {
-      inlineEditLoading.value[rowKey] = false;
+      inlineEditLoading.value = { ...inlineEditLoading.value, [ck]: false };
     }
   };
 
   const autoSave = async (row: TGet, field: keyof TUpdate) => {
     const rowKey = getKey(row.id);
     const key = fieldToGetKey(field);
+
     const originalValue = originalRows.value[rowKey]?.[key];
     const currentValue = row[key];
+
     if (currentValue === originalValue) return;
     await save(row, field, true);
   };
@@ -133,23 +150,22 @@ export function useInlineEdit<
           type: "warning",
         }
       );
-    } catch (e) {
+    } catch {
       return;
     }
 
     try {
       deleteLoading.value[rowKey] = true;
-
       await service.delete(row.id.toString());
 
       data.value = data.value.filter((r) => r.id !== row.id);
       delete originalRows.value[rowKey];
       delete previousValues.value[rowKey];
-    } catch (e: any) {
     } finally {
       deleteLoading.value[rowKey] = false;
     }
   };
+
   const getPreviousValue = (row: TGet, field: keyof TGet) => {
     const rowKey = getKey(row.id);
     const stack = previousValues.value[rowKey]?.[field];
@@ -162,7 +178,7 @@ export function useInlineEdit<
     if (stack && stack.length) {
       row[field] = stack.pop() as any;
       revertedFields.value[rowKey] = revertedFields.value[rowKey] || new Set();
-      revertedFields.value[rowKey].add(field);
+      revertedFields.value[rowKey]!.add(field);
     }
   };
 
@@ -170,10 +186,10 @@ export function useInlineEdit<
     data.value = [...newData];
     newData.forEach((row) => {
       const rowKey = getKey(row.id);
-      originalRows.value[rowKey] = { ...row } as TGet; // assert
+      originalRows.value[rowKey] = { ...row } as TGet;
       previousValues.value[rowKey] = {} as Record<keyof TGet, any[]>;
       Object.keys(row).forEach((field) => {
-        previousValues.value[rowKey][field as keyof TGet] = [];
+        previousValues.value[rowKey]![field as keyof TGet] = [];
       });
     });
   };
@@ -189,5 +205,10 @@ export function useInlineEdit<
     autoSave,
     getPreviousValue,
     revertField,
+
+    // helpers you can reuse in SmartTable
+    cellKey,
+    isCellSaving,
+    isRowSaving,
   };
 }

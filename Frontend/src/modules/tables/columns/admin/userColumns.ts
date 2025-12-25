@@ -47,7 +47,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     field: "status",
     label: "Status",
     width: "130px",
-    useSlots: true,
+    useSlot: true,
     slotName: "status",
   },
   {

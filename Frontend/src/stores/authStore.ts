@@ -1,45 +1,46 @@
+// ~/stores/authStore.ts
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 import type { UserBaseDataDTO } from "~/api/types/user.dto";
 
 export const useAuthStore = defineStore("auth", () => {
-  const token = ref<string | null>(null);
+  const token = ref<string>("");
   const user = ref<UserBaseDataDTO | null>(null);
-  function initAuth() {
-    if (process.client) {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        user.value = JSON.parse(storedUser);
-      }
-      const storedToken = localStorage.getItem("token");
-      if (storedToken) {
-        token.value = storedToken;
-      }
-    }
+  const isReady = ref<boolean>(false);
+
+  const isAuthenticated = computed(() => !!token.value);
+
+  function setToken(next: string) {
+    token.value = next;
   }
-  const login = (newToken: string, userInfo: UserBaseDataDTO) => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
 
-    token.value = newToken;
-    user.value = userInfo;
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(userInfo));
-  };
+  function setUser(next: UserBaseDataDTO | null) {
+    user.value = next;
+    console.log("[USER]", user.value);
+  }
 
-  const logout = () => {
-    token.value = null;
+  function clear() {
+    token.value = "";
     user.value = null;
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-  };
+  }
+
+  function setReady(v: boolean) {
+    isReady.value = v;
+  }
 
   return {
+    // state
     token,
     user,
-    login,
-    logout,
-    isAuthenticated: computed(() => !!token.value),
-    initAuth,
+    isReady,
+
+    // getters
+    isAuthenticated,
+
+    // actions
+    setToken,
+    setUser,
+    clear,
+    setReady,
   };
 });

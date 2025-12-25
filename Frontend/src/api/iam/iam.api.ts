@@ -1,40 +1,39 @@
 import type { AxiosInstance } from "axios";
 import type {
-  UserRegister,
+  UserRegisterForm,
   UserLoginForm,
   UserLoginResponse,
   UserRegisterResponse,
+  MeResponse,
+  RefreshApiResponse,
 } from "~/api/iam/iam.dto";
 
 export class AuthApi {
   constructor(private $api: AxiosInstance, private baseURL = "/api/iam") {}
 
-  async registerUser(form: UserRegister): Promise<UserRegisterResponse> {
-    const response = await this.$api.post<UserRegisterResponse>(
-      `${this.baseURL}/register`,
-      form
-    );
-
-    return response.data;
-  }
-  async login(form: UserLoginForm): Promise<UserLoginResponse> {
-    const response = await this.$api.post<UserLoginResponse>(
-      `${this.baseURL}/login`,
-      form
-    );
-    return response.data;
+  async registerUser(form: UserRegisterForm) {
+    return this.$api
+      .post<UserRegisterResponse>(`${this.baseURL}/register`, form)
+      .then((r) => r.data);
   }
 
-  loginWithGoogle(apiBase: string) {
-    window.location.href = `${apiBase}/auth/google/login`;
+  async login(form: UserLoginForm) {
+    return this.$api
+      .post<UserLoginResponse>(`${this.baseURL}/login`, form)
+      .then((r) => r.data);
   }
-  // TODO return current profile
-  // change password
 
-  async getMyProfile() {
-    const response = await this.$api.get<UserLoginResponse>(
-      `${this.baseURL}/profile`
-    );
-    return response.data;
+  async refresh() {
+    return this.$api
+      .post<RefreshApiResponse>(`${this.baseURL}/refresh`)
+      .then((r) => r.data);
+  }
+
+  async me() {
+    return this.$api.get<MeResponse>(`${this.baseURL}/me`).then((r) => r.data);
+  }
+
+  async logout() {
+    return this.$api.post(`${this.baseURL}/logout`).then((r) => r.data);
   }
 }

@@ -1,4 +1,4 @@
-import { reactive, ref, computed, unref } from "vue";
+import { ref, computed, unref } from "vue";
 import type { UseFormService } from "~/form-system/types/serviceFormTypes";
 import type { Field } from "~/components/types/form";
 
@@ -7,20 +7,20 @@ export function useFormCreate<
   O extends Record<string, any>
 >(
   getService: () => UseFormService<I, O>,
-  getDefaultData: () => I,
+  getDefaultData: () => I | undefined | null,
   getFields: () => Field<I>[]
 ) {
   const service = computed(() => getService());
   const formDialogVisible = ref(false);
   const loading = ref(false);
 
-  const formData = reactive<Partial<I>>({ ...getDefaultData() });
+  const safeDefaults = () => (getDefaultData?.() ?? {}) as I;
+
+  const formData = ref<Partial<I>>({ ...safeDefaults() });
   const schema = computed(() => unref(getFields()));
 
   const resetFormData = async (data?: Partial<I>) => {
-    const defaults = getDefaultData();
-    Object.keys(formData).forEach((key) => delete (formData as any)[key]);
-    Object.assign(formData, { ...defaults, ...(data ?? {}) });
+    formData.value = { ...safeDefaults(), ...(data ?? {}) };
   };
 
   const openForm = async (data?: Partial<I>) => {
@@ -33,23 +33,21 @@ export function useFormCreate<
 
     loading.value = true;
     try {
-      if (payload) Object.assign(formData, payload);
+      if (payload) formData.value = { ...formData.value, ...payload };
 
       const filteredData: Partial<I> = {};
       const collectKeys = (fields: Field<I>[]) => {
         fields.forEach((f) => {
           if (f.row) collectKeys(f.row);
-          else if (f.key != null) {
-            filteredData[f.key] =
-              (formData as Record<string, any>)[f.key] ?? null;
-          }
+          else if (f.key != null)
+            filteredData[f.key] = (formData.value as any)[f.key] ?? null;
         });
       };
       collectKeys(unref(getFields()));
 
       const response = await service.value.create(filteredData as I);
 
-      resetFormData(response);
+      await resetFormData(response);
       formDialogVisible.value = false;
 
       return response;
@@ -60,6 +58,7 @@ export function useFormCreate<
       loading.value = false;
     }
   };
+
   const cancelForm = () => {
     formDialogVisible.value = false;
     resetFormData();

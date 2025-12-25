@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 
 definePageMeta({ layout: "admin" });
 
@@ -10,7 +10,7 @@ import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
 import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
 import BaseButton from "~/components/Base/BaseButton.vue";
 import ActionButtons from "~/components/Button/ActionButtons.vue";
-import StudentEnrollmentSelect from "~/components/Selects/StudentEnrollmentSelect.vue.vue";
+import StudentEnrollmentSelect from "~/components/Selects/StudentEnrollmentSelect.vue";
 import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 
@@ -32,7 +32,6 @@ import type {
   AdminCreateClass,
   AdminClassDataDTO,
   AdminClassListDTO,
-  AdminStudentsInClassSelectDTO,
 } from "~/api/admin/class/class.dto";
 
 import type { Field } from "~/components/types/form";
@@ -65,7 +64,6 @@ const adminApi = adminService();
 
 type ShowDeletedFilter = "all" | "active" | "deleted";
 
-// extend row with computed fields for table display
 type AdminClassRow = AdminClassDataDTO & {
   enrolled_count: number;
   subject_count: number;
@@ -82,7 +80,7 @@ const showDeleted = ref<ShowDeletedFilter>("all");
  * =========================== */
 
 const {
-  data: classes, // data for SmartTable
+  data: classes,
   loading: tableLoading,
   error: tableError,
   currentPage,
@@ -91,27 +89,27 @@ const {
   fetchPage,
   goPage,
 } = usePaginatedFetch<AdminClassRow, ShowDeletedFilter>(
-  // fetchFn: backend returns all classes; we filter + paginate on client
   async (filter, page, pageSize) => {
     const res: AdminClassListDTO | undefined =
       await adminApi.class.getClasses();
-
     const rawItems = res?.items ?? [];
 
-    // add enrolled_count and subject_count
-    const displayClasses: AdminClassRow[] = rawItems.map((c) => ({
-      ...c,
-      enrolled_count: c.student_ids?.length ?? 0,
+    // Prefer backend enrolled_count; fallback only if your DTO still includes student_ids
+    const displayClasses: AdminClassRow[] = rawItems.map((c: any) => ({
+      ...(c as AdminClassDataDTO),
+      enrolled_count:
+        typeof c.enrolled_count === "number"
+          ? c.enrolled_count
+          : c.student_ids?.length ?? 0,
       subject_count: c.subject_ids?.length ?? 0,
     }));
 
-    // filter by deleted state
     const filtered =
       filter === "all"
         ? displayClasses
         : filter === "deleted"
-        ? displayClasses.filter((c) => c.deleted)
-        : displayClasses.filter((c) => !c.deleted);
+        ? displayClasses.filter((c: any) => c.deleted)
+        : displayClasses.filter((c: any) => !c.deleted);
 
     const total = filtered.length;
     const start = (page - 1) * pageSize;
@@ -143,6 +141,7 @@ async function fetchSubjectOptions() {
     }));
   } catch (err) {
     console.error("Failed to load subject options", err);
+    ElMessage.error("Failed to load subjects.");
   } finally {
     subjectOptionsLoading.value = false;
   }
@@ -152,7 +151,6 @@ async function fetchSubjectOptions() {
  *  CREATE CLASS (DYNAMIC FORM)
  * =========================== */
 
-// Only CLASS mode on this page
 const createMode = ref<"CLASS">("CLASS");
 
 const {
@@ -165,7 +163,6 @@ const {
   loading: createFormLoading,
 } = useDynamicCreateFormReactive(createMode);
 
-// Inject loading + options into the `subject_ids` field
 const createFormSchema = computed<Field<AdminCreateClass>[]>(() =>
   baseCreateFormSchema.value.map((field) => {
     if (field.key !== "subject_ids") return field;
@@ -193,9 +190,8 @@ async function openCreateDialog() {
 
 async function handleSaveCreateForm(payload: Partial<AdminCreateClass>) {
   const created = await saveCreateForm(payload);
-  if (!created) {
-    return;
-  }
+  if (!created) return;
+  ElMessage.success("Class created.");
   await fetchPage(1);
 }
 
@@ -217,6 +213,19 @@ const manageRelationsForm = ref<ManageClassRelationsForm>({
   student_ids: [],
   teacher_id: null,
 });
+
+const currentClassForStudents = ref<AdminClassRow | null>(null);
+
+const originalStudentIds = ref<string[]>([]);
+const originalTeacherId = ref<string | null>(null);
+
+const detailLoading = ref<Record<string | number, boolean>>({});
+const deleteLoading = ref<Record<string | number, boolean>>({});
+const saveStudentsLoading = ref(false);
+
+const studentSelectPreloaded = ref<{ value: string; label: string }[]>([]);
+const studentsInClassLoading = ref(false);
+
 const manageRelationsFields = computed<Field<ManageClassRelationsForm>[]>(
   () => [
     {
@@ -225,11 +234,11 @@ const manageRelationsFields = computed<Field<ManageClassRelationsForm>[]>(
       component: StudentEnrollmentSelect,
       formItemProps: { label: "Students" },
       componentProps: {
-        classId: currentClassForStudents.value?.id ?? "", // ✅ add this
+        classId: currentClassForStudents.value?.id ?? "",
         multiple: true,
         placeholder: "Select students to enroll",
+        preloadedOptions: studentSelectPreloaded.value,
         loading: studentsInClassLoading.value,
-        options: studentSelectPreloaded,
       },
     },
     {
@@ -241,45 +250,58 @@ const manageRelationsFields = computed<Field<ManageClassRelationsForm>[]>(
     },
   ]
 );
-
-const currentClassForStudents = ref<AdminClassRow | null>(null);
-const originalStudentIds = ref<string[]>([]);
-const originalTeacherId = ref<string | null>(null);
-
-const detailLoading = ref<Record<string | number, boolean>>({});
-const deleteLoading = ref<Record<string | number, boolean>>({});
-const saveStudentsLoading = ref(false);
-const studentSelectPreloaded = ref<{ value: string; label: string }[]>([]);
-const studentsInClassLoading = ref(false);
-
+const manageStudentsDialogKey = ref("");
 async function openManageStudentsDialog(row: AdminClassRow) {
   currentClassForStudents.value = row;
+  manageStudentsDialogKey.value = row.id;
   studentSelectPreloaded.value = [];
   manageRelationsForm.value = {
     student_ids: [],
     teacher_id: (row.teacher_id as string | null) ?? null,
   };
+  originalStudentIds.value = [];
+  originalTeacherId.value = (row.teacher_id as string | null) ?? null;
 
   studentsInClassLoading.value = true;
   detailLoading.value[row.id] = true;
-  manageStudentsVisible.value = true;
 
   try {
     const res = await adminApi.class.listStudentsInClass(row.id);
-    console.log(res);
-    studentSelectPreloaded.value = res.items ?? [];
+    const preloaded = res?.items ?? [];
+
+    studentSelectPreloaded.value = preloaded;
+
+    const loadedStudentIds = preloaded.map((x) => x.value);
+    const loadedTeacherId = (row.teacher_id as string | null) ?? null;
 
     manageRelationsForm.value = {
-      student_ids: studentSelectPreloaded.value.map((x) => x.value),
-      teacher_id: (row.teacher_id as string | null) ?? null,
+      student_ids: loadedStudentIds,
+      teacher_id: loadedTeacherId,
     };
+
+    originalStudentIds.value = [...loadedStudentIds];
+    originalTeacherId.value = loadedTeacherId;
+    manageStudentsVisible.value = true;
+  } catch (err) {
+    console.error("Failed to load class details", err);
+    ElMessage.error("Failed to load students in this class.");
   } finally {
     studentsInClassLoading.value = false;
     detailLoading.value[row.id] = false;
   }
 }
+
 function cancelManageStudents() {
   manageStudentsVisible.value = false;
+  currentClassForStudents.value = null;
+}
+
+// helper: normalize teacher_id from select ("" -> null)
+function normalizeTeacherId(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 async function saveManageStudents(payload: Partial<ManageClassRelationsForm>) {
@@ -291,38 +313,38 @@ async function saveManageStudents(payload: Partial<ManageClassRelationsForm>) {
     ...payload,
   };
 
-  const newStudents = form.student_ids ?? [];
-  const newTeacher = form.teacher_id ?? null;
-
-  saveStudentsLoading.value = true;
-
   const classId = cls.id;
+
+  const newStudents = form.student_ids ?? [];
+  const newTeacher = normalizeTeacherId(form.teacher_id);
+
   const oldStudentSet = new Set(originalStudentIds.value);
   const newStudentSet = new Set(newStudents);
 
   const toAdd: string[] = [];
   const toRemove: string[] = [];
 
-  for (const id of newStudentSet) {
-    if (!oldStudentSet.has(id)) toAdd.push(id);
-  }
-  for (const id of oldStudentSet) {
-    if (!newStudentSet.has(id)) toRemove.push(id);
+  for (const id of newStudentSet) if (!oldStudentSet.has(id)) toAdd.push(id);
+  for (const id of oldStudentSet) if (!newStudentSet.has(id)) toRemove.push(id);
+
+  const oldTeacher = normalizeTeacherId(originalTeacherId.value);
+  const teacherChanged = oldTeacher !== newTeacher;
+
+  if (toAdd.length === 0 && toRemove.length === 0 && !teacherChanged) {
+    ElMessage.info("No changes to save.");
+    manageStudentsVisible.value = false;
+    return;
   }
 
-  const oldTeacherId = originalTeacherId.value;
-  const teacherChanged = oldTeacherId !== newTeacher;
+  saveStudentsLoading.value = true;
 
   try {
-    // update students
-    for (const sid of toAdd) {
-      await adminApi.class.enrollStudent(classId, sid);
-    }
-    for (const sid of toRemove) {
+    // students
+    for (const sid of toAdd) await adminApi.class.enrollStudent(classId, sid);
+    for (const sid of toRemove)
       await adminApi.class.unenrollStudent(classId, sid);
-    }
 
-    // update teacher if changed
+    // teacher
     if (teacherChanged) {
       if (newTeacher === null) {
         await adminApi.class.unassignClassTeacher(classId);
@@ -331,10 +353,11 @@ async function saveManageStudents(payload: Partial<ManageClassRelationsForm>) {
       }
     }
 
+    originalStudentIds.value = [...newStudents];
+    originalTeacherId.value = newTeacher;
+
     manageStudentsVisible.value = false;
     await fetchPage(currentPage.value || 1);
-  } catch (err) {
-    console.error("Failed to update class", err);
   } finally {
     saveStudentsLoading.value = false;
   }
@@ -353,19 +376,13 @@ async function handleSoftDelete(row: AdminClassRow) {
     await ElMessageBox.confirm(
       "Are you sure you want to soft delete this class?",
       "Warning",
-      {
-        confirmButtonText: "Yes",
-        cancelButtonText: "No",
-        type: "warning",
-      }
+      { confirmButtonText: "Yes", cancelButtonText: "No", type: "warning" }
     );
 
     deleteLoading.value[row.id] = true;
     await adminApi.class.softDeleteClass(row.id);
+    ElMessage.success("Class deleted.");
     await fetchPage(currentPage.value || 1);
-  } catch (err: any) {
-    if (err === "cancel" || err === "close") return;
-    console.error("Soft delete failed", err);
   } finally {
     deleteLoading.value[row.id] = false;
   }
@@ -379,7 +396,6 @@ onMounted(() => {
   fetchPage(1);
 });
 
-// when filter changes, reset to first page & refetch
 watch(showDeleted, () => {
   fetchPage(1);
 });
@@ -415,25 +431,28 @@ const { headerState: classHeaderStats } = useHeaderState({
     },
   ],
 });
+
+const searchModel = ref("");
 </script>
 
 <template>
   <div class="p-4 space-y-6">
-    <!-- OVERVIEW HEADER -->
     <OverviewHeader
       title="Classes"
       description="Manage class sections, enrolled students and assigned teachers."
       :loading="tableLoading"
       :showRefresh="true"
+      :showReset="true"
+      :showSearch="true"
       :stats="classHeaderStats"
       @refresh="fetchClasses"
+      v-model:searchModelValue="searchModel"
+      @update:searchModelValue="(v) => emit('update:searchModelValue', v)"
     >
-      <!-- Filters: status (all / active / deleted) -->
       <template #filters>
         <div
           class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"
         >
-          <!-- Status filter -->
           <div class="flex items-center gap-2">
             <span class="text-xs text-gray-500">Status:</span>
             <ElRadioGroup v-model="showDeleted" size="small">
@@ -445,7 +464,6 @@ const { headerState: classHeaderStats } = useHeaderState({
         </div>
       </template>
 
-      <!-- Actions: Refresh + Add Class -->
       <template #actions>
         <BaseButton
           plain
@@ -462,7 +480,6 @@ const { headerState: classHeaderStats } = useHeaderState({
       </template>
     </OverviewHeader>
 
-    <!-- TABLE -->
     <el-card>
       <SmartTable
         :data="classes"
@@ -483,7 +500,6 @@ const { headerState: classHeaderStats } = useHeaderState({
       </SmartTable>
     </el-card>
 
-    <!-- PAGINATION -->
     <el-row v-if="totalRows > 0" justify="end" class="m-4">
       <el-pagination
         :current-page="currentPage"
@@ -502,8 +518,6 @@ const { headerState: classHeaderStats } = useHeaderState({
       />
     </el-row>
 
-    <!-- CREATE CLASS DIALOG -->
-
     <SmartFormDialog
       v-model:visible="createFormVisible"
       v-model="createFormData"
@@ -516,9 +530,8 @@ const { headerState: classHeaderStats } = useHeaderState({
       :width="createFormDialogWidth"
     />
 
-    <!-- MANAGE STUDENTS + TEACHER DIALOG -->
-
     <SmartFormDialog
+      :key="manageStudentsDialogKey"
       v-model:visible="manageStudentsVisible"
       v-model="manageRelationsForm"
       :fields="manageRelationsFields"

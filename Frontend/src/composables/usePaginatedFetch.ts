@@ -1,7 +1,7 @@
 import { ref, unref, type Ref, type ComputedRef } from "vue";
+import axios from "axios";
 
 type MaybeRef<T> = Ref<T> | ComputedRef<T>;
-import axios from "axios";
 
 export function usePaginatedFetch<T, F>(
   fetchFn: (
@@ -17,16 +17,21 @@ export function usePaginatedFetch<T, F>(
   const data = ref<T[]>([]);
   const loading = ref(false);
   const error = ref<Error | null>(null);
-
+  const hasFetchedOnce = ref(false);
   const currentPage = ref(initialPage);
   const pageSize = ref(initialPageSize);
   const totalRows = ref(0);
 
   let controller: AbortController | null = null;
+  let reqId = 0;
 
   const fetchPage = async (page: number = currentPage.value) => {
+    reqId += 1;
+    const myReqId = reqId;
+
     controller?.abort();
-    controller = new AbortController();
+    const myController = new AbortController();
+    controller = myController;
 
     loading.value = true;
     error.value = null;
@@ -40,13 +45,18 @@ export function usePaginatedFetch<T, F>(
         filterValue,
         page,
         pageSize.value,
-        controller.signal
+        myController.signal
       );
+
+      // ✅ ignore stale responses
+      if (myReqId !== reqId) return;
 
       data.value = res.items;
       totalRows.value = res.total;
       currentPage.value = page;
+      hasFetchedOnce.value = true;
     } catch (err: any) {
+      // ✅ ignore aborts
       if (
         err?.name === "AbortError" ||
         err?.name === "CanceledError" ||
@@ -56,10 +66,14 @@ export function usePaginatedFetch<T, F>(
         return;
       }
 
+      // ✅ ignore stale errors too
+      if (myReqId !== reqId) return;
+
       error.value = err;
       console.error("Fetch failed:", err);
     } finally {
-      loading.value = false;
+      // ✅ only the latest request can stop loading
+      if (myReqId === reqId) loading.value = false;
     }
   };
 
@@ -84,5 +98,6 @@ export function usePaginatedFetch<T, F>(
     fetchPage,
     goPage,
     setPageSize,
+    hasFetchedOnce,
   };
 }

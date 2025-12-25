@@ -1,37 +1,27 @@
-import { UserRole } from "~/api/types/enums/role.enum";
 import type { UserBaseDataDTO } from "~/api/types/user.dto";
-import type { ApiResponse } from "~/api/types/common/api-response.type";
+import type { UserRole } from "~/api/types/enums/role.enum";
 
-export type IamApiResponse<T> = ApiResponse<T>;
+export type UserLoginForm = {
+  email: string;
+  password: string;
+};
 
-export interface UserLogin {
-  access_token: string;
-  user: UserBaseDataDTO;
-}
-
-export interface UserRegister {
+export type UserRegisterForm = {
   email: string;
   password: string;
   role: UserRole;
-}
+};
 
-export interface UserLoginForm {
-  email: string;
-  password: string;
-}
-
-export interface UserRegister {
+export type AuthData = {
   access_token: string;
   user: UserBaseDataDTO;
-}
+};
 
-export interface AuthData {
+export type RefreshResponse = {
   access_token: string;
-  user: UserBaseDataDTO;
-}
+};
 
-export type UserLoginResponse = IamApiResponse<UserLogin>;
-
-export type UserRegisterResponse = IamApiResponse<UserRegister>;
-
-export type AuthDataResponse = IamApiResponse<AuthData>;
+export type UserLoginResponse = AuthData;
+export type UserRegisterResponse = AuthData;
+export type MeResponse = UserBaseDataDTO;
+export type RefreshApiResponse = RefreshResponse;

@@ -1,21 +1,19 @@
-import { jwtDecode } from "jwt-decode";
 import { useMessage } from "~/composables/common/useMessage";
 import { useRouter } from "nuxt/app";
 import { useAuthStore } from "~/stores/authStore";
 import { AuthApi } from "~/api/iam/iam.api";
-import { useApiUtils } from "~/utils/useApiUtils";
 import { Role } from "~/api/types/enums/role.enum";
-import type { UserRegister, UserLoginForm, AuthData } from "~/api/iam/iam.dto";
-import type { UserBaseDataDTO } from "~/api/types/user.dto";
+import type { UserRegisterForm, UserLoginForm } from "~/api/iam/iam.dto";
+import { isAxiosError } from "axios";
 
 export class AuthService {
   private router = useRouter();
   private authStore = useAuthStore();
-  private safeApiCall = useApiUtils().safeApiCall;
   private message = useMessage();
+
   constructor(private authApi: AuthApi) {}
 
-  private validateCredentials(form: UserRegister | UserLoginForm): boolean {
+  private validateCredentials(form: UserRegisterForm | UserLoginForm): boolean {
     if (!form.email || !form.password) {
       this.message.showWarning("Please fill in all fields");
       return false;
@@ -23,80 +21,70 @@ export class AuthService {
     return true;
   }
 
-  async register(form: UserRegister): Promise<AuthData | null> {
-    if (!this.validateCredentials(form)) return null;
-
-    const { data } = await this.safeApiCall<AuthData>(
-      () => this.authApi.registerUser(form),
-      {
-        showSuccessNotification: true,
-        showErrorNotification: true,
-      }
-    );
-    if (!data) return null;
-    await this.router.push("/auth/login");
-    return data;
-  }
-
   async login(form: UserLoginForm): Promise<void | null> {
     if (!this.validateCredentials(form)) return null;
 
-    const { data } = await this.safeApiCall<AuthData>(
-      () => this.authApi.login(form),
-      {
-        showErrorNotification: true,
-        showSuccessNotification: true,
+    try {
+      const data = await this.authApi.login(form);
+
+      const token = data?.access_token;
+      const user = data?.user;
+
+      if (!token || !user) {
+        this.message.showError("Invalid response from server");
+        return null;
       }
-    );
-    if (!data) return;
-    const token = data.access_token;
-    if (!token) {
-      this.message.showError("Invalid response from server: no token");
+
+      this.authStore.setToken(token);
+      this.authStore.setUser(user);
+
+      this.message.showSuccess("Logged in successfully");
+      await this.redirectByRole(user.role);
       return;
+    } catch (err) {
+      if (isAxiosError(err)) {
+        const msg =
+          (err.response?.data as any)?.msg ||
+          (err.response?.data as any)?.message ||
+          err.message ||
+          "Login failed";
+        this.message.showError(String(msg));
+        return null;
+      }
+
+      this.message.showError("Login failed");
+      return null;
     }
-    const decodedUser = jwtDecode(token) as UserBaseDataDTO;
-    this.authStore.login(token, decodedUser);
-    await this.redirectByRole(decodedUser.role);
   }
 
-  // loginWithGoogle() {
-  //   this.authApi.loginWithGoogle(this.authApi);
-  // }
-
-  logout() {
-    this.authStore.logout();
-    this.router.push("/auth/login");
-    this.message.showSuccess("Logged out successfully");
+  async logout(): Promise<void> {
+    try {
+      await this.authApi.logout();
+    } catch {
+      // ignore
+    } finally {
+      this.authStore.clear();
+      await this.router.push("/auth/login");
+      this.message.showSuccess("Logged out successfully");
+    }
   }
 
   private async redirectByRole(role: Role) {
     switch (role) {
       case Role.ADMIN:
         await this.router.push("/admin/dashboard");
-        break;
-      case Role.FRONT_OFFICE:
-        await this.router.push("/front-office/dashboard");
-        break;
-      case Role.ACADEMIC:
-        await this.router.push("/academic/dashboard");
-        break;
-      case Role.FINANCE:
-        await this.router.push("/finance/dashboard");
-        break;
-      case Role.PARENT:
-        await this.router.push("/parent/dashboard");
-        break;
+        return;
       case Role.TEACHER:
         await this.router.push("/teacher/dashboard");
-        break;
+        return;
       case Role.STUDENT:
         await this.router.push("/student/dashboard");
-        break;
-      case Role.HR:
-        await this.router.push("/hr/dashboard");
-        break;
+        return;
       default:
+        this.authStore.clear();
+        this.message.showError("Unknown role. Please login again.");
         await this.router.push("/auth/login");
+        return;
     }
   }
 }

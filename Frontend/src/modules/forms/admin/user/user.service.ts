@@ -6,6 +6,8 @@ import type {
   AdminGetUserData,
 } from "~/api/admin/user/user.dto";
 
+import { createUserZod, updateUserZod } from "./user.validation";
+
 export function useServiceFormUser(): UseFormService<
   AdminCreateUser,
   AdminUpdateUser,
@@ -17,9 +19,34 @@ export function useServiceFormUser(): UseFormService<
   const service = adminService();
 
   return {
-    create: (data) => service.user.createUser(data, { showSuccess: true }),
-    update: (id, data) =>
-      service.user.updateUser(id, data, { showSuccess: true }),
+    create: async (data) => {
+      const validation = createUserZod.safeParse(data);
+      if (!validation.success) {
+        const errorMessage = validation.error.errors[0].message;
+        ElMessage.error(errorMessage);
+        throw new Error(errorMessage);
+      }
+      return service.user.createUser(validation.data as AdminCreateUser, {
+        showSuccess: true,
+      });
+    },
+
+    update: async (id, data) => {
+      const validation = updateUserZod.safeParse(data);
+      if (!validation.success) {
+        const errorMessage = validation.error.errors[0].message;
+        ElMessage.error(errorMessage);
+        throw new Error(errorMessage);
+      }
+      const cleanData = { ...validation.data };
+      if (!cleanData.password) {
+        delete cleanData.password;
+      }
+      return service.user.updateUser(id, cleanData as AdminUpdateUser, {
+        showSuccess: true,
+      });
+    },
+
     delete: async (id) => {
       await service.user.softDeleteUser(id);
       return true;

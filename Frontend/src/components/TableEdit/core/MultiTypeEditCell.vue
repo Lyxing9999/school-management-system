@@ -3,39 +3,47 @@
   lang="ts"
   generic="R extends Record<string, any>, F extends keyof R = keyof R"
 >
+import { Edit, Loading } from "@element-plus/icons-vue";
 import SaveCancelControls from "~/components/TableEdit/controls/SaveCancelControls.vue";
 import { useVModel } from "@vueuse/core";
 import type { InlineEditProps } from "~/components/types/tableEdit";
 import { debounce } from "lodash-es";
 import { validateField } from "~/components/TableEdit/validate/validateField";
-import { markRaw, computed } from "vue";
-const props = withDefaults(defineProps<InlineEditProps<R, F>>(), {
-  inlineEditActive: false,
-  controls: true,
-  autoSave: false,
-  debounceMs: 300,
-  controlsSlot: false,
-  customClass: "flex justify-between items-center cursor-pointer",
-});
+import { markRaw, computed, onBeforeUnmount } from "vue";
+
+const props = withDefaults(
+  defineProps<
+    InlineEditProps<R, F> & { loading?: boolean; disabled?: boolean }
+  >(),
+  {
+    loading: false,
+    disabled: false,
+    inlineEditActive: false,
+    controls: true,
+    autoSave: false,
+    debounceMs: 300,
+    controlsSlot: false,
+    customClass: "flex justify-between items-center cursor-pointer",
+  }
+);
+
 const emit = defineEmits<{
   (e: "update:modelValue", value: R[F]): void;
   (e: "update:inlineEditActive", value: boolean): void;
-  (e: "save", row: R, field: F): void;
+  (e: "save", row: R, field: F, value: R[F]): void;
   (e: "cancel", row: R, field: F): void;
-  (e: "auto-save", row: R, field: F): void;
+  (e: "auto-save", row: R, field: F, value: R[F]): void;
 }>();
-let hasPendingSave = false;
+
+const isBlocked = computed(() => props.loading || props.disabled);
+
 function getFinalValue(): R[F] {
   let val: any = inputValue.value;
-
-  if (props.childComponentProps?.prependValue) {
+  if (props.childComponentProps?.prependValue)
     val = props.childComponentProps.prependValue + val;
-  }
-
-  if (props.childComponentProps?.appendValue) {
+  if (props.childComponentProps?.appendValue)
     val = val + props.childComponentProps.appendValue;
-  }
-  return val;
+  return val as R[F];
 }
 
 const inlineEditActive = useVModel(
@@ -48,86 +56,100 @@ const inlineEditActive = useVModel(
 const inputValue = computed({
   get: () => {
     const val = props.modelValue ?? props.row[props.field];
-    if (props.childComponentProps?.appendValue && val) {
-      return val.replace(props.childComponentProps.appendValue, "");
+    if (props.childComponentProps?.appendValue && val != null) {
+      return String(val).replace(props.childComponentProps.appendValue, "");
     }
     return val;
   },
-  set: (val: string) => emit("update:modelValue", val as R[F]),
+  set: (val: any) => emit("update:modelValue", val as R[F]),
 });
+
 function resetInput() {
-  emit("update:modelValue", props.modelValue ?? props.row[props.field]);
+  emit(
+    "update:modelValue",
+    (props.modelValue ?? props.row[props.field]) as R[F]
+  );
 }
 
 function handleSave() {
-  const finalValue = getFinalValue();
+  if (isBlocked.value) return;
+
   const error = validateField(inputValue.value, props.rules || []);
   if (error) {
     ElMessage.error(error);
     return;
   }
+
+  const finalValue = getFinalValue();
   emit("update:modelValue", finalValue);
-  emit("save", finalValue, props.field);
+  emit("save", props.row, props.field, finalValue);
   inlineEditActive.value = false;
 }
 
 function handleCancel() {
+  if (isBlocked.value) return;
   resetInput();
-
   emit("cancel", props.row, props.field);
   inlineEditActive.value = false;
 }
 
+let hasPendingSave = false;
+
 const triggerAutoSave = debounce(() => {
-  props.row[props.field] = getFinalValue() as any;
-  emit("auto-save", props.row, props.field);
-  hasPendingSave = true;
+  if (isBlocked.value) return;
+
+  const error = validateField(inputValue.value, props.rules || []);
+  if (error) {
+    ElMessage.error(error);
+    return;
+  }
+
+  const finalValue = getFinalValue();
+  emit("update:modelValue", finalValue);
+  emit("auto-save", props.row, props.field, finalValue);
 }, props.debounceMs);
 
 function triggerAutoSaveOnce() {
-  if (!hasPendingSave) {
-    hasPendingSave = true;
-    triggerAutoSave();
-    setTimeout(() => {
-      hasPendingSave = false;
-    }, props.debounceMs);
-  }
+  if (isBlocked.value) return;
+  if (hasPendingSave) return;
+
+  hasPendingSave = true;
+  triggerAutoSave();
+  setTimeout(() => (hasPendingSave = false), props.debounceMs);
+}
+
+function handleChange(value: any) {
+  inputValue.value = value;
+  if (!props.autoSave) return;
+  triggerAutoSaveOnce();
 }
 
 function handleBlur() {
-  if (props.autoSave) {
-    const error = validateField(inputValue.value, props.rules || []);
-    if (error) {
-      ElMessage.error(error);
-      return;
-    }
-    inlineEditActive.value = false;
-    triggerAutoSaveOnce();
-  }
+  if (!props.autoSave) return;
+  if (isBlocked.value) return;
+
+  inlineEditActive.value = false;
+  triggerAutoSaveOnce();
 }
+
 onBeforeUnmount(() => {
   triggerAutoSave.flush();
 });
+
 const component = computed(() =>
   props.component ? markRaw(props.component) : null
 );
 const childComponent = computed(() =>
   props.childComponent ? markRaw(props.childComponent) : null
 );
-function handleChange(value: any) {
-  inputValue.value = value;
-  if (props.autoSave) {
-    const error = validateField(inputValue.value, props.rules || []);
-    if (error) return;
-    triggerAutoSaveOnce();
-  }
-}
 </script>
+
 <template>
+  <!-- VIEW MODE -->
   <div
     v-if="!inlineEditActive"
-    :class="props.customClass"
-    @click="inlineEditActive = true"
+    :class="[props.customClass, { 'cursor-not-allowed opacity-60': isBlocked }]"
+    @click="!isBlocked && (inlineEditActive = true)"
   >
     <span class="truncate max-w-[170px] block">
       {{
@@ -138,18 +160,21 @@ function handleChange(value: any) {
       }}
     </span>
 
-    <span v-if="controls" class="flex items-center space-x-1">
-      <el-icon><Edit /></el-icon>
+    <span class="flex items-center space-x-1">
+      <!-- SPINNER ONLY for saving cell -->
+      <el-icon v-if="props.loading" class="is-loading"><Loading /></el-icon>
+      <el-icon v-else-if="controls"><Edit /></el-icon>
     </span>
   </div>
-  <template v-else-if="!component">
-    <span>{{ row[props.field] ?? "—" }}</span>
-  </template>
+
+  <!-- EDIT MODE -->
   <div v-else>
     <component
+      v-if="component"
       :is="component"
       v-model="inputValue"
       v-bind="componentProps"
+      :disabled="isBlocked"
       @keydown.enter.prevent="handleSave"
       @keydown.esc.prevent="handleCancel"
       @blur="handleBlur"

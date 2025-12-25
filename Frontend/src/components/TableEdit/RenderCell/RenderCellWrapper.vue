@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, isVNode } from "vue";
+import { isVNode } from "vue";
 import type { Component, VNode } from "vue";
 
 type RenderConfig = {
@@ -43,7 +43,6 @@ const isObjectConfig = (v: unknown): v is RenderConfig => {
     </template>
   </component>
 
-  <!-- 3) New: config object { component, componentProps, value } -->
   <component
     v-else-if="isObjectConfig(props.vnode) && (props.vnode as any).component"
     :is="(props.vnode as any).component"
@@ -54,7 +53,6 @@ const isObjectConfig = (v: unknown): v is RenderConfig => {
     </template>
   </component>
 
-  <!-- 4) Legacy props.component/props.componentProps/value (if used directly) -->
   <component
     v-else-if="props.component"
     :is="props.component"
@@ -65,7 +63,6 @@ const isObjectConfig = (v: unknown): v is RenderConfig => {
     </template>
   </component>
 
-  <!-- 5) Fallback -->
   <span v-else>
     {{ (props.vnode as any)?.value ?? props.value ?? "—" }}
   </span>

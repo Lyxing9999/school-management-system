@@ -50,7 +50,7 @@ export function useDynamicCreateFormReactive<
         FormData,
         FormData
       >,
-    () => registry.value.formData?.() ?? ({} as FormData),
+    () => (registry.value.formData?.() ?? {}) as FormData,
     () => registry.value.schema as Schema
   );
 }

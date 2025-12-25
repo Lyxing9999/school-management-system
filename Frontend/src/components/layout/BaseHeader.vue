@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { navigateTo } from "nuxt/app";
 import {
   Menu,
   Bell,
@@ -8,8 +9,12 @@ import {
   ArrowDown,
   User as UserIcon,
 } from "@element-plus/icons-vue";
+
 import BaseInputSearch from "~/components/Base/BaseInputSearch.vue";
 import { useAuthStore } from "~/stores/authStore";
+import { iamService } from "~/api/iam"; // adjust path to where your iamService() file is
+// Example: "~/api/iam/index" or "~/services/iam" depending on your project
+// Use the real path you created.
 
 type ThemeKey = "light" | "dark";
 
@@ -18,6 +23,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
+const iam = iamService();
 
 const searchQuery = ref("");
 const unreadNotifications = ref(5);
@@ -25,7 +31,11 @@ const unreadNotifications = ref(5);
 const theme = ref<ThemeKey>("light");
 const isDark = computed(() => theme.value === "dark");
 
-const displayName = computed(() => authStore.user?.username ?? "Admin User");
+// Since your store is Composition API (refs), prefer .value in script
+const displayName = computed(() => {
+  if (!authStore.isReady) return "Loading...";
+  return authStore.user?.username ?? "Admin User";
+});
 
 function applyTheme(next: ThemeKey) {
   theme.value = next;
@@ -40,6 +50,7 @@ function applyTheme(next: ThemeKey) {
 function toggleDark() {
   applyTheme(isDark.value ? "light" : "dark");
 }
+
 onMounted(() => {
   const current =
     (document.documentElement.getAttribute("data-theme") as ThemeKey) ??
@@ -51,12 +62,12 @@ const handleNotificationClick = () => {
   console.log("Notification clicked");
 };
 
-const handleProfileClick = () => {
-  console.log("Profile clicked");
+const handleProfileClick = async () => {
+  await navigateTo("/profile"); 
 };
 
-const handleLogoutClick = () => {
-  console.log("Logout clicked");
+const handleLogoutClick = async () => {
+  await iam.auth.logout();
 };
 </script>
 
@@ -76,6 +87,7 @@ const handleLogoutClick = () => {
     <!-- Center -->
     <div class="header-center">
       <!-- Center header -->
+      <!-- <BaseInputSearch v-model="searchQuery" /> -->
     </div>
 
     <!-- Right -->
@@ -108,22 +120,7 @@ const handleLogoutClick = () => {
           </el-button>
         </el-tooltip>
 
-        <!-- Optional: if you want explicit Light/Purple/Dark buttons -->
-        <!--
-        <el-dropdown trigger="click">
-          <el-button type="text" class="icon-button">
-            Theme
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item @click="applyTheme('purple')">Purple</el-dropdown-item>
-              <el-dropdown-item @click="applyTheme('light')">Light</el-dropdown-item>
-              <el-dropdown-item @click="applyTheme('dark')">Dark</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        -->
-
+        <!-- User dropdown -->
         <el-dropdown trigger="click" placement="bottom-end">
           <el-button type="text" class="user-dropdown">
             <el-space size="small" alignment="center">

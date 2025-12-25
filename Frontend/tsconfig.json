@@ -49,6 +49,6 @@
     "src/**/*.vue",
     "src/types/**/*.d.ts",
     ".nuxt/**/*.d.ts"   
-, "src/services/formServices"  ],
+, "src/services/formServices", "src/composables/pages/users/useUsersPaging.ts"  ],
   "exclude": ["node_modules"]
 }

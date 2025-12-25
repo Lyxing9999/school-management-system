@@ -669,20 +669,6 @@ const scheduleTeacherRows = computed(
       </el-col>
     </el-row>
 
-    <el-row :gutter="16" class="mt-2">
-      <el-col :xs="24" :sm="8">
-        <el-card shadow="hover" class="stat-card h-full">
-          <div class="card-title">Today&apos;s lessons</div>
-          <div class="text-2xl font-semibold mt-1">
-            {{ todayLessons }}
-          </div>
-          <p class="text-[11px] text-gray-500 mt-1">
-            Total scheduled lessons for today across all classes.
-          </p>
-        </el-card>
-      </el-col>
-    </el-row>
-
     <!-- Row 1: Attendance overview -->
     <el-row :gutter="16" class="mt-2">
       <el-col :xs="24" :md="8">

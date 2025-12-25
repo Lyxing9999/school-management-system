@@ -1,16 +1,26 @@
 // ~/composables/useDialogDynamicWidth.ts
-import { computed } from "vue";
+import { computed, toValue, type MaybeRefOrGetter } from "vue";
 import type { Field } from "~/components/types/form";
 
-export function useDialogDynamicWidth(fields: Field<any>[]) {
+function countLeafFields(fields: Field<any>[]): number {
+  let n = 0;
+  for (const f of fields ?? []) {
+    if ((f as any).row?.length) n += countLeafFields((f as any).row);
+    else if ((f as any).key != null) n += 1;
+  }
+  return n;
+}
+
+export function useDialogDynamicWidth(fields: MaybeRefOrGetter<Field<any>[]>) {
   return computed(() => {
-    if (!fields || fields.length === 0) return "400px";
+    const list = toValue(fields) ?? [];
+    if (list.length === 0) return "400px";
 
-    const count = fields.length;
+    const count = countLeafFields(list);
 
-    if (count <= 4) return "40%"; // very few fields — narrow
-    if (count <= 8) return "60%"; // medium forms
-    if (count <= 12) return "75%"; // large
-    return "90%"; // very big form
+    if (count <= 4) return "40%";
+    if (count <= 8) return "60%";
+    if (count <= 12) return "75%";
+    return "90%";
   });
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive } from "vue";
+import type { FormInstance, FormRules } from "element-plus";
 import { ElMessage } from "element-plus";
 
 import schoolLogo from "~/assets/image/school-logo-light.png";
@@ -9,35 +10,43 @@ import { iamService } from "~/api/iam/index";
 import type { UserLoginForm } from "~/api/iam/iam.dto";
 
 const authService = iamService().auth;
-const loading = ref(false);
 
-const form: UserLoginForm = reactive({
+const loading = ref(false);
+const formRef = ref<FormInstance>();
+
+const form = reactive<UserLoginForm>({
   email: "",
   password: "",
 });
 
-const emailRules = [
-  { required: true, message: "Please enter email", trigger: "blur" },
-];
-const passwordRules = [
-  { required: true, message: "Please enter password", trigger: "blur" },
-];
+const rules: FormRules = {
+  email: [
+    { required: true, message: "Please enter email", trigger: "blur" },
+    { type: "email", message: "Invalid email format", trigger: "blur" },
+  ],
+  password: [
+    { required: true, message: "Please enter password", trigger: "blur" },
+  ],
+};
 
 const submit = async () => {
-  if (!form.email || !form.password) {
-    ElMessage.warning("Please enter email and password");
-    return;
-  }
+  if (loading.value) return;
+
+  const ok = await formRef.value?.validate().catch(() => false);
+  if (!ok) return;
 
   loading.value = true;
   try {
     await authService.login(form);
+  } catch (e) {
   } finally {
     loading.value = false;
   }
 };
 
-// const loginWithGoogle = () => authService.loginWithGoogle();
+const loginWithGoogle = () => {
+  ElMessage.info("Google login is not implemented yet");
+};
 </script>
 
 <template>
@@ -51,17 +60,14 @@ const submit = async () => {
 
         <!-- Form -->
         <el-form
+          ref="formRef"
           :model="form"
+          :rules="rules"
           label-position="top"
           class="text-left"
           @submit.prevent="submit"
         >
-          <el-form-item
-            label="Email"
-            :rules="emailRules"
-            prop="email"
-            class="mb-6"
-          >
+          <el-form-item label="Email" prop="email" class="mb-6">
             <el-input
               v-model="form.email"
               placeholder="Email"
@@ -70,12 +76,7 @@ const submit = async () => {
             />
           </el-form-item>
 
-          <el-form-item
-            label="Password"
-            :rules="passwordRules"
-            prop="password"
-            class="mb-6"
-          >
+          <el-form-item label="Password" prop="password" class="mb-6">
             <el-input
               v-model="form.password"
               type="password"
@@ -83,6 +84,7 @@ const submit = async () => {
               autocomplete="current-password"
               show-password
               class="auth-input"
+              @keyup.enter="submit"
             />
           </el-form-item>
 
@@ -103,7 +105,7 @@ const submit = async () => {
         <el-button
           class="auth-google-btn w-full mt-2"
           :disabled="loading"
-          @click=""
+          @click="loginWithGoogle"
         >
           <img :src="googleIcon" alt="Google Icon" class="w-6 h-6" />
           <span>Login with Google</span>

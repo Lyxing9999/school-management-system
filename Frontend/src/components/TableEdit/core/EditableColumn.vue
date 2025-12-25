@@ -6,24 +6,28 @@
 import MultiTypeEditCell from "~/components/TableEdit/core/MultiTypeEditCell.vue";
 import RenderCell from "~/components/TableEdit/RenderCell/RenderCellWrapper.vue";
 import type { InlineEditColumnProps } from "~/components/types/tableEdit";
-const props = defineProps<InlineEditColumnProps<R, F>>();
+
+const props = defineProps<
+  InlineEditColumnProps<R, F> & {
+    isLoading?: (row: R, field: F) => boolean;
+    isDisabled?: (row: R, field: F) => boolean;
+  }
+>();
+
 const emit = defineEmits<{
-  (e: "update:modelValue", value: R[F]): void;
-  (e: "save", row: R, field: F): void;
+  (e: "save", row: R, field: F, value: R[F]): void;
   (e: "cancel", row: R, field: F): void;
-  (e: "auto-save", row: R, field: F): void;
+  (e: "auto-save", row: R, field: F, value: R[F]): void;
 }>();
+
 defineSlots<{
-  default?(props: { row: R; field: F }): any;
   header?(props: { column: { label: string; field: F } }): any;
   operation?(props: { row: R; field: F }): any;
   controlsSlot?(props: { row: R; field: F }): any;
+
+  /** IMPORTANT: allow any dynamic slot name used by SmartTable columns */
+  [key: string]: ((props: any) => any) | undefined;
 }>();
-// Make TS aware of dynamic slots
-
-// Check if slot exists
-
-const slots = useSlots() as Record<string, (props: any) => any>;
 </script>
 
 <template>
@@ -34,44 +38,50 @@ const slots = useSlots() as Record<string, (props: any) => any>;
     :prop="String(props.field)"
   >
     <template #default="{ row }">
-      <template v-if="useSlots">
-        <component
-          :is="slots[props.slotName]"
+      <!-- SLOT MODE (dynamic slot name) -->
+      <template v-if="props.useSlot && props.slotName">
+        <slot
+          :name="props.slotName"
           v-bind="{ row, field: props.field, value: row[props.field] }"
         />
       </template>
 
+      <!-- OPERATION MODE -->
       <template v-else-if="operation">
         <slot name="operation" :row="row" :field="props.field" />
       </template>
 
+      <!-- RENDER FN MODE -->
       <template v-else-if="render">
         <RenderCell :vnode="render(row, props.field)" />
       </template>
 
+      <!-- INLINE EDIT MODE -->
       <template v-else>
         <MultiTypeEditCell
-          v-model="row[field]"
+          v-model="row[props.field]"
           :row="row"
-          :field="field"
+          :field="props.field"
           :component="component"
           :componentProps="componentProps"
           :childComponent="childComponent"
           :childComponentProps="childComponentProps"
           :inlineEditActive="inlineEditActive"
           :controls="controls"
-          :controlsSlot="controlsSlot"
+          :controlsSlot="!!$slots.controlsSlot"
           :placeholder="placeholder"
           :autoSave="autoSave"
           :rules="rules"
           :debounceMs="debounceMs"
           :customClass="customClass"
-          @save="emit('save', row as R, field as F)"
-          @cancel="emit('cancel', row as R, field as F)"
-          @auto-save="emit('auto-save', row as R, field as F)"
+          :loading="props.isLoading ? props.isLoading(row as R, props.field as F) : false"
+          :disabled="props.isDisabled ? props.isDisabled(row as R, props.field as F) : false"
+          @save="(_, __, value) => emit('save', row as R, props.field as F, value as R[F])"
+          @cancel="() => emit('cancel', row as R, props.field as F)"
+          @auto-save="(_, __, value) => emit('auto-save', row as R, props.field as F, value as R[F])"
         >
           <template v-if="$slots.controlsSlot" #controlsSlot>
-            <slot name="controlsSlot" :row="row" :field="field" />
+            <slot name="controlsSlot" :row="row" :field="props.field" />
           </template>
         </MultiTypeEditCell>
       </template>

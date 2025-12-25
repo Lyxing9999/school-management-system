@@ -39,6 +39,7 @@ export type InlineEditProps<
   autoSave?: boolean;
   debounceMs?: number;
   customClass?: string;
+  loading?: boolean;
 };
 
 import type { VNode, Component } from "vue";
@@ -78,7 +79,7 @@ export type InlineEditColumnProps<
   customClass?: string;
   footer?: boolean;
   slotName?: string;
-  useSlots?: boolean;
+  useSlot?: boolean;
 };
 
 /**
@@ -104,7 +105,7 @@ export type ColumnConfig<T> = {
   rules?: Rule[];
   footer?: boolean;
   slotName?: string;
-  useSlots?: boolean;
+  useSlot?: boolean;
   childComponentProps?: {
     options?: Array<Record<string, any>>;
     valueKey?: string;

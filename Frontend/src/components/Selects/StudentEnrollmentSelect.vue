@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import RemoteSelect from "~/components/Selects/RemoteSelect.vue";
 import { adminService } from "~/api/admin";
-import { computed } from "vue";
 
 const adminApi = adminService();
 
 type StudentValue = string | string[] | null;
+type SelectOption = { value: string; label: string };
 
 const props = defineProps<{
   classId: string;
@@ -14,49 +15,51 @@ const props = defineProps<{
   disabled?: boolean;
   multiple?: boolean;
   loading?: boolean;
-
-  options?:
-    | { value: string; label: string }[]
-    | (() => { value: string; label: string }[]);
+  preloadedOptions?: SelectOption[];
 }>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: StudentValue): void;
 }>();
-watch(
-  () => props.classId,
-  () => {
-    fetchAllStudents();
-  }
-);
-const fetchAllStudents = async () => {
+
+const innerValue = computed({
+  get: () => props.modelValue,
+  set: (v) => emit("update:modelValue", v),
+});
+
+function normalizeApiItems(res: any): SelectOption[] {
+  const items = res?.data?.items ?? res?.items ?? [];
+  return (items as any[]).map((x) => ({
+    value: String(x.value ?? x.id ?? x._id),
+    label: String(x.label ?? x.name ?? x.value),
+  }));
+}
+
+const fetchEligible = async (): Promise<SelectOption[]> => {
   if (!props.classId) return [];
   const res = await adminApi.class.listStudentsForEnrollmentSelect(
     props.classId
   );
-  return res?.items ?? [];
+  return normalizeApiItems(res);
 };
 
-const innerValue = computed({
-  get: () => props.modelValue,
-  set: (v: StudentValue) => emit("update:modelValue", v),
-});
-
-const resolvedPreloaded = computed(() => {
-  if (!props.options) return [];
-  return typeof props.options === "function" ? props.options() : props.options;
-});
+const reloadKey = computed(
+  () => `${props.classId}|${(props.preloadedOptions ?? []).length}`
+);
 </script>
+
 <template>
-  <div class="relative" v-loading="!!props.loading">
+  <div class="relative" v-loading="!!loading">
     <RemoteSelect
       v-model="innerValue"
-      :fetcher="fetchAllStudents"
-      :preloaded-options="resolvedPreloaded"
+      :fetcher="fetchEligible"
+      :preloaded-options="preloadedOptions"
+      :hide-preloaded-in-dropdown="true"
+      :reload-key="reloadKey"
       label-key="label"
       value-key="value"
-      :placeholder="placeholder ?? 'Select student'"
-      :disabled="disabled || !!props.loading"
+      :placeholder="placeholder ?? 'Select students to enroll'"
+      :disabled="disabled || !!loading"
       :multiple="multiple"
       clearable
     />
