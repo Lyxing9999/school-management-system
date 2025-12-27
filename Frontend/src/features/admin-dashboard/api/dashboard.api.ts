@@ -1,9 +1,8 @@
-// ~/api/admin/dashboard/dashboard.api.ts
 import type { AxiosInstance } from "axios";
 import type {
-  AdminDashboardResponse,
   AdminDashboardFilterDTO,
-} from "~/api/admin/dashboard/dashboard.dto";
+  AdminDashboardResponse,
+} from "./dashboard.dto.js";
 
 export class DashboardApi {
   constructor(
@@ -13,8 +12,9 @@ export class DashboardApi {
 
   async getDashboardData(filters?: AdminDashboardFilterDTO) {
     const res = await this.$api.get<AdminDashboardResponse>(this.baseURL, {
-      params: filters, // will send ?date_from=&date_to=&term=
+      params: filters,
     });
+
     return res.data;
   }
 }

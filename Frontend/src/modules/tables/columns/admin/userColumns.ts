@@ -1,5 +1,5 @@
 import type { ColumnConfig } from "~/components/types/tableEdit";
-import { ElInput, ElDatePicker, ElTag } from "element-plus";
+import { ElInput, ElTag } from "element-plus";
 import { h } from "vue";
 import type { AdminGetUserItemData } from "~/api/admin/user/user.dto";
 
@@ -36,7 +36,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     componentProps: {
       placeholder: "Enter email",
       class: "w-full",
-      style: { width: "100%" }, // important in tables
+      style: { width: "100%" }, 
     },
 
     childComponentProps: { appendValue: "@gmail.com" },

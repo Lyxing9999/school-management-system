@@ -1,9 +1,5 @@
 import type { ColumnConfig } from "~/components/types/tableEdit";
-import type { Field } from "~/components/types/form";
-import { ElInput, ElDatePicker } from "element-plus";
-import { h } from "vue";
 import type { AdminSubjectDataDTO } from "~/api/admin/subject/subject.dto";
-import type { SubjectDTO } from "~/api/types/school.dto";
 // ------------------ Subject Table Columns ------------------
 
 export const subjectColumns = computed<ColumnConfig<AdminSubjectDataDTO>[]>(
@@ -36,7 +32,7 @@ export const subjectColumns = computed<ColumnConfig<AdminSubjectDataDTO>[]>(
       field: "is_active",
       label: "Status",
       align: "center",
-      operation: true, // use #operation slot
+      operation: true, 
     },
   ]
 );

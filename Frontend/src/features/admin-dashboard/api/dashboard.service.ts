@@ -1,10 +1,9 @@
-// ~/api/admin/dashboard/dashboard.service.ts
 import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
 import { DashboardApi } from "./dashboard.api";
 import type {
   AdminDashboardDTO,
   AdminDashboardFilterDTO,
-} from "./dashboard.dto";
+} from "../api/dashboard.dto";
 
 export class DashboardService {
   private callApi = useApiUtils().callApi;
@@ -14,8 +13,8 @@ export class DashboardService {
   /**
    * Get admin dashboard data with optional filters.
    *
-   * @param filters  { date_from?: string; date_to?: string; term?: string }
-   * @param options  ApiCallOptions (showError, showSuccess, loadingRef, etc.)
+   * @param filters { date_from?: string; date_to?: string; term?: string }
+   * @param options ApiCallOptions (showError, loadingRef, etc.)
    */
   async getDashboardData(
     filters?: AdminDashboardFilterDTO,
@@ -25,6 +24,10 @@ export class DashboardService {
       () => this.dashboardApi.getDashboardData(filters),
       options
     );
-    return data!;
+
+    // callApi returns T | null typically, so enforce here
+    if (!data) throw new Error("Dashboard service returned null.");
+
+    return data;
   }
 }
