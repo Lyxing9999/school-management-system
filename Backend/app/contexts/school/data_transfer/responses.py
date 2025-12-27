@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Optional
-from pydantic import BaseModel, ConfigDict, field_validator
+from typing import Optional, List, Literal
+from pydantic import BaseModel, ConfigDict, field_validator, Field
 from bson import ObjectId
 
 from app.contexts.shared.lifecycle.dto import LifecycleDTO
@@ -169,3 +169,27 @@ def schedule_to_dto(slot: ScheduleSlot) -> ScheduleDTO:
         room=slot.room,
         lifecycle=_lifecycle_to_dto(slot.lifecycle),
     )
+
+
+
+
+class UpdateClassRelationsRequest(BaseModel):
+    student_ids: list[str] = Field(default_factory=list)
+    teacher_id: str | None = None
+
+
+class ConflictItem(BaseModel):
+    student_id: str
+    reason: Literal["ALREADY_ENROLLED", "NOT_FOUND"]
+    current_class_id: Optional[str] = None
+
+
+class UpdateClassRelationsResult(BaseModel):
+    class_id: str
+    teacher_changed: bool
+    teacher_id: str | None
+    enrolled_count: int
+    added: list[str] = Field(default_factory=list)
+    removed: list[str] = Field(default_factory=list)
+    conflicts: list[ConflictItem] = Field(default_factory=list)
+    capacity_rejected: list[str] = Field(default_factory=list)

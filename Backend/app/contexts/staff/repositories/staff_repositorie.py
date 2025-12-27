@@ -4,7 +4,7 @@ from typing import Optional
 
 from bson import ObjectId
 from pymongo.collection import Collection
-
+from pymongo import ASCENDING
 from app.contexts.core.error import MongoErrorMixin
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.shared.decorators.mongo_wrappers import mongo_operation
@@ -31,7 +31,7 @@ class MongoStaffRepository(MongoErrorMixin):
 
     def _oid(self, value: ObjectId | str) -> ObjectId:
         return mongo_converter.convert_to_object_id(value)
-
+    
     @mongo_operation("find_one")
     def find_one(self, staff_id: ObjectId | str, include_deleted: bool = False) -> Optional[Staff]:
         oid = self._oid(staff_id)

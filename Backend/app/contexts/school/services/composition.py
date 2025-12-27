@@ -32,6 +32,10 @@ from app.contexts.school.services.lifecycle.schedule_lifecycle_service import Sc
 
 from app.contexts.student.services.student_service import StudentService
 
+from app.contexts.school.services.use_cases.class_relations_service import ClassRelationsService
+from app.contexts.school.ports.student_membership_port import StudentMembershipPort
+from app.contexts.student.adapters.mongo_student_membership_gateway import MongoStudentMembershipGateway
+
 def build_school_facade(db: Database) -> SchoolFacade:
     class_factory, attendance_factory, grade_factory, subject_factory = build_school_factories(db)
 
@@ -41,6 +45,8 @@ def build_school_facade(db: Database) -> SchoolFacade:
     subject_repo = MongoSubjectRepository(db["subjects"], SubjectMapper())
     schedule_repo = MongoScheduleRepository(db["schedules"], ScheduleMapper())
     teacher_assignment_repo = TeacherAssignmentRepository(db["teacher_subject_assignments"])
+
+    student_membership: StudentMembershipPort = MongoStudentMembershipGateway(db)
 
     class_lifecycle = ClassLifecycleService(db)
     subject_lifecycle = SubjectLifecycleService(db)
@@ -87,6 +93,10 @@ def build_school_facade(db: Database) -> SchoolFacade:
         class_repo=class_repo,
         subject_repo=subject_repo,
     )
+    class_relations_service = ClassRelationsService(
+        class_repo=class_repo,
+        student_membership=student_membership,
+    )
 
     return SchoolFacade(
         class_service=class_service,
@@ -96,4 +106,5 @@ def build_school_facade(db: Database) -> SchoolFacade:
         attendance_service=attendance_service,
         grade_service=grade_service,
         teacher_assignment_service=teacher_assignment_service,
+        class_relations_service=class_relations_service,
     )

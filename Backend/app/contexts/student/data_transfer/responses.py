@@ -10,7 +10,7 @@ from app.contexts.school.data_transfer.responses import (
 )
 from app.contexts.school.data_transfer.responses import GradeType
 from app.contexts.school.data_transfer.responses import AttendanceStatus
-
+from app.contexts.shared.lifecycle.dto import LifecycleDTO 
 
 class StudentBaseDataDTO(BaseModel):
     id: str
@@ -27,14 +27,12 @@ class StudentBaseDataDTO(BaseModel):
     current_grade_level: int
     status: str
     history: List[Dict[str, Any]] = []
-    created_at: datetime
-    updated_at: datetime
     current_class_id: Optional[str] = None
     photo_url: str | None = None
     phone_number: str | None = None
     address: dict | None = None
     guardians: List[str] | None = None
-
+    lifecycle: LifecycleDTO
 
 
 class StudentClassSectionDTO(ClassSectionDTO):
@@ -60,6 +58,7 @@ class StudentScheduleDTO(BaseModel):
     room: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
 
 class StudentClassListDTO(BaseModel):
     items: List[StudentClassSectionDTO]

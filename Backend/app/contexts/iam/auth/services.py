@@ -19,7 +19,7 @@ class AuthService:
             "username": user_data["username"],
             "email": user_data["email"],
         }
-        return create_access_token(data=payload, expire_delta=timedelta(hours=1))
+        return create_access_token(data=payload, expire_delta=timedelta(minutes=15))
 
 
 def get_auth_service() -> AuthService:

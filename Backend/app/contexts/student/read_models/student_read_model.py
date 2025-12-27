@@ -1,7 +1,5 @@
-from __future__ import annotations
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Iterable 
 from bson import ObjectId
-from pydantic.v1.utils import Obj
 from pymongo.database import Database
 from pymongo.cursor import Cursor
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
@@ -85,10 +83,12 @@ class StudentReadModel(MongoErrorMixin):
     # options select
     # -------------
 
+
     def list_student_name_options(
         self,
         filter: Dict[str, Any] = None,
         projection: Optional[Dict[str, int]] = None,
+        limit: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         filter = filter or {}
 
@@ -101,8 +101,29 @@ class StudentReadModel(MongoErrorMixin):
         }
 
         cursor = self.collection.find(filter, proj)
+
+        if limit is not None:
+            cursor = cursor.limit(int(limit))
+
         return list(cursor)
 
 
     def count_active_students(self) -> int:
         return self.collection.count_documents(student_active())
+
+        
+    def list_student_ids_in_class(self, class_id: ObjectId, *, session=None) -> set[ObjectId]:
+        cur = self.collection.find(
+            {"current_class_id": class_id, "lifecycle.deleted_at": None},
+            {"_id": 1},
+            session=session,
+        )
+        return {d["_id"] for d in cur}
+
+    def exists(self, student_id: ObjectId, *, session=None) -> bool:
+        return self.collection.count_documents({"_id": student_id, "lifecycle.deleted_at": None}, limit=1, session=session) == 1
+
+
+    def get_current_class_id(self, student_id: ObjectId, *, session=None) -> Optional[ObjectId]:
+        doc = self.collection.find_one({"_id": student_id}, {"current_class_id": 1}, session=session)
+        return doc.get("current_class_id") if doc else None

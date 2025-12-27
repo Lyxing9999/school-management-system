@@ -6,7 +6,7 @@ from bson import ObjectId
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.staff.read_models.staff_read_model import StaffReadModel
 
-from app.contexts.shared.lifecycle.filters import not_deleted
+from app.contexts.shared.lifecycle.filters import not_deleted, active
 
 
 class IAMReadModel(MongoErrorMixin):
@@ -104,7 +104,7 @@ class IAMReadModel(MongoErrorMixin):
 
         users: List[Dict[str, Any]] = list(
             self.collection.find(query, projection)
-            .sort("created_at", -1)
+            .sort("lifecycle.created_at", -1)
             .skip(skip)
             .limit(page_size)
         )
@@ -131,6 +131,11 @@ class IAMReadModel(MongoErrorMixin):
             user["created_by_name"] = staff_map.get(creator_key, "Unknown")
 
         return users, total
+
+
+
+
+
 
     def count_active_users(self, role: str | list[str]) -> int:
         return self.collection.count_documents(active({"role": role}))

@@ -5,7 +5,8 @@ from authlib.integrations.flask_client import OAuth
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_cors import CORS
 from app.contexts.infra.http.errors import register_error_handlers
-
+from app.contexts.infra.database.db import get_db
+from app.contexts.infra.database.indexes import ensure_indexes
 oauth = OAuth()
 
 def create_app():
@@ -35,7 +36,6 @@ def create_app():
 
     # Extensions
     init_extensions(app)
-
     # global error handlers
     register_error_handlers(app)
 
@@ -78,5 +78,8 @@ def create_app():
     if settings.DEBUG:
         for rule in app.url_map.iter_rules():
             print(f"{rule} -> methods: {rule.methods}")
+    # Ensure indexes
+    db = get_db()
+    ensure_indexes(db)
 
     return app

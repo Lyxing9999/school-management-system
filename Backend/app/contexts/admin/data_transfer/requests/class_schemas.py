@@ -92,3 +92,10 @@ class AdminEnrollStudentToClassSchema(BaseModel):
         if not v:
             raise ValueError("student_id is required")
         return v
+
+
+
+
+class AdminUpdateClassRelationsSchema(BaseModel):
+    student_ids: List[str] = Field(default_factory=list)
+    teacher_id: Optional[str] = None

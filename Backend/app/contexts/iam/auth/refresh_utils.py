@@ -1,6 +1,6 @@
 import secrets
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from app.contexts.core.config.setting import settings 
 
@@ -14,5 +14,7 @@ def create_refresh_token() -> str:
 def hash_refresh_token(token: str) -> str:
     return hashlib.sha256((token + REFRESH_PEPPER).encode("utf-8")).hexdigest()
 
-def now_utc():
-    return datetime.now(timezone.utc)
+
+def now_utc() -> datetime:
+   
+    return datetime.utcnow()

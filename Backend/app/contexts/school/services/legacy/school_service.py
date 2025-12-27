@@ -46,6 +46,8 @@ class SchoolService:
     def unenroll_student_from_class(self, *args, **kwargs):
         return self._facade.enrollment_service.unenroll_student_from_class(*args, **kwargs)
 
+    def update_class_relations(self, *args, **kwargs):
+        return self._facade.class_relations_service.apply(*args, **kwargs)
     # -------- Attendance --------
     def mark_attendance(self, *args, **kwargs):
         return self._facade.attendance_service.mark_attendance(*args, **kwargs)

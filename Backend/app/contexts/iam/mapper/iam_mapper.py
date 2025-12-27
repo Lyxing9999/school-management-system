@@ -44,7 +44,7 @@ class IAMMapper:
 
         return IAM(
             id=id_value,
-            email=data["email"],  # keep strict: email should be required
+            email=data["email"],
             password=data.get("password"),
             role=role,
             username=data.get("username"),

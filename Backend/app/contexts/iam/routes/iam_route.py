@@ -9,7 +9,13 @@ from app.contexts.iam.domain.iam import IAM
 from app.contexts.iam.mapper.iam_mapper import IAMMapper
 from app.contexts.iam.auth.cookies import set_refresh_cookie
 from app.contexts.iam.auth.jwt_utils import login_required
-
+from app.contexts.core.security.auth_utils import get_current_user
+from app.contexts.iam.auth.refresh_utils import (
+    create_refresh_token,
+    hash_refresh_token,
+    now_utc,
+    REFRESH_TTL,
+)
 
 iam_bp = Blueprint('iam_bp', __name__)
 
@@ -36,7 +42,7 @@ def login_user():
 @wrap_response
 def update_user_profile():
     user_service = IAMService(get_db())
-    current_user_id = request.user_id 
+    current_user_id = get_current_user()
     update_schema: IAMUpdateSchema = pydantic_converter.convert_to_model(request.json, IAMUpdateSchema)
     iam_domain: IAM = user_service.update_info(current_user_id, update_schema , update_by_admin=False)
     return IAMMapper.to_dto(iam_domain)
@@ -97,11 +103,11 @@ def refresh_access_token():
     return resp
 
 
-
 @iam_bp.route("/me", methods=["GET"])
 @wrap_response
 @login_required()
 def get_me():
     user_service = IAMService(get_db())
-    me_dto = user_service.me(g.user["id"])
+    current = get_current_user()          
+    me_dto = user_service.me(current["user_id"])
     return me_dto

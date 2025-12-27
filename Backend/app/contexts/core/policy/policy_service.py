@@ -12,13 +12,12 @@ class PolicyService:
     def _load_config(self, path: str) -> dict:
         file_path = Path(path)
         if not file_path.exists():
-            print(f"[Warning] Policy config not found: {path}. Using empty policy set.")
             return {}  # default to empty dict to avoid None
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"[Warning] Failed to load policy config: {e}. Using empty policy set.")
+
             return {}
 
     def get_default_permissions(self, role: StaffRole) -> List[str]:

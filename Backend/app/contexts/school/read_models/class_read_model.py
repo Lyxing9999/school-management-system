@@ -7,6 +7,10 @@ from pymongo.collection import Collection
 from app.contexts.shared.model_converter import mongo_converter
 
 
+
+
+from app.contexts.shared.lifecycle.filters import not_deleted
+
 class ClassReadModel:
     """
     Read-side helper for Class data.
@@ -75,11 +79,13 @@ class ClassReadModel:
         return list(self.collection.find({"_id": {"$in": oids}}))
     # ------------ public API: class lists ------------
 
+
+
     def list_all(self) -> List[Dict]:
         """
-        Return all class documents as plain dicts.
+        Return all class documents (not soft-deleted) as plain dicts.
         """
-        cursor = self.collection.find({})
+        cursor = self.collection.find(not_deleted())
         return list(cursor)
 
     def list_classes_for_teacher(self, teacher_id: str | ObjectId) -> List[Dict]:

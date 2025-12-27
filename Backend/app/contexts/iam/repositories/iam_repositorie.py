@@ -12,7 +12,6 @@ class MongoIAMRepository(MongoErrorMixin):
     def __init__(self, collection: Collection):
         self.collection = collection
         self._iam_mapper = IAMMapper()
-        self.create_indexes()
 
 
     def find_one(self, id: ObjectId) -> IAM | None:

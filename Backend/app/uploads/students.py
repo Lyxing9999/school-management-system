@@ -45,7 +45,7 @@ def delete_file(file_url: str):
         if os.path.exists(filepath):
             os.remove(filepath)
     except Exception as e:
-        print("Failed to delete file:", e)
+        raise e
 
 
 # === Serve uploaded files (GET /uploads/<entity>/<filename>) ===
@@ -53,7 +53,7 @@ def delete_file(file_url: str):
 def serve_file(entity, filename):
     folder_path = os.path.join(UPLOAD_ROOT, entity)
     file_path = os.path.join(folder_path, filename)
-    print("Serving file from:", file_path)
+
     return send_from_directory(folder_path, filename)
 
 # === Upload or Update Student Photo (PATCH /api/uploads/student/<student_id>) ===

@@ -1,5 +1,6 @@
 from typing import List, Tuple, Union, Optional, Final
 from bson import ObjectId
+import re
 from pymongo.database import Database
 
 from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
@@ -135,20 +136,62 @@ class AdminReadModel(MongoErrorMixin):
 
         items.sort(key=lambda x: (x["label"] or "").lower())
         return items
-    def admin_list_enrollment_student_select(self, class_id: str | ObjectId) -> List[dict]:
+
+
+
+
+    def admin_search_enrollment_student_select(self, class_id, *, q: str, limit: int = 20) -> List[dict]:
+        q = (q or "").strip()
+        limit = max(1, min(int(limit or 20), 50))
+        eligible_or = [
+            {"current_class_id": {"$exists": False}},
+            {"current_class_id": None},
+            {"current_class_id": ""},
+        ]
+
+        base_filter = {
+            "status": "Active",
+            "$or": eligible_or,
+        }
+        if q == "":
+            docs = self._student_read_model.list_student_name_options(
+                filter=base_filter,
+                projection={"_id": 1},
+                limit=limit,
+            )
+            ids = [d["_id"] for d in docs if d.get("_id")]
+            return self._display_name_service.student_select_options_for_ids(ids)
+
+        if len(q) < 2:
+            return []
+
+        rx = re.compile(re.escape(q), re.IGNORECASE)
+
+        search_or = [
+            {"first_name_en": rx},
+            {"last_name_en": rx},
+            {"first_name_kh": rx},
+            {"last_name_kh": rx},
+            {"code": rx},
+        ]
+
         filter_ = {
             "status": "Active",
-            "$or": [
-                {"current_class_id": {"$exists": False}},
-                {"current_class_id": None},
+            "$and": [
+                {"$or": eligible_or},
+                {"$or": search_or},
             ],
         }
 
+        docs = self._student_read_model.list_student_name_options(
+            filter=filter_,
+            projection={"_id": 1},
+            limit=limit,
+        )
+        ids = [d["_id"] for d in docs if d.get("_id")]
+        return self._display_name_service.student_select_options_for_ids(ids)
 
-        docs = self._student_read_model.list_student_name_options(filter=filter_, projection={"_id": 1, "current_class_id": 1})
-        student_ids = [d["_id"] for d in docs if d.get("_id")]
-        return self._display_name_service.student_select_options_for_ids(student_ids)
-    
+
     def admin_list_students_in_class_select(self, class_id: str | ObjectId) -> List[dict]:
         coid = mongo_converter.convert_to_object_id(class_id)
 

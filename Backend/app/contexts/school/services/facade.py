@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.contexts.school.services.use_cases.attendance_service import AttendanceService
     from app.contexts.school.services.use_cases.grade_service import GradeService
     from app.contexts.school.services.use_cases.teacher_assignment_service import TeacherAssignmentService
+    from app.contexts.school.services.use_cases.class_relations_service import ClassRelationsService
 
 @dataclass(slots=True)
 class SchoolFacade:
@@ -20,3 +21,4 @@ class SchoolFacade:
     attendance_service: AttendanceService
     grade_service: GradeService
     teacher_assignment_service: TeacherAssignmentService
+    class_relations_service: ClassRelationsService

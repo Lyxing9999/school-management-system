@@ -14,7 +14,8 @@ class StaffPolicy:
     def __init__(self, db: Database):
         self.staff = db.staff
         self.class_sections = db.classes
-        self.schedule_slots = db.schedule
+        self.schedule_slots = db.schedules
+
     def _get_active_staff_by_user_id(self, user_id: ObjectId) -> dict | None:
         return self.staff.find_one(not_deleted({"user_id": user_id}), {"_id": 1})
 

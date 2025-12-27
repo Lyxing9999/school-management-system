@@ -24,3 +24,6 @@ class AdminClassSelectDTO(NameSelectDTO):
 
 class AdminClassSelectListDTO(ItemListDTO[AdminClassSelectDTO]):
     pass
+
+
+
