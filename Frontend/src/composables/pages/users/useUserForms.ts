@@ -1,19 +1,24 @@
-import { ref, computed, nextTick, watch } from "vue";
-import {
-  adminFormRegistryCreate,
-  adminFormRegistryEdit,
-} from "~/form-system/register/admin";
+import { ref, computed, nextTick } from "vue";
 import { useDialogDynamicWidth } from "~/composables/useDialogDynamicWidth";
+import { useResponsiveDialog } from "~/composables/useResponsiveDialog";
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
 } from "~/form-system/useDynamicForm.ts/useAdminForms";
+import {
+  adminFormRegistryCreate,
+  adminFormRegistryEdit,
+} from "~/form-system/register/admin";
 import type { AdminGetUserItemData } from "~/api/admin/user/user.dto";
 
 type CreateMode = "STAFF" | "STUDENT";
 type EditMode = "STAFF" | "STUDENT";
 
 export function useUserForms() {
+  const dialog = useResponsiveDialog({
+    mobileBp: 768,
+    preset: { desktopMinPx: 560, desktopVw: 72, desktopMaxPx: 1040 },
+  });
   // CREATE
   const selectedFormCreate = ref<CreateMode>("STUDENT");
   const createFormKey = ref(0);
@@ -22,7 +27,6 @@ export function useUserForms() {
   async function openCreate(mode: CreateMode) {
     selectedFormCreate.value = mode;
     createFormKey.value++;
-
     await nextTick();
     await create.openForm();
   }
@@ -30,15 +34,30 @@ export function useUserForms() {
   const schemaCreate = computed(
     () => adminFormRegistryCreate[selectedFormCreate.value].schema ?? []
   );
-  const createWidthRef = useDialogDynamicWidth(schemaCreate.value);
 
-  const createDialogWidth = computed(() => {
-    if (selectedFormCreate.value === "STAFF") return "65%";
-    if (selectedFormCreate.value === "STUDENT") return "80%";
-    return createWidthRef.value;
+  // IMPORTANT: pass the computed ref, not schemaCreate.value
+  const createWidthBySchema = useDialogDynamicWidth(schemaCreate);
+
+  // One responsive “policy”
+  const createResponsive = useResponsiveDialog({
+    preset: {
+      desktopMinPx: 560,
+      desktopVw: selectedFormCreate.value === "STAFF" ? 62 : 74,
+      desktopMaxPx: selectedFormCreate.value === "STAFF" ? 920 : 1020,
+    },
   });
 
-  // EDIT (unchanged – your pattern is OK)
+  const createDialogWidth = computed(() => {
+    if (dialog.isMobile.value) return "100%";
+
+    // CTO-style: explicit clamp per form type (predictable)
+    if (selectedFormCreate.value === "STAFF") {
+      return "clamp(560px, 65vw, 980px)";
+    }
+    return "clamp(560px, 78vw, 1120px)";
+  });
+
+  // EDIT
   const selectedFormEdit = ref<EditMode>("STUDENT");
   const editFormDataKey = ref<string>("");
   const detailLoadingMap = ref<Record<string, boolean>>({});
@@ -54,7 +73,6 @@ export function useUserForms() {
       detailLoadingMap.value[key] = true;
       selectedFormEdit.value = row.role === "student" ? "STUDENT" : "STAFF";
       editFormDataKey.value = key || "new";
-
       await nextTick();
       await edit.openForm(row.id);
     } finally {
@@ -65,12 +83,22 @@ export function useUserForms() {
   const schemaEdit = computed(
     () => adminFormRegistryEdit[selectedFormEdit.value].schema ?? []
   );
-  const editWidthRef = useDialogDynamicWidth(schemaEdit.value);
+
+  const editWidthBySchema = useDialogDynamicWidth(schemaEdit);
+  const editResponsive = useResponsiveDialog({
+    preset: {
+      desktopMinPx: 540,
+      desktopVw: selectedFormEdit.value === "STAFF" ? 60 : 70,
+      desktopMaxPx: selectedFormEdit.value === "STAFF" ? 880 : 980,
+    },
+  });
 
   const editDialogWidth = computed(() => {
-    if (selectedFormEdit.value === "STAFF") return "60%";
-    if (selectedFormEdit.value === "STUDENT") return "70%";
-    return editWidthRef.value;
+    if (dialog.isMobile.value) return "100%";
+    if (selectedFormEdit.value === "STAFF") {
+      return "clamp(560px, 60vw, 960px)";
+    }
+    return "clamp(560px, 72vw, 1080px)";
   });
 
   return {
@@ -87,6 +115,8 @@ export function useUserForms() {
     saveCreateForm: create.saveForm,
     cancelCreateForm: create.cancelForm,
     createDialogWidth,
+    createDialogFullscreen: createResponsive.fullscreen,
+    createDialogTop: createResponsive.top,
 
     selectedFormEdit,
     editFormDataKey,
@@ -97,5 +127,7 @@ export function useUserForms() {
     saveEditForm: edit.saveForm,
     cancelEditForm: edit.cancelForm,
     editDialogWidth,
+    editDialogFullscreen: editResponsive.fullscreen,
+    editDialogTop: editResponsive.top,
   };
 }

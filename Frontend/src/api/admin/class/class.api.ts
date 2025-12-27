@@ -5,6 +5,10 @@ import type {
   AdminGetClassResponse,
   AdminClassNameSelectListResponse,
   AdminStudentsInClassSelectResponse,
+  AdminUpdateClassRelationsResponse,
+  AdminUpdateClassRelationsDTO,
+  SearchStudentsParams,
+  AdminStudentSelectPagedResultResponse,
 } from "./class.dto";
 
 export class ClassApi {
@@ -18,79 +22,101 @@ export class ClassApi {
   // ============
 
   async getClasses() {
-    const res = await this.$api.get<AdminGetClassListResponse>(this.baseURL);
-    return res.data;
+    return this.$api
+      .get<AdminGetClassListResponse>(this.baseURL)
+      .then((res) => res.data);
   }
 
   async getClass(classId: string) {
-    const res = await this.$api.get<AdminGetClassResponse>(
-      `${this.baseURL}/${classId}`
-    );
-    return res.data;
+    return this.$api
+      .get<AdminGetClassResponse>(`${this.baseURL}/${classId}`)
+      .then((res) => res.data);
   }
 
   async listClassNameSelect() {
-    const res = await this.$api.get<AdminClassNameSelectListResponse>(
-      `${this.baseURL}/names-select`
-    );
-    return res.data;
+    return this.$api
+      .get<AdminClassNameSelectListResponse>(`${this.baseURL}/names-select`)
+      .then((res) => res.data);
   }
 
   async listStudentsInClass(classID: string) {
-    const res = await this.$api.get<AdminStudentsInClassSelectResponse>(
-      `${this.baseURL}/${classID}/students`
-    );
-    return res.data;
+    return this.$api
+      .get<AdminStudentsInClassSelectResponse>(
+        `${this.baseURL}/${classID}/students`
+      )
+      .then((res) => res.data);
   }
-  async listStudentsForEnrollmentSelect(classID: string) {
-    const res = await this.$api.get<any>(
-      `${this.baseURL}/${classID}/enrollment-student-select`
-    );
-    return res.data;
+  async searchStudentsForEnrollmentSelect(
+    classID: string,
+    params: SearchStudentsParams,
+    signal?: AbortSignal
+  ): Promise<AdminStudentSelectPagedResultResponse> {
+    return this.$api
+      .get<AdminStudentSelectPagedResultResponse>(
+        `${this.baseURL}/${classID}/enrollment-student-select/search`,
+        {
+          params: {
+            q: params.q,
+            limit: params.limit ?? 30,
+            cursor: params.cursor ?? undefined,
+          },
+          signal,
+        }
+      )
+      .then((res) => res.data);
   }
   // ============
   // COMMANDS
   // ============
   async createClass(data: AdminCreateClass): Promise<AdminGetClassResponse> {
-    const res = await this.$api.post<AdminGetClassResponse>(
-      `${this.baseURL}`,
-      data
-    );
-    return res.data;
+    return this.$api
+      .post<AdminGetClassResponse>(`${this.baseURL}`, data)
+      .then((res) => res.data);
   }
 
   async assignClassTeacher(classID: string, teacherId: string) {
-    const res = await this.$api.patch<AdminGetClassResponse>(
-      `${this.baseURL}/${classID}/teacher`,
-      { teacher_id: teacherId }
-    );
-    return res.data;
+    return this.$api
+      .patch<AdminGetClassResponse>(`${this.baseURL}/${classID}/teacher`, {
+        teacher_id: teacherId,
+      })
+      .then((res) => res.data);
   }
 
   async unassignClassTeacher(classID: string) {
-    const res = await this.$api.delete<AdminGetClassResponse>(
-      `${this.baseURL}/${classID}/teacher`
-    );
-    return res.data;
+    return this.$api
+      .delete<AdminGetClassResponse>(`${this.baseURL}/${classID}/teacher`)
+      .then((res) => res.data);
   }
   async enrollStudent(classID: string, studentID: string) {
-    const res = await this.$api.post<AdminGetClassResponse>(
-      `${this.baseURL}/${classID}/students`,
-      { student_id: studentID }
-    );
-    return res.data;
+    return this.$api
+      .post<AdminGetClassResponse>(`${this.baseURL}/${classID}/students`, {
+        student_id: studentID,
+      })
+      .then((res) => res.data);
   }
 
   async unenrollStudent(classID: string, studentID: string) {
-    const res = await this.$api.delete<AdminGetClassResponse>(
-      `${this.baseURL}/${classID}/students/${studentID}`
-    );
-    return res.data;
+    return this.$api
+      .delete<AdminGetClassResponse>(
+        `${this.baseURL}/${classID}/students/${studentID}`
+      )
+      .then((res) => res.data);
   }
   async softDeleteClass(classId: string) {
-    const res = await this.$api.delete<AdminGetClassResponse>(
-      `${this.baseURL}/${classId}/soft-delete`
-    );
-    return res.data;
+    return this.$api
+      .delete<AdminGetClassResponse>(`${this.baseURL}/${classId}/soft-delete`)
+      .then((res) => res.data);
+  }
+
+  async updateRelations(
+    classID: string,
+    payload: AdminUpdateClassRelationsDTO
+  ) {
+    return this.$api
+      .put<AdminUpdateClassRelationsResponse>(
+        `${this.baseURL}/${classID}/relations`,
+        payload
+      )
+      .then((res) => res.data);
   }
 }

@@ -15,7 +15,7 @@ import type {
   TeacherScheduleListDTO,
   TeacherClassListWithSummeryDTO,
 } from "~/api/teacher/dto";
-
+import { reportError } from "~/utils/errors";
 definePageMeta({
   layout: "teacher",
 });
@@ -125,7 +125,7 @@ const loadClassDetails = async (classId: string) => {
         | TeacherAttendanceEnriched[]
     );
   } catch (err) {
-    console.error(err);
+    reportError(err, `teacher.classDetails.load classId=${classId}`, "log");
     const message = extractErrorMessage(err, "Failed to load class details.");
     ElMessage.error(message);
   }
@@ -155,12 +155,10 @@ const loadOverview = async () => {
       scheduleRes as { items?: TeacherScheduleItem[] } | TeacherScheduleItem[]
     );
 
-    // Set initial focus class
     if (!focusClassId.value && classes.value.length > 0) {
       focusClassId.value = classes.value[0].id;
     }
 
-    // Load details for focus class
     if (focusClassId.value) {
       await loadClassDetails(focusClassId.value);
     } else {
@@ -168,13 +166,12 @@ const loadOverview = async () => {
       attendance.value = [];
     }
   } catch (err: unknown) {
-    console.error(err);
+    reportError(err, "teacher.dashboard.loadOverview", "log");
     const message = extractErrorMessage(
       err,
       "Failed to load teacher dashboard data."
     );
     errorMessage.value = message;
-    ElMessage.error(message);
   } finally {
     loadingOverview.value = false;
   }

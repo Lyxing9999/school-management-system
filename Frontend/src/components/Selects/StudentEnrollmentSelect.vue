@@ -1,20 +1,30 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import RemoteSelect from "~/components/Selects/RemoteSelect.vue";
+import RemoteSearchSelect, {
+  type RemoteResult,
+} from "~/components/Selects/RemoteSearchSelect.vue";
 import { adminService } from "~/api/admin";
+import type {
+  AdminStudentSelectDTO,
+  PagedResult,
+  SearchStudentsParams,
+} from "~/api/admin/class/class.dto";
 
 const adminApi = adminService();
 
-type StudentValue = string | string[] | null;
-type SelectOption = { value: string; label: string };
+type StudentValue = string[] | null;
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
 
 const props = defineProps<{
   classId: string;
   modelValue: StudentValue;
-  placeholder?: string;
   disabled?: boolean;
-  multiple?: boolean;
-  loading?: boolean;
+
+  /** students already in this class (must NEVER appear in dropdown) */
   preloadedOptions?: SelectOption[];
 }>();
 
@@ -27,20 +37,30 @@ const innerValue = computed({
   set: (v) => emit("update:modelValue", v),
 });
 
-function normalizeApiItems(res: any): SelectOption[] {
-  const items = res?.data?.items ?? res?.items ?? [];
-  return (items as any[]).map((x) => ({
-    value: String(x.value ?? x.id ?? x._id),
-    label: String(x.label ?? x.name ?? x.value),
-  }));
+function toSelectOption(x: AdminStudentSelectDTO): SelectOption {
+  return { value: String(x.value), label: String(x.label) };
 }
 
-const fetchEligible = async (): Promise<SelectOption[]> => {
-  if (!props.classId) return [];
-  const res = await adminApi.class.listStudentsForEnrollmentSelect(
-    props.classId
-  );
-  return normalizeApiItems(res);
+const fetchEligible = async (
+  q: string,
+  cursor?: string | null,
+  signal?: AbortSignal
+): Promise<RemoteResult<SelectOption>> => {
+  if (!props.classId) return { items: [], nextCursor: null };
+
+  const limit = q.trim() === "" ? 20 : 30;
+
+  const res: PagedResult<AdminStudentSelectDTO> =
+    await adminApi.class.searchStudentsForEnrollmentSelect(
+      props.classId,
+      { q, limit, cursor } satisfies SearchStudentsParams,
+      signal
+    );
+
+  return {
+    items: (res.items ?? []).map(toSelectOption),
+    nextCursor: res.nextCursor ?? null,
+  };
 };
 
 const reloadKey = computed(
@@ -49,19 +69,25 @@ const reloadKey = computed(
 </script>
 
 <template>
-  <div class="relative" v-loading="!!loading">
-    <RemoteSelect
-      v-model="innerValue"
-      :fetcher="fetchEligible"
-      :preloaded-options="preloadedOptions"
-      :hide-preloaded-in-dropdown="true"
-      :reload-key="reloadKey"
-      label-key="label"
-      value-key="value"
-      :placeholder="placeholder ?? 'Select students to enroll'"
-      :disabled="disabled || !!loading"
-      :multiple="multiple"
-      clearable
-    />
-  </div>
+  <RemoteSearchSelect
+    v-model="innerValue"
+    :fetcher="fetchEligible"
+    :preloaded-options="preloadedOptions"
+    :hide-preloaded-in-dropdown="true"
+    :reload-key="reloadKey"
+    label-key="label"
+    value-key="value"
+    multiple
+    clearable
+    :default-limit="20"
+    :show-default-on-open="true"
+    :prevent-keyboard-remove="true"
+    :min-query-length="2"
+    :debounce-ms="600"
+    empty-label="Type to search"
+    no-results-label="No results"
+    searching-label="Searching..."
+    loading-label="Loading students..."
+    :disabled="disabled"
+  />
 </template>

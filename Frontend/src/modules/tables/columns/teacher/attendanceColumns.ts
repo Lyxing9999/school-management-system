@@ -1,5 +1,5 @@
 import type { ColumnConfig } from "~/components/types/tableEdit";
-import type { AttendanceEnriched } from "~/api/teacher/attendance/dto";
+import type { AttendanceEnriched } from "~/api/teacher/dto.ts";
 import { ElTag } from "element-plus";
 import { formatDate } from "~/utils/formatDate";
 const getStatusTagType = (status: string) => {
@@ -62,11 +62,12 @@ export const attendanceColumns: ColumnConfig<AttendanceEnriched>[] = [
     }),
   },
   {
-    label: "Actions",
-    slotName: "operation",
+    field: "id",
     operation: true,
-    fixed: "right",
-    width: "220",
+    label: "Operation",
+    inlineEditActive: false,
     align: "center",
+    minWidth: "200px",
+    smartProps: {},
   },
 ];

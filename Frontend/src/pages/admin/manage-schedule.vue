@@ -41,6 +41,7 @@ import type {
  * ---------------------------------- */
 import { useLabelMap } from "~/composables/common/useLabelMap";
 import { createScheduleColumns } from "~/modules/tables/columns/admin/scheduleColumns";
+import { reportError } from "~/utils/errors";
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
@@ -309,7 +310,8 @@ async function handleSoftDelete(row: AdminScheduleSlotData) {
     await fetchSchedule(currentPage.value || 1);
   } catch (err: any) {
     if (err === "cancel" || err === "close") return;
-    console.error("Soft delete failed", err);
+
+    reportError(err, `scheduleSlot.softDelete id=${row.id}`, "log");
   } finally {
     deleteLoading.value[row.id] = false;
   }

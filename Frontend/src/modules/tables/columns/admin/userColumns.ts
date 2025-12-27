@@ -31,9 +31,16 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     autoSave: true,
     controlsSlot: true,
     minWidth: "300px",
+
     component: ElInput,
-    componentProps: { placeholder: "Enter email" },
+    componentProps: {
+      placeholder: "Enter email",
+      class: "w-full",
+      style: { width: "100%" }, // important in tables
+    },
+
     childComponentProps: { appendValue: "@gmail.com" },
+
     rules: [
       { required: true, message: "Email required", trigger: "blur" },
       {
@@ -81,9 +88,8 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     operation: true,
     label: "Operation",
     inlineEditActive: false,
-    fixed: "right",
     align: "center",
-    width: "220px",
+    minWidth: "200px",
     smartProps: {},
   },
 ];

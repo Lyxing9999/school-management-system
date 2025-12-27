@@ -1,7 +1,7 @@
 import { ref, computed, unref } from "vue";
 import type { UseFormService } from "~/form-system/types/serviceFormTypes";
 import type { Field } from "~/components/types/form";
-
+import { reportError } from "~/utils/errors";
 export function useFormCreate<
   I extends Record<string, any>,
   O extends Record<string, any>
@@ -52,7 +52,7 @@ export function useFormCreate<
 
       return response;
     } catch (err) {
-      console.error("Create failed:", err);
+      reportError(err, "form.save.create_failed", "log");
       return null;
     } finally {
       loading.value = false;

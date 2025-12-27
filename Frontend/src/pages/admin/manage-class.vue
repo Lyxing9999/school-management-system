@@ -56,6 +56,11 @@ import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
  * ---------------------------------- */
 import { useHeaderState } from "~/composables/useHeaderState";
 
+/* ------------------------------------
+ * Utils
+ * ---------------------------------- */
+import { reportError } from "~/utils/errors";
+
 const adminApi = adminService();
 
 /* ===========================
@@ -131,16 +136,18 @@ const subjectOptionsLoading = ref(false);
 
 async function fetchSubjectOptions() {
   if (subjectOptions.value.length > 0) return;
+
   subjectOptionsLoading.value = true;
   try {
     const res = await adminApi.subject.getSubjects();
     const items = res?.items ?? [];
+
     subjectOptions.value = items.map((s) => ({
       value: s.id,
       label: `${s.name} (${s.code})`,
     }));
   } catch (err) {
-    console.error("Failed to load subject options", err);
+    reportError(err, "subjectOptions.fetch", "log");
     ElMessage.error("Failed to load subjects.");
   } finally {
     subjectOptionsLoading.value = false;
@@ -283,14 +290,13 @@ async function openManageStudentsDialog(row: AdminClassRow) {
     originalTeacherId.value = loadedTeacherId;
     manageStudentsVisible.value = true;
   } catch (err) {
-    console.error("Failed to load class details", err);
+    reportError(err, `class.students.load classId=${row.id}`, "log");
     ElMessage.error("Failed to load students in this class.");
   } finally {
     studentsInClassLoading.value = false;
     detailLoading.value[row.id] = false;
   }
 }
-
 function cancelManageStudents() {
   manageStudentsVisible.value = false;
   currentClassForStudents.value = null;
@@ -303,7 +309,6 @@ function normalizeTeacherId(value: unknown): string | null {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
-
 async function saveManageStudents(payload: Partial<ManageClassRelationsForm>) {
   const cls = currentClassForStudents.value;
   if (!cls) return;
@@ -314,49 +319,61 @@ async function saveManageStudents(payload: Partial<ManageClassRelationsForm>) {
   };
 
   const classId = cls.id;
-
   const newStudents = form.student_ids ?? [];
   const newTeacher = normalizeTeacherId(form.teacher_id);
-
-  const oldStudentSet = new Set(originalStudentIds.value);
-  const newStudentSet = new Set(newStudents);
-
-  const toAdd: string[] = [];
-  const toRemove: string[] = [];
-
-  for (const id of newStudentSet) if (!oldStudentSet.has(id)) toAdd.push(id);
-  for (const id of oldStudentSet) if (!newStudentSet.has(id)) toRemove.push(id);
-
-  const oldTeacher = normalizeTeacherId(originalTeacherId.value);
-  const teacherChanged = oldTeacher !== newTeacher;
-
-  if (toAdd.length === 0 && toRemove.length === 0 && !teacherChanged) {
-    ElMessage.info("No changes to save.");
-    manageStudentsVisible.value = false;
-    return;
-  }
 
   saveStudentsLoading.value = true;
 
   try {
-    // students
-    for (const sid of toAdd) await adminApi.class.enrollStudent(classId, sid);
-    for (const sid of toRemove)
-      await adminApi.class.unenrollStudent(classId, sid);
+    const result = await adminApi.class.updateRelations(classId, {
+      student_ids: newStudents,
+      teacher_id: newTeacher,
+    });
 
-    // teacher
-    if (teacherChanged) {
-      if (newTeacher === null) {
-        await adminApi.class.unassignClassTeacher(classId);
-      } else {
-        await adminApi.class.assignClassTeacher(classId, newTeacher);
-      }
+    const hasIssues =
+      result.conflicts.length > 0 || result.capacity_rejected.length > 0;
+
+    if (!hasIssues) {
+      ElMessage.success(
+        `Saved. Added ${result.added.length}, removed ${result.removed.length}.`
+      );
+      manageStudentsVisible.value = false;
+    } else {
+      await ElMessageBox.alert(
+        [
+          `Saved with exceptions:`,
+          `- Added: ${result.added.length}`,
+          `- Removed: ${result.removed.length}`,
+          result.conflicts.length
+            ? `- Conflicts: ${result.conflicts.length}`
+            : null,
+          result.capacity_rejected.length
+            ? `- Capacity rejected: ${result.capacity_rejected.length}`
+            : null,
+          "",
+          "Reloading server truth into the selector.",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        "Some changes were not applied",
+        { type: "warning" }
+      );
+
+      // Reload server truth
+      const res = await adminApi.class.listStudentsInClass(classId);
+      const preloaded = res?.items ?? [];
+      studentSelectPreloaded.value = preloaded;
+
+      const loadedStudentIds = preloaded.map((x: any) => x.value);
+      manageRelationsForm.value = {
+        student_ids: loadedStudentIds,
+        teacher_id: result.teacher_id,
+      };
+
+      originalStudentIds.value = [...loadedStudentIds];
+      originalTeacherId.value = result.teacher_id;
     }
 
-    originalStudentIds.value = [...newStudents];
-    originalTeacherId.value = newTeacher;
-
-    manageStudentsVisible.value = false;
     await fetchPage(currentPage.value || 1);
   } finally {
     saveStudentsLoading.value = false;
@@ -381,7 +398,6 @@ async function handleSoftDelete(row: AdminClassRow) {
 
     deleteLoading.value[row.id] = true;
     await adminApi.class.softDeleteClass(row.id);
-    ElMessage.success("Class deleted.");
     await fetchPage(currentPage.value || 1);
   } finally {
     deleteLoading.value[row.id] = false;

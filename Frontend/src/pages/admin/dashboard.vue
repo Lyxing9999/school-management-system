@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
-
+import { reportError } from "~/utils/errors";
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 import { formatDate } from "~/utils/formatDate";
 
@@ -90,7 +90,8 @@ const loadDashboard = async () => {
 
     dashboard.value = data;
   } catch (err) {
-    console.error(err);
+    reportError(err, "admin.dashboard.load", "log");
+
     const message = extractErrorMessage(
       err,
       "Failed to load admin dashboard data."
@@ -546,7 +547,6 @@ type TopAbsentStudentRow = {
  */
 const topAbsentStudents = computed<TopAbsentStudentRow[]>(() => {
   const raw: any[] = attendance.value?.top_absent_students ?? [];
-  console.log(raw);
   return raw.map((row) => ({
     ...row,
     // class_name is not in the sample payload, so give a readable fallback

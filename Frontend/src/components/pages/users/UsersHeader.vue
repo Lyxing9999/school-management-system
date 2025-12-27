@@ -37,11 +37,11 @@ const emit = defineEmits<{
     @update:searchModelValue="(v) => emit('update:searchModelValue', v)"
     @refresh="emit('refresh')"
     @reset="emit('reset')"
-  >
-    <template #filters>
+    ><template #filters>
       <el-row :gutter="12" align="middle" class="w-full">
-        <el-col :span="12">
-          <div class="flex items-center gap-2">
+        <!-- Mode -->
+        <el-col :xs="24" :sm="24" :md="12">
+          <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs text-gray-500 whitespace-nowrap">Mode:</span>
             <StaffModePills
               :model-value="staffMode"
@@ -51,18 +51,18 @@ const emit = defineEmits<{
           </div>
         </el-col>
 
-        <el-col :span="12">
-          <div
-            class="flex items-center gap-2 justify-start sm:justify-end w-full"
-          >
+        <!-- Roles -->
+        <el-col :xs="24" :sm="24" :md="12">
+          <div class="flex flex-wrap items-center gap-2 md:justify-end w-full">
             <span class="text-xs text-gray-500 whitespace-nowrap">Roles:</span>
+
             <el-select
               :model-value="selectedRoles"
               multiple
               filterable
               clearable
-              class="w-full sm:w-[360px]"
-              @update:model-value="(v) => emit('update:selectedRoles', v)"
+              class="w-full md:w-[360px]"
+              @update:model-value="(v) => emit('update:selectedRoles', v as Role[])"
             >
               <el-option
                 v-for="opt in currentRoleOptions"

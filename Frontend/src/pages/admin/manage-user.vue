@@ -81,6 +81,8 @@ const {
   saveCreateForm,
   cancelCreateForm,
   createDialogWidth,
+  createDialogFullscreen,
+  createDialogTop,
 
   selectedFormEdit,
   editFormDataKey,
@@ -91,6 +93,8 @@ const {
   saveEditForm,
   cancelEditForm,
   editDialogWidth,
+  editDialogFullscreen,
+  editDialogTop,
 } = useUserForms();
 
 /* 5) status inline */
@@ -267,6 +271,8 @@ function updateStatusDraft(val: any) {
       :title="`Add ${staffMode === 'staff' ? 'Staff' : 'User'}`"
       :loading="createLoading"
       :useElForm="true"
+      :fullscreen="createDialogFullscreen"
+      :top="createDialogTop"
       :width="createDialogWidth"
       @save="
         async (payload) => {
@@ -286,9 +292,13 @@ function updateStatusDraft(val: any) {
       title="Edit"
       :loading="editLoading"
       :useElForm="true"
+      :fullscreen="editDialogFullscreen"
+      :top="editDialogTop"
       :width="editDialogWidth"
       @save="saveEditForm"
       @cancel="cancelEditForm"
     />
   </div>
 </template>
+
+<style scoped></style>

@@ -4,7 +4,7 @@ import { ElMessage } from "element-plus";
 
 import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 import { formatDate } from "~/utils/formatDate";
-
+import { reportError, invariant } from "~/utils/errors";
 definePageMeta({
   layout: "student",
 });
@@ -345,9 +345,12 @@ const loadDashboard = async () => {
     // grades.value = ...
     // attendance.value = ...
 
-    console.warn("USE_DEMO=false but real API not wired in this snippet.");
+    invariant(
+      false,
+      "Student dashboard API is not wired while USE_DEMO=false."
+    );
   } catch (err) {
-    console.error(err);
+    reportError(err, "student.dashboard.load", "log");
     const message = extractErrorMessage(
       err,
       "Failed to load student dashboard data."

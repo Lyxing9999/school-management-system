@@ -27,7 +27,7 @@ import type {
 } from "~/api/admin/subject/subject.dto";
 // For grade labels in table
 import { gradeOptions } from "~/modules/forms/admin/subject/subject.schema";
-
+import { reportError } from "~/utils/errors";
 // Dynamic form system
 import { useDynamicCreateFormReactive } from "~/form-system/useDynamicForm.ts/useAdminForms";
 import { subjectColumns } from "~/modules/tables/columns/admin/subjectColumns";
@@ -144,13 +144,15 @@ async function toggleSubjectActive(row: AdminSubjectDataDTO) {
     }
     await fetchPage(currentPage.value || 1);
   } catch (err) {
-    console.error("Failed to toggle subject active state", err);
+    reportError(err, `subject.toggleActive id=${id}`, "log");
     row.is_active = previous;
+
+    // Optional (recommended UX):
+    // ElMessage.error("Failed to update subject status.");
   } finally {
     statusLoading.value[id] = false;
   }
 }
-
 /* ---------------------- header stats ---------------------- */
 
 const totalSubjects = computed(() => totalRows.value ?? 0);

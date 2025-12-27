@@ -4,7 +4,7 @@ export default defineNuxtPlugin(async () => {
   if (!process.client) return;
 
   const path = window.location.pathname;
-  if (path.startsWith("/auth")) return; 
+  if (path.startsWith("/auth")) return;
 
   const authStore = useAuthStore();
   const { $api } = useNuxtApp();
@@ -15,7 +15,8 @@ export default defineNuxtPlugin(async () => {
       authStore.setToken(r.data.access_token);
 
       const me = await $api.get("/api/iam/me");
-      authStore.setUser(me.data);
+      authStore.setUser(me.data.data);
+
     } catch {
       authStore.clear();
     } finally {

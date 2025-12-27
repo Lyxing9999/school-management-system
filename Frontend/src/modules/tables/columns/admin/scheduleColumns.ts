@@ -55,12 +55,13 @@ export function createScheduleColumns(
         ),
     },
     {
-      label: "Actions",
-      slotName: "operation",
+      field: "id",
       operation: true,
-      fixed: "right",
-      width: "250",
+      label: "Operation",
+      inlineEditActive: false,
       align: "center",
+      minWidth: "200px",
+      smartProps: {},
     },
   ];
 }

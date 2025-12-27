@@ -34,6 +34,7 @@ import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
 import { useHeaderState } from "~/composables/useHeaderState";
 import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
 import TableCard from "~/components/Cards/TableCard.vue";
+import { reportError } from "~/utils/errors";
 const teacherApi = teacherService();
 
 /**
@@ -172,9 +173,6 @@ const gradeColumns: ColumnConfig<GradeEnriched>[] = [
     },
   },
 
-
-
-  
   {
     key: "type",
     label: "Type",
@@ -396,11 +394,9 @@ const submitAddGrade = async () => {
     await loadGrades();
     ElMessage.success("Grade added.");
   } catch (err: any) {
-    console.error(err);
-    ElMessage.error(err?.message ?? "Failed to add grade.");
+    reportError(err, "grade.add.submit", "log");
   }
 };
-
 const handleOpenAddDialog = () => {
   if (!selectedClassId.value) {
     ElMessage.warning("Please select a class first.");

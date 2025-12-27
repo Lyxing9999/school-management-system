@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from "~/utils/errors";
 import { ref, onMounted } from "vue";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -45,11 +46,11 @@ const fetchCambodiaHolidays = async () => {
   try {
     const year = new Date().getFullYear();
     const cacheKey = `cambodia_holidays_${year}`;
-    const cached = localStorage.getItem(cacheKey);
+
+    const cached = import.meta.client ? localStorage.getItem(cacheKey) : null;
 
     if (cached) {
-      const holidays = JSON.parse(cached);
-      calendarOptions.value.events = holidays;
+      calendarOptions.value.events = JSON.parse(cached);
       return;
     }
 
@@ -58,7 +59,8 @@ const fetchCambodiaHolidays = async () => {
     );
 
     const data = await res.json();
-    if (data.meta?.code === 200 && data.response?.holidays) {
+
+    if (data?.meta?.code === 200 && data?.response?.holidays) {
       const events = data.response.holidays.map((holiday: any) => ({
         title: holiday.name,
         date: holiday.date.iso,
@@ -66,16 +68,18 @@ const fetchCambodiaHolidays = async () => {
         extendedProps: { description: holiday.description },
       }));
 
-      localStorage.setItem(cacheKey, JSON.stringify(events));
+      if (import.meta.client)
+        localStorage.setItem(cacheKey, JSON.stringify(events));
       calendarOptions.value.events = events;
-    } else {
-      console.error("API Error:", data.meta?.error_detail || "Unknown error");
+      return;
     }
+
+    const detail = data?.meta?.error_detail ?? "Unknown API error";
+    reportError(new Error(detail), "holidays.fetch.api", "log");
   } catch (error) {
-    console.error("Failed to fetch holidays", error);
+    reportError(error, "holidays.fetch.exception", "log");
   }
 };
-
 onMounted(() => {
   fetchCambodiaHolidays();
 });

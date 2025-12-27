@@ -37,6 +37,16 @@ const emit = defineEmits<{
 
 const isBlocked = computed(() => props.loading || props.disabled);
 
+const component = computed(() =>
+  props.component ? markRaw(props.component) : null
+);
+const childComponent = computed(() =>
+  props.childComponent ? markRaw(props.childComponent) : null
+);
+
+// IMPORTANT: only allow edit mode if there is a component to render
+const isEditable = computed(() => !!component.value && !isBlocked.value);
+
 function getFinalValue(): R[F] {
   let val: any = inputValue.value;
   if (props.childComponentProps?.prependValue)
@@ -135,21 +145,18 @@ function handleBlur() {
 onBeforeUnmount(() => {
   triggerAutoSave.flush();
 });
-
-const component = computed(() =>
-  props.component ? markRaw(props.component) : null
-);
-const childComponent = computed(() =>
-  props.childComponent ? markRaw(props.childComponent) : null
-);
 </script>
 
 <template>
   <!-- VIEW MODE -->
   <div
     v-if="!inlineEditActive"
-    :class="[props.customClass, { 'cursor-not-allowed opacity-60': isBlocked }]"
-    @click="!isBlocked && (inlineEditActive = true)"
+    :class="[
+      props.customClass,
+      { 'cursor-not-allowed opacity-60': isBlocked },
+      { 'cursor-pointer': isEditable },
+    ]"
+    @click="isEditable && (inlineEditActive = true)"
   >
     <span class="truncate max-w-[170px] block">
       {{
@@ -161,9 +168,8 @@ const childComponent = computed(() =>
     </span>
 
     <span class="flex items-center space-x-1">
-      <!-- SPINNER ONLY for saving cell -->
       <el-icon v-if="props.loading" class="is-loading"><Loading /></el-icon>
-      <el-icon v-else-if="controls"><Edit /></el-icon>
+      <el-icon v-else-if="controls && isEditable"><Edit /></el-icon>
     </span>
   </div>
 
@@ -187,6 +193,7 @@ const childComponent = computed(() =>
         :value="opt.value"
         :label="opt.label"
       />
+
       <template v-if="controls" #suffix>
         <SaveCancelControls @confirm="handleSave" @cancel="handleCancel" />
       </template>
@@ -207,5 +214,17 @@ const childComponent = computed(() =>
         />
       </template>
     </component>
+
+    <!-- Fallback: if edit mode is activated but no component exists, never show blank -->
+    <div v-else class="flex items-center justify-between">
+      <span class="truncate max-w-[170px] block">
+        {{
+          Array.isArray(inputValue)
+            ? inputValue.slice(0, 3).join(", ") +
+              (inputValue.length > 3 ? "..." : "")
+            : inputValue || "—"
+        }}
+      </span>
+    </div>
   </div>
 </template>

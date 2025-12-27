@@ -1,7 +1,7 @@
 <!-- components/ErrorBoundary.vue -->
 <script setup lang="ts">
 import { ref, onErrorCaptured } from "vue";
-
+import { reportError } from "~/utils/errors";
 const props = defineProps<{
   onError?: (err: Error) => void;
 }>();
@@ -19,11 +19,10 @@ function resetError() {
 
 onErrorCaptured((err, instance, info) => {
   error.value = err as Error;
-  console.error("ErrorBoundary captured:", err, info);
+  reportError(err, `ErrorBoundary captured: ${info}`, "log");
   props.onError?.(err as Error);
-  return false; // stop propagation
+  return false;
 });
-
 defineSlots<{
   default(props: { error: Error | null; reset: () => void }): any;
   fallback(props: { error: Error; reset: () => void }): any;

@@ -36,6 +36,7 @@
       "#plugins/*": [".nuxt/plugins/*"],
       "#types": [".nuxt/types"],
       "#types/*": [".nuxt/types/*"]
+      
 
     },
     "allowSyntheticDefaultImports": true,
@@ -48,7 +49,7 @@
     "src/**/*.ts",
     "src/**/*.vue",
     "src/types/**/*.d.ts",
-    ".nuxt/**/*.d.ts"   
-, "src/services/formServices", "src/composables/pages/users/useUsersPaging.ts"  ],
+    ".nuxt/**/*.d.ts",
+    "env.d.ts", "src/**/*.ts", "src/**/*.vue", "src/services/formServices", "src/composables/pages/users/useUsersPaging.ts"  ],
   "exclude": ["node_modules"]
 }

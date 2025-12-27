@@ -8,6 +8,14 @@
 import { onMounted, onBeforeUnmount } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { eventBus } from "~/composables/useGlobalEventBus";
+useHead({
+  meta: [
+    {
+      name: "viewport",
+      content: "width=device-width, initial-scale=1, viewport-fit=cover",
+    },
+  ],
+});
 const handleErrorMessage = (msg: string) => {
   ElMessage.error(msg);
 };

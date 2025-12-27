@@ -49,6 +49,44 @@ export interface AdminClassListDTO {
 export interface AdminClassNameSelectListDTO {
   items: AdminClassNameSelectDTO[];
 }
+export type AdminUpdateClassRelationsDTO = {
+  student_ids: string[];
+  teacher_id: string | null;
+};
+
+export type AdminUpdateClassRelationsResultDTO = {
+  class_id: string;
+  teacher_changed: boolean;
+  teacher_id: string | null;
+  enrolled_count: number;
+  added: string[];
+  removed: string[];
+  conflicts: Array<{
+    student_id: string;
+    reason: "ALREADY_ENROLLED" | "NOT_FOUND";
+    current_class_id?: string | null;
+  }>;
+  capacity_rejected: string[];
+};
+
+export type SearchStudentsParams = {
+  q: string;
+  limit?: number;
+  cursor?: string | null;
+};
+
+export type PagedResult<T> = {
+  items: T[];
+  nextCursor?: string | null;
+};
+export type AdminStudentSelectDTO = {
+  value: string; // student_id (ObjectId as string)
+  label: string; // e.g. "Sok Dara (G10-A) - STU00012"
+  // optional extras (only if useful)
+  meta?: Record<string, any> | null;
+};
+export type AdminStudentSelectPagedResultDTO =
+  PagedResult<AdminStudentSelectDTO>;
 
 /**
  * Wrapped responses
@@ -61,3 +99,9 @@ export type AdminClassNameSelectListResponse =
 
 export type AdminStudentsInClassSelectResponse =
   ApiResponse<AdminStudentsInClassSelectDTO>;
+
+export type AdminUpdateClassRelationsResponse =
+  ApiResponse<AdminUpdateClassRelationsResultDTO>;
+
+export type AdminStudentSelectPagedResultResponse =
+  ApiResponse<AdminStudentSelectPagedResultDTO>;

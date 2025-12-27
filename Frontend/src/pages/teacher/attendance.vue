@@ -37,7 +37,7 @@ import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
 import { useHeaderState } from "~/composables/useHeaderState"; // <-- make sure path is correct
 
 import { attendanceColumns } from "~/modules/tables/columns/teacher/attendanceColumns";
-
+import { reportError } from "~/utils/errors";
 const teacherApi = teacherService();
 
 /* ---------------- types ---------------- */
@@ -262,6 +262,7 @@ watch(
 );
 
 /* ---------------- create ---------------- */
+
 const submitAttendance = async () => {
   const form = attendanceForm.value;
 
@@ -285,9 +286,8 @@ const submitAttendance = async () => {
 
     await loadAttendance();
     attendanceForm.value.student_id = "";
-  } catch (err: any) {
-    console.error(err);
-    ElMessage.error(err?.message ?? "Failed to record attendance.");
+  } catch (err) {
+    reportError(err, "attendance.submit", "log");
   }
 };
 
@@ -344,9 +344,8 @@ const submitEditAttendance = async () => {
 
     if (!dto) return ElMessage.error("Failed to update status.");
     await loadAttendance();
-  } catch (err: any) {
-    console.error(err);
-    ElMessage.error(err?.message ?? "Failed to update status.");
+  } catch (err) {
+    reportError(err, "attendance.edit", "log");
   }
 };
 
@@ -377,8 +376,8 @@ const handleDeleteAttendance = async (row: AttendanceEnriched) => {
     );
 
     attendanceList.value = attendanceList.value.filter((a) => a.id !== row.id);
-  } catch {
-    // cancelled
+  } catch (err) {
+    reportError(err, "attendance.delete", "log");
   }
 };
 

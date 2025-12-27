@@ -1,0 +1,140 @@
+/* =========================================================
+   Page Responsive Foundation (token-driven)
+========================================================= */
+
+/* 0) Core: prevent layout overflow bugs */
+html,
+body {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* Make sure any long content can shrink instead of pushing viewport */
+.el-row,
+.el-col,
+.el-table__cell,
+.el-table .cell,
+.el-form-item__content,
+.el-input,
+.el-input__wrapper,
+.el-select,
+.el-select__wrapper,
+.el-date-editor,
+.el-input-group,
+.layout-main,
+.layout-main-container {
+    min-width: 0;
+}
+
+/* 1) Mobile-friendly content padding */
+.layout-main {
+    padding: 16px;
+}
+
+@media (max-width: 640px) {
+    .layout-main {
+        padding: 12px !important;
+    }
+}
+
+/* 2) Cards/sections should not “stick” to edges on mobile */
+.page-shell {
+    max-width: 1200px;
+    /* optional: keep desktop readable */
+    margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+    .page-shell {
+        padding: 0;
+        /* rely on layout-main padding */
+    }
+}
+
+/* 3) Tables: always allow horizontal scroll on small screens */
+@media (max-width: 640px) {
+    .el-table {
+        width: 100%;
+    }
+
+    .el-table__body-wrapper,
+    .el-table__header-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Make the scroll visible and stable */
+    .el-table__body-wrapper {
+        scrollbar-gutter: stable;
+    }
+}
+
+/* 4) Action rows: stack + full width buttons on mobile */
+@media (max-width: 640px) {
+
+    .actions-row,
+    .filters-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .actions-row>*,
+    .filters-row>* {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .actions-row .el-button,
+    .actions-row button,
+    .filters-row .el-button,
+    .filters-row button {
+        width: 100%;
+    }
+}
+
+/* 5) Poppers (select / date / dropdown) fit viewport */
+@media (max-width: 640px) {
+
+    .el-popper,
+    .el-select__popper,
+    .el-picker__popper,
+    .el-dropdown__popper {
+        max-width: calc(100vw - 24px) !important;
+    }
+}
+
+/* 6) Dialogs / drawers should respect viewport on mobile */
+@media (max-width: 640px) {
+    .el-dialog {
+        width: calc(100vw - 24px) !important;
+        max-width: 520px;
+        /* still reasonable */
+        margin: 12px auto !important;
+    }
+
+    .el-drawer {
+        width: min(92vw, 320px) !important;
+    }
+}
+
+/* 7) Pagination: avoid overflow, wrap nicely */
+@media (max-width: 640px) {
+    .el-pagination {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-start;
+    }
+
+    /* optional: hide jumper on very small screens */
+    .el-pagination__jump {
+        display: none;
+    }
+}
+
+/* 8) iOS safe area for fixed header/footer (if you ever fix them) */
+:root {
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+}

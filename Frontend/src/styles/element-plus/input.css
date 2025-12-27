@@ -106,3 +106,103 @@
 .el-input__inner::placeholder {
     color: var(--muted-color);
 }
+
+
+
+/* =========================================================
+   Element Plus: Input Group Append/Prepend (token driven)
+   For: .el-input-group__append / suffix blocks like "@gmail.com"
+========================================================= */
+
+/* 1) Base append/prepend surface */
+.el-input-group__append,
+.el-input-group__prepend {
+    background: var(--input-bg, var(--color-card)) !important;
+    color: color-mix(in srgb, var(--text-color) 82%, var(--muted-color) 18%) !important;
+
+    border: 1px solid var(--input-border, var(--border-color)) !important;
+    box-shadow: none !important;
+
+    padding: 0 10px;
+}
+
+/* 2) Make it connect cleanly to the input wrapper */
+.el-input-group--append .el-input__wrapper {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.el-input-group--append .el-input-group__append {
+    border-left: 0 !important;
+    border-top-right-radius: var(--border-radius-base, 10px) !important;
+    border-bottom-right-radius: var(--border-radius-base, 10px) !important;
+}
+
+.el-input-group--prepend .el-input__wrapper {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}
+
+.el-input-group--prepend .el-input-group__prepend {
+    border-right: 0 !important;
+    border-top-left-radius: var(--border-radius-base, 10px) !important;
+    border-bottom-left-radius: var(--border-radius-base, 10px) !important;
+}
+
+/* 3) Hover: input + append should feel like ONE control */
+.el-input-group:hover .el-input__wrapper,
+.el-input-group:hover .el-input-group__append,
+.el-input-group:hover .el-input-group__prepend {
+    border-color: color-mix(in srgb, var(--border-color) 60%, var(--color-primary) 40%) !important;
+}
+
+/* 4) Focus: follow your ring system */
+.el-input-group:focus-within .el-input__wrapper,
+.el-input-group:focus-within .el-input-group__append,
+.el-input-group:focus-within .el-input-group__prepend {
+    border-color: color-mix(in srgb, var(--border-color) 35%, var(--color-primary) 65%) !important;
+}
+
+.el-input-group:focus-within .el-input__wrapper {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent) !important;
+}
+
+/* 5) Tooltip / icon inside append (your refresh svg icon) */
+.el-input-group__append .el-icon,
+.el-input-group__append .el-tooltip__trigger {
+    color: var(--muted-color) !important;
+    transition: color var(--transition-base), transform var(--transition-base);
+}
+
+.el-input-group__append .el-tooltip__trigger:hover {
+    color: var(--color-primary) !important;
+    transform: translateY(-0.5px);
+}
+
+.el-input-group__append .el-tooltip__trigger:active {
+    transform: translateY(0);
+}
+
+/* 6) Disabled: append should not stay “normal” */
+.el-input.is-disabled .el-input-group__append,
+.el-input.is-disabled .el-input-group__prepend,
+.el-input-group.is-disabled .el-input-group__append,
+.el-input-group.is-disabled .el-input-group__prepend {
+    background: color-mix(in srgb, var(--color-card) 70%, var(--color-bg) 30%) !important;
+    border-color: var(--border-color) !important;
+    color: color-mix(in srgb, var(--muted-color) 80%, transparent) !important;
+    cursor: not-allowed;
+}
+
+.el-input.is-disabled .el-input-group__append .el-tooltip__trigger,
+.el-input-group.is-disabled .el-input-group__append .el-tooltip__trigger {
+    color: color-mix(in srgb, var(--muted-color) 75%, transparent) !important;
+    pointer-events: none;
+}
+
+/* 7) Dark mode: prevent the append from looking “white/bright” */
+html[data-theme="dark"] .el-input-group__append,
+html[data-theme="dark"] .el-input-group__prepend {
+    background: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%) !important;
+}
+

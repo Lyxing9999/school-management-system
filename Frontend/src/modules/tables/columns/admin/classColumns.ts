@@ -9,7 +9,7 @@ export const classColumns: ColumnConfig<AdminClassDataDTO>[] = [
   },
   {
     label: "Teacher",
-    field: "teacher_id",
+    field: "teacher_name",
     align: "left",
     minWidth: "160px",
     render: (row: AdminClassDataDTO) =>
@@ -39,11 +39,12 @@ export const classColumns: ColumnConfig<AdminClassDataDTO>[] = [
     width: "130px",
   },
   {
-    label: "Actions",
-    slotName: "operation",
+    field: "id",
     operation: true,
-    fixed: "right",
-    width: "220px",
+    label: "Operation",
+    inlineEditActive: false,
+    // fixed: "right", // keep on desktop if you want; see note below
     align: "center",
+    minWidth: "200px",
   },
 ];

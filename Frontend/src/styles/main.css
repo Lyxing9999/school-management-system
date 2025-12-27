@@ -21,7 +21,9 @@
 @import "./element-plus/el-tag.css";
 @import "./element-plus/el-check-tag.css";
 @import "./element-plus/el-date-picker.css";
-
+@import "./element-plus/overview-header.css";
+@import "./element-plus/responsive.css";
+@import "./element-plus/el-dialog.css";
 /* =========================================================
    0) BASE TOKENS (ALWAYS AVAILABLE)
 ========================================================= */
@@ -432,4 +434,47 @@ body {
 .el-drawer,
 .el-card {
   font-family: var(--el-font-family);
+}
+
+
+
+/* =========================================================
+   Responsive foundation (Element Plus + Tailwind friendly)
+========================================================= */
+
+/* Let grids + table cells shrink properly */
+.el-row,
+.el-col,
+.el-table__cell,
+.el-table .cell {
+  min-width: 0;
+}
+
+/* Tables: allow horizontal scroll on mobile */
+@media (max-width: 640px) {
+  .el-table {
+    width: 100%;
+  }
+
+  .el-table__body-wrapper {
+    overflow-x: auto;
+  }
+}
+
+/* Forms/inputs/selects should never overflow */
+.el-input,
+.el-select,
+.el-date-editor,
+.el-input-group {
+  width: 100%;
+}
+
+/* Mobile: buttons stack / full width by default */
+@media (max-width: 640px) {
+
+  .btn-mobile-full,
+  .btn-mobile-full .el-button,
+  .btn-mobile-full button {
+    width: 100%;
+  }
 }

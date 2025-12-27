@@ -16,7 +16,6 @@ export const useAuthStore = defineStore("auth", () => {
 
   function setUser(next: UserBaseDataDTO | null) {
     user.value = next;
-    console.log("[USER]", user.value);
   }
 
   function clear() {

@@ -20,7 +20,6 @@ const emit = defineEmits<{
 const fetchSubjects = async () => {
   if (!props.classId) return [];
   const res = await teacherApi.teacher.listSubjectsInClass(props.classId);
-  console.log(res);
   // res should be TeacherSubjectSelectNameListDTO
   // { items: [{ id: string, name: string | code: string, ... }, ...] }
   return res?.items ?? [];

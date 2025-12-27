@@ -17,8 +17,6 @@ beforeAll(async () => {
     password: "12345678",
   });
 
-  console.log("Login response:", loginRes.data);
-
   token = loginRes.data?.data?.access_token;
   if (!token) throw new Error("Login failed, no token received");
 

@@ -82,7 +82,6 @@ const loadAttendance = async () => {
     );
     // StudentAttendanceListDTO => { items: [...] }
     attendance.value = res.items ?? [];
-    // console.log("Student attendance rows:", attendance.value);
   } finally {
     loadingAttendance.value = false;
   }

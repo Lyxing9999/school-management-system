@@ -1,12 +1,11 @@
 <script
-  lang="ts"
   setup
+  lang="ts"
   generic="T extends Record<string, any> = Record<string, any>"
 >
 import FormField from "./FormField.vue";
 import type { Field } from "../types/form";
-import type { FormInstance } from "element-plus";
-import type { UploadUserFile } from "element-plus";
+import type { FormInstance, UploadUserFile } from "element-plus";
 
 defineProps<{
   rowFields: Field<T>[];
@@ -27,21 +26,36 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <el-row :gutter="20" class="mb-4">
-    <el-col
+  <div class="form-row-grid">
+    <FormField
       v-for="subField in rowFields"
       :key="subField.key"
-      :span="24 / rowFields.length"
-    >
-      <FormField
-        :field="subField"
-        :form="form"
-        :el-form-ref="elFormRef"
-        :file-list="fileList"
-        :use-el-form="useElForm"
-        @upload-change="(key, files) => emit('upload-change', key, files)"
-        @upload-remove="(key, file) => emit('upload-remove', key, file)"
-      />
-    </el-col>
-  </el-row>
+      :field="subField"
+      :form="form"
+      :el-form-ref="elFormRef"
+      :file-list="fileList"
+      :use-el-form="useElForm"
+      @upload-change="(key, files) => emit('upload-change', key, files)"
+      @upload-remove="(key, file) => emit('upload-remove', key, file)"
+    />
+  </div>
 </template>
+
+<style scoped>
+.form-row-grid {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 16px;
+
+  /* CTO default: responsive without breakpoints */
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+/* Optional: slightly tighter on very small screens */
+@media (max-width: 480px) {
+  .form-row-grid {
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+}
+</style>

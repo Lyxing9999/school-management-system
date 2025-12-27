@@ -1,6 +1,6 @@
 import { ref, unref, type Ref, type ComputedRef } from "vue";
 import axios from "axios";
-
+import { reportError } from "~/utils/errors";
 type MaybeRef<T> = Ref<T> | ComputedRef<T>;
 
 export function usePaginatedFetch<T, F>(
@@ -48,7 +48,7 @@ export function usePaginatedFetch<T, F>(
         myController.signal
       );
 
-      // ✅ ignore stale responses
+      // ignore stale responses
       if (myReqId !== reqId) return;
 
       data.value = res.items;
@@ -56,7 +56,7 @@ export function usePaginatedFetch<T, F>(
       currentPage.value = page;
       hasFetchedOnce.value = true;
     } catch (err: any) {
-      // ✅ ignore aborts
+      // ignore aborts/cancels
       if (
         err?.name === "AbortError" ||
         err?.name === "CanceledError" ||
@@ -66,13 +66,13 @@ export function usePaginatedFetch<T, F>(
         return;
       }
 
-      // ✅ ignore stale errors too
+      // ignore stale errors too
       if (myReqId !== reqId) return;
 
       error.value = err;
-      console.error("Fetch failed:", err);
+
+      reportError(err, "paging.fetchPage", "log");
     } finally {
-      // ✅ only the latest request can stop loading
       if (myReqId === reqId) loading.value = false;
     }
   };

@@ -5,6 +5,11 @@ import type {
   AdminClassListDTO,
   AdminClassNameSelectListDTO,
   AdminStudentsInClassSelectDTO,
+  AdminUpdateClassRelationsResultDTO,
+  AdminUpdateClassRelationsDTO,
+  PagedResult,
+  SearchStudentsParams,
+  AdminStudentSelectDTO,
 } from "./class.dto";
 import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
 import { ClassApi } from "./class.api";
@@ -46,9 +51,14 @@ export class ClassService {
     );
     return data!;
   }
-  async listStudentsForEnrollmentSelect(classID: string) {
-    const data = await this.callApi<AdminStudentSelectDTO[]>(() =>
-      this.classApi.listStudentsForEnrollmentSelect(classID)
+
+  async searchStudentsForEnrollmentSelect(
+    classID: string,
+    params: SearchStudentsParams,
+    signal?: AbortSignal
+  ): Promise<PagedResult<AdminStudentSelectDTO>> {
+    const data = await this.callApi<PagedResult<AdminStudentSelectDTO>>(() =>
+      this.classApi.searchStudentsForEnrollmentSelect(classID, params, signal)
     );
     return data!;
   }
@@ -111,6 +121,18 @@ export class ClassService {
     const classData = await this.callApi<AdminClassDataDTO>(
       () => this.classApi.unenrollStudent(classId, studentId),
       { showSuccess: true, ...(options ?? {}) }
+    );
+    return classData!;
+  }
+
+  async updateRelations(
+    classId: string,
+    payload: AdminUpdateClassRelationsDTO,
+    options?: ApiCallOptions
+  ) {
+    const classData = await this.callApi<AdminUpdateClassRelationsResultDTO>(
+      () => this.classApi.updateRelations(classId, payload),
+      { showSuccess: false, ...(options ?? {}) }
     );
     return classData!;
   }

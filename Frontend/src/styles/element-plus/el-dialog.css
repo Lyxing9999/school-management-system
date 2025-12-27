@@ -1,0 +1,25 @@
+
+@media (max-width: 768px) {
+    .el-dialog.is-fullscreen {
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    .el-dialog__header {
+        padding: 14px 14px 10px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .el-dialog__body {
+        padding: 12px 14px 16px;
+        background: var(--color-card);
+        max-height: calc(100vh - var(--header-height));
+        overflow: auto;
+    }
+
+    .el-dialog__footer {
+        padding: 12px 14px;
+        border-top: 1px solid var(--border-color);
+        background: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%);
+    }
+}
