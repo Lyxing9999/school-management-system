@@ -85,4 +85,4 @@ coverage.xml
 # =========================
 # ✅ MongoDB / DB Dumps
 # =========================
-dump/
+dump/Frontend/.pnpm-store/
