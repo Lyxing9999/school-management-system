@@ -1,8 +1,0 @@
-{
-  "name": "element-plus",
-  "configKey": "elementPlus",
-  "compatibility": {
-    "nuxt": ">=3"
-  },
-  "version": "1.1.4"
-}
