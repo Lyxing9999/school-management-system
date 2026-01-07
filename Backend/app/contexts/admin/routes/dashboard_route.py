@@ -7,7 +7,7 @@ from flask import request, g
 from app.contexts.admin.routes import admin_bp
 from app.contexts.iam.auth.jwt_utils import role_required
 from app.contexts.shared.decorators.response_decorator import wrap_response
-from app.contexts.admin.data_transfer.responses import AdminDashboardDTO
+from app.contexts.admin.features.dashboard.dto import AdminDashboardDTO
 
 
 def _parse_date_arg(value: str | None) -> datetime | None:
@@ -54,6 +54,7 @@ def admin_get_dashboard():
     date_from_str = request.args.get("date_from")
     date_to_str = request.args.get("date_to")
     term = request.args.get("term")  # can be None
+
 
     date_from = _parse_date_arg(date_from_str)
     date_to = _parse_date_arg(date_to_str)

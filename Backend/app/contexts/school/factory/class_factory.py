@@ -20,7 +20,7 @@ class ClassFactory:
     def create_class(
         self,
         name: str,
-        teacher_id: str | ObjectId | None = None,
+        homeroom_teacher_id: str | ObjectId | None = None,
         subject_ids: Iterable[str | ObjectId] | None = None,
         max_students: int | None = None,
         status: ClassSectionStatus | str = ClassSectionStatus.ACTIVE,
@@ -29,20 +29,20 @@ class ClassFactory:
         if self.class_read_model.get_by_name(clean_name):
             raise ClassNameAlreadyExistsException(clean_name)
 
-        teacher_oid = self._normalize_id(teacher_id) if teacher_id is not None else None
+        homeroom_teacher_oid = self._normalize_id(homeroom_teacher_id) if homeroom_teacher_id is not None else None
 
         subject_oids = list({self._normalize_id(sid) for sid in (subject_ids or [])})
 
-        if teacher_oid is not None:
-            max_load = self.teacher_read_model.get_max_class_load(teacher_oid)
+        if homeroom_teacher_oid is not None:
+            max_load = self.teacher_read_model.get_max_class_load(homeroom_teacher_oid)
             if max_load is not None:
-                current_load = self.teacher_read_model.count_classes_for_teacher(teacher_oid)
+                current_load = self.teacher_read_model.count_classes_for_teacher(homeroom_teacher_oid)
                 if current_load >= max_load:
-                    raise TeacherOverClassLoadException(teacher_oid, max_load)
+                    raise TeacherOverClassLoadException(homeroom_teacher_oid, max_load)
 
         return ClassSection(
             name=clean_name,
-            teacher_id=teacher_oid,
+            homeroom_teacher_id=homeroom_teacher_oid,
             subject_ids=subject_oids,
             max_students=max_students,
             status=status,

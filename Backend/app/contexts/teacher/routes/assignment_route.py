@@ -1,0 +1,21 @@
+
+from flask import g
+from app.contexts.teacher.routes import teacher_bp
+from app.contexts.iam.auth.jwt_utils import role_required
+from app.contexts.shared.decorators.response_decorator import wrap_response
+from app.contexts.core.security.auth_utils import get_current_staff_id
+from app.contexts.shared.model_converter import mongo_converter
+
+from app.contexts.teacher.data_transfer.responses import (
+    TeacherAssignmentDTO,
+    TeacherAssignmentListDTO,
+)
+
+@teacher_bp.route("/my-assignments", methods=["GET"])
+@role_required(["teacher"])
+@wrap_response
+def my_assignments():
+    teacher_id = get_current_staff_id()
+    docs = g.teacher_service.list_my_assignments_enriched(teacher_id)
+    items = mongo_converter.list_to_dto(docs, TeacherAssignmentDTO)
+    return TeacherAssignmentListDTO(items=items)

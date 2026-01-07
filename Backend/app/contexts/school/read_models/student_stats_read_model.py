@@ -1,30 +1,37 @@
-from __future__ import annotations
+from typing import Any, Final, Dict, List, Optional, Union
 
-from typing import Final, List, Dict, Any, Union, Optional
 from bson import ObjectId
 from pymongo.database import Database
 
-from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
-
+from app.contexts.core.errors.mongo_error_mixin import MongoErrorMixin
 from app.contexts.iam.read_models.iam_read_model import IAMReadModel
-from app.contexts.school.read_models.class_read_model import ClassReadModel
-from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
+from app.contexts.school.domain.class_section import ClassSectionStatus
 from app.contexts.school.read_models.attendance_read_model import AttendanceReadModel
+from app.contexts.school.read_models.class_read_model import ClassReadModel
 from app.contexts.school.read_models.grade_read_model import GradeReadModel
+from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
 from app.contexts.school.read_models.subject_read_model import SubjectReadModel
-from app.contexts.staff.read_models.staff_read_model import StaffReadModel
-from app.contexts.student.read_models.student_read_model import StudentReadModel
-
+from app.contexts.shared.lifecycle.filters import ShowDeleted
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.shared.services.display_name_service import DisplayNameService
+from app.contexts.staff.read_models.staff_read_model import StaffReadModel
+from app.contexts.student.domain.student import StudentStatus
+from app.contexts.student.read_models.student_read_model import StudentReadModel
 
 
-class StudentStatsReadModel(MongoErrorMixin):\
+class StudentStatsReadModel(MongoErrorMixin):
+    """
+    Student-facing stats/data read model.
+
+    Policy:
+    - only ACTIVE students are allowed to see data here
+    - only ACTIVE classes are considered valid current class
+    - lifecycle filtering stays at underlying read models (show_deleted defaults active)
+    """
 
     def __init__(self, db: Database):
         self.db = db
 
-        # base read models
         self._student_read: Final[StudentReadModel] = StudentReadModel(db)
         self._class_read: Final[ClassReadModel] = ClassReadModel(db)
         self._schedule_read: Final[ScheduleReadModel] = ScheduleReadModel(db)
@@ -34,7 +41,6 @@ class StudentStatsReadModel(MongoErrorMixin):\
         self._iam_read: Final[IAMReadModel] = IAMReadModel(db)
         self._staff_read: Final[StaffReadModel] = StaffReadModel(db)
 
-        # shared enrichment
         self._display: Final[DisplayNameService] = DisplayNameService(
             iam_read_model=self._iam_read,
             staff_read_model=self._staff_read,
@@ -46,47 +52,84 @@ class StudentStatsReadModel(MongoErrorMixin):\
     def _oid(self, v: Union[str, ObjectId, None]) -> Optional[ObjectId]:
         if v is None:
             return None
-        return mongo_converter.convert_to_object_id(v)
+        try:
+            return mongo_converter.convert_to_object_id(v)
+        except Exception:
+            return None
 
-    def _get_current_class_id(self, student_id: Union[str, ObjectId]) -> Optional[ObjectId]:
+    def _get_active_student_doc(
+        self,
+        student_id: Union[str, ObjectId],
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> Optional[Dict[str, Any]]:
         sid = self._oid(student_id)
         if not sid:
             return None
-        stu_doc = self._student_read.get_by_id(sid)  
+
+        doc = self._student_read.get_by_id(sid, show_deleted=show_deleted)
+        if not doc:
+            return None
+
+        # IMPORTANT: enforce StudentStatus
+        if doc.get("status") != StudentStatus.ACTIVE.value:
+            return None
+
+        return doc
+
+    def _get_active_current_class_doc(
+        self,
+        student_id: Union[str, ObjectId],
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> Optional[Dict[str, Any]]:
+        stu_doc = self._get_active_student_doc(student_id, show_deleted=show_deleted)
         if not stu_doc:
             return None
-        return stu_doc.get("current_class_id")
 
-    # ---------------- CLASSES ----------------
+        cid = self._oid(stu_doc.get("current_class_id"))
+        if not cid:
+            return None
 
-    def list_my_classes_enriched(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
-        class_id = self._get_current_class_id(student_id)
-        if not class_id:
-            return []
+        class_doc = self._class_read.get_by_id(cid, show_deleted=show_deleted)
+        if not class_doc:
+            return None
 
-        class_doc = self._class_read.get_by_id(class_id)
+        # IMPORTANT: enforce ClassSectionStatus
+        if class_doc.get("status") != ClassSectionStatus.ACTIVE.value:
+            return None
+
+        return class_doc
+
+    # -------------------------
+    # Public methods
+    # -------------------------
+
+    def list_my_classes_enriched(
+        self,
+        student_id: Union[str, ObjectId],
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> List[Dict[str, Any]]:
+        class_doc = self._get_active_current_class_doc(student_id, show_deleted=show_deleted)
         if not class_doc:
             return []
-
-        # enrich_classes expects Iterable[dict]
         return self._display.enrich_classes([class_doc])
 
-    # ---------------- SUBJECTS ----------------
-
-    def list_my_subjects(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
-        class_id = self._get_current_class_id(student_id)
-        if not class_id:
-            return []
-
-        class_doc = self._class_read.get_by_id(class_id)
+    def list_my_subjects(
+        self,
+        student_id: Union[str, ObjectId],
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> List[Dict[str, Any]]:
+        class_doc = self._get_active_current_class_doc(student_id, show_deleted=show_deleted)
         if not class_doc:
             return []
 
         subject_ids = class_doc.get("subject_ids") or []
-        if not subject_ids:
+        if not isinstance(subject_ids, list) or not subject_ids:
             return []
 
-        # normalize ids
         soids: List[ObjectId] = []
         for raw in subject_ids:
             oid = self._oid(raw)
@@ -96,78 +139,87 @@ class StudentStatsReadModel(MongoErrorMixin):\
         if not soids:
             return []
 
-        subject_docs = self._subject_read.list_by_ids(soids)
+        subject_docs = self._subject_read.list_by_ids(soids, show_deleted=show_deleted)  # ensure your SubjectReadModel supports this
         result: List[Dict[str, Any]] = []
 
         for s in subject_docs:
             doc = dict(s)
             sid = doc.pop("_id", None)
-            if sid:
+            if sid is not None:
                 doc["id"] = str(sid)
 
             name = (doc.get("name") or "").strip()
             code = (doc.get("code") or "").strip()
-            if name and code:
-                doc["label"] = f"{name} ({code})"
-            else:
-                doc["label"] = name or code
+            doc["label"] = f"{name} ({code})" if (name and code) else (name or code)
 
             result.append(doc)
 
         result.sort(key=lambda d: (d.get("label") or "").lower())
         return result
 
-    # ---------------- SCHEDULE ----------------
-
-    def list_my_schedule_enriched(self, student_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
-        class_id = self._get_current_class_id(student_id)
-        if not class_id:
+    def list_my_schedule_enriched(
+        self,
+        student_id: Union[str, ObjectId],
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> List[Dict[str, Any]]:
+        class_doc = self._get_active_current_class_doc(student_id, show_deleted=show_deleted)
+        if not class_doc:
             return []
 
-        schedule_docs = self._schedule_read.list_schedules_for_classes([class_id])
+        class_id = class_doc["_id"]
+        schedule_docs = self._schedule_read.list_schedules_for_classes([class_id], show_deleted=show_deleted)  # ensure supported
         if not schedule_docs:
             return []
 
         enriched = self._display.enrich_schedules(schedule_docs)
-        enriched.sort(key=lambda s: (s.get("day_of_week", 0), s.get("start_time", "")))
+        enriched.sort(key=lambda s: (int(s.get("day_of_week") or 0), str(s.get("start_time") or "")))
         return enriched
-
-    # ---------------- ATTENDANCE ----------------
 
     def list_my_attendance_enriched(
         self,
         student_id: Union[str, ObjectId],
         class_id: Union[str, ObjectId, None] = None,
+        *,
+        show_deleted: ShowDeleted = "active",
     ) -> List[Dict[str, Any]]:
-        sid = self._oid(student_id)
-        if not sid:
+        stu_doc = self._get_active_student_doc(student_id, show_deleted=show_deleted)
+        if not stu_doc:
             return []
 
-        cid = self._oid(class_id) if class_id else self._get_current_class_id(sid)
+        sid = stu_doc["_id"]
+
+        # If caller provides class_id, use it; else use current class
+        cid = self._oid(class_id) if class_id is not None else self._oid(stu_doc.get("current_class_id"))
         if not cid:
             return []
+
+        # Optional hardening: only allow current class
+        # if cid != self._oid(stu_doc.get("current_class_id")):
+        #     return []
 
         records = self._attendance_read.list_attendance_for_class_and_student(
             class_id=cid,
             student_id=sid,
+            show_deleted=show_deleted,
         )
         if not records:
             return []
 
         return self._display.enrich_attendance(records)
 
-    # ---------------- GRADES ----------------
-
     def list_my_grades_enriched(
         self,
         student_id: Union[str, ObjectId],
-        term: Optional[str] = None,
+        *,
+        show_deleted: ShowDeleted = "active",
     ) -> List[Dict[str, Any]]:
-        sid = self._oid(student_id)
-        if not sid:
+        stu_doc = self._get_active_student_doc(student_id, show_deleted=show_deleted)
+        if not stu_doc:
             return []
 
-        records = self._grade_read.list_grades_for_student(sid, term=term) if term else self._grade_read.list_grades_for_student(sid)
+        sid = stu_doc["_id"]
+        records = self._grade_read.list_grades_for_student_paged(sid, show_deleted=show_deleted)  # ensure supported
         if not records:
             return []
 

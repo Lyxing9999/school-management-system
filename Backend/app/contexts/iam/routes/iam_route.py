@@ -1,15 +1,23 @@
 from flask import Blueprint, request, make_response, jsonify
-from app.contexts.shared.model_converter import pydantic_converter
-from app.contexts.iam.services.iam_service import IAMService
-from app.contexts.shared.decorators.response_decorator import wrap_response
+
 from app.contexts.infra.database.db import get_db
-from app.contexts.iam.data_transfer.request import  IAMUpdateSchema , IAMLoginSchema
-from app.contexts.iam.data_transfer.response import IAMResponseDataDTO 
-from app.contexts.iam.domain.iam import IAM
+from app.contexts.shared.model_converter import pydantic_converter
+from app.contexts.shared.decorators.response_decorator import wrap_response
+
+from app.contexts.iam.services.iam_service import IAMService
 from app.contexts.iam.mapper.iam_mapper import IAMMapper
+
+from app.contexts.iam.data_transfer.request import (
+    IAMLoginSchema,
+    IAMUpdateSchema,
+    PasswordResetConfirmSchema,
+)
+from app.contexts.iam.data_transfer.response import IAMResponseDataDTO
+
 from app.contexts.iam.auth.cookies import set_refresh_cookie
 from app.contexts.iam.auth.jwt_utils import login_required
 from app.contexts.core.security.auth_utils import get_current_user
+
 from app.contexts.iam.auth.refresh_utils import (
     create_refresh_token,
     hash_refresh_token,
@@ -17,38 +25,48 @@ from app.contexts.iam.auth.refresh_utils import (
     REFRESH_TTL,
 )
 
-iam_bp = Blueprint('iam_bp', __name__)
 
-
+iam_bp = Blueprint("iam_bp", __name__)
 
 
 # -------------------------
-# Authentication routes
+# AUTH: LOGIN
 # -------------------------
-@iam_bp.route('/login', methods=['POST'])
+@iam_bp.route("/login", methods=["POST"])
 def login_user():
     user_service = IAMService(get_db())
     user_schema: IAMLoginSchema = pydantic_converter.convert_to_model(request.json, IAMLoginSchema)
+
     dto, refresh = user_service.login(user_schema.email, user_schema.password)
-    resp: IAMResponseDataDTO = make_response(jsonify(dto.model_dump())) 
+
+    # dto is Pydantic model (IAMResponseDataDTO)
+    resp: IAMResponseDataDTO = make_response(jsonify(dto.model_dump()))
     set_refresh_cookie(resp, refresh)
     return resp
 
 
 # -------------------------
-# Profile routes
+# AUTH: LOGOUT
 # -------------------------
-@iam_bp.route('/update_info', methods=['PATCH'])
-@wrap_response
-def update_user_profile():
-    user_service = IAMService(get_db())
-    current_user_id = get_current_user()
-    update_schema: IAMUpdateSchema = pydantic_converter.convert_to_model(request.json, IAMUpdateSchema)
-    iam_domain: IAM = user_service.update_info(current_user_id, update_schema , update_by_admin=False)
-    return IAMMapper.to_dto(iam_domain)
+@iam_bp.route("/logout", methods=["POST"])
+def logout_user():
+    db = get_db()
+    user_service = IAMService(db)
+
+    rt = request.cookies.get("refresh_token") or ""
+    user_service.logout(rt)
+
+    # clear cookie
+    resp = make_response(jsonify({"message": "Logged out"}))
+    # if your set_refresh_cookie supports clearing, use that.
+    # Otherwise clear manually:
+    resp.set_cookie("refresh_token", "", expires=0, httponly=True, samesite="Lax")
+    return resp
 
 
-
+# -------------------------
+# AUTH: REFRESH (ROTATE)
+# -------------------------
 @iam_bp.route("/refresh", methods=["POST"])
 def refresh_access_token():
     db = get_db()
@@ -84,17 +102,19 @@ def refresh_access_token():
 
     refresh_tokens.update_one(
         {"_id": doc["_id"]},
-        {"$set": {"revoked_at": now_utc(), "replaced_by_hash": new_hash}}
+        {"$set": {"revoked_at": now_utc(), "replaced_by_hash": new_hash}},
     )
 
-    refresh_tokens.insert_one({
-        "user_id": str(safe_dict["id"]),
-        "token_hash": new_hash,
-        "created_at": now_utc(),
-        "expires_at": now_utc() + REFRESH_TTL,
-        "revoked_at": None,
-        "replaced_by_hash": None,
-    })
+    refresh_tokens.insert_one(
+        {
+            "user_id": str(safe_dict["id"]),
+            "token_hash": new_hash,
+            "created_at": now_utc(),
+            "expires_at": now_utc() + REFRESH_TTL,
+            "revoked_at": None,
+            "replaced_by_hash": None,
+        }
+    )
 
     access = iam_service._auth_service.create_access_token(safe_dict)
 
@@ -103,11 +123,62 @@ def refresh_access_token():
     return resp
 
 
+# -------------------------
+# PROFILE: GET ME
+# -------------------------
 @iam_bp.route("/me", methods=["GET"])
 @wrap_response
 @login_required()
 def get_me():
     user_service = IAMService(get_db())
-    current = get_current_user()          
+    current = get_current_user()  # you already use this (dict)
     me_dto = user_service.me(current["user_id"])
     return me_dto
+
+
+# -------------------------
+# PROFILE: UPDATE ME (email/username)
+# -------------------------
+@iam_bp.route("/me", methods=["PATCH"])
+@wrap_response
+@login_required()
+def patch_me():
+    user_service = IAMService(get_db())
+    current = get_current_user()  # dict or str is supported by your service
+
+    payload: IAMUpdateSchema = pydantic_converter.convert_to_model(request.json, IAMUpdateSchema)
+
+    # IMPORTANT: For profile page, only send email/username.
+    # If payload contains password, your IAMService.update_info will revoke refresh tokens.
+    iam_domain = user_service.update_info(current, payload, update_by_admin=False)
+    return IAMMapper.to_dto(iam_domain)
+
+
+# -------------------------
+# PASSWORD: CHANGE (LOGGED IN)
+# -------------------------
+@iam_bp.route("/change-password", methods=["POST"])
+@wrap_response
+@login_required()
+def change_password():
+    user_service = IAMService(get_db())
+    current = get_current_user()
+
+    body = request.json or {}
+    current_pw = str(body.get("current_password") or "")
+    new_pw = str(body.get("new_password") or "")
+
+    return user_service.change_password(current, current_pw, new_pw)
+
+
+# -------------------------
+# RESET PASSWORD: CONFIRM (TOKEN-BASED)
+# -------------------------
+@iam_bp.route("/reset-password/confirm", methods=["POST"])
+@wrap_response
+def confirm_password_reset():
+    user_service = IAMService(get_db())
+    payload: PasswordResetConfirmSchema = pydantic_converter.convert_to_model(
+        request.json, PasswordResetConfirmSchema
+    )
+    return user_service.confirm_password_reset(payload.token, payload.new_password)

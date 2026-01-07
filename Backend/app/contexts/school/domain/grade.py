@@ -12,7 +12,9 @@ from app.contexts.school.errors.grade_exceptions import (
     GradeRecordDeletedException,
     InvalidTermException,
 )
-
+class Semester(str, Enum):
+    S1 = "S1"
+    S2 = "S2"
 # Accept: 2025-S1 or 2025-S2
 _TERM_RE = re.compile(r"^(?P<year>\d{4})-(?P<semester>S[12])$")
 

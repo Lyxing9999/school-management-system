@@ -55,9 +55,9 @@ class StudentScheduleDTO(BaseModel):
     end_time: str
     class_name: Optional[str] = None
     teacher_name: Optional[str] = None
+    subject_label: Optional[str] = None
     room: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    lifecycle: LifecycleDTO
 
 
 class StudentClassListDTO(BaseModel):
@@ -80,8 +80,7 @@ class StudentGradeDTO(BaseModel):
     score: float
     type: GradeType
     term: str | None = None
-    created_at: datetime
-    updated_at: datetime
+    lifecycle: LifecycleDTO
 
 class StudentGradeListDTO(BaseModel):
     items: List[StudentGradeDTO]
@@ -106,8 +105,7 @@ class StudentAttendanceDTO(BaseModel):
     marked_by_teacher_id: str
     teacher_name: Optional[str] = None
 
-    created_at: datetime
-    updated_at: datetime
+    lifecycle: LifecycleDTO
 
 class StudentAttendanceListDTO(BaseModel):
     items: List[StudentAttendanceDTO]

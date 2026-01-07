@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -7,6 +7,7 @@ from pymongo.collection import Collection
 
 from app.contexts.school.domain.subject import Subject
 from app.contexts.school.mapper.subject_mapper import SubjectMapper
+from app.contexts.shared.lifecycle.filters import not_deleted
 
 
 class ISubjectRepository(ABC):
@@ -38,7 +39,7 @@ class ISubjectRepository(ABC):
 
 
 class MongoSubjectRepository(ISubjectRepository):
-    """MongoDB implementation of ISubjectRepository."""
+    """MongoDB implementation of ISubjectRepository (lifecycle-aware)."""
 
     def __init__(
         self,
@@ -58,7 +59,7 @@ class MongoSubjectRepository(ISubjectRepository):
         _id = payload.pop("_id")
 
         result = self.collection.update_one(
-            {"_id": _id},
+            not_deleted({"_id": _id}),
             {"$set": payload},
         )
         if result.matched_count == 0:
@@ -66,25 +67,31 @@ class MongoSubjectRepository(ISubjectRepository):
         return subject
 
     def find_by_id(self, id: ObjectId) -> Optional[Subject]:
-        doc = self.collection.find_one({"_id": id})
+        doc = self.collection.find_one(not_deleted({"_id": id}))
         if not doc:
             return None
         return self.mapper.to_domain(doc)
 
     def find_by_code(self, code: str) -> Optional[Subject]:
-        doc = self.collection.find_one({"code": code})
+        code = (code or "").strip()
+        if not code:
+            return None
+        doc = self.collection.find_one(not_deleted({"code": code}))
         if not doc:
             return None
         return self.mapper.to_domain(doc)
 
     def find_by_name(self, name: str) -> Optional[Subject]:
-        doc = self.collection.find_one({"name": name})
+        name = (name or "").strip()
+        if not name:
+            return None
+        doc = self.collection.find_one(not_deleted({"name": name}))
         if not doc:
             return None
         return self.mapper.to_domain(doc)
 
     def list_all(self, active_only: bool = False) -> list[Subject]:
-        query: dict = {}
+        query: dict = not_deleted()
         if active_only:
             query["is_active"] = True
 

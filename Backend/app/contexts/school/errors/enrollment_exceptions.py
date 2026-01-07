@@ -1,4 +1,4 @@
-from app.contexts.core.error.app_base_exception import (
+from app.contexts.core.errors.app_base_exception import (
     AppBaseException,
     ErrorCategory,
     ErrorSeverity,

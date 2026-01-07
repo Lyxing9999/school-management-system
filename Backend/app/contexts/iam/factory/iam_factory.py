@@ -1,4 +1,3 @@
-
 from app.contexts.iam.domain.iam import IAM
 from app.contexts.shared.enum.roles import SystemRole
 from app.contexts.iam.auth.services import get_auth_service

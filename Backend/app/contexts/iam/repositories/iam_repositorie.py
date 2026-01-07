@@ -1,11 +1,13 @@
-from __future__ import annotations
-from bson import ObjectId
+from typing import Optional
 
-from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
+from bson import ObjectId
 from pymongo.collection import Collection
 
-from app.contexts.iam.mapper.iam_mapper import IAMMapper
+from app.contexts.core.errors.mongo_error_mixin import MongoErrorMixin
 from app.contexts.iam.domain.iam import IAM
+from app.contexts.iam.mapper.iam_mapper import IAMMapper
+from app.contexts.shared.lifecycle.filters import not_deleted, by_show_deleted
+from app.contexts.shared.lifecycle.domain import now_utc as lifecycle_now_utc
 
 
 class MongoIAMRepository(MongoErrorMixin):
@@ -13,32 +15,53 @@ class MongoIAMRepository(MongoErrorMixin):
         self.collection = collection
         self._iam_mapper = IAMMapper()
 
-
-    def find_one(self, id: ObjectId) -> IAM | None:
-        """Find a single user matching the query."""
-        raw_user = self.collection.find_one({"_id": id})
-        if not raw_user: return None
-        return self._iam_mapper.to_domain(raw_user)
-
+    def find_one(self, id: ObjectId, *, include_deleted: bool = False) -> Optional[IAM]:
+        show = "all" if include_deleted else "active"
+        raw_user = self.collection.find_one(by_show_deleted(show, {"_id": id}))
+        return None if not raw_user else self._iam_mapper.to_domain(raw_user)
 
     def save(self, user_data: dict) -> IAM:
-        """Insert a new user into the collection."""
-        inserted_id = self.collection.insert_one(user_data).inserted_id
-        iam = self.find_one(inserted_id)
+        payload = dict(user_data)
+        res = self.collection.insert_one(payload)
+        iam = self.find_one(res.inserted_id)
+        if iam is None:
+            raise RuntimeError(f"IAM insert succeeded but could not load user: {res.inserted_id}")
         return iam
 
+    def update(self, user_id: ObjectId, user: dict) -> Optional[IAM]:
+        payload = dict(user)
+        payload.pop("_id", None)
 
-    def update(self, user_id: ObjectId, user: dict) -> IAM:
-        user = dict(user)
-        user.pop("_id", None)  # do not set _id
-        self.collection.update_one({"_id": user_id}, {"$set": user})
+        # Important: don't replace entire lifecycle dict unless you explicitly want to.
+        payload.pop("lifecycle", None)
+
+        res = self.collection.update_one(
+            not_deleted({"_id": user_id}),
+            {
+                "$set": {
+                    **payload,
+                    "lifecycle.updated_at": lifecycle_now_utc(),
+                }
+            },
+        )
+        if res.matched_count == 0:
+            return None
+
         return self.find_one(user_id)
 
-    #soft_delete & hard-delete will be handled by lifecycle service
+    def update_password(self, user_id: ObjectId | str, password_hash: str) -> int:
+        oid = ObjectId(user_id) if isinstance(user_id, str) else user_id
+
+        res = self.collection.update_one(
+            not_deleted({"_id": oid}),
+            {
+                "$set": {
+                    "password": password_hash,
+                    "lifecycle.updated_at": lifecycle_now_utc(),
+                }
+            },
+        )
+        return int(res.modified_count)
+
     def hard_delete(self, user_id: ObjectId) -> None:
         self.collection.delete_one({"_id": user_id})
-
-    def create_indexes(self):
-        """Create necessary indexes for the collection."""
-        self.collection.create_index([("email", 1)], unique=True, background=True)
-        self.collection.create_index([("username", 1)], unique=True, background=True, sparse=True)

@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Literal
+from datetime import datetime, time, timedelta
 
 ShowDeleted = Literal["all", "active", "deleted"]
 
@@ -46,6 +45,30 @@ def by_show_deleted(show: ShowDeleted, extra: Optional[Dict[str, Any]] = None) -
     return q
 
 
+
+def build_date_range(
+    field_key: str,
+    *,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    end_exclusive: bool = True,
+) -> Dict[str, Any]:
+
+    if not date_from and not date_to:
+        return {}
+
+    q: Dict[str, Any] = {}
+
+    if date_from:
+        q["$gte"] = date_from
+
+    if date_to:
+        if date_to.time() == time.min:
+            date_to = date_to + timedelta(days=1)
+
+        q["$lt" if end_exclusive else "$lte"] = date_to
+
+    return {field_key: q} if q else {}
 
 
 

@@ -1,7 +1,7 @@
 from datetime import date as date_type
 from typing import Optional, Any, Dict, Iterable
 
-from app.contexts.core.error.app_base_exception import (
+from app.contexts.core.errors.app_base_exception import (
     AppBaseException,
     ErrorSeverity,
     ErrorCategory,

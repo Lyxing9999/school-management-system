@@ -9,12 +9,12 @@ class ClassRosterUpdate:
     desired_teacher_id: Optional[ObjectId]
 
     @staticmethod
-    def from_payload(*, class_id: ObjectId, student_ids: list[ObjectId], teacher_id: Optional[ObjectId]) -> "ClassRosterUpdate":
+    def from_payload(*, class_id: ObjectId, student_ids: list[ObjectId], homeroom_teacher_id: Optional[ObjectId]) -> "ClassRosterUpdate":
         # normalize duplicates by set()
         return ClassRosterUpdate(
             class_id=class_id,
             desired_student_ids=set(student_ids),
-            desired_teacher_id=teacher_id,
+            desired_teacher_id=homeroom_teacher_id,
         )
 
     def diff(self, current_student_ids: Set[ObjectId]) -> tuple[Set[ObjectId], Set[ObjectId]]:

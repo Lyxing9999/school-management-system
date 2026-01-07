@@ -31,6 +31,7 @@ class ScheduleService(OidMixin):
         start_time: time,
         end_time: time,
         room: str | None = None,
+        subject_id: str | ObjectId | None = None,
     ) -> ScheduleSlot:
         class_oid = self._oid(class_id)
         teacher_oid = self._oid(teacher_id)
@@ -45,8 +46,25 @@ class ScheduleService(OidMixin):
             start_time=start_time,
             end_time=end_time,
             room=room,
+            subject_id=subject_id,
         )
         return self.schedule_repo.insert(slot)
+
+    def assign_subject_to_schedule_slot(
+        self,
+        slot_id: str | ObjectId,
+        subject_id: str | ObjectId | None,
+    ) -> ScheduleSlot:
+        oid = self._oid(slot_id)
+        slot = self.schedule_repo.find_by_id(oid)
+        if slot is None:
+            raise ScheduleNotFoundException(str(slot_id))
+        
+        slot.assign_subject(subject_id)
+        updated = self.schedule_repo.update(slot)
+        if updated is None:
+            raise ScheduleUpdateFailedException(str(slot_id))
+        return updated
 
     def move_schedule_slot(
         self,
@@ -55,6 +73,8 @@ class ScheduleService(OidMixin):
         new_start_time: time,
         new_end_time: time,
         new_room: str | None = None,
+        new_subject_id: str | ObjectId | None = None,  
+        
     ) -> ScheduleSlot:
         oid = self._oid(slot_id)
         slot = self.schedule_repo.find_by_id(oid)
@@ -66,6 +86,7 @@ class ScheduleService(OidMixin):
             new_start=new_start_time,
             new_end=new_end_time,
             new_room=new_room,
+            new_subject_id=new_subject_id,
         )
 
         updated = self.schedule_repo.update(slot)

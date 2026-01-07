@@ -1,61 +1,64 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, RootModel, ConfigDict
-from app.contexts.shared.enum.roles import SystemRole
-from datetime import datetime
-from pydantic import ConfigDict
-from app.contexts.iam.domain.iam import IAMStatus
-from app.contexts.shared.lifecycle.dto import LifecycleDTO 
+
+from app.contexts.shared.lifecycle.dto import LifecycleDTO
+
 
 # -------------------------
-# Base User DTO
+# Base User DTO (API-facing)
 # -------------------------
 class IAMBaseDataDTO(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
         extra="ignore",
         arbitrary_types_allowed=True,
-        enum_values_as_str=True
+        populate_by_name=True,
     )
-    id: str 
-    email: str 
-    role: SystemRole 
-    username: str 
-    status: IAMStatus 
-    created_by: str 
+
+    id: str
+    email: str
+    role: str               
+    username: Optional[str] = None
+    status: str              
+    created_by: Optional[str] = None
     lifecycle: LifecycleDTO
 
 
 # -------------------------
 # Response DTO (login/register)
+# Shape: {"user": {...}, "access_token": "..."}
 # -------------------------
 class IAMResponseDataDTO(BaseModel):
-    user: IAMBaseDataDTO
-    access_token: str
-
     model_config = ConfigDict(
         from_attributes=True,
         extra="forbid",
-        populate_by_name=True
+        populate_by_name=True,
     )
 
+    user: IAMBaseDataDTO
+    access_token: str
+
+
 # -------------------------
-# Update DTO
+# Update / Read DTOs
 # -------------------------
 class IAMUpdateDataDTO(IAMBaseDataDTO):
     pass
 
-# -------------------------
-# Read DTO
-# -------------------------
+
 class IAMReadDataDTO(IAMBaseDataDTO):
     pass
+
 
 class IAMReadDataDTOList(RootModel[List[IAMReadDataDTO]]):
     pass
 
+
+# -------------------------
+# Select DTO (dropdown etc.)
+# -------------------------
 class IAMSelectDataDTO(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     id: str
     email: str
-    model_config =   {"extra": "allow"}
-    
-    

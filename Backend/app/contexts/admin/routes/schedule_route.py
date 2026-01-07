@@ -8,6 +8,7 @@ from app.contexts.shared.model_converter import pydantic_converter, mongo_conver
 from app.contexts.admin.data_transfer.requests import (
     AdminCreateScheduleSlotSchema,
     AdminUpdateScheduleSlotSchema,
+    AdminAssignScheduleSlotSubjectSchema
 )
 from app.contexts.admin.data_transfer.responses import (
     AdminScheduleSlotDataDTO,
@@ -15,6 +16,16 @@ from app.contexts.admin.data_transfer.responses import (
 )
 from app.contexts.admin.mapper.school_admin_mapper import SchoolAdminMapper
 
+
+
+#helper function
+def _get_pagination():
+    page = request.args.get("page", default=1, type=int)
+    page_size = request.args.get("page_size", default=10, type=int)
+
+    page = max(1, page)
+    page_size = min(max(1, page_size), 100)  # clamp
+    return page, page_size
 
 # ---------------------------------------------------------
 # CREATE schedule slot
@@ -28,6 +39,7 @@ def admin_create_schedule_slot():
     slot = g.admin.schedule_service.admin_create_schedule_slot(payload=payload, created_by=admin_id)
     dto: AdminScheduleSlotDataDTO = SchoolAdminMapper.schedule_slot_to_dto(slot)
     return dto
+
 
 
 # ---------------------------------------------------------
@@ -44,6 +56,26 @@ def admin_update_schedule_slot(slot_id: str):
     return dto
 
 
+@admin_bp.route("/schedule/slots/<slot_id>/subject", methods=["PATCH"])
+@role_required(["admin"])
+@wrap_response
+def admin_assign_subject_to_schedule_slot(slot_id: str):
+    payload = pydantic_converter.convert_to_model(
+        request.json,
+        AdminAssignScheduleSlotSubjectSchema,
+    )
+
+    admin_id = get_current_staff_id()
+
+    slot = g.admin.schedule_service.admin_assign_subject_to_schedule_slot(
+        slot_id=slot_id,
+        subject_id=payload.subject_id,   
+
+    )
+
+    dto: AdminScheduleSlotDataDTO = SchoolAdminMapper.schedule_slot_to_dto(slot)
+    return dto
+
 # ---------------------------------------------------------
 # DELETE schedule slot
 # ---------------------------------------------------------
@@ -52,7 +84,6 @@ def admin_update_schedule_slot(slot_id: str):
 @wrap_response
 def admin_delete_schedule_slot(slot_id: str):
     admin_id = get_current_staff_id()
-
     g.admin.schedule_service.admin_delete_schedule_slot(slot_id=slot_id, deleted_by=admin_id)
     return {"message": "Schedule slot deleted successfully"}
 
@@ -64,10 +95,19 @@ def admin_delete_schedule_slot(slot_id: str):
 @role_required(["admin"])
 @wrap_response
 def admin_list_schedules_for_class_enriched(class_id: str):
-    slots = g.admin.schedule_service.admin_list_schedules_for_class_enriched(class_id=class_id)
-    slots_dto = mongo_converter.list_to_dto(slots, AdminScheduleSlotDataDTO)
-    return AdminScheduleListDTO(items=slots_dto)
-
+    page, page_size = _get_pagination()
+    result = g.admin.schedule_service.admin_list_schedules_for_class_enriched(
+        class_id=class_id,
+        page=page,
+        page_size=page_size,
+    )
+    items_dto = mongo_converter.list_to_dto(result.get("items", []), AdminScheduleSlotDataDTO)
+    return AdminScheduleListDTO(
+        items=items_dto,
+        total=result.get("total", 0),
+        page=result.get("page", page),
+        page_size=result.get("page_size", page_size),
+    )
 
 # ---------------------------------------------------------
 # LIST schedule for a TEACHER
@@ -76,16 +116,25 @@ def admin_list_schedules_for_class_enriched(class_id: str):
 @role_required(["admin"])
 @wrap_response
 def admin_list_schedules_for_teacher_enriched(teacher_id: str):
-    slots = g.admin.schedule_service.admin_list_schedules_for_teacher_enriched(teacher_id=teacher_id)
-    slots_dto = mongo_converter.list_to_dto(slots, AdminScheduleSlotDataDTO)
-    return AdminScheduleListDTO(items=slots_dto)
+    page, page_size = _get_pagination()
+    result = g.admin.schedule_service.admin_list_schedules_for_teacher_enriched(
+        teacher_id=teacher_id,
+        page=page,
+        page_size=page_size,
+    )
+    items_dto = mongo_converter.list_to_dto(result.get("items", []), AdminScheduleSlotDataDTO)
+    return AdminScheduleListDTO(
+        items=items_dto,
+        total=result.get("total", 0),
+        page=result.get("page", page),
+        page_size=result.get("page_size", page_size),
+    )
 
 
-
+    
 @admin_bp.route("/schedule/slots/<slot_id>", methods=["GET"])
 @role_required(["admin"])
 @wrap_response
 def admin_get_schedule_by_id(slot_id: str):
     slot = g.admin.schedule_service.admin_get_schedule_by_id(slot_id=slot_id)
-    slot_dto = mongo_converter.doc_to_dto(slot, AdminScheduleSlotDataDTO)
-    return slot_dto
+    return mongo_converter.doc_to_dto(slot, AdminScheduleSlotDataDTO)

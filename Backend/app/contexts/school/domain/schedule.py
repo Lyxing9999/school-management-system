@@ -36,6 +36,7 @@ class ScheduleSlot:
         self,
         class_id: ObjectId | str,
         teacher_id: ObjectId | str,
+        
         day_of_week: DayOfWeek | int,
         start_time: time,
         end_time: time,
@@ -100,7 +101,19 @@ class ScheduleSlot:
             self.subject_id = new_subject_id if isinstance(new_subject_id, ObjectId) else ObjectId(new_subject_id)
 
         self._touch()
+    def assign_subject(self, subject_id: ObjectId | str | None) -> None:
+        """
+        Assign or clear subject for the slot.
+        - subject_id=None means clear subject (allowed in your rules).
+        """
+        if self.is_deleted():
+            raise ScheduleSlotDeletedException(self.id)
+        if subject_id is None:
+            self.subject_id = None
+        else:
+            self.subject_id = subject_id if isinstance(subject_id, ObjectId) else ObjectId(subject_id)
 
+        self._touch()
     def overlaps(self, other: "ScheduleSlot") -> bool:
         """Check overlap on same day (used by service for conflict detection)."""
         if self.day_of_week != other.day_of_week:

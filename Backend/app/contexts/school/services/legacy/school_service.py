@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pymongo.database import Database
 
 from app.contexts.school.services.composition import build_school_facade
@@ -57,6 +55,15 @@ class SchoolService:
 
     def get_attendance_by_id(self, *args, **kwargs):
         return self._facade.attendance_service.get_attendance_by_id(*args, **kwargs)
+    
+    def soft_delete_attendance(self, *args, **kwargs):
+        return self._facade.attendance_service.soft_delete_attendance(*args, **kwargs)
+    
+    def restore_attendance(self, *args, **kwargs):
+        return self._facade.attendance_service.restore_attendance(*args, **kwargs)
+    
+    def hard_delete_attendance(self, *args, **kwargs):
+        return self._facade.attendance_service.hard_delete_attendance(*args, **kwargs)
 
     # -------- Grades --------
     def add_grade(self, *args, **kwargs):
@@ -71,6 +78,14 @@ class SchoolService:
     def get_grade_by_id(self, *args, **kwargs):
         return self._facade.grade_service.get_grade_by_id(*args, **kwargs)
 
+    def soft_delete_grade(self, *args, **kwargs):
+        return self._facade.grade_service.soft_delete_grade(*args, **kwargs)
+
+    def restore_grade(self, *args, **kwargs):
+        return self._facade.grade_service.restore_grade(*args, **kwargs)
+
+    def hard_delete_grade(self, *args, **kwargs):
+        return self._facade.grade_service.hard_delete_grade(*args, **kwargs)
     # -------- Subjects --------
     def create_subject(self, *args, **kwargs):
         return self._facade.subject_service.create_subject(*args, **kwargs)
@@ -83,6 +98,9 @@ class SchoolService:
 
     def activate_subject(self, *args, **kwargs):
         return self._facade.subject_service.activate_subject(*args, **kwargs)
+
+    def update_subject_patch(self, *args, **kwargs):
+        return self._facade.subject_service.update_subject_patch(*args, **kwargs)
 
     def deactivate_subject(self, *args, **kwargs):
         return self._facade.subject_service.deactivate_subject(*args, **kwargs)
@@ -102,6 +120,9 @@ class SchoolService:
 
     def move_schedule_slot(self, *args, **kwargs):
         return self._facade.schedule_service.move_schedule_slot(*args, **kwargs)
+
+    def assign_subject_to_schedule_slot(self, *args, **kwargs):
+        return self._facade.schedule_service.assign_subject_to_schedule_slot(*args, **kwargs)
 
     def delete_schedule_slot(self, *args, **kwargs):
         return self._facade.schedule_service.delete_schedule_slot(*args, **kwargs)

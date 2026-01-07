@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from datetime import datetime, date as date_type
 from enum import Enum
@@ -26,14 +25,6 @@ class AttendanceStatus(str, Enum):
 
 
 class AttendanceRecord:
-    """
-    One attendance mark per (student_id, class_id, date).
-
-    Notes:
-    - date is a KH school date (no timezone)
-    - lifecycle timestamps are UTC (created_at/updated_at/deleted_at)
-    """
-
     def __init__(
         self,
         student_id: ObjectId | str,
@@ -41,8 +32,8 @@ class AttendanceRecord:
         status: AttendanceStatus | str,
         *,
         id: ObjectId | None = None,
-        record_date: date_type | None = None,               # KH school day
-        marked_by_teacher_id: ObjectId | str | None = None, # teacher IAM id or staff id (your choice)
+        record_date: date_type | None = None,
+        marked_by_teacher_id: ObjectId | str | None = None,
         lifecycle: Lifecycle | None = None,
     ) -> None:
         self.id = id or ObjectId()
@@ -50,7 +41,9 @@ class AttendanceRecord:
         self.class_id = class_id if isinstance(class_id, ObjectId) else ObjectId(class_id)
 
         self._status = self._validate_status(status)
-        self.date = record_date or today_kh()
+
+        # CANONICAL
+        self.record_date = record_date or today_kh()
 
         self.marked_by_teacher_id = (
             marked_by_teacher_id
@@ -59,33 +52,29 @@ class AttendanceRecord:
         )
 
         self.lifecycle = lifecycle or Lifecycle()
-
         self._validate_date_not_in_future()
 
-    # -------- Properties --------
+    # ---- compatibility alias (old code that uses .date won't break) ----
+    @property
+    def date(self) -> date_type:
+        return self.record_date
+
+    @date.setter
+    def date(self, value: date_type) -> None:
+        self.record_date = value
 
     @property
     def status(self) -> AttendanceStatus:
         return self._status
 
-    # -------- Behavior --------
-
-    def change_status(
-        self,
-        new_status: AttendanceStatus | str,
-        *,
-        actor_id: ObjectId | None = None,
-    ) -> None:
+    def change_status(self, new_status: AttendanceStatus | str, *, actor_id: ObjectId | None = None) -> None:
         if self.is_deleted():
             raise AttendanceRecordDeletedException(self.id)
 
         self._status = self._validate_status(new_status)
-
-        # Optional: capture who changed the mark
         if actor_id is not None:
             self.marked_by_teacher_id = actor_id
-
-        self._touch()
+        self.lifecycle.touch(now_utc())
 
     def soft_delete(self, actor_id: ObjectId) -> None:
         self.lifecycle.soft_delete(actor_id)
@@ -96,20 +85,15 @@ class AttendanceRecord:
     def is_deleted(self) -> bool:
         return self.lifecycle.is_deleted()
 
-    # -------- Internal helpers --------
-
-    def _touch(self) -> None:
-        self.lifecycle.touch(now_utc())
-
     @staticmethod
     def _validate_status(status: AttendanceStatus | str) -> AttendanceStatus:
         if isinstance(status, AttendanceStatus):
             return status
         try:
-            return AttendanceStatus(status)
+            return AttendanceStatus(str(status).strip().lower())
         except ValueError:
             raise InvalidAttendanceStatusException(status)
 
     def _validate_date_not_in_future(self) -> None:
-        if self.date > today_kh():
-            raise AttendanceDateInFutureException(self.date)
+        if self.record_date > today_kh():
+            raise AttendanceDateInFutureException(self.record_date)

@@ -37,7 +37,7 @@ class ClassSection:
         name: str,
         *,
         id: Optional[ObjectId] = None,
-        teacher_id: Optional[ObjectId] = None,
+        homeroom_teacher_id: Optional[ObjectId] = None,
         subject_ids: Optional[Iterable[ObjectId]] = None,
         enrolled_count: Optional[int] = 0,
         max_students: Optional[int] = None,
@@ -49,7 +49,7 @@ class ClassSection:
 
         self.id = id or ObjectId()
         self._name = name.strip()
-        self._teacher_id = teacher_id
+        self._homeroom_teacher_id = homeroom_teacher_id
         self._subject_ids: List[ObjectId] = list(subject_ids or [])
 
         self._enrolled_count = enrolled_count if enrolled_count is not None else 0
@@ -67,8 +67,8 @@ class ClassSection:
         return self._name
 
     @property
-    def teacher_id(self) -> ObjectId | None:
-        return self._teacher_id
+    def homeroom_teacher_id(self) -> ObjectId | None:
+        return self._homeroom_teacher_id
 
     @property
     def enrolled_count(self) -> int:
@@ -111,16 +111,16 @@ class ClassSection:
         self._name = new_name.strip()
         self._touch()
 
-    def assign_teacher(self, teacher_id: ObjectId) -> None:
+    def assign_homeroom_teacher(self, homeroom_teacher_id: ObjectId) -> None:
         self._require_not_deleted()
-        if not isinstance(teacher_id, ObjectId):
-            raise InvalidTeacherIdError(received_value=teacher_id)
-        self._teacher_id = teacher_id
+        if not isinstance(homeroom_teacher_id, ObjectId):
+            raise InvalidTeacherIdError(received_value=homeroom_teacher_id)
+        self._homeroom_teacher_id = homeroom_teacher_id
         self._touch()
 
-    def remove_teacher(self) -> None:
+    def remove_homeroom_teacher(self) -> None:
         self._require_not_deleted()
-        self._teacher_id = None
+        self._homeroom_teacher_id = None
         self._touch()
 
     def increment_enrollment(self) -> None:

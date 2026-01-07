@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 from bson import ObjectId
 
-from app.contexts.core.error.app_base_exception import (
+from app.contexts.core.errors.app_base_exception import (
     AppBaseException,
     ErrorSeverity,
     ErrorCategory,
@@ -247,4 +247,61 @@ class ClassSectionNotActiveException(AppBaseException):
             details={"class_id": str(class_id), "status": status},
             hint="Set class status to 'active' (or restore it) before performing this action.",
             recoverable=True,
+        )
+
+
+
+
+# -------------------------
+# Relations / Roster Errors
+# -------------------------
+
+class ClassNotFoundOrDeletedException(AppBaseException):
+    """
+    Raised when a class section does not exist OR is soft-deleted.
+    Mirrors: "CLASS_NOT_FOUND_OR_DELETED"
+    """
+    def __init__(self, class_id: ObjectId | str):
+        super().__init__(
+            message=f"Class section {class_id} not found or is deleted.",
+            error_code="CLASS_NOT_FOUND_OR_DELETED",
+            status_code=404,
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="The requested class does not exist or has been deleted.",
+            recoverable=True,
+            context={"class_id": str(class_id)},
+            hint="Verify the class_id or restore the class section before updating relations.",
+        )
+
+
+class TeacherChangeBlockedByScheduleException(AppBaseException):
+    """
+    Raised when attempting to change/unassign a teacher while the class has an active schedule.
+    Mirrors: "TEACHER_CHANGE_BLOCKED_BY_SCHEDULE"
+    """
+    def __init__(
+        self,
+        *,
+        class_id: ObjectId | str,
+        current_teacher_id: Optional[ObjectId | str],
+        desired_teacher_id: Optional[ObjectId | str],
+    ):
+        super().__init__(
+            message=(
+                "Teacher change blocked because class has an active schedule. "
+                f"class_id={class_id}, current_teacher_id={current_teacher_id}, desired_teacher_id={desired_teacher_id}."
+            ),
+            error_code="TEACHER_CHANGE_BLOCKED_BY_SCHEDULE",
+            status_code=409,
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Cannot change the teacher because this class already has a schedule.",
+            recoverable=True,
+            context={
+                "class_id": str(class_id),
+                "current_teacher_id": str(current_teacher_id) if current_teacher_id else None,
+                "desired_teacher_id": str(desired_teacher_id) if desired_teacher_id else None,
+            },
+            hint="Remove/close the active schedule for this class before changing or unassigning the teacher.",
         )

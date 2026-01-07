@@ -5,5 +5,5 @@ from .student import *
 from .subject import *
 from .classes import *
 from .schedule import *
-from .dashboard import *
 from .composites import *
+from .assignment_responses import *

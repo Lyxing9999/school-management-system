@@ -1,6 +1,6 @@
 from flask import Response as FlaskResponse, jsonify
 from typing import Optional, Union, Dict, Any
-from app.contexts.core.error.app_base_exception import ErrorCategory, ErrorSeverity
+from app.contexts.core.errors.app_base_exception import ErrorCategory, ErrorSeverity
 from enum import Enum
 from werkzeug.exceptions import HTTPException
 import json

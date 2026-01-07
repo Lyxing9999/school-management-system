@@ -1,31 +1,27 @@
-from __future__ import annotations
 
 from datetime import datetime, date as date_type, time
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional
 
 from bson import ObjectId
 
 from app.contexts.student.data_transfer.responses import StudentBaseDataDTO
 from app.contexts.student.domain.student import Student, Gender, StudentStatus
-
 from app.contexts.student.errors.student_exceptions import (
     StudentMapperRequiredFieldMissingException,
     StudentMapperDobParseException,
     StudentMapperInvalidEnumValueException,
 )
-
-from app.contexts.shared.lifecycle.domain import Lifecycle
+from app.contexts.shared.lifecycle.domain import Lifecycle, now_utc
 
 
 class StudentMapper:
     """
-    Converts between:
-    - Mongo dict <-> Student domain
-    - Student domain -> DTO
+    Mongo dict <-> Student domain
+    Student domain -> DTO
 
-    Lifecycle handling:
-    - Preferred Mongo shape: doc["lifecycle"] = { created_at, updated_at, deleted_at, deleted_by }
-    - Backward-compatible: top-level created_at/updated_at/deleted_at/deleted_by
+    Lifecycle:
+    - prefers doc["lifecycle"]
+    - supports legacy top-level created_at/updated_at/etc
     """
 
     REQUIRED_FIELDS = [
@@ -41,9 +37,6 @@ class StudentMapper:
         "current_grade_level",
     ]
 
-    # -------------------------
-    # Helpers
-    # -------------------------
     @staticmethod
     def _require(data: Dict[str, Any], field: str) -> Any:
         if field not in data:
@@ -72,7 +65,6 @@ class StudentMapper:
             return raw
         if isinstance(raw, str):
             try:
-                # supports "...Z"
                 return datetime.fromisoformat(raw.replace("Z", "+00:00"))
             except Exception:
                 return None
@@ -91,7 +83,6 @@ class StudentMapper:
 
         if isinstance(raw_dob, str):
             try:
-                # if you store "YYYY-MM-DD" this works, and ISO also works
                 return datetime.fromisoformat(raw_dob).date()
             except ValueError as e:
                 raise StudentMapperDobParseException(raw_value=raw_dob, reason=str(e))
@@ -113,27 +104,33 @@ class StudentMapper:
                     value=raw_value,
                     allowed=allowed,
                 )
+            # fallback: first enum value
             return list(enum_cls)[0]
 
     @staticmethod
     def _parse_lifecycle(data: Dict[str, Any]) -> Lifecycle:
         """
-        Supports:
-        - nested lifecycle dict
-        - legacy top-level lifecycle fields
+        Never return created_at/updated_at as None.
+        If missing -> default now_utc().
         """
+        n = now_utc()
+
         lc = data.get("lifecycle")
         if isinstance(lc, dict):
+            created = StudentMapper._parse_datetime(lc.get("created_at")) or n
+            updated = StudentMapper._parse_datetime(lc.get("updated_at")) or created
             return Lifecycle(
-                created_at=StudentMapper._parse_datetime(lc.get("created_at")),
-                updated_at=StudentMapper._parse_datetime(lc.get("updated_at")),
+                created_at=created,
+                updated_at=updated,
                 deleted_at=StudentMapper._parse_datetime(lc.get("deleted_at")),
                 deleted_by=StudentMapper._parse_object_id(lc.get("deleted_by")),
             )
 
+        created = StudentMapper._parse_datetime(data.get("created_at")) or n
+        updated = StudentMapper._parse_datetime(data.get("updated_at")) or created
         return Lifecycle(
-            created_at=StudentMapper._parse_datetime(data.get("created_at")),
-            updated_at=StudentMapper._parse_datetime(data.get("updated_at")),
+            created_at=created,
+            updated_at=updated,
             deleted_at=StudentMapper._parse_datetime(data.get("deleted_at")),
             deleted_by=StudentMapper._parse_object_id(data.get("deleted_by")),
         )
@@ -155,7 +152,6 @@ class StudentMapper:
         if not data:
             return None
 
-        # Validate required fields (prevents KeyError)
         for f in StudentMapper.REQUIRED_FIELDS:
             StudentMapper._require(data, f)
 
@@ -212,7 +208,6 @@ class StudentMapper:
             "address": student.address,
             "guardians": student.guardians,
             "status": student.status.value,
-            # IMPORTANT: store lifecycle as dict (Mongo-friendly)
             "lifecycle": StudentMapper._lifecycle_to_dict(student.lifecycle),
             "history": student.history,
         }
@@ -235,12 +230,11 @@ class StudentMapper:
             gender=student.gender.value if hasattr(student.gender, "value") else str(student.gender),
             dob=student.dob,
             current_grade_level=student.current_grade_level,
-            # IMPORTANT: do NOT return "None" string
             current_class_id=str(student.current_class_id) if student.current_class_id else None,
             photo_url=student.photo_url,
             phone_number=student.phone_number,
             address=student.address,
             guardians=student.guardians,
             status=student.status.value if hasattr(student.status, "value") else str(student.status),
-            lifecycle=lifecycle_payload,  
+            lifecycle=lifecycle_payload,
         )

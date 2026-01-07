@@ -1,4 +1,3 @@
-# app/contexts/infra/database/extensions.py
 from flask_cors import CORS
 from pymongo import MongoClient
 from flask_debugtoolbar import DebugToolbarExtension

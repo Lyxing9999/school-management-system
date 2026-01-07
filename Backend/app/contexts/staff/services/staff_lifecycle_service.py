@@ -12,7 +12,7 @@ from app.contexts.shared.lifecycle.errors import LifecyclePolicyDeniedException
 from app.contexts.shared.lifecycle.policy_result import PolicyResult
 
 from app.contexts.staff.policies.staff_policy import StaffPolicy
-from app.contexts.iam.error.iam_exception import NotFoundUserException
+from app.contexts.iam.errors.iam_exception import NotFoundUserException
 from app.contexts.staff.errors.staff_exceptions import StaffNotFoundException 
 
 

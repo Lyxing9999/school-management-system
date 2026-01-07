@@ -1,19 +1,23 @@
-from __future__ import annotations
 
 from typing import Optional
+
 from bson import ObjectId
 
-from app.contexts.iam.error.iam_exception import (
-    UsernameAlreadyExistsException,
+from app.contexts.iam.errors.iam_exception import (
     EmailAlreadyExistsException,
+    UsernameAlreadyExistsException,
 )
 from app.contexts.iam.read_models.iam_read_model import IAMReadModel
+from app.contexts.shared.lifecycle.filters import ShowDeleted
+
 
 class IAMUniquenessPolicy:
     """
     Read-side uniqueness checks for IAM fields.
-    Used by services/factories for nice error messages.
-    Note: DB unique indexes are still required for true enforcement.
+
+    Consistency rule:
+    - Default to checking ONLY active (not-deleted) users.
+    - Optionally allow checking against "all" if you want to reserve usernames/emails forever.
     """
 
     def __init__(self, iam_read_model: IAMReadModel):
@@ -25,13 +29,17 @@ class IAMUniquenessPolicy:
         username: Optional[str] = None,
         email: Optional[str] = None,
         exclude_user_id: Optional[ObjectId] = None,
+        show_deleted: ShowDeleted = "active",
     ) -> None:
-        query = {"$or": []}
+        username_norm = (username or "").strip()
+        email_norm = (email or "").strip()
 
-        if username:
-            query["$or"].append({"username": username})
-        if email:
-            query["$or"].append({"email": email})
+        query: dict = {"$or": []}
+
+        if username_norm:
+            query["$or"].append({"username": username_norm})
+        if email_norm:
+            query["$or"].append({"email": email_norm})
 
         if not query["$or"]:
             return
@@ -39,12 +47,12 @@ class IAMUniquenessPolicy:
         if exclude_user_id:
             query = {"$and": [{"_id": {"$ne": exclude_user_id}}, query]}
 
-        existing = self._iam_read_model.find_one(query)
+        existing = self._iam_read_model.find_one(query, show_deleted=show_deleted)
         if not existing:
             return
 
-        if username and existing.get("username") == username:
-            raise UsernameAlreadyExistsException(username)
+        if username_norm and (existing.get("username") or "") == username_norm:
+            raise UsernameAlreadyExistsException(username_norm)
 
-        if email and existing.get("email") == email:
-            raise EmailAlreadyExistsException(email)
+        if email_norm and (existing.get("email") or "") == email_norm:
+            raise EmailAlreadyExistsException(email_norm)

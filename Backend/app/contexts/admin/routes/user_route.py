@@ -11,11 +11,8 @@ from app.contexts.admin.data_transfer.requests import (
 )
 from app.contexts.admin.data_transfer.responses import (
     PaginatedUsersDataDTO,
-    AdminUserStaffDataDTO,
     AdminSetUserStatusDTO,  
     PaginatedUserItemDTO,
-    StaffBaseDataDTO,
-    IAMBaseDataDTO
 )
 from app.contexts.common.base_response_dto import BaseResponseDTO
 from app.contexts.iam.mapper.iam_mapper import IAMMapper 
@@ -53,6 +50,13 @@ def admin_create_user():
         user_schema, created_by=admin_id
     )
     return IAMMapper.to_dto(user_response_dto)
+
+@admin_bp.route("/users/<user_id>/password-reset", methods=["POST"])
+@role_required(["admin"])
+@wrap_response
+def admin_request_password_reset(user_id: str):
+    admin_id = get_current_staff_id()
+    return g.admin.user_service.admin_request_password_reset(target_user_id=user_id, admin_id=admin_id)
 
 @admin_bp.route('/users/<user_id>', methods=['PATCH'])
 @role_required(["admin"])

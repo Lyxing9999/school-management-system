@@ -49,11 +49,10 @@ def get_my_attendance():
 @wrap_response
 def get_my_grades():
     student_id = get_current_student_id()
-    term = request.args.get("term")
     my_grades = g.student_service.get_my_grades(
         student_id=student_id,
-        term=term,
     )
+
     items = mongo_converter.list_to_dto(my_grades, StudentGradeDTO)
     return StudentGradeListDTO(items=items)
 

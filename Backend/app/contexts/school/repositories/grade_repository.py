@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -7,6 +7,7 @@ from pymongo.collection import Collection
 
 from app.contexts.school.domain.grade import GradeRecord
 from app.contexts.school.mapper.grade_mapper import GradeMapper
+from app.contexts.shared.lifecycle.filters import not_deleted
 
 
 class IGradeRepository(ABC):
@@ -43,7 +44,7 @@ class IGradeRepository(ABC):
 
 
 class MongoGradeRepository(IGradeRepository):
-    """MongoDB implementation of IGradeRepository."""
+    """MongoDB implementation of IGradeRepository (lifecycle-aware)."""
 
     def __init__(
         self,
@@ -63,7 +64,7 @@ class MongoGradeRepository(IGradeRepository):
         _id = payload.pop("_id")
 
         result = self.collection.update_one(
-            {"_id": _id},
+            not_deleted({"_id": _id}),
             {"$set": payload},
         )
         if result.matched_count == 0:
@@ -71,7 +72,7 @@ class MongoGradeRepository(IGradeRepository):
         return grade
 
     def find_by_id(self, id: ObjectId) -> Optional[GradeRecord]:
-        doc = self.collection.find_one({"_id": id})
+        doc = self.collection.find_one(not_deleted({"_id": id}))
         if not doc:
             return None
         return self.mapper.to_domain(doc)
@@ -82,7 +83,7 @@ class MongoGradeRepository(IGradeRepository):
         subject_id: ObjectId | None = None,
         class_id: ObjectId | None = None,
     ) -> list[GradeRecord]:
-        query: dict = {"student_id": student_id}
+        query: dict = not_deleted({"student_id": student_id})
         if subject_id is not None:
             query["subject_id"] = subject_id
         if class_id is not None:
@@ -96,7 +97,5 @@ class MongoGradeRepository(IGradeRepository):
         class_id: ObjectId,
         subject_id: ObjectId,
     ) -> list[GradeRecord]:
-        cursor = self.collection.find(
-            {"class_id": class_id, "subject_id": subject_id}
-        )
+        cursor = self.collection.find(not_deleted({"class_id": class_id, "subject_id": subject_id}))
         return [self.mapper.to_domain(doc) for doc in cursor]

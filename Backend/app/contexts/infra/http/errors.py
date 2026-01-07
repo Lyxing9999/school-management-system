@@ -2,7 +2,7 @@ from flask import request
 import traceback
 from werkzeug.exceptions import HTTPException
 from app.contexts.infra.http.responses import Response
-from app.contexts.core.error.app_base_exception import AppBaseException, handle_exception
+from app.contexts.core.errors.app_base_exception import AppBaseException, handle_exception
 from app.contexts.core.log.log_service import LogService
 
 log_service = LogService.get_instance()

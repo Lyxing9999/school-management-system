@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional
 
 # -------------------------
 # Login
@@ -18,3 +19,13 @@ class IAMUpdateSchema(BaseModel):
     model_config = {
          "enum_values_as_str": True,
     }
+
+
+class IAMMeUpdateSchema(BaseModel):
+    email: Optional[EmailStr] = None
+    username: Optional[str] = Field(default=None, max_length=50)
+
+
+class PasswordResetConfirmSchema(BaseModel):
+    token: str = Field(..., min_length=10)
+    new_password: str = Field(..., min_length=8)

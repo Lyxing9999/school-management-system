@@ -37,8 +37,11 @@ class IAMMapper:
         role = IAM._validate_role(raw_role)
 
         # status (avoid Enum(None) crash)
-        raw_status = data.get("status")
-        status = None if raw_status is None else IAMStatus(raw_status)
+        raw_status = data.get("status", IAMStatus.ACTIVE.value)
+        try:
+            status = IAMStatus(raw_status) if not isinstance(raw_status, IAMStatus) else raw_status
+        except ValueError:
+            status = IAMStatus.ACTIVE
 
         created_by = IAMMapper._to_object_id(data.get("created_by"))
 

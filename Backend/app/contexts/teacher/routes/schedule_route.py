@@ -1,5 +1,5 @@
 from flask import request, g
-
+import math
 
 from app.contexts.teacher.routes import teacher_bp
 from app.contexts.core.security.auth_utils import get_current_staff_id
@@ -13,11 +13,40 @@ from app.contexts.teacher.data_transfer.responses import (
 )
 
 
+
 @teacher_bp.route("/schedule", methods=["GET"])
 @role_required(["teacher"])
 @wrap_response
 def get_schedule():
     teacher_id = get_current_staff_id()
-    schedule = g.teacher_service.list_my_schedule_enriched(teacher_id)
-    items = mongo_converter.list_to_dto(schedule, TeacherScheduleDTO)
-    return TeacherScheduleListDTO(items=items)
+
+    page = request.args.get("page", default=1, type=int)
+    page_size = request.args.get("page_size", default=10, type=int)
+
+    class_id = request.args.get("class_id", type=str)
+    day_of_week = request.args.get("day_of_week", type=int)
+    start_time_from = request.args.get("start_time_from", type=str)
+    start_time_to = request.args.get("start_time_to", type=str)
+
+    schedules, total = g.teacher_service.list_my_schedule_enriched(
+        teacher_id=teacher_id,
+        page=page,
+        page_size=page_size,
+        sort=None,
+        class_id=class_id,
+        day_of_week=day_of_week,
+        start_time_from=start_time_from,
+        start_time_to=start_time_to,
+    )
+
+    items = mongo_converter.list_to_dto(schedules, TeacherScheduleDTO)
+
+    pages = math.ceil((total or 0) / page_size) if page_size > 0 else 0
+
+    return TeacherScheduleListDTO(
+        items=items,
+        total=int(total or 0),
+        page=page,
+        page_size=page_size,
+        pages=pages,
+    )

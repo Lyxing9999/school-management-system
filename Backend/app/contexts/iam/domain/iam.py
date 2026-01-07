@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 from enum import Enum
 from app.contexts.shared.enum.roles import SystemRole
-from app.contexts.iam.error.iam_exception import InvalidRoleException, UserDeletedException
+from app.contexts.iam.errors.iam_exception import InvalidRoleException, UserDeletedException
 from app.contexts.shared.lifecycle.domain import Lifecycle  
 
 
@@ -31,7 +31,7 @@ class IAM:
         self._password = password
         self._role = self._validate_role(role)
         self._username = username
-        self.created_by = created_by or "self_created"
+        self.created_by = created_by
         self.status = IAMStatus(status) if isinstance(status, str) else status
         self.lifecycle = lifecycle or Lifecycle()
 

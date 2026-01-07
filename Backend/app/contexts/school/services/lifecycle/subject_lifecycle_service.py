@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from bson import ObjectId
 from pymongo.database import Database
 from pymongo.results import UpdateResult, DeleteResult

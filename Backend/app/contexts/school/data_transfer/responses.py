@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import datetime as dt
-from typing import Optional, List, Literal
+from typing import Optional, Literal
 from pydantic import BaseModel, ConfigDict, field_validator, Field
 from bson import ObjectId
-
+import datetime as dt
 from app.contexts.shared.lifecycle.dto import LifecycleDTO
 
 from app.contexts.school.domain.class_section import ClassSection, ClassSectionStatus
@@ -37,7 +36,7 @@ class ClassSectionDTO(BaseModel):
 
     id: str
     name: str
-    teacher_id: Optional[str]
+    homeroom_teacher_id: Optional[str]
     subject_ids: list[str]
     enrolled_count: int
     max_students: int
@@ -64,7 +63,7 @@ class AttendanceDTO(BaseModel):
     student_id: str
     class_id: str
     status: AttendanceStatus
-    date: date
+    record_date: dt.date
     marked_by_teacher_id: Optional[str]
     lifecycle: LifecycleDTO
 
@@ -95,7 +94,7 @@ class ScheduleDTO(BaseModel):
     end_time: str
     room: Optional[str] = None
     lifecycle: LifecycleDTO
-
+    
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
     def _time_to_str(cls, v):
@@ -110,7 +109,7 @@ def class_section_to_dto(section: ClassSection) -> ClassSectionDTO:
     return ClassSectionDTO(
         id=str(section.id),
         name=section.name,
-        teacher_id=_oid_to_str(section.teacher_id),
+        homeroom_teacher_id=_oid_to_str(section.homeroom_teacher_id),
         subject_ids=[str(s) for s in section.subject_ids],
         enrolled_count=section.enrolled_count,
         max_students=section.max_students,
@@ -137,11 +136,10 @@ def attendance_to_dto(record: AttendanceRecord) -> AttendanceDTO:
         student_id=str(record.student_id),
         class_id=str(record.class_id),
         status=record.status,
-        date=record.date,
+        record_date=record.date,  
         marked_by_teacher_id=_oid_to_str(record.marked_by_teacher_id),
         lifecycle=_lifecycle_to_dto(record.lifecycle),
     )
-
 
 def grade_to_dto(grade: GradeRecord) -> GradeDTO:
     return GradeDTO(
@@ -175,7 +173,7 @@ def schedule_to_dto(slot: ScheduleSlot) -> ScheduleDTO:
 
 class UpdateClassRelationsRequest(BaseModel):
     student_ids: list[str] = Field(default_factory=list)
-    teacher_id: str | None = None
+    homeroom_teacher_id: str | None = None
 
 
 class ConflictItem(BaseModel):
@@ -186,8 +184,8 @@ class ConflictItem(BaseModel):
 
 class UpdateClassRelationsResult(BaseModel):
     class_id: str
-    teacher_changed: bool
-    teacher_id: str | None
+    homeroom_teacher_changed: bool
+    homeroom_teacher_id: str | None
     enrolled_count: int
     added: list[str] = Field(default_factory=list)
     removed: list[str] = Field(default_factory=list)

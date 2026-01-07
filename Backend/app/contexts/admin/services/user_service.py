@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional
-
+from urllib.parse import urlencode
 from pymongo.database import Database
 from bson import ObjectId
 
@@ -14,7 +14,6 @@ from app.contexts.admin.data_transfer.requests import (
     AdminSetUserStatusSchema,
 )
 from app.contexts.iam.auth.services import AuthService
-from app.contexts.iam.error.iam_exception import NotFoundUserException
 
 from app.contexts.iam.domain.iam import IAM
 from app.contexts.iam.factory.iam_factory import IAMFactory
@@ -23,9 +22,12 @@ from app.contexts.iam.read_models.iam_read_model import IAMReadModel
 from app.contexts.iam.repositories.iam_repositorie import MongoIAMRepository
 from app.contexts.iam.policies.iam_uniqueness_policy import IAMUniquenessPolicy
 from app.contexts.iam.services.iam_lifecycle_service import IAMLifecycleService
-from app.contexts.iam.policies.iam_policy import IAMPolicy
-
-
+from app.contexts.iam.errors.iam_exception import (
+    NotFoundUserException,
+    UserDeletedException,
+    UserInactiveException,
+)
+from app.contexts.iam.auth.password_reset_utils import create_reset_token, hash_reset_token, now_utc, RESET_TTL
 class UserAdminService:
     """
     Admin-facing orchestration service for IAM users.
@@ -50,14 +52,15 @@ class UserAdminService:
         iam_lifecycle_service: IAMLifecycleService | None = None,
     ) -> None:
         # Allow DI for tests; default to concrete implementations.
-        self._iam_repository = iam_repository or MongoIAMRepository(db["iam"])
-        self._iam_read_model = iam_read_model or IAMReadModel(db)
-        self._admin_read_model = admin_read_model or AdminReadModel(db)
+        self.db = db
+        self._iam_repository = iam_repository or MongoIAMRepository(self.db["iam"])
+        self._iam_read_model = iam_read_model or IAMReadModel(self.db)
+        self._admin_read_model = admin_read_model or AdminReadModel(self.db)
         self._auth_service = auth_service or AuthService()
         self._iam_mapper = iam_mapper or IAMMapper()
         self._uniqueness_policy = uniqueness_policy or IAMUniquenessPolicy(self._iam_read_model)
         self._iam_factory = iam_factory or IAMFactory(iam_read_model=self._iam_read_model)
-        self._iam_lifecycle_service = iam_lifecycle_service or IAMLifecycleService(db)
+        self._iam_lifecycle_service = iam_lifecycle_service or IAMLifecycleService(self.db)
 
 
     def _oid(self, value: str | ObjectId) -> ObjectId:
@@ -127,6 +130,38 @@ class UserAdminService:
         iam.set_status(schema.status)
         self._iam_repository.update(user_oid, self._iam_mapper.to_persistence(iam))
         return {"id": str(user_oid), "status": schema.status.value}
+
+
+    def admin_request_password_reset(self, target_user_id: str, admin_id: str | ObjectId) -> dict:
+        raw_user = self._iam_read_model.get_by_id(target_user_id)
+        if not raw_user:
+            raise NotFoundUserException(target_user_id)
+
+        iam_model = self._iam_mapper.to_domain(raw_user)
+        if iam_model.is_deleted():
+            raise UserDeletedException(target_user_id)
+        if iam_model.is_inactive():
+            raise UserInactiveException(target_user_id)
+
+        token = create_reset_token()
+        token_hash = hash_reset_token(token)
+
+        resets = self.db["password_resets"]
+        resets.insert_one({
+            "user_id": str(iam_model.id),
+            "token_hash": token_hash,
+            "created_by": str(admin_id),
+            "created_at": now_utc(),
+            "expires_at": now_utc() + RESET_TTL,
+            "used_at": None,
+        })
+
+        base = (settings.FRONTEND_URL or "").rstrip("/")  
+        query = urlencode({"token": token})
+        reset_link = f"{base}/auth/reset-password?{query}"
+
+        return {"message": "Password reset created", "reset_link": reset_link}
+
 
     def admin_get_users(
         self,

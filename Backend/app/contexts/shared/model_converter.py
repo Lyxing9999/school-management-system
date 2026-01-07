@@ -3,9 +3,9 @@ from typing import TypeVar, Dict, Any , Union, Type, List
 from pydantic import BaseModel
 import logging
 from enum import Enum
-from app.contexts.core.error.pydantic_error_exception import PydanticBaseValidationError, AppTypeError
+from app.contexts.core.errors.pydantic_error_exception import PydanticBaseValidationError, AppTypeError
 from bson import ObjectId
-from app.contexts.core.error import handle_exception
+from app.contexts.core.errors import handle_exception
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel) #for schema 

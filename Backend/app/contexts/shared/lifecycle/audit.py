@@ -5,8 +5,6 @@ from bson import ObjectId
 from pymongo.collection import Collection
 
 
-
-
 def append_history(
     collection: Collection,
     entity_id: ObjectId,

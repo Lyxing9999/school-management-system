@@ -17,6 +17,10 @@ def create_access_token(data: dict, expire_delta: timedelta = timedelta(hours=1)
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+def decode_access_token(token: str) -> dict:
+    if not token:
+        raise jwt.InvalidTokenError("Missing token")
+    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
 def role_required(allowed_roles: list[str]):
     def decorator(f):
@@ -62,7 +66,7 @@ def login_required():
 
             token = auth_header.split(" ")[1]
             try:
-                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                payload = decode_access_token(token)
 
                 if payload.get("type") and payload.get("type") != "access":
                     return jsonify({"msg": "Invalid token type"}), 401

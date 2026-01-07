@@ -15,6 +15,7 @@ class AdminCreateScheduleSlotSchema(BaseModel):
     start_time: time
     end_time: time
     room: Optional[str] = None
+    subject_id: Optional[str] = None
 
     @field_validator("class_id", "teacher_id", mode="before")
     @classmethod
@@ -47,6 +48,7 @@ class AdminUpdateScheduleSlotSchema(BaseModel):
     start_time: time
     end_time: time
     room: Optional[str] = None
+    subject_id: Optional[str] = None
 
     @field_validator("day_of_week", mode="before")
     @classmethod
@@ -62,3 +64,9 @@ class AdminUpdateScheduleSlotSchema(BaseModel):
     def _time_range(self):
         validate_time_range(self.start_time, self.end_time)
         return self
+
+
+class AdminAssignScheduleSlotSubjectSchema(BaseModel):
+    model_config = ConfigDict(extra="ignore", use_enum_values=True)
+    
+    subject_id: Optional[str] = None

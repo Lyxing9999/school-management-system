@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 from functools import wraps
-from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
+from app.contexts.core.errors.mongo_error_mixin import MongoErrorMixin
 from app.contexts.core.log.log_service import LogService
 
 

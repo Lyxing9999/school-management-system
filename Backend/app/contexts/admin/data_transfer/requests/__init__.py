@@ -31,6 +31,12 @@ from .subject_schemas import (
 from .schedule_schemas import (
     AdminCreateScheduleSlotSchema,
     AdminUpdateScheduleSlotSchema,
+    AdminAssignScheduleSlotSubjectSchema
+)
+
+from .assignment_requests import (
+    AdminAssignSubjectTeacherRequest,
+    AdminUnassignSubjectTeacherRequest,
 )
 
 __all__ = [
@@ -62,4 +68,9 @@ __all__ = [
     # Schedule
     "AdminCreateScheduleSlotSchema",
     "AdminUpdateScheduleSlotSchema",
+    "AdminAssignScheduleSlotSubjectSchema",
+
+    # teacher Assignment subject
+    "AdminAssignSubjectTeacherRequest",
+    "AdminUnassignSubjectTeacherRequest",
 ]

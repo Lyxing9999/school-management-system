@@ -10,7 +10,7 @@ class AdminCreateClassSchema(BaseModel):
     model_config = ConfigDict(extra="ignore", use_enum_values=True)
 
     name: str = Field(..., min_length=1)
-    teacher_id: Optional[str] = None
+    homeroom_teacher_id: Optional[str] = None
     subject_ids: List[str] = Field(default_factory=list)
     max_students: Optional[int] = Field(default=None, ge=1)
 
@@ -19,9 +19,9 @@ class AdminCreateClassSchema(BaseModel):
     def _name(cls, v):
         return strip(v)
 
-    @field_validator("teacher_id", mode="before")
+    @field_validator("homeroom_teacher_id", mode="before")
     @classmethod
-    def _teacher_id(cls, v):
+    def _homeroom_teacher_id(cls, v):
         return oid_to_str(v)
 
     @field_validator("subject_ids", mode="before")
@@ -34,7 +34,7 @@ class AdminUpdateClassSchema(BaseModel):
     model_config = ConfigDict(extra="ignore", use_enum_values=True)
 
     name: Optional[str] = None
-    teacher_id: Optional[str] = None
+    homeroom_teacher_id: Optional[str] = None
     subject_ids: Optional[List[str]] = None
     max_students: Optional[int] = Field(default=None, ge=1)
 
@@ -43,9 +43,9 @@ class AdminUpdateClassSchema(BaseModel):
     def _name(cls, v):
         return strip_or_none(v)
 
-    @field_validator("teacher_id", mode="before")
+    @field_validator("homeroom_teacher_id", mode="before")
     @classmethod
-    def _teacher_id(cls, v):
+    def _homeroom_teacher_id(cls, v):
         return oid_to_str(v)
 
     @field_validator("subject_ids", mode="before")
@@ -57,11 +57,11 @@ class AdminUpdateClassSchema(BaseModel):
 
 class AdminAssignTeacherToClassSchema(BaseModel):
     model_config = ConfigDict(extra="ignore", use_enum_values=True)
-    teacher_id: str = Field(..., min_length=1)
+    homeroom_teacher_id: str = Field(..., min_length=1)
 
-    @field_validator("teacher_id", mode="before")
+    @field_validator("homeroom_teacher_id", mode="before")
     @classmethod
-    def _teacher_id(cls, v):
+    def _homeroom_teacher_id(cls, v):
         v = oid_to_str(v)
         if not v:
             raise ValueError("teacher_id is required")
@@ -70,11 +70,11 @@ class AdminAssignTeacherToClassSchema(BaseModel):
 
 class AdminUnAssignTeacherToClassSchema(BaseModel):
     model_config = ConfigDict(extra="ignore", use_enum_values=True)
-    teacher_id: str = Field(..., min_length=1)
+    homeroom_teacher_id: str = Field(..., min_length=1)
 
-    @field_validator("teacher_id", mode="before")
+    @field_validator("homeroom_teacher_id", mode="before")
     @classmethod
-    def _teacher_id(cls, v):
+    def _homeroom_teacher_id(cls, v):
         v = oid_to_str(v)
         if not v:
             raise ValueError("teacher_id is required")
@@ -98,4 +98,4 @@ class AdminEnrollStudentToClassSchema(BaseModel):
 
 class AdminUpdateClassRelationsSchema(BaseModel):
     student_ids: List[str] = Field(default_factory=list)
-    teacher_id: Optional[str] = None
+    homeroom_teacher_id: Optional[str] = None

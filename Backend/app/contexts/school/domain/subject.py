@@ -8,7 +8,9 @@ from app.contexts.school.errors.subject_exceptions import (
     InvalidSubjectNameError,
     InvalidSubjectCodeError,
     InvalidGradeLevelError,
-    SubjectDeletedException,  # add this
+    SubjectDeletedException, 
+    SubjectPatchFieldNotAllowedException,
+    SubjectNoChangeException,
 )
 
 
@@ -128,3 +130,47 @@ class Subject:
             if level < 1 or level > 12:
                 raise InvalidGradeLevelError(level)
         return unique_sorted
+
+
+
+    def apply_patch(
+        self,
+        *,
+        name: str | None = None,
+        code: str | None = None,
+        description: str | None = None,
+        allowed_grade_levels: list[int] | None = None,
+        is_active: bool | None = None,
+    ) -> None:
+        self._require_not_deleted()
+
+        changed = False
+
+        if name is not None:
+            new_name = name.strip()
+            if new_name != self._name:
+                self.rename(new_name)
+                changed = True
+
+        if code is not None:
+            new_code = code.strip().upper()
+            if new_code != self._code:
+                self.change_code(new_code)
+                changed = True
+
+        if description is not None:
+            if description != self._description:
+                self.update_description(description)
+                changed = True
+
+        if allowed_grade_levels is not None:
+            # PATCH not allowed to change grade levels
+            raise SubjectPatchFieldNotAllowedException("allowed_grade_levels")
+
+        if is_active is not None:
+            if is_active != self.is_active:
+                self.activate() if is_active else self.deactivate()
+                changed = True
+
+        if not changed:
+            raise SubjectNoChangeException(self.id)

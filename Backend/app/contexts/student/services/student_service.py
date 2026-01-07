@@ -146,5 +146,5 @@ class StudentService:
     def get_my_attendance(self, student_id: str | ObjectId, class_id: str | ObjectId | None = None) -> list[dict]:
         return self._student_stats.list_my_attendance_enriched(student_id, class_id)
 
-    def get_my_grades(self, student_id: str | ObjectId, term: str | None = None) -> list[dict]:
-        return self._student_stats.list_my_grades_enriched(student_id, term=term)
+    def get_my_grades(self, student_id: str | ObjectId) -> list[dict]:
+        return self._student_stats.list_my_grades_enriched(student_id)

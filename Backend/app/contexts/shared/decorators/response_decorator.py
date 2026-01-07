@@ -11,7 +11,7 @@ from pydantic import BaseModel, RootModel
 
 from app.contexts.infra.http.responses import Response
 from app.contexts.core.log.log_service import LogService
-from app.contexts.core.error.app_base_exception import AppBaseException, handle_exception
+from app.contexts.core.errors.app_base_exception import AppBaseException, handle_exception
 from app.contexts.common.base_response_dto import BaseResponseDTO
 
 log_service = LogService.get_instance()

@@ -1,12 +1,14 @@
-from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from bson import ObjectId
 from pymongo.collection import Collection
 
-from app.contexts.school.domain.schedule import ScheduleSlot, DayOfWeek
+from app.contexts.school.domain.schedule import DayOfWeek, ScheduleSlot
 from app.contexts.school.mapper.schedule_mapper import ScheduleMapper
+from app.contexts.shared.lifecycle.filters import not_deleted
+from app.contexts.shared.lifecycle.updates import now_utc
 
 
 class IScheduleRepository(ABC):
@@ -46,7 +48,7 @@ class IScheduleRepository(ABC):
 
 
 class MongoScheduleRepository(IScheduleRepository):
-    """MongoDB implementation of IScheduleRepository."""
+    """MongoDB implementation of IScheduleRepository (lifecycle-aware)."""
 
     def __init__(
         self,
@@ -66,7 +68,7 @@ class MongoScheduleRepository(IScheduleRepository):
         _id = payload.pop("_id")
 
         result = self.collection.update_one(
-            {"_id": _id},
+            not_deleted({"_id": _id}),
             {"$set": payload},
         )
         if result.matched_count == 0:
@@ -74,21 +76,24 @@ class MongoScheduleRepository(IScheduleRepository):
         return slot
 
     def delete(self, id: ObjectId) -> bool:
-        result = self.collection.delete_one({"_id": id})
-        return result.deleted_count == 1
+        result = self.collection.update_one(
+            not_deleted({"_id": id}),
+            {"$set": {"lifecycle.deleted_at": now_utc(), "lifecycle.updated_at": now_utc()}},
+        )
+        return result.matched_count == 1
 
     def find_by_id(self, id: ObjectId) -> Optional[ScheduleSlot]:
-        doc = self.collection.find_one({"_id": id})
+        doc = self.collection.find_one(not_deleted({"_id": id}))
         if not doc:
             return None
         return self.mapper.to_domain(doc)
 
     def list_for_class(self, class_id: ObjectId) -> list[ScheduleSlot]:
-        cursor = self.collection.find({"class_id": class_id})
+        cursor = self.collection.find(not_deleted({"class_id": class_id}))
         return [self.mapper.to_domain(doc) for doc in cursor]
 
     def list_for_teacher(self, teacher_id: ObjectId) -> list[ScheduleSlot]:
-        cursor = self.collection.find({"teacher_id": teacher_id})
+        cursor = self.collection.find(not_deleted({"teacher_id": teacher_id}))
         return [self.mapper.to_domain(doc) for doc in cursor]
 
     def list_for_teacher_and_day(
@@ -98,6 +103,6 @@ class MongoScheduleRepository(IScheduleRepository):
     ) -> list[ScheduleSlot]:
         day_value = int(day_of_week)
         cursor = self.collection.find(
-            {"teacher_id": teacher_id, "day_of_week": day_value}
+            not_deleted({"teacher_id": teacher_id, "day_of_week": day_value})
         )
         return [self.mapper.to_domain(doc) for doc in cursor]

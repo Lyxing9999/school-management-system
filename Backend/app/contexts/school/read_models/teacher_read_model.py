@@ -1,8 +1,12 @@
-from __future__ import annotations
-from typing import Optional
+
+from typing import Optional, Union
+
 from bson import ObjectId
-from pymongo.database import Database
 from pymongo.collection import Collection
+from pymongo.database import Database
+
+from app.contexts.shared.lifecycle.filters import not_deleted
+from app.contexts.shared.model_converter import mongo_converter
 
 
 class TeacherReadModel:
@@ -13,29 +17,26 @@ class TeacherReadModel:
     """
 
     def __init__(self, db: Database):
-        # You may need to adjust these collection names
         self.classes: Collection = db["classes"]
         self.teachers: Collection = db["teachers"]
 
-    def count_classes_for_teacher(self, teacher_id: ObjectId) -> int:
+    def _oid(self, v: Union[str, ObjectId]) -> ObjectId:
+        return mongo_converter.convert_to_object_id(v)
+
+    def count_classes_for_teacher(self, teacher_id: Union[str, ObjectId]) -> int:
         """
         Count non-deleted classes where this teacher is the assigned teacher.
         """
-        return self.classes.count_documents(
-            {
-                "teacher_id": teacher_id,
-                "deleted": {"$ne": True},
-            }
-        )
+        tid = self._oid(teacher_id)
+        return self.classes.count_documents(not_deleted({"teacher_id": tid}))
 
-    def get_max_class_load(self, teacher_id: ObjectId) -> Optional[int]:
+    def get_max_class_load(self, teacher_id: Union[str, ObjectId]) -> Optional[int]:
         """
-        Return the teacher's max class load if stored,
-        or None if no limit is configured.
+        Return the teacher's max class load if stored, or None if not configured.
         """
-        doc = self.teachers.find_one({"_id": teacher_id})
+        tid = self._oid(teacher_id)
+        doc = self.teachers.find_one(not_deleted({"_id": tid}))
         if not doc:
             return None
-
-        # Adjust field name if you use something different
-        return doc.get("max_class_load")
+        value = doc.get("max_class_load")
+        return int(value) if value is not None else None

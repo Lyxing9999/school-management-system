@@ -18,7 +18,7 @@ from contexts.shared.lifecycle.errors import LifecyclePolicyDeniedException
 
 from contexts.student.policies.student_policy import StudentPolicy
 from contexts.student.errors.student_exceptions import StudentNotFoundException 
-from contexts.iam.error.iam_exception import NotFoundUserException          
+from contexts.iam.errors.iam_exception import NotFoundUserException          
 
 
 from contexts.student.domain.student import StudentStatus as Status

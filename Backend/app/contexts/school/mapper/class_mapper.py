@@ -23,11 +23,11 @@ class ClassSectionMapper:
         return ClassSection(
             name=data["name"],
             id=data.get("_id"),
-            teacher_id=data.get("teacher_id"),
+            homeroom_teacher_id=data.get("homeroom_teacher_id"),
             enrolled_count=data.get("enrolled_count", 0),
             subject_ids=data.get("subject_ids", []),
             max_students=data.get("max_students"),
-            status=status_raw,  # domain will normalize
+            status=status_raw, 
             lifecycle=lifecycle,
         )
 
@@ -37,7 +37,7 @@ class ClassSectionMapper:
         return {
             "_id": cls.id,
             "name": cls.name,
-            "teacher_id": cls.teacher_id,
+            "homeroom_teacher_id": cls.homeroom_teacher_id,
             "enrolled_count": cls.enrolled_count,
             "subject_ids": list(cls.subject_ids),
             "max_students": cls.max_students,

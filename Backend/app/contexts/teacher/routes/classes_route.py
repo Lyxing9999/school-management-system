@@ -1,6 +1,6 @@
-
 # app/contexts/teacher/routes/classes_route.py
 from __future__ import annotations
+
 from flask import g
 
 from app.contexts.teacher.routes import teacher_bp
@@ -13,6 +13,7 @@ from app.contexts.teacher.data_transfer.responses import (
     TeacherClassSectionDTO,
     TeacherClassSectionListDTO,
     TeacherClassSectionSummaryDTO,
+    TeacherClassSummaryDTO,
     TeacherStudentDTO,
     TeacherStudentListDTO,
 )
@@ -23,10 +24,15 @@ from app.contexts.teacher.data_transfer.responses import (
 @wrap_response
 def list_my_classes_enriched():
     teacher_id = get_current_staff_id()
-    classes = g.teacher_service.list_my_classes_enriched(teacher_id)
-    classes_dto = mongo_converter.list_to_dto(classes, TeacherClassSectionDTO)
-    return TeacherClassSectionListDTO(items=classes_dto)
 
+    # This should already return enriched docs:
+    # - homeroom_teacher_name
+    # - subject_labels
+    # - enrolled_count, subject_count, etc.
+    docs = g.teacher_service.list_my_classes_enriched(teacher_id)
+
+    items_dto = mongo_converter.list_to_dto(docs, TeacherClassSectionDTO)
+    return TeacherClassSectionListDTO(items=items_dto)
 
 
 @teacher_bp.route("/me/classes/summary", methods=["GET"])
@@ -34,10 +40,15 @@ def list_my_classes_enriched():
 @wrap_response
 def list_my_classes_with_summary():
     teacher_id = get_current_staff_id()
-    classes, summary = g.teacher_service.list_my_classes_with_summary(teacher_id)
-    classes_dto = mongo_converter.list_to_dto(classes, TeacherClassSectionDTO)
-    return TeacherClassSectionSummaryDTO(items=classes_dto, summary=summary)
 
+    docs, summary = g.teacher_service.list_my_classes_with_summary(teacher_id)
+
+    items_dto = mongo_converter.list_to_dto(docs, TeacherClassSectionDTO)
+
+    # ✅ Validate summary shape so it cannot drift silently
+    summary_dto = TeacherClassSummaryDTO(**(summary or {}))
+
+    return TeacherClassSectionSummaryDTO(items=items_dto, summary=summary_dto)
 
 
 @teacher_bp.route("/me/classes/<class_id>/students", methods=["GET"])
@@ -45,6 +56,12 @@ def list_my_classes_with_summary():
 @wrap_response
 def list_my_students_in_class(class_id: str):
     teacher_id = get_current_staff_id()
-    students = g.teacher_service.list_my_students_in_class(class_id)
-    students_dto = mongo_converter.list_to_dto(students, TeacherStudentDTO)
-    return TeacherStudentListDTO(items=students_dto)
+
+    # ✅ IMPORTANT: enforce permission (homeroom teacher at minimum)
+    docs = g.teacher_service.list_my_students_in_class(
+        teacher_id=teacher_id,
+        class_id=class_id,
+    )
+
+    items_dto = mongo_converter.list_to_dto(docs, TeacherStudentDTO)
+    return TeacherStudentListDTO(items=items_dto)

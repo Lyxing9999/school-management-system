@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from bson import ObjectId
 from pymongo.database import Database
 from pymongo.results import UpdateResult, DeleteResult
@@ -9,7 +7,7 @@ from app.contexts.shared.lifecycle.policy_result import PolicyResult
 from app.contexts.shared.lifecycle.errors import LifecyclePolicyDeniedException
 
 from app.contexts.iam.policies.iam_policy import IAMPolicy
-from app.contexts.iam.error.iam_exception import NotFoundUserException
+from app.contexts.iam.errors.iam_exception import NotFoundUserException
 
 
 LIFECYCLE_NOT_DELETED = {"lifecycle.deleted_at": None}

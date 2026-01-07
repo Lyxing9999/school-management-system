@@ -5,6 +5,7 @@
 This backend is built with **Flask** and follows a **Domain-Driven Design (DDD)** Pure OOP architecture. Each domain ("bounded context") is isolated, with pure Python domain models, services orchestrating logic, repositories handling persistence, and routes handling HTTP with DTO validation.
 
 ### Core Request Flow:
+
 1. **Route validates Request DTO** (Pydantic)
 2. **Route calls Service Layer**
 3. **Service converts DTO → Domain Model** (via Factory if complex)
@@ -15,6 +16,7 @@ This backend is built with **Flask** and follows a **Domain-Driven Design (DDD)*
 8. **Return HTTP Response**
 
 ### Key Benefits:
+
 - **Pure OOP** – Domain models are plain Python classes, no ORM inheritance
 - **Separation of Concerns** – Services handle logic, repositories handle persistence, routes handle HTTP
 - **Scalability & Modularity** – Each context is self-contained
@@ -76,7 +78,7 @@ flowchart TB
     K --> B
     B --> L[Mapper<br/>Domain → Response DTO]
     L --> M[HTTP Response]
-    
+
     style B fill:#e1f5ff
     style E fill:#fff4e1
     style G fill:#e8f5e9
@@ -87,16 +89,16 @@ flowchart TB
 
 ### Layer Responsibilities
 
-| Layer | Responsibility |
-|-------|---------------|
-| **Routes** | Validate Request DTO, call Service, convert Domain → Response DTO |
-| **Service** | Convert DTO → Domain (via Factory), orchestrate business logic, call repositories |
-| **Factory** | Create complex domain objects with validation |
-| **Domain Models** | Pure Python classes with business rules (NO database code) |
-| **Repository** | Handle database CRUD operations |
-| **Mapper** | Convert Domain Model ↔ Database dictionaries |
-| **Read Models** | Optimized read-only queries |
-| **DTOs** | Request/response contracts with client |
+| Layer             | Responsibility                                                                    |
+| ----------------- | --------------------------------------------------------------------------------- |
+| **Routes**        | Validate Request DTO, call Service, convert Domain → Response DTO                 |
+| **Service**       | Convert DTO → Domain (via Factory), orchestrate business logic, call repositories |
+| **Factory**       | Create complex domain objects with validation                                     |
+| **Domain Models** | Pure Python classes with business rules (NO database code)                        |
+| **Repository**    | Handle database CRUD operations                                                   |
+| **Mapper**        | Convert Domain Model ↔ Database dictionaries                                      |
+| **Read Models**   | Optimized read-only queries                                                       |
+| **DTOs**          | Request/response contracts with client                                            |
 
 ---
 
@@ -105,6 +107,7 @@ flowchart TB
 ### 1️⃣ Routes Layer (routes.py)
 
 **Responsibilities:**
+
 - Validate Request DTO (Pydantic)
 - Call Service Layer
 - Convert Domain Model → Response DTO
@@ -127,19 +130,19 @@ from app.contexts.iam.data_transfer.responses import IAMBaseDataDTO
 def admin_create_user():
     # Step 1: Validate Request DTO
     user_schema = pydantic_converter.convert_to_model(
-        request.json, 
+        request.json,
         AdminCreateUserSchema
     )
-    
+
     # Step 2: Get context (current user)
     admin_id = get_current_user_id()
-    
+
     # Step 3: Call Service (returns Domain Model)
     user_domain = g.admin_facade.user_service.admin_create_user(
-        user_schema, 
+        user_schema,
         created_by=admin_id
     )
-    
+
     # Step 4: Convert Domain → Response DTO
     return IAMMapper.to_dto(user_domain)
 
@@ -152,18 +155,18 @@ def admin_get_users_paginated():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 5))
     roles = request.args.getlist("role[]") or request.args.getlist("role")
-    
+
     # Step 2: Call Service
     cursor, total = g.admin_facade.user_service.admin_get_users(
         roles, page=page, page_size=page_size
     )
-    
+
     # Step 3: Convert to Response DTO
     users_list = [
-        IAMMapper.to_dto(IAMMapper.to_domain(user)) 
+        IAMMapper.to_dto(IAMMapper.to_domain(user))
         for user in cursor
     ]
-    
+
     return PaginatedUsersDataDTO(
         users=users_list,
         total=total,
@@ -174,6 +177,7 @@ def admin_get_users_paginated():
 ```
 
 **Key Points:**
+
 - No business logic in routes
 - DTOs are converted at route boundaries
 - Service returns Domain Models
@@ -184,6 +188,7 @@ def admin_get_users_paginated():
 ### 2️⃣ Service Layer (services.py)
 
 **Responsibilities:**
+
 - Convert Request DTO → Domain Model (via Factory)
 - Orchestrate business logic
 - Enforce permissions & validation
@@ -210,14 +215,14 @@ class UserAdminService:
         self._iam_service: Optional[IAMService] = None
         self._admin_read_model: Optional[AdminReadModel] = None
         self._iam_factory: Optional[IAMFactory] = None
-    
+
     @property
     def iam_service(self) -> IAMService:
         """Lazy-load IAM service"""
         if self._iam_service is None:
             self._iam_service = IAMService(self.db)
         return self._iam_service
-    
+
     @property
     def iam_factory(self) -> IAMFactory:
         """Lazy-load IAM factory"""
@@ -226,11 +231,11 @@ class UserAdminService:
                 user_read_model=self.admin_read_model.iam_read_model
             )
         return self._iam_factory
-    
+
     @log_operation(level="INFO")
     def admin_create_user(
-        self, 
-        payload: AdminCreateUserSchema, 
+        self,
+        payload: AdminCreateUserSchema,
         created_by: str | ObjectId
     ) -> IAM:
         """
@@ -242,7 +247,7 @@ class UserAdminService:
         """
         # Step 1: Set context
         payload.created_by = created_by
-        
+
         # Step 2: DTO → Domain Model (via Factory)
         iam_model = self.iam_factory.create_user(
             email=payload.email,
@@ -251,43 +256,44 @@ class UserAdminService:
             role=payload.role,
             created_by=payload.created_by
         )
-        
+
         # Step 3: Persist via service/repository
         return self.iam_service.save_domain(iam_model)
-    
+
     @log_operation(level="INFO")
     def admin_update_user(
-        self, 
-        user_id: str | ObjectId, 
+        self,
+        user_id: str | ObjectId,
         payload: AdminUpdateUserSchema
     ) -> IAM:
         """Update user - delegates to IAM service"""
         return self.iam_service.update_info(
-            user_id, 
-            payload, 
+            user_id,
+            payload,
             update_by_admin=True
         )
-    
+
     def admin_soft_delete_user(self, user_id: str | ObjectId) -> IAM:
         """Soft delete - delegates to IAM service"""
         return self.iam_service.soft_delete(user_id)
-    
+
     @log_operation(level="INFO")
     def admin_get_users(
-        self, 
-        role: str | list[str], 
-        page: int, 
+        self,
+        role: str | list[str],
+        page: int,
         page_size: int
     ) -> Tuple[List[dict], int]:
         """Get paginated users by role"""
         return self.admin_read_model.get_page_by_role(
-            role, 
-            page=page, 
+            role,
+            page=page,
             page_size=page_size
         )
 ```
 
 **Key Points:**
+
 - Service orchestrates, doesn't do raw DB operations
 - Converts DTO → Domain via Factory
 - Returns Domain Models (not DTOs)
@@ -307,7 +313,7 @@ from enum import Enum
 
 class IAM:
     """Pure OOP Domain Model - No database dependencies"""
-    
+
     def __init__(
         self,
         email: str,
@@ -354,9 +360,9 @@ class IAM:
         self.updated_at = datetime.utcnow()
 
     def update_info(
-        self, 
-        email: str | None = None, 
-        username: str | None = None, 
+        self,
+        email: str | None = None,
+        username: str | None = None,
         password: str | None = None
     ):
         """Update user information"""
@@ -398,6 +404,7 @@ class IAM:
 ```
 
 **Key Points:**
+
 - Pure Python class (no ORM)
 - Business logic in methods
 - Validation in domain
@@ -416,7 +423,7 @@ from app.contexts.core.security.auth_service import get_auth_service
 
 class IAMFactory:
     """Factory for creating IAM domain models"""
-    
+
     def __init__(self, user_read_model, auth_service=None):
         self.user_read_model = user_read_model
         self.auth_service = auth_service or get_auth_service()
@@ -439,7 +446,7 @@ class IAMFactory:
         # Business validation
         if self.user_read_model.get_by_email(email):
             raise EmailAlreadyExistsException(email)
-        
+
         # Set defaults
         role = role or SystemRole.STUDENT
         username = self._generate_unique_username(
@@ -447,7 +454,7 @@ class IAMFactory:
         )
         hashed_password = self.auth_service.hash_password(password)
         created_by = created_by or "self_created"
-        
+
         # Create domain model
         return IAM(
             email=email,
@@ -468,6 +475,7 @@ class IAMFactory:
 ```
 
 **Key Points:**
+
 - Centralizes object creation logic
 - Handles validation before domain model creation
 - Coordinates with read models for uniqueness checks
@@ -485,7 +493,7 @@ from bson import ObjectId
 
 class IAMMapper:
     """Handles conversion between Domain Model and Database"""
-    
+
     @staticmethod
     def to_domain(data: dict) -> IAM:
         """Convert database dict → domain model"""
@@ -540,6 +548,7 @@ class IAMMapper:
 ```
 
 **Key Points:**
+
 - Clean separation between domain and persistence
 - Handles type conversions (ObjectId ↔ string)
 - Three conversion methods: to_domain, to_persistence, to_dto
@@ -558,11 +567,11 @@ from app.contexts.iam.domain.iam import IAM
 
 class IAMRepository:
     """Handles database operations for IAM"""
-    
+
     def __init__(self, db_client: MongoClient):
         self.collection = db_client.db.users
         self.mapper = IAMMapper()
-    
+
     def save(self, iam: IAM) -> IAM:
         """Save or update IAM"""
         data = self.mapper.to_persistence(iam)
@@ -572,28 +581,29 @@ class IAMRepository:
             upsert=True
         )
         return iam
-    
+
     def find_by_id(self, user_id: str | ObjectId) -> IAM | None:
         """Find user by ID"""
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
-        
+
         data = self.collection.find_one({
-            "_id": user_id, 
+            "_id": user_id,
             "deleted": False
         })
         return self.mapper.to_domain(data) if data else None
-    
+
     def delete(self, user_id: str | ObjectId) -> bool:
         """Hard delete user"""
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
-        
+
         result = self.collection.delete_one({"_id": user_id})
         return result.deleted_count > 0
 ```
 
 **Key Points:**
+
 - Abstracts database operations
 - Uses mapper for conversions
 - Returns domain models
@@ -606,7 +616,7 @@ class IAMRepository:
 Domain-specific exceptions:
 
 ```python
-from app.contexts.core.error import AppBaseException, ErrorSeverity, ErrorCategory
+from app.contexts.core.errors import AppBaseException, ErrorSeverity, ErrorCategory
 
 class EmailAlreadyExistsException(AppBaseException):
     def __init__(self, email: str):
@@ -674,16 +684,16 @@ sequenceDiagram
 
 ## ✅ Architecture Benefits
 
-| Principle | Benefit |
-|-----------|---------|
-| **Pure OOP** | Domain models are plain Python classes |
-| **DTO at Boundaries** | Clean separation between HTTP and domain |
-| **Factory Pattern** | Centralized creation logic with validation |
-| **Mapper Isolation** | Clean Domain ↔ DB conversion |
-| **Service Orchestration** | Business logic in one place |
-| **Repository Pattern** | Database abstraction |
-| **Testability** | Each layer can be tested independently |
-| **Modularity** | Contexts are self-contained |
+| Principle                 | Benefit                                    |
+| ------------------------- | ------------------------------------------ |
+| **Pure OOP**              | Domain models are plain Python classes     |
+| **DTO at Boundaries**     | Clean separation between HTTP and domain   |
+| **Factory Pattern**       | Centralized creation logic with validation |
+| **Mapper Isolation**      | Clean Domain ↔ DB conversion               |
+| **Service Orchestration** | Business logic in one place                |
+| **Repository Pattern**    | Database abstraction                       |
+| **Testability**           | Each layer can be tested independently     |
+| **Modularity**            | Contexts are self-contained                |
 
 ---
 

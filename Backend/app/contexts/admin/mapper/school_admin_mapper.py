@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import List
 
-
 from app.contexts.school.domain.schedule import ScheduleSlot
 from app.contexts.school.domain.class_section import ClassSection
 from app.contexts.school.domain.subject import Subject
@@ -11,54 +10,56 @@ from app.contexts.admin.data_transfer.responses import (
     AdminScheduleSlotDataDTO,
     AdminSubjectListDTO,
     AdminScheduleListDTO,
+    AdminClassDataDTO,
 )
-
 
 class SchoolAdminMapper:
     # ========== CLASS ==========
 
     @staticmethod
-    def class_to_dto(section: ClassSection) -> ClassSection:
-        """Domain ClassSection -> DTO"""
-        return ClassSection(
+    def class_to_dto(section: ClassSection) -> AdminClassDataDTO:
+        """Domain ClassSection -> AdminClassDataDTO"""
+        return AdminClassDataDTO(
             id=str(section.id),
             name=section.name,
-            teacher_id=str(section.teacher_id) if section.teacher_id else None,
-            subject_ids=[str(sid) for sid in section.subject_ids],
-            enrolled_count=section.enrolled_count,
+            homeroom_teacher_id=str(section.homeroom_teacher_id) if section.homeroom_teacher_id else None,
+            enrolled_count=int(section.enrolled_count or 0),
             max_students=section.max_students,
+            status=section.status.value if hasattr(section.status, "value") else section.status,
+            subject_ids=[str(sid) for sid in section.subject_ids],
+            subject_count=len(section.subject_ids),
+            homeroom_teacher_name=None,
+            subject_labels=[],
             lifecycle=section.lifecycle,
         )
 
     @staticmethod
-    def class_doc_to_dto(doc: dict) -> ClassSection:
-        """Raw Mongo dict -> DTO (used by read models)."""
-        return ClassSection(
+    def class_doc_to_dto(doc: dict) -> AdminClassDataDTO:
+        """Raw Mongo dict -> AdminClassDataDTO (read-model output)"""
+        subject_ids = doc.get("subject_ids") or []
+        return AdminClassDataDTO(
             id=str(doc["_id"]),
-            name=doc["name"],
-            teacher_id=str(doc["teacher_id"]) if doc.get("teacher_id") else None,
-            subject_ids=[str(sid) for sid in doc.get("subject_ids", [])],
-            enrolled_count=doc.get("enrolled_count"),
+            name=doc.get("name", ""),
+            homeroom_teacher_id=str(doc["homeroom_teacher_id"]) if doc.get("homeroom_teacher_id") else None,
+            enrolled_count=int(doc.get("enrolled_count") or 0),
             max_students=doc.get("max_students"),
+            status=doc.get("status"),
+            subject_ids=[str(sid) for sid in subject_ids],
+            subject_count=len(subject_ids),
+            homeroom_teacher_name=None,
+            subject_labels=[],
             lifecycle=doc.get("lifecycle"),
         )
 
     @staticmethod
-    def class_list_to_dto(docs: List[dict]) -> List[ClassSection]:
-        """
-        NOTE: this takes *dicts* from ClassReadModel, not domain objects.
-        """
-        items = [
-            SchoolAdminMapper.class_doc_to_dto(doc)
-            for doc in docs
-        ]
-        return items
+    def class_list_to_dto(docs: List[dict]) -> List[AdminClassDataDTO]:
+        """List[dict] -> List[AdminClassDataDTO]"""
+        return [SchoolAdminMapper.class_doc_to_dto(doc) for doc in docs]
 
     # ========== SUBJECT ==========
 
     @staticmethod
     def subject_to_dto(subject: Subject) -> AdminSubjectDataDTO:
-        """Domain Subject -> DTO"""
         return AdminSubjectDataDTO(
             id=str(subject.id),
             name=subject.name,
@@ -71,7 +72,6 @@ class SchoolAdminMapper:
 
     @staticmethod
     def subject_doc_to_dto(doc: dict) -> AdminSubjectDataDTO:
-        """Raw Mongo dict -> DTO (used by read models)."""
         return AdminSubjectDataDTO(
             id=str(doc["_id"]),
             name=doc["name"],
@@ -84,17 +84,12 @@ class SchoolAdminMapper:
 
     @staticmethod
     def subject_list_to_dto(docs: List[dict]) -> AdminSubjectListDTO:
-        items = [
-            SchoolAdminMapper.subject_doc_to_dto(doc)
-            for doc in docs
-        ]
-        return AdminSubjectListDTO(items=items)
+        return AdminSubjectListDTO(items=[SchoolAdminMapper.subject_doc_to_dto(doc) for doc in docs])
 
     # ========== SCHEDULE ==========
 
     @staticmethod
     def schedule_slot_to_dto(slot: ScheduleSlot) -> AdminScheduleSlotDataDTO:
-        """Domain ScheduleSlot -> DTO"""
         return AdminScheduleSlotDataDTO(
             id=str(slot.id),
             class_id=str(slot.class_id),
@@ -108,13 +103,12 @@ class SchoolAdminMapper:
 
     @staticmethod
     def schedule_slot_doc_to_dto(doc: dict) -> AdminScheduleSlotDataDTO:
-        """Raw Mongo dict -> DTO (used by read models)."""
         return AdminScheduleSlotDataDTO(
             id=str(doc["_id"]),
             class_id=str(doc["class_id"]),
             teacher_id=str(doc["teacher_id"]),
             day_of_week=doc["day_of_week"],
-            start_time=doc["start_time"],   
+            start_time=doc["start_time"],
             end_time=doc["end_time"],
             room=doc.get("room"),
             lifecycle=doc.get("lifecycle"),
@@ -122,9 +116,4 @@ class SchoolAdminMapper:
 
     @staticmethod
     def schedule_list_to_dto(slots: List[ScheduleSlot]) -> AdminScheduleListDTO:
-        """Domain list[ScheduleSlot] -> list DTO"""
-        items = [
-            SchoolAdminMapper.schedule_slot_to_dto(slot)
-            for slot in slots
-        ]
-        return AdminScheduleListDTO(items=items)
+        return AdminScheduleListDTO(items=[SchoolAdminMapper.schedule_slot_to_dto(s) for s in slots])

@@ -1,268 +1,290 @@
-from typing import List, Dict, Union, Any, Final, Tuple
+from typing import Any, Dict, Final, List, Tuple, Union, Optional
 from bson import ObjectId
 from pymongo.database import Database
 
-from app.contexts.core.error.mongo_error_mixin import MongoErrorMixin
+from app.contexts.core.errors.mongo_error_mixin import MongoErrorMixin
+from app.contexts.shared.model_converter import mongo_converter
+from app.contexts.shared.lifecycle.filters import not_deleted
+
+from app.contexts.iam.read_models.iam_read_model import IAMReadModel
+from app.contexts.staff.read_models.staff_read_model import StaffReadModel
+from app.contexts.student.read_models.student_read_model import StudentReadModel
+
 from app.contexts.school.read_models.class_read_model import ClassReadModel
+from app.contexts.school.read_models.subject_read_model import SubjectReadModel
+from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
 from app.contexts.school.read_models.attendance_read_model import AttendanceReadModel
 from app.contexts.school.read_models.grade_read_model import GradeReadModel
-from app.contexts.iam.read_models.iam_read_model import IAMReadModel
-from app.contexts.school.read_models.schedule_read_model import ScheduleReadModel
-from app.contexts.student.read_models.student_read_model import StudentReadModel
-from app.contexts.school.read_models.subject_read_model import SubjectReadModel
-from app.contexts.staff.read_models.staff_read_model import StaffReadModel
-
-from app.contexts.shared.model_converter import mongo_converter
 
 from app.contexts.shared.services.display_name_service import DisplayNameService
+from app.contexts.school.read_models.teacher_assignment_read_model import TeacherAssignmentReadModel
+
 
 class TeacherReadModel(MongoErrorMixin):
-    """
-    Read-side facade for teacher use cases.
-
-    - Exposes lower-level read models via properties
-    - Adds helper methods for "teacher views" (classes, schedules, attendance, etc.)
-    - Returns UI-friendly dicts (ObjectId -> str, includes display names where useful)
-    """
-
     def __init__(self, db: Database) -> None:
-        # base read models
-        self._iam: Final = IAMReadModel(db)
-        self._schedule: Final = ScheduleReadModel(db)
-        self._classes: Final = ClassReadModel(db)
-        self._attendance: Final = AttendanceReadModel(db)
-        self._grade: Final = GradeReadModel(db)
-        self._student: Final = StudentReadModel(db)
-        self._subject: Final = SubjectReadModel(db)
-        self._staff: Final = StaffReadModel(db)
+        self.db: Final[Database] = db
 
-        # shared display-name helper (depends only on read models)
-        self._display_name_service: Final[DisplayNameService] = DisplayNameService(
-            iam_read_model=self._iam,
-            staff_read_model=self._staff,
-            class_read_model=self._classes,
-            subject_read_model=self._subject,
-            student_read_model=self._student,
+        self.iam: Final[IAMReadModel] = IAMReadModel(db)
+        self.staff: Final[StaffReadModel] = StaffReadModel(db)
+
+        self.classes: Final[ClassReadModel] = ClassReadModel(db)
+        self.subject: Final[SubjectReadModel] = SubjectReadModel(db)
+        self.student: Final[StudentReadModel] = StudentReadModel(db)
+
+        self.schedule: Final[ScheduleReadModel] = ScheduleReadModel(db)
+        self.attendance: Final[AttendanceReadModel] = AttendanceReadModel(db)
+
+        self.grade: Final[GradeReadModel] = GradeReadModel(
+            db,
+            student_read=self.student,
+            subject_read=self.subject,
         )
 
-    # ----------------- properties (low-level accessors) -----------------
+        self.display: Final[DisplayNameService] = DisplayNameService(
+            iam_read_model=self.iam,
+            staff_read_model=self.staff,
+            class_read_model=self.classes,
+            subject_read_model=self.subject,
+            student_read_model=self.student,
+        )
 
-    @property
-    def iam(self) -> IAMReadModel:
-        return self._iam
+        self.assignment_read: Final[TeacherAssignmentReadModel] = TeacherAssignmentReadModel(db)
 
-    @property
-    def schedule(self) -> ScheduleReadModel:
-        return self._schedule
+    def _oid(self, v: Union[str, ObjectId]) -> ObjectId:
+        return mongo_converter.convert_to_object_id(v)
 
-    @property
-    def classes(self) -> ClassReadModel:
-        return self._classes
+    # -------------------------
+    # Permission checks
+    # -------------------------
+    def is_homeroom_teacher(self, *, teacher_id: Union[str, ObjectId], class_id: Union[str, ObjectId]) -> bool:
+        tid = self._oid(teacher_id)
+        cid = self._oid(class_id)
+        cls = self.classes.get_by_id(cid)
+        if not cls:
+            return False
 
-    @property
-    def attendance(self) -> AttendanceReadModel:
-        return self._attendance
+        homeroom_id = cls.get("homeroom_teacher_id")
+        legacy_id = cls.get("teacher_id")  # optional fallback
 
-    @property
-    def grade(self) -> GradeReadModel:
-        return self._grade
+        return str(homeroom_id or legacy_id or "") == str(tid)
 
-    @property
-    def student(self) -> StudentReadModel:
-        return self._student
-
-    @property
-    def subject(self) -> SubjectReadModel:
-        return self._subject
-
-    @property
-    def staff(self) -> StaffReadModel:
-        return self._staff
-
-    @property
-    def display_names(self) -> DisplayNameService:
-        return self._display_name_service
-
-    # ----------------- simple helpers -----------------
-
-    def get_me(self, user_id: ObjectId) -> dict | None:
-        return self.iam.get_by_id(user_id)
-
-    # ----------------- classes -----------------
-
-    def list_student_ids_for_teacher(
+    def is_assigned_subject_teacher(
         self,
+        *,
         teacher_id: Union[str, ObjectId],
-    ) -> List[ObjectId]:
-        """
-        Return the list of student_ids (ObjectId) enrolled in the given class.
-        - teacher_id: ObjectId
-        - return: Student Object ID Current Teacher Teach List[ObjectId]
-        """
-        t_oid = mongo_converter.convert_to_object_id(teacher_id)
+        class_id: Union[str, ObjectId],
+        subject_id: Union[str, ObjectId],
+    ) -> bool:
+        tid = self._oid(teacher_id)
+        cid = self._oid(class_id)
+        sid = self._oid(subject_id)
+        doc = self.assignment_read.get_active_by_class_subject(cid, sid)
+        return bool(doc and str(doc.get("teacher_id")) == str(tid))
 
-        class_docs = self.classes.list_classes_for_teacher(t_oid)
-        class_ids = [c["_id"] for c in class_docs if c.get("_id")]
-        if not class_ids:
-            return []
+    # -------------------------
+    # Classes (roles-enriched)
+    # -------------------------
+    def list_my_classes_with_roles_enriched(self, teacher_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+        tid = self._oid(teacher_id)
 
-        return self.student.list_student_ids_by_current_class_ids(class_ids)
+        # 1) homeroom classes (your existing method)
+        homeroom_docs = self.classes.list_classes_for_teacher(tid) or []
+        homeroom_ids = {c.get("_id") for c in homeroom_docs if c.get("_id")}
 
-    def list_my_classes_enriched(self, teacher_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
-        """
-        Classes for this teacher, with:
-        - ids converted to str
-        - teacher_name attached
+        # 2) teaching assignment classes
+        assign_docs = self.assignment_read.list_for_teacher(tid, show_deleted="active")
+        assign_class_ids = {d.get("class_id") for d in assign_docs if d.get("class_id")}
 
-        Returned shape per item:
-        {
-          "id": "....",
-          "name": "Grade 7A",
-          "teacher_id": "....",
-          "teacher_name": "Mr X",
-          "student_ids": ["...", "..."],
-          "subject_ids": ["...", "..."],
-          ...
-        }
-        """
-        oid = mongo_converter.convert_to_object_id(teacher_id)
-        raw_classes = self.classes.list_classes_for_teacher(oid)
-        if not raw_classes:
-            return []
-        enriched_classes = self.display_names.enrich_classes(raw_classes)
-        return enriched_classes
+        # fetch missing classes
+        extra_ids = [cid for cid in assign_class_ids if cid and cid not in homeroom_ids]
+        extra_classes: List[dict] = []
+        if extra_ids:
+            extra_classes = self.classes.list_by_ids(list(extra_ids))  # implement list_by_ids in ClassReadModel if missing
 
+        combined = list(homeroom_docs) + list(extra_classes)
 
+        # enrich base class fields
+        enriched = self.display.enrich_classes(combined) if combined else []
 
+        # build assigned subjects per class for UI (chips)
+        # {class_id -> [subject_id...]}
+        by_class: Dict[str, List[ObjectId]] = {}
+        for a in assign_docs:
+            cid = a.get("class_id")
+            sid = a.get("subject_id")
+            if cid and sid:
+                by_class.setdefault(str(cid), []).append(sid)
 
+        # subject label maps (bulk)
+        all_subject_ids: List[ObjectId] = []
+        for sids in by_class.values():
+            all_subject_ids.extend([x for x in sids if x])
+        subject_label_map = self.display.subject_labels_for_ids(all_subject_ids)
+        subject_label_map_str = {str(k): v for k, v in subject_label_map.items()}
 
+        # attach role fields
+        for c in enriched:
+            cid = c.get("_id") or c.get("id")
+            cid_str = str(cid) if cid else ""
 
-    def list_subject_ids_for_class(self, class_id: Union[str, ObjectId]) -> List[ObjectId]:
-        return self.classes.list_subject_ids_for_class(class_id)
+            c["is_homeroom"] = cid in homeroom_ids or cid_str in {str(x) for x in homeroom_ids if x}
+            sids = by_class.get(cid_str, [])
 
-    # ----------------- select options (for dropdowns) -----------------
+            labels: List[str] = []
+            for sid in sids:
+                labels.append(subject_label_map.get(sid) or subject_label_map_str.get(str(sid)) or "[deleted subject]")
 
+            c["assigned_subject_labels"] = sorted(set([x for x in labels if x]))
 
+        return enriched
+
+    def list_teacher_classes_with_summary(self, teacher_id: Union[str, ObjectId]) -> Tuple[List[Dict], Dict]:
+        docs, summary = self.classes.list_classes_for_teacher_with_summary(self._oid(teacher_id))
+        enriched = self.display.enrich_classes(docs) if docs else []
+        return enriched, summary
+
+    # -------------------------
+    # Students
+    # -------------------------
     def list_my_students_in_class(self, class_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
-        student = self.student.list_students_by_current_class_id(class_id)
-        return student
+        return self.student.list_students_in_class(class_id, projection={"history": 0})
 
+    def list_student_name_options_in_class(self, class_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+        students = self.student.list_student_ids_in_class(self._oid(class_id))
+        student_ids = [s for s in (students or []) if s]
+        return self.display.student_select_options_for_ids(student_ids)
 
-    def list_student_name_options_in_class(
+    # -------------------------
+    # Subjects select: assigned-only
+    # -------------------------
+    def list_subject_name_options_in_class_for_teacher(
         self,
+        *,
         class_id: Union[str, ObjectId],
+        teacher_id: Union[str, ObjectId],
     ) -> List[Dict[str, Any]]:
-    
-        students = self.student.list_students_by_current_class_ids([class_id])
-        if not students:
-            return []
-        student_ids = [s["_id"] for s in students if s.get("_id")]
-        return self.display_names.student_select_options_for_ids(student_ids)
+        cid = self._oid(class_id)
+        tid = self._oid(teacher_id)
 
-
-
-
-    def list_subject_name_options_in_class(
-        self,
-        class_id: Union[str, ObjectId],
-    ) -> List[Dict[str, Any]]:
-        """
-        Return subject options for a class, shaped for UI select:
-
-        [
-          { "id": "ObjectIdString", "name": "Math (MTH101)" },
-          ...
+        docs = self.assignment_read.list_for_teacher(tid, show_deleted="active")
+        subject_ids = [
+            d.get("subject_id")
+            for d in docs
+            if d.get("subject_id") and str(d.get("class_id")) == str(cid)
         ]
-
-        Uses SubjectReadModel.list_names_by_ids which returns {ObjectId: name}
-        (or you can route this through DisplayNameService.subject_names_for_ids).
-        """
-        subject_ids = self.list_subject_ids_for_class(class_id)
         if not subject_ids:
             return []
 
-        # subject_names_for_ids => { ObjectId: "Math (MTH101)", ... }
-        name_map = self.display_names.subject_labels_for_ids(subject_ids)
+        label_map = self.display.subject_labels_for_ids(subject_ids)
+        label_map_str = {str(k): v for k, v in label_map.items()}
 
-        options: List[Dict[str, Any]] = []
-        for sid, label in name_map.items():
-            options.append(
-                {
-                    "id": str(sid),
-                    "name": label,
-                }
-            )
-        return options
+        items = []
+        for sid in subject_ids:
+            label = label_map.get(sid) or label_map_str.get(str(sid)) or ""
+            if label:
+                items.append({"value": str(sid), "label": label})
 
-    def list_class_name_options_for_teacher(
+        items.sort(key=lambda x: (x.get("label") or "").lower())
+        return items
+    # -------------------------
+    # Schedule & grades enrichment
+    # -------------------------
+    def list_schedule_for_teacher_enriched(self, *args, **kwargs):
+        items, total = self.schedule.list_schedules_for_teacher_paginated(*args, **kwargs)
+        if not items:
+            return [], total
+        return self.display.enrich_schedules(items), total
+
+    def get_attendance_by_id(self, att_id: ObjectId) -> dict | None:
+        return self.attendance.get_by_id(att_id)
+
+    def get_grade_by_id(self, grade_id: ObjectId) -> dict | None:
+        return self.grade.get_by_id(grade_id)
+
+    def list_grades_for_class_enriched_paged(
         self,
-        teacher_id: Union[str, ObjectId],
-    ) -> List[Dict[str, Any]]:
-        return self.classes.list_class_name_options_for_teacher(teacher_id)
+        *,
+        class_id: Union[str, ObjectId],
+        teacher_id: Optional[Union[str, ObjectId]] = None,  
+        subject_id: Optional[Union[str, ObjectId]] = None,
+        page: int = 1,
+        page_size: int = 10,
+        term: str | None = None,
+        grade_type: str | None = None,
+        q: str | None = None,
+    ) -> Dict[str, Any]:
 
-    # ----------------- schedule -----------------
+        result = self.grade.list_grades_for_class_paged(
+            class_id=class_id,
+            teacher_id=teacher_id,       
+            subject_id=subject_id,
+            page=page,
+            page_size=page_size,
+            term=term,
+            grade_type=grade_type,
+            q=q,
+            sort="-created_at",
+            show_deleted="active",
+        )
 
-    def list_schedule_for_teacher_enriched(self, teacher_id: Union[str, ObjectId]) -> List[dict]:
-        """
-        For now: raw schedule docs for this teacher.
+        result["items"] = self.display.enrich_grades(result["items"])
+        return result
 
-        Later you can enrich with:
-        - class_name via display_names.class_names_for_ids
-        - maybe subject_name if you add subject_id to schedule
-        """
-        oid = mongo_converter.convert_to_object_id(teacher_id)
-        schedules = self.schedule.list_schedules_for_teacher(oid)
-        if not schedules:
+    # -------------------------
+    # Classes select scope
+    # -------------------------
+    def list_class_name_options_for_teacher_scope(self, teacher_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+        # build from roles-enriched classes (homeroom + teaching)
+        classes = self.list_my_classes_with_roles_enriched(teacher_id)
+        out: List[Dict[str, Any]] = []
+        for c in classes:
+            cid = c.get("_id") or c.get("id")
+            label = c.get("name") or c.get("class_name") or ""
+            if cid and label:
+                out.append({"value": str(cid), "label": str(label)})
+        out.sort(key=lambda x: (x.get("label") or "").lower())
+        return out
+        
+
+    def has_any_assignment_in_class(self, teacher_id: Union[str, ObjectId], *, filters: Dict[str, Any]) -> bool:
+        q = {**filters, "teacher_id": self._oid(teacher_id)}
+        return self.assignment_read.exists(q, show_deleted="active")
+    # -------------------------
+    # Assignments list (enriched)
+    # -------------------------
+    def list_my_assignments_enriched(self, teacher_id: Union[str, ObjectId]) -> List[Dict[str, Any]]:
+        tid = self._oid(teacher_id)
+        docs = self.assignment_read.list_for_teacher(tid, show_deleted="active")
+        if not docs:
             return []
-        return self.display_names.enrich_schedules(schedules)
 
-    # ----------------- grades & attendance -----------------
+        # normalize ids for converter + UI
+        normalized: List[Dict[str, Any]] = []
+        for d in docs:
+            x = dict(d)
+            if "_id" in x and "id" not in x:
+                x["id"] = str(x["_id"])
+            for k in ("class_id", "subject_id", "teacher_id", "assigned_by"):
+                if x.get(k) is not None:
+                    x[k] = str(x[k])
+            normalized.append(x)
 
-    def list_grades_for_class_enriched(self, class_id: Union[str, ObjectId]) -> List[dict]:
-        """
-        Currently returns raw grade docs for a class.
-
-        You can later use DisplayNameService to attach student_name, subject_name:
-        - display_names.username_for_id(...)
-        - display_names.subject_name_for_id(...)
-        """
-        grades = self.grade.list_grades_for_class(class_id)
-        if not grades:
-            return []
-        return self.display_names.enrich_grades(grades)
-
-
-
-
-
-
+        return self.display.enrich_teaching_assignments(normalized)
 
 
 
     def list_attendance_for_class_enriched(
         self,
+        *,
         class_id: Union[str, ObjectId],
-    ) -> List[dict]:
-        """
-        Attendance records for a class, with student_name attached.
-
-        Returned shape per item:
-        {
-          "id": "...",
-          "student_id": "ObjectIdString",
-          "student_name": "student1",
-          "class_id": "ObjectIdString",
-          "date": "...",
-          "status": "...",
-          ...
-        }
-        """
-        attendances = self.attendance.list_attendance_for_class(class_id)
-        if not attendances:
+        record_date: str | None = None,
+        show_deleted: str = "active",
+    ) -> list[dict]:
+        docs = self.attendance.list_attendance_for_class_by_date(
+            class_id=class_id,
+            record_date=record_date,
+            show_deleted=show_deleted,
+        )
+        if not docs:
             return []
-        return self.display_names.enrich_attendance(attendances)
-
-    def list_teacher_classes_with_summary(self, teacher_id: Union[str, ObjectId]) -> Tuple[List[Dict], Dict]:
-        docs, summary = self.classes.list_classes_for_teacher_with_summary(teacher_id)
-        enriched = self.display_names.enrich_classes(docs)
-        return enriched, summary
+        return self.display.enrich_attendance(docs)

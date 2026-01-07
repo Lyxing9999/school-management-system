@@ -22,13 +22,13 @@ class ClassService(OidMixin):
     def create_class(
         self,
         name: str,
-        teacher_id: str | ObjectId | None = None,
+        homeroom_teacher_id: str | ObjectId | None = None,
         subject_ids: Iterable[str | ObjectId] | None = None,
         max_students: int | None = None,
     ) -> ClassSection:
         section = self.class_factory.create_class(
             name=name,
-            teacher_id=teacher_id,
+            homeroom_teacher_id=homeroom_teacher_id,
             subject_ids=subject_ids,
             max_students=max_students,
         )

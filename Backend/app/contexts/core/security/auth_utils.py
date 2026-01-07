@@ -3,7 +3,7 @@ import jwt
 from bson.objectid import ObjectId
 
 from app.contexts.core.config.setting import settings
-from app.contexts.core.error import AppBaseException, ErrorSeverity, ErrorCategory
+from app.contexts.core.errors import AppBaseException, ErrorSeverity, ErrorCategory
 from app.contexts.shared.model_converter import mongo_converter
 
 
@@ -67,6 +67,7 @@ def get_current_student_id() -> ObjectId:
     # 1) IAM user ObjectId
     user_oid = get_current_user_oid()
     student_doc = g.admin.admin_read_model.admin_get_student_by_user_id(user_oid)
+
     if not student_doc:
         raise AppBaseException(
             message="No student profile for current user",
