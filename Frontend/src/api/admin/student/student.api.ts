@@ -3,7 +3,7 @@ import type {
   AdminCreateStudent,
   AdminCreateStudentResponse,
   AdminUpdateStudent,
-  AdminStudentNameSelectResponse,
+  AdminStudentListSelectResponse,
   StudentBaseDataResponse,
 } from "~/api/admin/student/student.dto";
 
@@ -43,8 +43,8 @@ export class StudentApi {
     );
     return res.data;
   }
-  async listStudentNamesSelect(): Promise<AdminStudentNameSelectResponse> {
-    const res = await this.$api.get<AdminStudentNameSelectResponse>(
+  async listStudentNamesSelect(): Promise<AdminStudentListSelectResponse> {
+    const res = await this.$api.get<AdminStudentListSelectResponse>(
       `${this.baseURL}/student-select`
     );
     return res.data;

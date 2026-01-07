@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Libre Barcode 39',
+  fullName: 'Libre Barcode 39 Regular',
+  postscriptName: 'LibreBarcode39-Regular',
+  category: 'display',
+  capHeight: 590,
+  ascent: 600,
+  descent: -400,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 400,
+  xWidthAvg: 481,
+  subsets: {
+    latin: {
+      xWidthAvg: 481
+    },
+    thai: {
+      xWidthAvg: 500
+    }
+  }
+};

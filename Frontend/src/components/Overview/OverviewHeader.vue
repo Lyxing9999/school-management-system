@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import BaseInputSearch from "~/components/Base/BaseInputSearch.vue";
+import BaseInputSearch from "~/components/base/BaseInputSearch.vue";
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -99,6 +99,7 @@ function pluralize(stat: {
               class="w-full sm:w-auto reset-btn"
               :disabled="disabled || resetDisabled"
               @click="onReset"
+              aria-label="Reset filters"
             >
               {{ resetLabel }}
             </BaseButton>
@@ -117,11 +118,14 @@ function pluralize(stat: {
         <el-col :xs="24" :sm="16" :md="12">
           <BaseInputSearch
             v-if="showSearch"
-            v-model="searchValue"
-            :placeholder="searchPlaceholder"
-            clearable
-            :disabled="disabled || searchDisabled"
-            class="w-full"
+            :model-value="searchModelValue"
+            @update:modelValue="
+              (v) => emit('update:searchModelValue', String(v ?? ''))
+            "
+            :auto-search="true"
+            :debounce="350"
+            :ignore-empty="false"
+            @search="emit('refresh')"
           />
         </el-col>
 
@@ -132,6 +136,7 @@ function pluralize(stat: {
             class="w-full sm:w-auto reset-btn reset-btn--danger"
             :disabled="disabled || resetDisabled"
             @click="onReset"
+            aria-label="Reset filters"
           >
             {{ resetLabel }}
           </BaseButton>
@@ -156,10 +161,7 @@ function pluralize(stat: {
             {{ stat.value }} {{ pluralize(stat) }}
           </span>
 
-          <span
-            v-else
-            class="inline-flex items-center gap-1 rounded-full bg-white text-gray-700 px-3 py-0.5 border border-gray-200"
-          >
+          <span v-else class="stat-pill stat-pill--secondary">
             <span
               class="w-1.5 h-1.5 rounded-full"
               :class="stat.dotClass ?? 'bg-emerald-500'"
@@ -180,7 +182,6 @@ function pluralize(stat: {
 
 <style scoped>
 .overview-top :deep(.el-col) {
-  /* prevents odd spacing in some Element Plus grid cases */
   min-width: 0;
 }
 .reset-btn {
@@ -220,7 +221,6 @@ function pluralize(stat: {
   transform: translateY(0);
 }
 
-/* ✅ Disabled: make it look intentionally disabled (not “normal”) */
 .reset-btn.is-disabled,
 .reset-btn[disabled],
 .reset-btn:disabled {
@@ -236,12 +236,11 @@ function pluralize(stat: {
   ) !important;
   color: color-mix(in srgb, var(--muted-color) 85%, transparent) !important;
 
-  opacity: 1 !important; /* avoid Element Plus “washed” opacity */
+  opacity: 1 !important;
   cursor: not-allowed !important;
   transform: none !important;
 }
 
-/* Dark mode: keep disabled darker (avoid looking like enabled) */
 html[data-theme="dark"] .reset-btn {
   background: color-mix(
     in srgb,
@@ -269,5 +268,36 @@ html[data-theme="dark"] .reset-btn:disabled {
     transparent
   ) !important;
   color: color-mix(in srgb, var(--muted-color) 82%, transparent) !important;
+}
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem; /* gap-1 */
+  padding: 0.125rem 0.75rem; /* py-0.5 px-3 */
+  border-radius: 999px;
+  border: 1px solid transparent;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.stat-pill--secondary {
+  background: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%);
+  border-color: color-mix(in srgb, var(--border-color) 70%, transparent);
+  color: color-mix(in srgb, var(--text-color) 84%, var(--muted-color) 16%);
+
+  transition: background-color var(--transition-base),
+    border-color var(--transition-base), color var(--transition-base);
+}
+
+/* Optional: hover polish (safe) */
+.stat-pill--secondary:hover {
+  background: var(--hover-bg);
+  border-color: color-mix(
+    in srgb,
+    var(--border-color) 55%,
+    var(--color-primary) 45%
+  );
+  color: var(--text-color);
 }
 </style>

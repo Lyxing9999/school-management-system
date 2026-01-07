@@ -25,32 +25,20 @@ const safeTopAbsentStudents = computed(() =>
       <VizCard
         title="Attendance status summary"
         :loading="loading"
-        :option-exists="!!statusOption"
+        :option="statusOption"
         empty-text="No attendance data"
-      >
-        <VChart
-          v-if="statusOption"
-          :option="statusOption"
-          autoresize
-          class="w-full h-full"
-        />
-      </VizCard>
+        :height="260"
+      />
     </el-col>
 
     <el-col :xs="24" :md="16">
       <VizCard
         title="Daily attendance trend"
         :loading="loading"
-        :option-exists="!!dailyTrendOption"
+        :option="dailyTrendOption"
         empty-text="No daily trend data"
-      >
-        <VChart
-          v-if="dailyTrendOption"
-          :option="dailyTrendOption"
-          autoresize
-          class="w-full h-full"
-        />
-      </VizCard>
+        :height="260"
+      />
     </el-col>
   </el-row>
 
@@ -59,16 +47,10 @@ const safeTopAbsentStudents = computed(() =>
       <VizCard
         title="Attendance by class"
         :loading="loading"
-        :option-exists="!!byClassOption"
+        :option="byClassOption"
         empty-text="No class-level attendance"
-      >
-        <VChart
-          v-if="byClassOption"
-          :option="byClassOption"
-          autoresize
-          class="w-full h-full"
-        />
-      </VizCard>
+        :height="260"
+      />
     </el-col>
 
     <el-col :xs="24" :md="12">

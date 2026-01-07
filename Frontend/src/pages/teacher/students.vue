@@ -1,94 +1,73 @@
-<!-- ~/pages/teacher/students/index.vue -->
 <script setup lang="ts">
-definePageMeta({ layout: "teacher" });
+definePageMeta({ layout: "default" });
 
 import { ref, computed, watch, onMounted } from "vue";
-import { ElMessage } from "element-plus";
+import { storeToRefs } from "pinia";
+import { ElMessage, ElInput, ElAlert, ElEmpty, ElTag } from "element-plus";
 
 import { teacherService } from "~/api/teacher";
 import type { ClassSectionDTO } from "~/api/types/school.dto";
+import type { TeacherStudentDataDTO } from "~/api/teacher/dto";
 
-import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
-import BaseButton from "~/components/Base/BaseButton.vue";
-import TeacherClassSelect from "~/components/Selects/TeacherClassSelect.vue";
-import TableCard from "~/components/Cards/TableCard.vue";
-import { useHeaderState } from "~/composables/useHeaderState";
+import OverviewHeader from "~/components/overview/OverviewHeader.vue";
+import BaseButton from "~/components/base/BaseButton.vue";
+import TeacherClassSelect from "~/components/selects/class/TeacherClassSelect.vue";
+import TableCard from "~/components/cards/TableCard.vue";
+import { useHeaderState } from "~/composables/ui/useHeaderState";
 
-const teacher = teacherService();
+import { usePreferencesStore } from "~/stores/preferencesStore";
 
-/* ----------------- types (backend -> UI adapter) ----------------- */
+const teacherApi = teacherService();
+const prefs = usePreferencesStore();
+const { tablePageSize } = storeToRefs(prefs);
 
-type BackendStudentDTO = {
-  id: string;
-  user_id?: string;
-  student_id_code?: string;
-  first_name_kh?: string;
-  last_name_kh?: string;
-  first_name_en?: string;
-  last_name_en?: string;
-  gender?: string;
-  dob?: string; // "YYYY-MM-DD"
-  status?: string;
-  phone_number?: string;
-  current_class_id?: string;
-};
+/* ----------------- helpers ----------------- */
+function unwrapApi<T = any>(res: any): T {
+  // axios usually: res.data
+  const d = res?.data ?? res;
+  // your common response: { success, message, data: {...} }
+  return (d?.data ?? d) as T;
+}
 
-type StudentRow = {
-  id: string;
-  code: string;
-  name: string;
-  gender: string;
-  dob: string;
-  status: string;
-  phone: string;
-};
+function fullNameEn(s: TeacherStudentDataDTO) {
+  return `${s.first_name_en ?? ""} ${s.last_name_en ?? ""}`.trim();
+}
+function fullNameKh(s: TeacherStudentDataDTO) {
+  return `${s.first_name_kh ?? ""} ${s.last_name_kh ?? ""}`.trim();
+}
+function displayName(s: TeacherStudentDataDTO) {
+  return fullNameEn(s) || fullNameKh(s) || "-";
+}
 
-const buildStudentName = (s: BackendStudentDTO) => {
-  const en = `${s.first_name_en ?? ""} ${s.last_name_en ?? ""}`.trim();
-  if (en) return en;
+function initials(s: TeacherStudentDataDTO) {
+  const n = displayName(s);
+  return (n?.[0] ?? "?").toUpperCase();
+}
 
-  const kh = `${s.first_name_kh ?? ""} ${s.last_name_kh ?? ""}`.trim();
-  if (kh) return kh;
-
-  return s.student_id_code ?? "Unknown Student";
-};
-
-const toStudentRow = (s: BackendStudentDTO): StudentRow => ({
-  id: s.id,
-  code: s.student_id_code ?? "-",
-  name: buildStudentName(s),
-  gender: s.gender ?? "-",
-  dob: s.dob ?? "-",
-  status: s.status ?? "-",
-  phone: s.phone_number ?? "-",
-});
-
-const formatDob = (dob: string) => {
-  return dob && dob !== "-" ? dob : "-";
-};
-
-const statusTagType = (status: string) => {
-  const v = (status || "").toLowerCase();
+function statusTagType(status: string) {
+  const v = String(status || "").toLowerCase();
   if (v === "active") return "success";
   if (v === "inactive") return "info";
   if (v === "suspended") return "warning";
-  return "default";
-};
+  return "info";
+}
+
+function formatDob(dob?: string) {
+  const v = String(dob ?? "-");
+  return v && v !== "-" ? v : "-";
+}
 
 /* ----------------- state ----------------- */
-
 const loadingClasses = ref(false);
 const loadingStudents = ref(false);
 const errorMessage = ref<string | null>(null);
 
 const classes = ref<ClassSectionDTO[]>([]);
 const selectedClassId = ref<string | null>(null);
-const students = ref<StudentRow[]>([]);
 
-// UI helpers
+const students = ref<TeacherStudentDataDTO[]>([]);
 const searchTerm = ref("");
 
-// derived
 const selectedClass = computed(
   () => classes.value.find((c) => c.id === selectedClassId.value) ?? null
 );
@@ -96,24 +75,42 @@ const selectedClass = computed(
 const totalClasses = computed(() => classes.value.length);
 const totalStudentsInSelected = computed(() => students.value.length);
 
-/* ----------------- filter + pagination ----------------- */
-
+/* ----------------- filtering ----------------- */
 const filteredStudents = computed(() => {
   const term = searchTerm.value.trim().toLowerCase();
   if (!term) return students.value;
 
   return students.value.filter((s) => {
+    const nameEn = fullNameEn(s).toLowerCase();
+    const nameKh = fullNameKh(s).toLowerCase();
+    const code = String(s.student_id_code ?? "").toLowerCase();
+    const phone = String(s.phone_number ?? "").toLowerCase();
+    const id = String(s.id ?? "").toLowerCase();
+
     return (
-      s.name.toLowerCase().includes(term) ||
-      s.code.toLowerCase().includes(term) ||
-      s.phone.toLowerCase().includes(term) ||
-      s.id.toLowerCase().includes(term)
+      nameEn.includes(term) ||
+      nameKh.includes(term) ||
+      code.includes(term) ||
+      phone.includes(term) ||
+      id.includes(term)
     );
   });
 });
 
+/* ----------------- pagination (client-side) ----------------- */
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref<number>(Number(tablePageSize.value || 10));
+
+watch(tablePageSize, (v) => {
+  const next = Number(v || 10);
+  if (!Number.isFinite(next) || next <= 0) return;
+  pageSize.value = next;
+  currentPage.value = 1;
+});
+
+watch(searchTerm, () => {
+  currentPage.value = 1;
+});
 
 const pagedStudents = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
@@ -121,22 +118,18 @@ const pagedStudents = computed(() => {
   return filteredStudents.value.slice(start, end);
 });
 
-watch(
-  () => searchTerm.value,
-  () => {
-    currentPage.value = 1;
-  }
-);
-
-/* ----------------- API: load classes ----------------- */
-
-const loadClasses = async () => {
+/* ----------------- API: classes ----------------- */
+async function loadClasses() {
   loadingClasses.value = true;
   errorMessage.value = null;
 
   try {
-    const res = await teacher.teacher.listMyClasses({ showError: false });
-    classes.value = res.items ?? [];
+    const res: any = await teacherApi.teacher.listMyClasses({
+      showError: false,
+    });
+    const payload = unwrapApi<{ items: ClassSectionDTO[] }>(res);
+
+    classes.value = payload?.items ?? [];
 
     if (!selectedClassId.value && classes.value.length > 0) {
       selectedClassId.value = classes.value[0].id;
@@ -148,11 +141,10 @@ const loadClasses = async () => {
   } finally {
     loadingClasses.value = false;
   }
-};
+}
 
-/* ----------------- API: load students ----------------- */
-
-const loadStudentsForClass = async (classId: string | null) => {
+/* ----------------- API: students ----------------- */
+async function loadStudentsForClass(classId: string | null) {
   students.value = [];
   currentPage.value = 1;
   searchTerm.value = "";
@@ -163,12 +155,12 @@ const loadStudentsForClass = async (classId: string | null) => {
   errorMessage.value = null;
 
   try {
-    const res = await teacher.teacher.listStudentsInClass(classId, {
+    const res: any = await teacherApi.teacher.listStudentsInClass(classId, {
       showError: false,
     });
 
-    const raw = (res.items ?? []) as BackendStudentDTO[];
-    students.value = raw.map(toStudentRow);
+    const payload = unwrapApi<{ items: TeacherStudentDataDTO[] }>(res);
+    students.value = payload?.items ?? [];
   } catch (err: any) {
     const msg = err?.message ?? "Failed to load students.";
     errorMessage.value = msg;
@@ -176,37 +168,28 @@ const loadStudentsForClass = async (classId: string | null) => {
   } finally {
     loadingStudents.value = false;
   }
-};
+}
 
-watch(selectedClassId, (newVal) => {
-  loadStudentsForClass(newVal);
+watch(selectedClassId, (id) => {
+  loadStudentsForClass(id);
 });
 
-onMounted(async () => {
+/* ----------------- actions ----------------- */
+async function handleRefresh() {
   await loadClasses();
-  if (selectedClassId.value) {
-    await loadStudentsForClass(selectedClassId.value);
-  }
-});
+  if (selectedClassId.value) await loadStudentsForClass(selectedClassId.value);
+}
 
-const handleRefresh = async () => {
-  await loadClasses();
-  if (selectedClassId.value) {
-    await loadStudentsForClass(selectedClassId.value);
-  }
-};
-
-const handlePageChange = (page: number) => {
+function handlePageChange(page: number) {
   currentPage.value = page;
-};
+}
 
-const handlePageSizeChange = (size: number) => {
-  pageSize.value = size;
-  currentPage.value = 1;
-};
+function handlePageSizeChange(size: number) {
+  // persist globally (your existing store pattern)
+  prefs.setTablePageSize(size);
+}
 
 /* ----------------- header stats ----------------- */
-
 const { headerState } = useHeaderState({
   items: [
     {
@@ -230,6 +213,14 @@ const { headerState } = useHeaderState({
     },
   ],
 });
+
+/* ----------------- mount ----------------- */
+onMounted(async () => {
+  await loadClasses();
+  if (selectedClassId.value) {
+    await loadStudentsForClass(selectedClassId.value);
+  }
+});
 </script>
 
 <template>
@@ -243,7 +234,6 @@ const { headerState } = useHeaderState({
     >
       <template #filters>
         <div class="flex flex-wrap items-center gap-3">
-          <!-- Class select pill -->
           <div
             class="flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm"
             style="
@@ -281,7 +271,7 @@ const { headerState } = useHeaderState({
     </OverviewHeader>
 
     <transition name="el-fade-in">
-      <el-alert
+      <ElAlert
         v-if="errorMessage"
         :title="errorMessage"
         type="error"
@@ -301,6 +291,16 @@ const { headerState } = useHeaderState({
       "
       :rightText="`Showing ${pagedStudents.length} / ${filteredStudents.length} students`"
     >
+      <!-- Search -->
+      <div class="mb-4 flex items-center justify-between gap-3 flex-wrap">
+        <ElInput
+          v-model="searchTerm"
+          clearable
+          placeholder="Search name, code, phone, or record ID..."
+          style="max-width: 420px"
+        />
+      </div>
+
       <el-table
         v-if="filteredStudents.length || loadingClasses || loadingStudents"
         v-loading="loadingClasses || loadingStudents"
@@ -320,7 +320,7 @@ const { headerState } = useHeaderState({
         <el-table-column type="index" label="#" width="70" align="center" />
 
         <!-- Student (name + code) -->
-        <el-table-column label="Student" min-width="280" show-overflow-tooltip>
+        <el-table-column label="Student" min-width="300" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="flex items-center gap-2">
               <div
@@ -330,15 +330,21 @@ const { headerState } = useHeaderState({
                   color: var(--color-primary);
                 "
               >
-                {{ (row.name || "?").charAt(0).toUpperCase() }}
+                {{ initials(row) }}
               </div>
 
-              <div class="flex flex-col leading-tight">
-                <span class="font-medium" style="color: var(--text-color)">
-                  {{ row.name }}
+              <div class="flex flex-col leading-tight min-w-0">
+                <span
+                  class="font-medium truncate"
+                  style="color: var(--text-color)"
+                >
+                  {{ displayName(row) }}
                 </span>
-                <span class="text-xs" style="color: var(--muted-color)">
-                  {{ row.code }}
+                <span
+                  class="text-xs truncate"
+                  style="color: var(--muted-color)"
+                >
+                  {{ row.student_id_code || "-" }}
                 </span>
               </div>
             </div>
@@ -357,18 +363,22 @@ const { headerState } = useHeaderState({
 
         <el-table-column label="Status" width="140">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)" effect="light">
+            <ElTag :type="statusTagType(row.status)" effect="light">
               {{ row.status }}
-            </el-tag>
+            </ElTag>
           </template>
         </el-table-column>
 
         <el-table-column
-          prop="phone"
+          prop="phone_number"
           label="Phone"
           min-width="160"
           show-overflow-tooltip
-        />
+        >
+          <template #default="{ row }">
+            <span>{{ row.phone_number || "-" }}</span>
+          </template>
+        </el-table-column>
 
         <el-table-column
           label="Record ID"
@@ -397,7 +407,7 @@ const { headerState } = useHeaderState({
       </div>
 
       <div v-else class="py-10">
-        <el-empty
+        <ElEmpty
           v-if="!loadingStudents && selectedClassId"
           :description="
             students.length === 0
@@ -418,7 +428,7 @@ const { headerState } = useHeaderState({
               }}
             </p>
           </template>
-        </el-empty>
+        </ElEmpty>
       </div>
     </TableCard>
   </div>

@@ -2,7 +2,6 @@
 import type {
   AdminCreateClass,
   AdminClassDataDTO,
-  AdminClassListDTO,
   AdminClassNameSelectListDTO,
   AdminStudentsInClassSelectDTO,
   AdminUpdateClassRelationsResultDTO,
@@ -10,8 +9,14 @@ import type {
   PagedResult,
   SearchStudentsParams,
   AdminStudentSelectDTO,
+  AdminClassPaginatedDTO,
+  ListClassesParams,
+  AdminSubjectSelectListDTO,
 } from "./class.dto";
-import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
+import {
+  useApiUtils,
+  type ApiCallOptions,
+} from "~/composables/system/useApiUtils";
 import { ClassApi } from "./class.api";
 
 export class ClassService {
@@ -23,9 +28,9 @@ export class ClassService {
   // QUERY
   // ============
 
-  async getClasses(options?: ApiCallOptions) {
-    const data = await this.callApi<AdminClassListDTO>(
-      () => this.classApi.getClasses(),
+  async getClasses(params?: ListClassesParams, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminClassPaginatedDTO>(
+      () => this.classApi.getClasses(params),
       options
     );
     return data!;
@@ -135,5 +140,12 @@ export class ClassService {
       { showSuccess: false, ...(options ?? {}) }
     );
     return classData!;
+  }
+  async listSubjectsSelectInClass(classId: string, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminSubjectSelectListDTO>(
+      () => this.classApi.listSubjectsSelectInClass(classId),
+      options
+    );
+    return data!;
   }
 }

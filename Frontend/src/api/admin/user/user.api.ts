@@ -4,7 +4,7 @@ import type {
   AdminCreateUser,
   AdminGetUserResponse,
   AdminUpdateUser,
-  AdminUpdateUserStatus,
+  AdminPasswordResetApiResponse,
 } from "./user.dto";
 
 import { Role } from "~/api/types/enums/role.enum";
@@ -75,6 +75,14 @@ export class UserApi {
     const res = await this.$api.patch<AdminGetUserResponse>(
       `${this.baseURL}/${id}/status`,
       { status }
+    );
+    return res.data;
+  }
+  async requestPasswordReset(
+    userId: string
+  ): Promise<AdminPasswordResetApiResponse> {
+    const res = await this.$api.post<AdminPasswordResetApiResponse>(
+      `${this.baseURL}/${userId}/password-reset`
     );
     return res.data;
   }

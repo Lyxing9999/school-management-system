@@ -1,0 +1,63 @@
+{
+  "name": "@element-plus/nuxt",
+  "version": "1.1.4",
+  "description": "Element Plus module for Nuxt",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/module.mjs",
+      "require": "./dist/module.cjs"
+    }
+  },
+  "main": "./dist/module.cjs",
+  "types": "./dist/types.d.ts",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "element-plus",
+    "nuxt"
+  ],
+  "homepage": "https://github.com/element-plus/element-plus-nuxt#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/element-plus/element-plus-nuxt.git"
+  },
+  "bugs": {
+    "url": "https://github.com/element-plus/element-plus-nuxt/issues"
+  },
+  "peerDependencies": {
+    "@element-plus/icons-vue": ">=0.2.6",
+    "element-plus": ">=2"
+  },
+  "dependencies": {
+    "@nuxt/kit": "^3.13.2",
+    "magic-string": "^0.27.0",
+    "unplugin": "^1.15.0"
+  },
+  "devDependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "@nuxt/module-builder": "^0.5.5",
+    "@nuxt/schema": "^3.13.2",
+    "@nuxtjs/eslint-config-typescript": "^12.1.0",
+    "@types/node": "^22.8.6",
+    "element-plus": "^2.10.1",
+    "eslint": "^8.57.1",
+    "nuxi": "^3.15.0",
+    "nuxt": "^3.13.2",
+    "sass": "^1.89.2",
+    "typescript": "^5.6.3",
+    "vue": "^3.5.12"
+  },
+  "scripts": {
+    "build": "npm run dev:prepare && nuxt-module-build build",
+    "dev": "nuxi dev playground",
+    "dev:build": "nuxi build playground",
+    "dev:start": "node playground/.output/server/index.mjs",
+    "dev:prepare": "nuxt-module-build build --stub && nuxi prepare playground",
+    "lint": "eslint . --fix --ext .ts,.vue,.js",
+    "lint:test": "eslint . --ext .ts,.vue,.js --max-warnings 0"
+  }
+}

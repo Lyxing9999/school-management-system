@@ -1,11 +1,11 @@
 import { computed, unref, type Ref, type ComputedRef } from "vue";
 
-import { useFormCreate } from "~/composables/useFormCreate";
-import { useFormEdit } from "~/composables/useFormEdit";
+import { useFormCreate } from "~/composables/forms/useFormCreate";
+import { useFormEdit } from "~/composables/forms/useFormEdit";
 import {
   toInlineEditUpdateService,
   type UseInlineEditService,
-} from "~/composables/useInlineEdit";
+} from "~/composables/table-edit/useInlineEdit";
 
 import {
   adminFormRegistryCreate,

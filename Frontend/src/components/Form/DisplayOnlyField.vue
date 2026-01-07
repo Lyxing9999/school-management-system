@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { defineProps } from "vue";
 import { ElTag } from "element-plus";
 
 const props = defineProps<{

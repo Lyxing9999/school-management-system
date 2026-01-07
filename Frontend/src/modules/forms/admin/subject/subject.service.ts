@@ -5,10 +5,9 @@ import type { SubjectDTO } from "~/api/types/school.dto";
 export function useServiceFormSubject(): UseFormService<
   AdminCreateSubject,
   never,
-  boolean,
-  SubjectDTO
+  boolean
 > {
-  const service = adminService(); // called at runtime
+  const service = adminService(); 
 
   return {
     create: (data) =>

@@ -1,455 +1,244 @@
 <script setup lang="ts">
+definePageMeta({ layout: "default" });
+
 import { ref, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 
-import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
-import { formatDate } from "~/utils/formatDate";
-import { reportError, invariant } from "~/utils/errors";
-definePageMeta({
-  layout: "student",
-});
+import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 
-/**
- * Demo mode:
- * - true  => uses local demo arrays (your Mongo sample-based)
- * - false => use your real studentService() calls
- */
-const USE_DEMO = true;
+import { studentService } from "~/api/student";
+import { formatDate } from "~/utils/date/formatDate";
+import { reportError } from "~/utils/errors/errors";
 
-/* ------------------------------------------------
+import type {
+  StudentClassListDTO,
+  StudentAttendanceListDTO,
+  StudentGradeListDTO,
+  StudentScheduleListDTO,
+} from "~/api/student/student.dto";
+
+const student = studentService();
+
+/* -----------------------------
  * Types (frontend view models)
- * ------------------------------------------------ */
+ * ---------------------------- */
 
-type StudentClassDTO = {
-  id: string;
-  name: string;
-  teacher_id?: string | null;
-  subject_ids?: string[];
+type ClassItem = StudentClassListDTO["items"][number] & {
+  subject_labels?: string[];
+  teacher_name?: string;
 };
 
-type SubjectDTO = {
-  id: string;
-  name: string;
-  code: string;
+type AttendanceItem = StudentAttendanceListDTO["items"][number] & {
+  class_name?: string;
+  teacher_name?: string;
 };
 
-type GradeDTO = {
-  id: string;
-  student_id: string;
-  subject_id: string;
-  class_id?: string | null;
-  teacher_id?: string | null;
-  term?: string | null;
-  type: string;
-  score: number;
-  created_at: string;
-
-  // display
+type GradeItem = StudentGradeListDTO["items"][number] & {
   subject_label?: string;
   class_name?: string;
 };
 
-type AttendanceDTO = {
-  id: string;
-  student_id: string;
-  class_id: string;
-  status: "present" | "absent" | "late" | "excused" | string;
-  record_date: string;
-  marked_by_teacher_id?: string | null;
-  created_at: string;
-
-  // display
+type ScheduleItem = StudentScheduleListDTO["items"][number] & {
   class_name?: string;
   teacher_name?: string;
+  subject_label?: string;
 };
 
-type ScheduleDTO = {
-  id: string;
-  class_id: string;
-  teacher_id: string;
-  day_of_week: number; // 1=Mon..7=Sun
-  start_time: string; // "HH:MM"
-  end_time: string; // "HH:MM"
-  room?: string | null;
-
-  // display
-  class_name?: string;
-  teacher_name?: string;
-  subject_id?: string | null;
-};
-
-type StudentDashboardFilterDTO = {
-  date_from?: string;
-  date_to?: string;
-  term?: string;
-  class_id?: string;
-};
-
-/* ------------------------------------------------
- * State (admin-like)
- * ------------------------------------------------ */
+/* -----------------------------
+ * State
+ * ---------------------------- */
 
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
-const classes = ref<StudentClassDTO[]>([]);
-const subjects = ref<SubjectDTO[]>([]);
-const grades = ref<GradeDTO[]>([]);
-const schedule = ref<ScheduleDTO[]>([]);
-const attendance = ref<AttendanceDTO[]>([]);
+const myClass = ref<ClassItem | null>(null);
 
-/** Filters (same UX as admin) */
-const filterDateRange = ref<[Date, Date] | null>(null);
-const filterTerm = ref<string | "">("");
-const filterClassId = ref<string | "">("");
+const schedule = ref<ScheduleItem[]>([]);
+const grades = ref<GradeItem[]>([]);
+const attendance = ref<AttendanceItem[]>([]);
 
-const termOptions = [
-  { label: "All terms", value: "" },
-  { label: "Semester 1", value: "S1" },
-  { label: "Semester 2", value: "S2" },
-];
+/* -----------------------------
+ * Helpers
+ * ---------------------------- */
 
-/* ------------------------------------------------
- * Helpers (admin pattern)
- * ------------------------------------------------ */
-
-const extractErrorMessage = (err: unknown, fallback: string): string => {
-  if (err instanceof Error && err.message) return err.message;
-  if (typeof err === "string") return err;
-  // common backend shape
-  // @ts-ignore
-  if (err?.message) return String((err as any).message);
-  return fallback;
+const normalizeStatusCode = (val: unknown): string => {
+  if (val == null) return "";
+  return String(val).toLowerCase();
 };
 
-const formatDateParam = (d: Date): string => d.toISOString().slice(0, 10);
+const dayShort = (day: number) =>
+  (["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][day - 1] as string) ?? "—";
 
-const buildFilterPayload = (): StudentDashboardFilterDTO => {
-  const filters: StudentDashboardFilterDTO = {};
+const timeRange = (row: any) =>
+  `${row.start_time ?? "—"} - ${row.end_time ?? "—"}`;
 
-  if (filterDateRange.value) {
-    const [start, end] = filterDateRange.value;
-    filters.date_from = formatDateParam(start);
-    filters.date_to = formatDateParam(end);
-  }
+const getRecordDate = (row: any) =>
+  row?.record_date ?? row?.date ?? row?.lifecycle?.created_at ?? null;
 
-  if (filterTerm.value) filters.term = filterTerm.value;
-  if (filterClassId.value) filters.class_id = filterClassId.value;
+const getCreatedAt = (row: any) =>
+  row?.lifecycle?.created_at ?? row?.created_at ?? null;
 
-  return filters;
+/* -----------------------------
+ * Loaders (MVP: no filters, assume 1 class)
+ * ---------------------------- */
+
+const loadMyClass = async () => {
+  const res = await student.student.getMyClasses({ showError: true });
+  const items = (res.items ?? []) as ClassItem[];
+
+  // MVP: student has one class; if multiple exist, take the first
+  myClass.value = items[0] ?? null;
 };
 
-const withinDateRange = (iso: string) => {
-  if (!filterDateRange.value) return true;
-  const [start, end] = filterDateRange.value;
-  const t = new Date(iso).getTime();
-  const s = new Date(start).setHours(0, 0, 0, 0);
-  const e = new Date(end).setHours(23, 59, 59, 999);
-  return t >= s && t <= e;
+const loadSchedule = async () => {
+  // If your backend supports class_id filter, keep it to reduce payload.
+  // If not supported, it will be ignored safely.
+  const res = await student.student.getMySchedule(
+    myClass.value?.id ? { class_id: myClass.value.id } : undefined,
+    { showError: true, showSuccess: false }
+  );
+
+  schedule.value = (res.items ?? []) as ScheduleItem[];
 };
 
-/* ------------------------------------------------
- * Demo data (built from your Mongo samples)
- * ------------------------------------------------ */
+const loadGrades = async () => {
+  const res = await student.student.getMyGrades({
+    showError: true,
+    showSuccess: false,
+  });
 
-const loadDemoData = () => {
-  // Subjects (your sample)
-  const subj: SubjectDTO[] = [
-    { id: "69253bac9e97249bcea9ae27", name: "Match", code: "M-002" },
-    { id: "6928ed432292879b7a3a6b95", name: "Science", code: "S-001" },
-    { id: "693b96301213164a63ad5539", name: "Math", code: "M-001" },
-  ];
-
-  // Classes (your sample)
-  const cls: StudentClassDTO[] = [
-    {
-      id: "693d5f09488a6ba4642705d3",
-      name: "Grade 9",
-      teacher_id: "693d5eaf6a58b8b90b4078f5",
-      subject_ids: ["693b96301213164a63ad5539"],
-    },
-    {
-      id: "6928ed5f2292879b7a3a6b96",
-      name: "Grade 10",
-      teacher_id: "69252fd678b90ceeb4b58081",
-      subject_ids: ["6928ed432292879b7a3a6b95"],
-    },
-  ];
-
-  // Schedule (your sample + a couple more)
-  const sch: ScheduleDTO[] = [
-    {
-      id: "692f17d8408e11eb0e23aa87",
-      class_id: "692e77744863b4739c8017d1",
-      teacher_id: "692cf0759c755837d27af7a7",
-      day_of_week: 1,
-      start_time: "08:00",
-      end_time: "09:00",
-      room: "asdf",
-      class_name: "Grade 9",
-      teacher_name: "Mr. Teacher",
-      subject_id: "693b96301213164a63ad5539",
-    },
-    {
-      id: "sch-2",
-      class_id: "693d5f09488a6ba4642705d3",
-      teacher_id: "693d5eaf6a58b8b90b4078f5",
-      day_of_week: 3,
-      start_time: "10:00",
-      end_time: "11:00",
-      room: "A101",
-      class_name: "Grade 9",
-      teacher_name: "Mr. Dara",
-      subject_id: "693b96301213164a63ad5539",
-    },
-  ];
-
-  // Grades (your sample + more points for charts)
-  const grd: GradeDTO[] = [
-    {
-      id: "692998034cdff1a47715b93a",
-      student_id: "69252fa678b90ceeb4b58080",
-      subject_id: "6928ed432292879b7a3a6b95",
-      class_id: "6928ed5f2292879b7a3a6b96",
-      teacher_id: "69252fd678b90ceeb4b58081",
-      term: "S1",
-      type: "exam",
-      score: 13,
-      created_at: "2025-11-28T12:39:31.753Z",
-    },
-    {
-      id: "g-2",
-      student_id: "69252fa678b90ceeb4b58080",
-      subject_id: "693b96301213164a63ad5539",
-      class_id: "693d5f09488a6ba4642705d3",
-      teacher_id: "693d5eaf6a58b8b90b4078f5",
-      term: "S1",
-      type: "quiz",
-      score: 68,
-      created_at: "2025-12-01T08:10:00.000Z",
-    },
-    {
-      id: "g-3",
-      student_id: "69252fa678b90ceeb4b58080",
-      subject_id: "693b96301213164a63ad5539",
-      class_id: "693d5f09488a6ba4642705d3",
-      teacher_id: "693d5eaf6a58b8b90b4078f5",
-      term: "S1",
-      type: "homework",
-      score: 74,
-      created_at: "2025-12-05T09:30:00.000Z",
-    },
-    {
-      id: "g-4",
-      student_id: "69252fa678b90ceeb4b58080",
-      subject_id: "6928ed432292879b7a3a6b95",
-      class_id: "6928ed5f2292879b7a3a6b96",
-      teacher_id: "69252fd678b90ceeb4b58081",
-      term: "S2",
-      type: "quiz",
-      score: 55,
-      created_at: "2025-12-10T09:30:00.000Z",
-    },
-  ];
-
-  // Attendance (your sample + more points)
-  const att: AttendanceDTO[] = [
-    {
-      id: "6927dd579702ccf745db7d2b",
-      student_id: "6925687810b67780c6f740b1",
-      class_id: "69253bc39e97249bcea9ae28",
-      status: "absent",
-      record_date: "2025-11-27T00:00:00.000Z",
-      marked_by_teacher_id: "69252fd678b90ceeb4b58081",
-      created_at: "2025-11-27T05:10:47.973Z",
-    },
-    {
-      id: "a-2",
-      student_id: "6925687810b67780c6f740b1",
-      class_id: "693d5f09488a6ba4642705d3",
-      status: "present",
-      record_date: "2025-12-01T00:00:00.000Z",
-      marked_by_teacher_id: "693d5eaf6a58b8b90b4078f5",
-      created_at: "2025-12-01T05:10:47.973Z",
-    },
-    {
-      id: "a-3",
-      student_id: "6925687810b67780c6f740b1",
-      class_id: "693d5f09488a6ba4642705d3",
-      status: "late",
-      record_date: "2025-12-05T00:00:00.000Z",
-      marked_by_teacher_id: "693d5eaf6a58b8b90b4078f5",
-      created_at: "2025-12-05T05:10:47.973Z",
-    },
-    {
-      id: "a-4",
-      student_id: "6925687810b67780c6f740b1",
-      class_id: "693d5f09488a6ba4642705d3",
-      status: "excused",
-      record_date: "2025-12-10T00:00:00.000Z",
-      marked_by_teacher_id: "693d5eaf6a58b8b90b4078f5",
-      created_at: "2025-12-10T05:10:47.973Z",
-    },
-  ];
-
-  // Attach display labels (join)
-  const classMap = new Map(cls.map((c) => [c.id, c.name]));
-  const subjectMap = new Map(subj.map((s) => [s.id, s.name]));
-
-  const withGradeLabels = grd.map((g) => ({
-    ...g,
-    class_name: g.class_id ? classMap.get(g.class_id) : undefined,
-    subject_label: subjectMap.get(g.subject_id) || g.subject_id,
-  }));
-
-  const withAttendanceLabels = att.map((a) => ({
-    ...a,
-    class_name: classMap.get(a.class_id) || a.class_id,
-    teacher_name: "Teacher", // demo placeholder
-  }));
-
-  subjects.value = subj;
-  classes.value = cls;
-  grades.value = withGradeLabels;
-  schedule.value = sch;
-  attendance.value = withAttendanceLabels;
-
-  // default class filter
-  if (!filterClassId.value && classes.value.length) {
-    filterClassId.value = classes.value[0].id;
-  }
+  grades.value = (res.items ?? []) as GradeItem[];
 };
 
-/* ------------------------------------------------
- * Load dashboard (demo or real)
- * ------------------------------------------------ */
+const loadAttendance = async () => {
+  const res = await student.student.getMyAttendance(
+    myClass.value?.id ? { class_id: myClass.value.id } : undefined,
+    { showError: true, showSuccess: false }
+  );
+
+  attendance.value = (res.items ?? []) as AttendanceItem[];
+};
 
 const loadDashboard = async () => {
   loading.value = true;
   errorMessage.value = null;
 
   try {
-    const filters = buildFilterPayload();
-
-    if (USE_DEMO) {
-      loadDemoData();
-      // apply "selected class" to attendance in UI via computed filtering below
-      return;
-    }
-
-    // If you want the real API later, plug your studentService calls here
-    // const studentApi = studentService();
-    // ...
-    // classes.value = ...
-    // schedule.value = ...
-    // grades.value = ...
-    // attendance.value = ...
-
-    invariant(
-      false,
-      "Student dashboard API is not wired while USE_DEMO=false."
-    );
-  } catch (err) {
+    await loadMyClass();
+    await Promise.all([loadSchedule(), loadGrades(), loadAttendance()]);
+  } catch (err: unknown) {
     reportError(err, "student.dashboard.load", "log");
-    const message = extractErrorMessage(
-      err,
-      "Failed to load student dashboard data."
-    );
-    errorMessage.value = message;
-    ElMessage.error(message);
+    errorMessage.value =
+      err instanceof Error ? err.message : "Failed to load dashboard.";
+    ElMessage.error(errorMessage.value);
   } finally {
     loading.value = false;
   }
 };
 
-onMounted(async () => {
-  await loadDashboard();
-});
+onMounted(loadDashboard);
 
-/* ------------------------------------------------
- * Computed filtering
- * ------------------------------------------------ */
-
-const filteredGrades = computed(() => {
-  let rows = grades.value.slice();
-
-  if (filterTerm.value)
-    rows = rows.filter((g) => (g.term ?? "") === filterTerm.value);
-  if (filterDateRange.value)
-    rows = rows.filter((g) => withinDateRange(g.created_at));
-
-  return rows;
-});
-
-const filteredAttendance = computed(() => {
-  let rows = attendance.value.slice();
-
-  if (filterClassId.value)
-    rows = rows.filter((a) => a.class_id === filterClassId.value);
-  if (filterDateRange.value)
-    rows = rows.filter((a) => withinDateRange(a.record_date));
-
-  return rows;
-});
-
-/* ------------------------------------------------
- * Summary stats
- * ------------------------------------------------ */
-
-const totalClasses = computed(() => classes.value.length);
+/* -----------------------------
+ * Computed: overview stats
+ * ---------------------------- */
 
 const totalSubjects = computed(() => {
-  const set = new Set<string>();
-  for (const c of classes.value)
-    (c.subject_ids ?? []).forEach((sid) => set.add(sid));
-  return set.size;
+  const cls: any = myClass.value;
+  if (!cls) return 0;
+
+  // Prefer subject_ids; fallback to subject_labels
+  const ids = (cls.subject_ids ?? []) as string[];
+  if (ids.length) return new Set(ids).size;
+
+  const labels = (cls.subject_labels ?? []) as string[];
+  return new Set(labels).size;
 });
 
 const averageScore = computed(() => {
-  if (!filteredGrades.value.length) return null;
-  const total = filteredGrades.value.reduce(
-    (sum, g) => sum + (g.score ?? 0),
-    0
-  );
-  return total / filteredGrades.value.length;
+  const rows = grades.value as any[];
+  if (!rows.length) return null;
+  const total = rows.reduce((sum, g) => sum + Number(g.score ?? 0), 0);
+  return total / rows.length;
 });
 
-// today schedule (1..7)
+const statusSummary = computed(() => {
+  const summary = {
+    total: attendance.value.length,
+    present: 0,
+    absent: 0,
+    excused: 0,
+    late: 0,
+  };
+
+  for (const rec of attendance.value as any[]) {
+    const s = normalizeStatusCode(rec.status);
+    if (s === "present") summary.present++;
+    else if (s === "absent") summary.absent++;
+    else if (s === "excused") summary.excused++;
+    else if (s === "late") summary.late++;
+  }
+
+  return summary;
+});
+
+const presentRate = computed(() => {
+  if (!statusSummary.value.total) return null;
+  return (
+    Math.round(
+      (statusSummary.value.present / statusSummary.value.total) * 1000
+    ) / 10
+  );
+});
+
+// Today schedule (1..7)
 const todayDayOfWeek = computed(() => {
   const jsDay = new Date().getDay(); // 0=Sun..6=Sat
   return jsDay === 0 ? 7 : jsDay;
 });
-const todaySchedule = computed(() =>
-  schedule.value.filter((s) => s.day_of_week === todayDayOfWeek.value)
-);
 
-const recentGrades = computed(() =>
-  filteredGrades.value
-    .slice()
+const todaySchedule = computed(() => {
+  const rows = (schedule.value as any[]).filter(
+    (s) => Number(s.day_of_week) === todayDayOfWeek.value
+  );
+
+  // Sort by start_time
+  return rows.sort((a, b) =>
+    String(a.start_time ?? "").localeCompare(String(b.start_time ?? ""))
+  );
+});
+
+const recentGrades = computed(() => {
+  const rows = (grades.value as any[]).slice();
+
+  return rows
     .sort(
       (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        new Date(getCreatedAt(b) ?? 0).getTime() -
+        new Date(getCreatedAt(a) ?? 0).getTime()
     )
-    .slice(0, 5)
-);
+    .slice(0, 6);
+});
 
-const recentAttendance = computed(() =>
-  filteredAttendance.value
-    .slice()
+const recentAttendance = computed(() => {
+  const rows = (attendance.value as any[]).slice();
+
+  return rows
     .sort(
       (a, b) =>
-        new Date(b.record_date).getTime() - new Date(a.record_date).getTime()
+        new Date(getRecordDate(b) ?? 0).getTime() -
+        new Date(getRecordDate(a) ?? 0).getTime()
     )
-    .slice(0, 8)
-);
+    .slice(0, 8);
+});
 
-/* ------------------------------------------------
- * Visualizations (ECharts options, same pattern as admin)
- * ------------------------------------------------ */
+/* -----------------------------
+ * Chart options (ECharts)
+ * - assumes <VChart> is available in your project
+ * ---------------------------- */
 
-// Attendance summary donut
 const attendanceStatusOption = computed(() => {
-  const rows = filteredAttendance.value;
+  const rows = attendance.value as any[];
+
   if (!rows.length) {
     return {
       title: { text: "No attendance data", left: "center", top: "center" },
@@ -457,9 +246,12 @@ const attendanceStatusOption = computed(() => {
   }
 
   const counts = new Map<string, number>();
-  for (const r of rows) counts.set(r.status, (counts.get(r.status) ?? 0) + 1);
+  for (const r of rows) {
+    const k = normalizeStatusCode(r.status) || "unknown";
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
 
-  const seriesData = Array.from(counts.entries()).map(([name, value]) => ({
+  const data = Array.from(counts.entries()).map(([name, value]) => ({
     name,
     value,
   }));
@@ -473,28 +265,28 @@ const attendanceStatusOption = computed(() => {
         type: "pie",
         radius: ["40%", "70%"],
         avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 6, borderColor: "#fff", borderWidth: 1 },
-        data: seriesData,
+        itemStyle: { borderRadius: 8, borderWidth: 1 },
+        data,
       },
     ],
   };
 });
 
-// Score trend line (by grade created_at)
 const scoreTrendOption = computed(() => {
-  const rows = filteredGrades.value
+  const rows = (grades.value as any[])
     .slice()
     .sort(
       (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        new Date(getCreatedAt(a) ?? 0).getTime() -
+        new Date(getCreatedAt(b) ?? 0).getTime()
     );
 
   if (!rows.length) {
     return { title: { text: "No grade data", left: "center", top: "center" } };
   }
 
-  const x = rows.map((r) => formatDate(r.created_at));
-  const y = rows.map((r) => r.score);
+  const x = rows.map((r) => formatDate(getCreatedAt(r)));
+  const y = rows.map((r) => Number(r.score ?? 0));
 
   return {
     tooltip: { trigger: "axis" },
@@ -505,9 +297,8 @@ const scoreTrendOption = computed(() => {
   };
 });
 
-// Avg score by subject (bar)
 const avgBySubjectOption = computed(() => {
-  const rows = filteredGrades.value;
+  const rows = grades.value as any[];
   if (!rows.length) {
     return { title: { text: "No grade data", left: "center", top: "center" } };
   }
@@ -516,18 +307,19 @@ const avgBySubjectOption = computed(() => {
     string,
     { label: string; total: number; count: number; avg: number }
   >();
+
   for (const g of rows) {
-    const label = g.subject_label || g.subject_id;
+    const label = g.subject_label ?? g.subject_id ?? "Unknown";
     const cur = map.get(label) || { label, total: 0, count: 0, avg: 0 };
-    cur.total += g.score ?? 0;
+    cur.total += Number(g.score ?? 0);
     cur.count += 1;
     cur.avg = cur.total / cur.count;
     map.set(label, cur);
   }
 
-  const seriesRows = Array.from(map.values()).sort((a, b) => b.avg - a.avg);
-  const labels = seriesRows.map((r) => r.label);
-  const values = seriesRows.map((r) => Number(r.avg.toFixed(1)));
+  const list = Array.from(map.values()).sort((a, b) => b.avg - a.avg);
+  const labels = list.map((x) => x.label);
+  const values = list.map((x) => Number(x.avg.toFixed(1)));
 
   return {
     tooltip: { trigger: "axis" },
@@ -541,154 +333,47 @@ const avgBySubjectOption = computed(() => {
         fontSize: 11,
       },
     },
-    yAxis: { type: "value", name: "Avg score", min: 0, max: 100 },
-    series: [
-      {
-        name: "Average",
-        type: "bar",
-        data: values,
-        barWidth: "60%",
-        itemStyle: { borderRadius: [6, 6, 0, 0] },
-      },
-    ],
+    yAxis: { type: "value", name: "Avg", min: 0, max: 100 },
+    series: [{ name: "Average", type: "bar", data: values, barWidth: "60%" }],
   };
 });
 
-/* ------------------------------------------------
- * COO-style score insights (right card)
- * ------------------------------------------------ */
+/* -----------------------------
+ * Header pill text (MVP)
+ * ---------------------------- */
 
-const lastNGrades = computed(() =>
-  filteredGrades.value
-    .slice()
-    .sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-    .slice(0, 10)
-);
-
-const lastNAvg = computed(() => {
-  if (!lastNGrades.value.length) return null;
-  const total = lastNGrades.value.reduce((sum, g) => sum + (g.score ?? 0), 0);
-  return total / lastNGrades.value.length;
+const headerPill = computed(() => {
+  const cls = myClass.value?.name ?? "My class";
+  const avg =
+    averageScore.value == null ? "N/A" : averageScore.value.toFixed(1);
+  const pr = presentRate.value == null ? "N/A" : `${presentRate.value}%`;
+  return `${cls} • Avg: ${avg} • Present: ${pr}`;
 });
 
-const scoreTrendMeta = computed(() => {
-  if (averageScore.value === null || lastNAvg.value === null) return null;
-  const diff = lastNAvg.value - averageScore.value;
-  return { diff, direction: diff > 1 ? "up" : diff < -1 ? "down" : "flat" };
-});
+/* -----------------------------
+ * Actions
+ * ---------------------------- */
 
-const riskFlag = computed(() => {
-  if (averageScore.value === null) return null;
-  if (averageScore.value < 50)
-    return { level: "high" as const, label: "High risk" };
-  if (averageScore.value < 65)
-    return { level: "medium" as const, label: "Medium risk" };
-  return { level: "low" as const, label: "Low risk" };
-});
-
-/* ------------------------------------------------
- * Active filter label (admin pattern)
- * ------------------------------------------------ */
-
-const activeFilterLabel = computed(() => {
-  const parts: string[] = [];
-
-  if (filterDateRange.value) {
-    const [start, end] = filterDateRange.value;
-    parts.push(
-      `Date: ${formatDate(start.toISOString())} → ${formatDate(
-        end.toISOString()
-      )}`
-    );
-  }
-
-  if (filterTerm.value) {
-    const termLabel =
-      termOptions.find((t) => t.value === filterTerm.value)?.label ||
-      `Term: ${filterTerm.value}`;
-    parts.push(termLabel);
-  }
-
-  if (filterClassId.value) {
-    const classLabel =
-      classes.value.find((c) => c.id === filterClassId.value)?.name || "Class";
-    parts.push(`Class: ${classLabel}`);
-  }
-
-  if (!parts.length) return "Showing all available data";
-  return parts.join(" • ");
-});
+const handleRefresh = async () => {
+  await loadDashboard();
+};
 </script>
 
 <template>
   <div class="p-4 space-y-4">
     <OverviewHeader
       title="Student Dashboard"
-      description="Your performance and attendance overview."
+      description="Quick overview of your class, schedule, grades, and attendance."
       :loading="loading"
-      :showRefresh="false"
+      :showRefresh="true"
+      @refresh="handleRefresh"
     >
       <template #icon>
         <span
           class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-[var(--color-primary-light-6)] text-[color:var(--color-primary)] border border-[color:var(--color-primary-light-4)]"
         >
-          {{ activeFilterLabel }}
+          {{ headerPill }}
         </span>
-      </template>
-
-      <template #actions>
-        <div class="flex flex-wrap items-center gap-2">
-          <el-date-picker
-            v-model="filterDateRange"
-            type="daterange"
-            size="small"
-            range-separator="→"
-            start-placeholder="From"
-            end-placeholder="To"
-            format="YYYY-MM-DD"
-          />
-
-          <el-select
-            v-model="filterTerm"
-            placeholder="Term"
-            size="small"
-            style="min-width: 140px"
-          >
-            <el-option
-              v-for="t in termOptions"
-              :key="t.value || 'all'"
-              :label="t.label"
-              :value="t.value"
-            />
-          </el-select>
-
-          <el-select
-            v-model="filterClassId"
-            placeholder="Class"
-            size="small"
-            style="min-width: 170px"
-            clearable
-          >
-            <el-option
-              v-for="c in classes"
-              :key="c.id"
-              :label="c.name"
-              :value="c.id"
-            />
-          </el-select>
-
-          <BaseButton
-            plain
-            :loading="loading"
-            class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
-            @click="loadDashboard"
-          >
-            Apply filters
-          </BaseButton>
-        </div>
       </template>
     </OverviewHeader>
 
@@ -697,21 +382,28 @@ const activeFilterLabel = computed(() => {
       :title="errorMessage"
       type="error"
       show-icon
-      class="mb-2"
+      class="rounded-xl"
     />
 
     <!-- Overview cards -->
     <el-row :gutter="16">
       <el-col :xs="12" :sm="6">
         <el-card shadow="hover">
-          <div class="text-xs text-gray-500 mb-1">Enrolled Classes</div>
-          <div class="text-2xl font-semibold">{{ totalClasses }}</div>
+          <div class="text-xs text-gray-500 mb-1">My Class</div>
+          <div class="text-base font-semibold truncate">
+            {{ myClass?.name ?? "—" }}
+          </div>
+          <div class="text-[10px] text-gray-400 mt-1">
+            {{
+              myClass?.teacher_name ? `Teacher: ${myClass.teacher_name}` : " "
+            }}
+          </div>
         </el-card>
       </el-col>
 
       <el-col :xs="12" :sm="6">
         <el-card shadow="hover">
-          <div class="text-xs text-gray-500 mb-1">Total Subjects</div>
+          <div class="text-xs text-gray-500 mb-1">Subjects</div>
           <div class="text-2xl font-semibold">{{ totalSubjects }}</div>
         </el-card>
       </el-col>
@@ -730,48 +422,62 @@ const activeFilterLabel = computed(() => {
 
       <el-col :xs="12" :sm="6">
         <el-card shadow="hover">
-          <div class="text-xs text-gray-500 mb-1">Attendance Records</div>
+          <div class="text-xs text-gray-500 mb-1">Present Rate</div>
           <div class="text-2xl font-semibold">
-            {{ filteredAttendance.length }}
+            <span v-if="presentRate !== null">{{ presentRate }}%</span>
+            <span v-else class="text-gray-400">N/A</span>
           </div>
-          <div class="text-[10px] text-gray-400 mt-1">For selected filters</div>
+          <div class="text-[10px] text-gray-400 mt-1">
+            {{ statusSummary.present }} present •
+            {{ statusSummary.absent }} absent •
+            {{ statusSummary.excused }} excused • {{ statusSummary.late }} late
+          </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- Row: Left (tables) | Right (insights + charts) -->
+    <!-- Main grid -->
     <el-row :gutter="16">
       <!-- LEFT -->
       <el-col :xs="24" :md="14">
         <el-card shadow="hover" class="mb-4" v-loading="loading">
-          <div class="font-semibold mb-2">Today&apos;s Schedule</div>
+          <div class="font-semibold mb-2">Today’s Schedule</div>
+
           <el-table
             :data="todaySchedule"
             size="small"
             border
             style="width: 100%"
           >
-            <el-table-column
-              prop="class_name"
-              label="Class"
-              min-width="140"
-              show-overflow-tooltip
-            />
-            <el-table-column
-              prop="teacher_name"
-              label="Teacher"
-              min-width="120"
-              show-overflow-tooltip
-            />
-            <el-table-column label="Time" min-width="110">
-              <template #default="{ row }"
-                >{{ row.start_time }} - {{ row.end_time }}</template
-              >
+            <el-table-column label="Day" width="90" align="center">
+              <template #default="{ row }">{{
+                dayShort(Number(row.day_of_week))
+              }}</template>
             </el-table-column>
+
+            <el-table-column
+              prop="subject_label"
+              label="Subject"
+              min-width="180"
+              show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                <span class="text-gray-800">{{
+                  row.subject_label ?? "—"
+                }}</span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="Time" min-width="130">
+              <template #default="{ row }">
+                <span class="font-mono text-xs">{{ timeRange(row) }}</span>
+              </template>
+            </el-table-column>
+
             <el-table-column
               prop="room"
               label="Room"
-              min-width="90"
+              min-width="110"
               show-overflow-tooltip
             />
             <template #empty>
@@ -784,6 +490,7 @@ const activeFilterLabel = computed(() => {
 
         <el-card shadow="hover" class="mb-4" v-loading="loading">
           <div class="font-semibold mb-2">Recent Grades</div>
+
           <el-table
             :data="recentGrades"
             size="small"
@@ -793,31 +500,46 @@ const activeFilterLabel = computed(() => {
             <el-table-column
               prop="subject_label"
               label="Subject"
-              min-width="160"
-              show-overflow-tooltip
-            />
-            <el-table-column
-              prop="class_name"
-              label="Class"
-              min-width="140"
-              show-overflow-tooltip
-            />
-            <el-table-column prop="score" label="Score" width="90" />
-            <el-table-column prop="type" label="Type" width="100" />
-            <el-table-column prop="term" label="Term" width="80" />
-            <el-table-column
-              prop="created_at"
-              label="Recorded At"
-              min-width="170"
+              min-width="190"
               show-overflow-tooltip
             >
-              <template #default="{ row }">{{
-                formatDate(row.created_at)
-              }}</template>
+              <template #default="{ row }">
+                {{ row.subject_label ?? row.subject_id ?? "—" }}
+              </template>
             </el-table-column>
+
+            <el-table-column
+              prop="score"
+              label="Score"
+              width="90"
+              align="center"
+            />
+            <el-table-column
+              prop="type"
+              label="Type"
+              width="110"
+              align="center"
+            />
+            <el-table-column
+              prop="term"
+              label="Term"
+              width="90"
+              align="center"
+            />
+
+            <el-table-column
+              label="Recorded At"
+              min-width="180"
+              show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                {{ formatDate(getCreatedAt(row)) }}
+              </template>
+            </el-table-column>
+
             <template #empty>
               <div class="text-center text-gray-500 text-xs py-3">
-                No grade data for current filters.
+                No grade records yet.
               </div>
             </template>
           </el-table>
@@ -825,32 +547,35 @@ const activeFilterLabel = computed(() => {
 
         <el-card shadow="hover" v-loading="loading">
           <div class="font-semibold mb-2">Recent Attendance</div>
+
           <el-table
             :data="recentAttendance"
             size="small"
             border
             style="width: 100%"
           >
-            <el-table-column prop="record_date" label="Date" min-width="130">
-              <template #default="{ row }">{{
-                formatDate(row.record_date)
-              }}</template>
+            <el-table-column label="Date" min-width="140">
+              <template #default="{ row }">
+                {{ formatDate(getRecordDate(row)) }}
+              </template>
             </el-table-column>
+
             <el-table-column
-              prop="class_name"
-              label="Class"
-              min-width="140"
-              show-overflow-tooltip
-            />
-            <el-table-column prop="status" label="Status" width="110">
+              prop="status"
+              label="Status"
+              width="120"
+              align="center"
+            >
               <template #default="{ row }">
                 <el-tag
                   size="small"
                   :type="
-                    row.status === 'present'
+                    normalizeStatusCode(row.status) === 'present'
                       ? 'success'
-                      : row.status === 'excused'
+                      : normalizeStatusCode(row.status) === 'excused'
                       ? 'warning'
+                      : normalizeStatusCode(row.status) === 'late'
+                      ? 'info'
                       : 'danger'
                   "
                 >
@@ -858,19 +583,27 @@ const activeFilterLabel = computed(() => {
                 </el-tag>
               </template>
             </el-table-column>
+
             <el-table-column
-              prop="created_at"
-              label="Recorded At"
+              prop="teacher_name"
+              label="Marked By"
               min-width="170"
+              show-overflow-tooltip
+            />
+
+            <el-table-column
+              label="Recorded At"
+              min-width="180"
+              show-overflow-tooltip
             >
-              <template #default="{ row }">{{
-                formatDate(row.created_at)
-              }}</template>
+              <template #default="{ row }">
+                {{ formatDate(row?.lifecycle?.created_at) }}
+              </template>
             </el-table-column>
 
             <template #empty>
               <div class="text-center text-gray-500 text-xs py-3">
-                No attendance data for current filters.
+                No attendance records yet.
               </div>
             </template>
           </el-table>
@@ -879,72 +612,6 @@ const activeFilterLabel = computed(() => {
 
       <!-- RIGHT -->
       <el-col :xs="24" :md="10">
-        <el-card shadow="hover" class="mb-4" v-loading="loading">
-          <div class="font-semibold mb-1">Score Insights</div>
-          <div class="text-xs text-gray-500 mb-3">
-            Overall score, recent trend, and risk indicator.
-          </div>
-
-          <div class="grid grid-cols-2 gap-3 mb-3">
-            <div class="p-3 rounded border">
-              <div class="text-xs text-gray-500">Overall Avg</div>
-              <div class="text-xl font-semibold">
-                <span v-if="averageScore !== null">{{
-                  averageScore.toFixed(1)
-                }}</span>
-                <span v-else class="text-gray-400">N/A</span>
-              </div>
-            </div>
-
-            <div class="p-3 rounded border">
-              <div class="text-xs text-gray-500">Last 10 Avg</div>
-              <div class="text-xl font-semibold">
-                <span v-if="lastNAvg !== null">{{ lastNAvg.toFixed(1) }}</span>
-                <span v-else class="text-gray-400">N/A</span>
-              </div>
-
-              <div v-if="scoreTrendMeta" class="text-[11px] mt-1">
-                <el-tag
-                  size="small"
-                  :type="
-                    scoreTrendMeta.direction === 'up'
-                      ? 'success'
-                      : scoreTrendMeta.direction === 'down'
-                      ? 'danger'
-                      : 'info'
-                  "
-                >
-                  {{
-                    scoreTrendMeta.direction === "up"
-                      ? `Up (+${scoreTrendMeta.diff.toFixed(1)})`
-                      : scoreTrendMeta.direction === "down"
-                      ? `Down (${scoreTrendMeta.diff.toFixed(1)})`
-                      : "Flat"
-                  }}
-                </el-tag>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-3 rounded border">
-            <div class="text-xs text-gray-500 mb-1">Performance Risk</div>
-            <el-tag
-              v-if="riskFlag"
-              size="small"
-              :type="
-                riskFlag.level === 'high'
-                  ? 'danger'
-                  : riskFlag.level === 'medium'
-                  ? 'warning'
-                  : 'success'
-              "
-            >
-              {{ riskFlag.label }}
-            </el-tag>
-            <span v-else class="text-gray-400 text-sm">N/A</span>
-          </div>
-        </el-card>
-
         <el-card shadow="hover" class="mb-4" v-loading="loading">
           <div class="font-semibold mb-2">Attendance Status Summary</div>
           <ClientOnly>

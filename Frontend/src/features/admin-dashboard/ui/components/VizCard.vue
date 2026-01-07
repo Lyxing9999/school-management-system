@@ -1,13 +1,21 @@
 <script setup lang="ts">
-const props = defineProps<{
-  title: string;
-  loading?: boolean;
-  height?: number;
-  optionExists?: boolean; // pass !!option
-  emptyText?: string;
-}>();
+import type { EChartsOption } from "echarts";
 
-const h = props.height ?? 260;
+const props = withDefaults(
+  defineProps<{
+    title: string;
+    loading?: boolean;
+    height?: number;
+    option?: EChartsOption | null;
+    emptyText?: string;
+  }>(),
+  {
+    loading: false,
+    height: 260,
+    option: null,
+    emptyText: "No data available.",
+  }
+);
 </script>
 
 <template>
@@ -19,23 +27,25 @@ const h = props.height ?? 260;
       </div>
     </template>
 
+    <!-- Empty state -->
     <div
-      v-if="optionExists === false"
+      v-if="!option"
       class="flex items-center justify-center text-xs text-gray-500"
-      :style="{ height: `${h}px` }"
+      :style="{ height: `${height}px` }"
     >
-      {{ emptyText ?? "No data available." }}
+      {{ loading ? "Loading..." : emptyText }}
     </div>
 
+    <!-- Chart (client-only) -->
     <ClientOnly v-else>
-      <div class="w-full" :style="{ height: `${h}px` }">
-        <slot />
+      <div class="w-full" :style="{ height: `${height}px` }">
+        <VChart :option="option" autoresize class="w-full h-full" />
       </div>
 
       <template #fallback>
         <div
           class="flex items-center justify-center text-xs text-gray-500"
-          :style="{ height: `${h}px` }"
+          :style="{ height: `${height}px` }"
         >
           Loading chart...
         </div>

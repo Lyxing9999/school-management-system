@@ -133,6 +133,7 @@ export const staffFormSchema: Field<AdminCreateStaff>[] = [
         componentProps: {
           placeholder: "Select role",
           suffixIcon: Briefcase,
+          disabled: true,
         },
         childComponent: ElOption,
         childComponentProps: {
@@ -245,9 +246,11 @@ export const staffFormSchemaEdit: Field<AdminUpdateStaff>[] = [
         key: "role",
         label: "Role",
         component: ElSelect,
+
         componentProps: {
           placeholder: "Select role",
           suffixIcon: Briefcase,
+          disabled: true,
         },
         childComponent: ElOption,
         childComponentProps: {

@@ -35,6 +35,13 @@ export interface AdminUpdateUser {
 export interface AdminUpdateUserStatus {
   status: Status;
 }
-
+export interface AdminPasswordResetResponse {
+  message: string;
+  // MVP/dev only (if backend returns token). Remove later.
+  token?: string;
+}
 export type AdminGetUserResponse = AdminApiResponse<AdminGetUserData>;
 export type AdminGetPageUserResponse = AdminApiResponse<AdminGetPageUserData>;
+
+export type AdminPasswordResetApiResponse =
+  AdminApiResponse<AdminPasswordResetResponse>;

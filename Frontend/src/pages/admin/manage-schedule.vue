@@ -1,215 +1,203 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, watch, nextTick, onMounted } from "vue";
+import { storeToRefs } from "pinia";
 
-definePageMeta({ layout: "admin" });
+definePageMeta({ layout: "default" });
 
-/* ------------------------------------
- * Base components
- * ---------------------------------- */
-import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
-import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
-import BaseButton from "~/components/Base/BaseButton.vue";
-import ActionButtons from "~/components/Button/ActionButtons.vue";
-import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
-import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
+/* Base components */
+import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
+import SmartFormDialog from "~/components/form/SmartFormDialog.vue";
+import BaseButton from "~/components/base/BaseButton.vue";
+import ActionButtons from "~/components/buttons/ActionButtons.vue";
+import TeacherSelect from "~/components/selects/teacher/TeacherSelect.vue";
+import ClassSelect from "~/components/selects/class/ClassSelect.vue";
+import OverviewHeader from "~/components/overview/OverviewHeader.vue";
+import TableCard from "~/components/cards/TableCard.vue";
 
-/* ------------------------------------
- * Element Plus
- * ---------------------------------- */
+/* Element Plus */
 import {
-  ElOption,
-  ElSelect,
   ElRadioGroup,
   ElRadioButton,
   ElEmpty,
   ElSkeleton,
   ElMessageBox,
+  ElTag,
 } from "element-plus";
 
-/* ------------------------------------
- * Services & types
- * ---------------------------------- */
+/* Services & types */
 import { adminService } from "~/api/admin";
 import type { AdminScheduleSlotData } from "~/api/admin/schedule/schedule.dto";
-import type {
-  AdminClassDataDTO,
-  AdminClassListDTO,
-} from "~/api/admin/class/class.dto";
 
-/* ------------------------------------
- * Helpers / columns / forms
- * ---------------------------------- */
+/* Helpers */
 import { useLabelMap } from "~/composables/common/useLabelMap";
 import { createScheduleColumns } from "~/modules/tables/columns/admin/scheduleColumns";
-import { reportError } from "~/utils/errors";
+import { reportError } from "~/utils/errors/errors";
+
+/* Dynamic forms */
 import {
   useDynamicCreateFormReactive,
   useDynamicEditFormReactive,
 } from "~/form-system/useDynamicForm.ts/useAdminForms";
-import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
-import { useHeaderState } from "~/composables/useHeaderState";
+
+/* Pagination + header stats */
+import { usePaginatedFetch } from "~/composables/data/usePaginatedFetch";
+import { useHeaderState } from "~/composables/ui/useHeaderState";
+
+/* Preferences store (page size) */
+import { usePreferencesStore } from "~/stores/preferencesStore";
 
 const adminApi = adminService();
 
-/* ---------------------- mode ---------------------- */
-const viewMode = ref<"class" | "teacher">("class");
+/* ---------------------- store ---------------------- */
+const prefs = usePreferencesStore();
+const { tablePageSize } = storeToRefs(prefs);
 
-/* ---------------------- selection state ---------------------- */
-const selectedClassId = ref<string>("");
-const selectedTeacherId = ref<string>("");
+/* ---------------------- types ---------------------- */
+type ViewMode = "class" | "teacher";
+type ActiveFilter =
+  | { mode: "class"; classId: string }
+  | { mode: "teacher"; teacherId: string };
+type ScheduleFilter = ActiveFilter | null;
 
-/* ---------------------- pagination filter model ---------------------- */
-type ScheduleFilter = {
-  mode: "class" | "teacher";
-  classId?: string;
-  teacherId?: string;
-};
+/* ---------------------- mode + selection ---------------------- */
+const viewMode = ref<ViewMode>("class");
+const selectedClassId = ref<string | null>(null);
+const selectedTeacherId = ref<string | null>(null);
 
-const scheduleFilter = ref<ScheduleFilter>({
-  mode: "class",
-  classId: "",
-  teacherId: "",
+const activeFilter = computed<ActiveFilter | null>(() => {
+  if (viewMode.value === "class" && selectedClassId.value) {
+    return { mode: "class", classId: selectedClassId.value };
+  }
+  if (viewMode.value === "teacher" && selectedTeacherId.value) {
+    return { mode: "teacher", teacherId: selectedTeacherId.value };
+  }
+  return null;
 });
 
-// keep filter in sync with viewMode + selected IDs
-watch(
-  [viewMode, selectedClassId, selectedTeacherId],
-  ([mode, classId, teacherId]) => {
-    scheduleFilter.value = {
-      mode,
-      classId: classId || undefined,
-      teacherId: teacherId || undefined,
-    };
-  },
-  { immediate: true }
-);
+const hasSelectedFilter = computed(() => activeFilter.value !== null);
 
-/* ---------------------- paginated fetch ---------------------- */
-const {
-  data: slots,
-  loading: tableLoading,
-  error: tableError,
-  currentPage,
-  pageSize,
-  totalRows,
-  fetchPage,
-  goPage,
-} = usePaginatedFetch<AdminScheduleSlotData, ScheduleFilter>(
-  async (filter, page, pageSize, _signal) => {
-    // no selection -> no fetch
-    if (
-      !filter ||
-      (filter.mode === "class" && !filter.classId) ||
-      (filter.mode === "teacher" && !filter.teacherId)
-    ) {
-      return { items: [], total: 0 };
-    }
-
-    if (filter.mode === "class") {
-      const res = await adminApi.scheduleSlot.getClassSchedule(
-        filter.classId as string
-      );
-      const allSlots = res?.items ?? [];
-      const total = allSlots.length;
-      const start = (page - 1) * pageSize;
-      const items = allSlots.slice(start, start + pageSize);
-      return { items, total };
-    } else {
-      const res = await adminApi.scheduleSlot.getTeacherSchedule(
-        filter.teacherId as string
-      );
-      const allSlots = res?.items ?? [];
-      const total = allSlots.length;
-      const start = (page - 1) * pageSize;
-      const items = allSlots.slice(start, start + pageSize);
-      return { items, total };
-    }
-  },
-  1,
-  10,
-  scheduleFilter
-);
-
-const filteredSlots = computed(() => slots.value);
-
-/* ---------------------- filters / visibility ---------------------- */
-const hasSelectedFilter = computed(
-  () =>
-    (scheduleFilter.value.mode === "class" && !!scheduleFilter.value.classId) ||
-    (scheduleFilter.value.mode === "teacher" &&
-      !!scheduleFilter.value.teacherId)
-);
-
-const showTable = computed(
-  () =>
-    hasSelectedFilter.value &&
-    !tableLoading.value &&
-    filteredSlots.value.length > 0
-);
-
-const showEmptyState = computed(
-  () =>
-    hasSelectedFilter.value &&
-    !tableLoading.value &&
-    filteredSlots.value.length === 0
-);
-
-const showInitialEmptyState = computed(
-  () => !hasSelectedFilter.value && !tableLoading.value
-);
-
-/* ---------------------- dropdown options ---------------------- */
-const classOptions = ref<{ value: string; label: string }[]>([]);
+/* ---------------------- teacher label map (for columns) ---------------------- */
 const teacherOptions = ref<{ value: string; label: string }[]>([]);
-const optionsLoading = ref({ classes: false, teachers: false });
-
+const optionsLoading = ref({ teachers: false });
 const teacherLabelMap = useLabelMap(teacherOptions);
 
-async function fetchClassOptions() {
-  optionsLoading.value.classes = true;
-  try {
-    const res: AdminClassListDTO | undefined =
-      await adminApi.class.getClasses();
-    const items: AdminClassDataDTO[] = res?.items ?? [];
-
-    classOptions.value = items.map((c) => ({
-      value: c.id,
-      label: c.name,
-    }));
-
-    if (!selectedClassId.value && classOptions.value.length > 0) {
-      selectedClassId.value = classOptions.value[0].value;
-    }
-  } finally {
-    optionsLoading.value.classes = false;
-  }
-}
-
 async function fetchTeacherOptions() {
+  if (optionsLoading.value.teachers) return;
   optionsLoading.value.teachers = true;
+
   try {
     const res: any = await adminApi.staff.listTeacherSelect();
     const items = res?.items ?? [];
-
     teacherOptions.value = items
       .filter((s: any) => s.role === "teacher" || s.role === "academic")
       .map((t: any) => ({
-        value: t.id,
-        label: t.full_name ?? `${t.first_name} ${t.last_name ?? ""}`,
+        value: String(t.id),
+        label:
+          t.full_name ?? `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim(),
       }));
-
-    if (!selectedTeacherId.value && teacherOptions.value.length > 0) {
-      selectedTeacherId.value = teacherOptions.value[0].value;
-    }
+  } catch (err: unknown) {
+    reportError(err, "schedule.fetchTeacherOptions", "log");
   } finally {
     optionsLoading.value.teachers = false;
   }
 }
 
 /* ---------------------- columns ---------------------- */
-const scheduleColumns = createScheduleColumns(teacherLabelMap);
+const scheduleColumns = computed(() => createScheduleColumns(teacherLabelMap));
 
-/* ---------------------- dynamic create form ---------------------- */
+/* ---------------------- paginated fetch ---------------------- */
+const {
+  data: slots,
+  error: tableError,
+  currentPage,
+  pageSize,
+  totalRows,
+  initialLoading,
+  fetching,
+  fetchPage,
+  goPage,
+} = usePaginatedFetch<AdminScheduleSlotData, ScheduleFilter>(
+  async (filter, page, size, _signal) => {
+    if (!filter) return { items: [], total: 0 };
+
+    const params = { page, page_size: size };
+
+    if (filter.mode === "class") {
+      const res = await adminApi.scheduleSlot.getClassSchedule(
+        filter.classId,
+        params
+      );
+      return { items: res.items ?? [], total: res.total ?? 0 };
+    }
+
+    const res = await adminApi.scheduleSlot.getTeacherSchedule(
+      filter.teacherId,
+      params
+    );
+    return { items: res.items ?? [], total: res.total ?? 0 };
+  },
+  {
+    initialPage: 1,
+    pageSizeRef: tablePageSize,
+    filter: activeFilter,
+  }
+);
+
+const tableLoading = computed(() => initialLoading.value || fetching.value);
+
+/* ---------------------- derived UI states ---------------------- */
+const showTable = computed(
+  () => hasSelectedFilter.value && !tableLoading.value && slots.value.length > 0
+);
+const showEmptyState = computed(
+  () =>
+    hasSelectedFilter.value && !tableLoading.value && slots.value.length === 0
+);
+const showInitialEmptyState = computed(
+  () => !hasSelectedFilter.value && !tableLoading.value
+);
+
+async function fetchSchedule(page = currentPage.value || 1) {
+  if (!activeFilter.value) return;
+  await fetchPage(page);
+}
+
+/* ---------------------- mode / selection reactions ---------------------- */
+watch(
+  viewMode,
+  async (mode) => {
+    if (mode === "class") selectedTeacherId.value = null;
+    else selectedClassId.value = null;
+
+    if (mode === "teacher" && teacherOptions.value.length === 0) {
+      await fetchTeacherOptions();
+    }
+
+    if (activeFilter.value) {
+      await fetchPage(1);
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  activeFilter,
+  async (next, prev) => {
+    const prevKey = prev
+      ? `${prev.mode}:${"classId" in prev ? prev.classId : prev.teacherId}`
+      : null;
+    const nextKey = next
+      ? `${next.mode}:${"classId" in next ? next.classId : next.teacherId}`
+      : null;
+
+    if (prevKey !== nextKey && next) {
+      await fetchPage(1);
+    }
+  },
+  { immediate: true }
+);
+
+/* ---------------------- create slot ---------------------- */
 type CreateMode = "SCHEDULE_SLOT";
 const formEntity = ref<CreateMode>("SCHEDULE_SLOT");
 
@@ -227,35 +215,28 @@ const {
 const createDialogKey = ref(0);
 
 const handleOpenCreateForm = async () => {
-  if (!hasSelectedFilter.value) return;
+  if (!activeFilter.value) return;
 
   createDialogKey.value++;
 
-  if (viewMode.value === "class") {
-    await openCreateForm({
-      class_id: selectedClassId.value,
-    });
-  } else {
-    await openCreateForm({
-      teacher_id: selectedTeacherId.value,
-    });
-  }
+  const payload =
+    activeFilter.value.mode === "class"
+      ? { class_id: activeFilter.value.classId, __lock_class_id: true }
+      : { teacher_id: activeFilter.value.teacherId, __lock_teacher_id: true };
+
+  await openCreateForm(payload);
 };
 
-watch(formEntity, () => {
-  resetCreateFormData();
-});
+watch(formEntity, () => resetCreateFormData());
 
 const handleSaveCreateForm = async (payload: Partial<any>) => {
   await saveCreateForm(payload);
-  await fetchSchedule(1);
+  await fetchPage(1);
 };
 
-const handleCancelCreateForm = () => {
-  cancelCreateForm();
-};
+const handleCancelCreateForm = () => cancelCreateForm();
 
-/* ---------------------- dynamic edit form ---------------------- */
+/* ---------------------- edit slot (includes subject assignment) ---------------------- */
 const {
   formDialogVisible: editFormVisible,
   formData: editFormData,
@@ -277,18 +258,19 @@ const handleOpenEditForm = async (row: AdminScheduleSlotData) => {
     await nextTick();
     await openEditForm(row.id);
     editFormVisible.value = true;
+  } catch (err: unknown) {
+    reportError(err, `scheduleSlot.openEdit id=${row.id}`, "log");
   } finally {
     detailLoading.value[row.id] = false;
   }
 };
 
-const handleSaveEditForm = (payload: Partial<any>) => {
-  saveEditForm(payload, "PUT");
+const handleSaveEditForm = async (payload: Partial<any>) => {
+  await saveEditForm(payload, "PUT");
+  await fetchSchedule(currentPage.value || 1);
 };
 
-const handleCancelEditForm = () => {
-  cancelEditForm();
-};
+const handleCancelEditForm = () => cancelEditForm();
 
 /* ---------------------- delete ---------------------- */
 const deleteLoading = ref<Record<string | number, boolean>>({});
@@ -298,57 +280,25 @@ async function handleSoftDelete(row: AdminScheduleSlotData) {
     await ElMessageBox.confirm(
       "Are you sure you want to delete this schedule slot?",
       "Warning",
-      {
-        confirmButtonText: "Yes",
-        cancelButtonText: "No",
-        type: "warning",
-      }
+      { confirmButtonText: "Yes", cancelButtonText: "No", type: "warning" }
     );
 
     deleteLoading.value[row.id] = true;
     await adminApi.scheduleSlot.deleteScheduleSlot(row.id);
-    await fetchSchedule(currentPage.value || 1);
+
+    const page = currentPage.value || 1;
+    await fetchSchedule(page);
+
+    if (page > 1 && (slots.value?.length ?? 0) === 0) {
+      await fetchSchedule(page - 1);
+    }
   } catch (err: any) {
     if (err === "cancel" || err === "close") return;
-
     reportError(err, `scheduleSlot.softDelete id=${row.id}`, "log");
   } finally {
     deleteLoading.value[row.id] = false;
   }
 }
-
-/* ---------------------- schedule fetch wrapper ---------------------- */
-async function fetchSchedule(page: number = currentPage.value || 1) {
-  if (!hasSelectedFilter.value) return;
-  await fetchPage(page);
-}
-
-/* ---------------------- lifecycle ---------------------- */
-onMounted(async () => {
-  await Promise.all([fetchClassOptions(), fetchTeacherOptions()]);
-  await fetchSchedule(1);
-});
-
-/* ---------------------- watch: viewMode / filters ---------------------- */
-watch(viewMode, async (newMode) => {
-  if (newMode === "class") {
-    if (classOptions.value.length === 0) await fetchClassOptions();
-    selectedTeacherId.value = "";
-  } else {
-    if (teacherOptions.value.length === 0) await fetchTeacherOptions();
-    selectedClassId.value = "";
-  }
-
-  if (hasSelectedFilter.value) {
-    await fetchSchedule(1);
-  }
-});
-
-watch([selectedClassId, selectedTeacherId], async () => {
-  if (hasSelectedFilter.value) {
-    await fetchSchedule(1);
-  }
-});
 
 /* ---------------------- header stats ---------------------- */
 const totalSlots = computed(() => totalRows.value ?? 0);
@@ -374,11 +324,39 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
     },
   ],
 });
+
+/* ---------------------- pagination handlers ---------------------- */
+const handleRefresh = async () => {
+  await fetchSchedule(currentPage.value || 1);
+};
+
+const handlePageSizeChange = (size: number) => {
+  prefs.setTablePageSize(size);
+};
+
+/* ---------------------- card header text ---------------------- */
+const cardTitle = computed(() =>
+  viewMode.value === "class" ? "Class schedule" : "Teacher schedule"
+);
+
+const cardDescription = computed(() =>
+  hasSelectedFilter.value
+    ? "Manage weekly schedule slots for the selected filter."
+    : "Select a class or teacher to view the schedule."
+);
+
+const cardRightText = computed(() =>
+  hasSelectedFilter.value ? `Total: ${totalRows.value ?? 0}` : ""
+);
+
+/* ---------------------- initial mount ---------------------- */
+onMounted(async () => {
+  if (viewMode.value === "teacher") await fetchTeacherOptions();
+});
 </script>
 
 <template>
   <div class="p-4 space-y-6">
-    <!-- OVERVIEW HEADER -->
     <OverviewHeader
       title="Schedule"
       description="View and manage weekly schedule by class or by teacher."
@@ -390,7 +368,6 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
         <div
           class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 w-full"
         >
-          <!-- Mode toggle -->
           <div class="flex flex-col gap-1">
             <span class="text-xs schedule-muted">View by:</span>
             <ElRadioGroup v-model="viewMode" size="small">
@@ -401,37 +378,27 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
             </ElRadioGroup>
           </div>
 
-          <!-- Selector -->
           <div class="flex flex-col gap-1 w-full md:w-auto md:max-w-xs">
             <span class="text-xs schedule-muted">
               {{ viewMode === "class" ? "Class:" : "Teacher:" }}
             </span>
 
-            <ElSelect
+            <ClassSelect
               v-if="viewMode === 'class'"
               v-model="selectedClassId"
               placeholder="Select class"
-              filterable
-              clearable
               class="w-full"
-              :loading="optionsLoading.classes"
-              @visible-change="(open) => open && fetchClassOptions()"
-            >
-              <ElOption
-                v-for="opt in classOptions"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </ElSelect>
+              clearable
+            />
 
+            <!-- Product-ready: TeacherSelect loads options internally on open.
+                 We keep fetchTeacherOptions only for label map used by columns. -->
             <TeacherSelect
               v-else
               v-model="selectedTeacherId"
               placeholder="Select teacher"
               class="w-full"
               clearable
-              :loading="optionsLoading.teachers"
               @visible-change="(open: boolean) => open && fetchTeacherOptions()"
             />
           </div>
@@ -444,7 +411,7 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
           :loading="tableLoading"
           :disabled="!hasSelectedFilter"
           class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
-          @click="() => fetchSchedule(currentPage || 1)"
+          @click="handleRefresh"
         >
           Refresh
         </BaseButton>
@@ -459,66 +426,68 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
       </template>
     </OverviewHeader>
 
-    <!-- MAIN CARD (token-driven: works in light + dark) -->
-    <div class="mx-0 md:mx-1 p-4 rounded-2xl schedule-surface">
-      <!-- Small contextual label -->
-      <div class="mb-3 flex items-center justify-between">
-        <span
-          class="text-xs font-medium uppercase tracking-wide schedule-muted"
-        >
-          {{ viewMode === "class" ? "Class schedule" : "Teacher schedule" }}
-        </span>
-      </div>
-
-      <!-- Loading skeleton -->
+    <TableCard
+      :title="cardTitle"
+      :description="cardDescription"
+      :rightText="cardRightText"
+      padding="16px"
+    >
       <div v-if="tableLoading" class="py-4">
         <ElSkeleton :rows="4" animated />
       </div>
 
-      <!-- Table / states -->
-      <el-card>
-        <template #default>
-          <SmartTable
-            v-if="showTable"
-            :data="filteredSlots"
-            :columns="scheduleColumns"
-            :loading="tableLoading"
-          >
-            <template #operation="{ row }">
-              <ActionButtons
-                :rowId="row.id"
-                detailContent="Edit schedule slot"
-                deleteContent="Delete schedule slot"
-                :detailLoading="detailLoading[row.id] ?? false"
-                :deleteLoading="deleteLoading[row.id] ?? false"
-                @detail="() => handleOpenEditForm(row)"
-                @delete="() => handleSoftDelete(row)"
-              />
-            </template>
-          </SmartTable>
+      <SmartTable
+        v-if="showTable"
+        :data="slots"
+        :columns="scheduleColumns"
+        :loading="tableLoading"
+      >
+        <template #subject="{ row }">
+          <div class="flex items-center justify-between gap-3 w-full">
+            <div class="min-w-0 flex items-center gap-2">
+              <ElTag
+                size="small"
+                effect="plain"
+                class="shrink-0"
+                :type="row.subject_label ? 'success' : 'info'"
+              >
+                {{ row.subject_label ? "Assigned" : "None" }}
+              </ElTag>
+
+              <div class="min-w-0">
+                <div class="truncate font-medium">
+                  {{ row.subject_label || "—" }}
+                </div>
+                <div class="text-xs schedule-muted truncate">
+                  {{ row.class_name }}
+                </div>
+              </div>
+            </div>
+
+            <BaseButton
+              plain
+              class="!px-2 !py-1 !text-xs shrink-0"
+              :disabled="tableLoading"
+              @click="() => handleOpenEditForm(row)"
+            >
+              Edit
+            </BaseButton>
+          </div>
         </template>
-      </el-card>
 
-      <!-- Pagination -->
-      <el-row v-if="showTable && totalRows > 0" justify="end" class="mt-4">
-        <el-pagination
-          :current-page="currentPage"
-          :page-size="pageSize"
-          :total="totalRows"
-          :page-sizes="[10, 20, 50]"
-          layout="total, sizes, prev, pager, next, jumper"
-          background
-          @current-change="goPage"
-          @size-change="
-            (size: number) => {
-              pageSize = size;
-              fetchSchedule(1);
-            }
-          "
-        />
-      </el-row>
+        <template #operation="{ row }">
+          <ActionButtons
+            :rowId="row.id"
+            detailContent="Edit schedule slot"
+            deleteContent="Delete schedule slot"
+            :detailLoading="detailLoading[row.id] ?? false"
+            :deleteLoading="deleteLoading[row.id] ?? false"
+            @detail="() => handleOpenEditForm(row)"
+            @delete="() => handleSoftDelete(row)"
+          />
+        </template>
+      </SmartTable>
 
-      <!-- Empty when selection has no data -->
       <div v-if="showEmptyState" class="py-10">
         <ElEmpty
           description="No schedule slots found for this selection."
@@ -530,16 +499,28 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
         </ElEmpty>
       </div>
 
-      <!-- Initial state: nothing selected -->
       <div v-if="showInitialEmptyState" class="py-10">
         <ElEmpty
-          description="Select a class or teacher, then click 'Refresh'."
+          description="Select a class or teacher to view the schedule."
           :image-size="100"
         />
       </div>
-    </div>
 
-    <!-- CREATE DIALOG -->
+      <el-row v-if="showTable && totalRows > 0" justify="end" class="mt-4">
+        <el-pagination
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :total="totalRows"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @current-change="goPage"
+          @size-change="handlePageSizeChange"
+        />
+      </el-row>
+    </TableCard>
+
+    <!-- CREATE -->
     <SmartFormDialog
       :key="viewMode + '-' + createDialogKey"
       v-model:visible="createFormVisible"
@@ -551,8 +532,7 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
       @cancel="handleCancelCreateForm"
       :useElForm="true"
     />
-
-    <!-- EDIT DIALOG -->
+    <!-- EDIT -->
     <SmartFormDialog
       :key="editFormDataKey"
       v-model:visible="editFormVisible"
@@ -563,38 +543,13 @@ const { headerState: scheduleHeaderStats } = useHeaderState({
       @save="handleSaveEditForm"
       @cancel="handleCancelEditForm"
       :useElForm="true"
+      :width="'520px'"
     />
   </div>
 </template>
 
 <style scoped>
-/* Token-driven card surface */
-.schedule-surface {
-  background: var(--color-card);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 10px 22px var(--card-shadow);
-  color: var(--text-color);
-}
-
-/* Muted text aligned with your system */
 .schedule-muted {
   color: var(--muted-color);
-}
-
-/* Your existing append padding */
-:deep(.el-input-group__append) {
-  padding: 0 10px;
-}
-
-/* Make inner el-card not fight your outer surface */
-:deep(.el-card) {
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
-  box-shadow: none;
-}
-
-:deep(.el-card__body) {
-  background: transparent;
-  padding: 12px;
 }
 </style>

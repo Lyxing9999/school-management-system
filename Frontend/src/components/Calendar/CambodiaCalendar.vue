@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reportError } from "~/utils/errors";
+import { reportError } from "~/utils/errors/errors";
 import { ref, onMounted } from "vue";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";

@@ -1,16 +1,17 @@
+// features/admin-dashboard/composables/useAdminDashboard.ts
 import { ref, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
-import { reportError } from "~/utils/errors";
-import { formatDate } from "~/utils/formatDate";
+import { reportError } from "~/utils/errors/errors";
+import { formatDate } from "~/utils/date/formatDate";
 
 import type { AdminDashboardDTO } from "../api/dashboard.dto";
 import { createDashboardService } from "../api/dashboard.client";
 import {
   buildDashboardFilters,
-  termOptions,
+  normalizeDateRange,
   type DateRange,
-  type TermValue,
 } from "../model/filters";
+
 import { normalizeTopAbsentStudents } from "../model/normalize";
 import {
   buildAttendanceStatusOption,
@@ -36,20 +37,24 @@ export function useAdminDashboard() {
   const errorMessage = ref<string | null>(null);
   const dashboard = ref<AdminDashboardDTO | null>(null);
 
-  const filterDateRange = ref<DateRange>(null);
-  const filterTerm = ref<TermValue>("");
+  // defaults
+  const defaultDateRange: DateRange = null;
+  const filterDateRange = ref<DateRange>(defaultDateRange);
 
   function setDateRange(v: DateRange) {
-    filterDateRange.value = v;
+    filterDateRange.value = normalizeDateRange(v);
   }
-  function setTerm(v: TermValue) {
-    filterTerm.value = v;
+
+  const canReset = computed(() => filterDateRange.value !== null);
+
+  async function resetFilters() {
+    filterDateRange.value = defaultDateRange;
+    await loadDashboard();
   }
 
   const loadingValue = computed(() => loading.value);
   const errorMessageValue = computed(() => errorMessage.value);
   const dateRangeValue = computed(() => filterDateRange.value);
-  const termValue = computed(() => filterTerm.value);
 
   const overview = computed(() => dashboard.value?.overview);
   const attendance = computed(() => dashboard.value?.attendance);
@@ -62,25 +67,11 @@ export function useAdminDashboard() {
   const totalSubjects = computed(() => overview.value?.total_subjects ?? 0);
 
   const activeFilterLabel = computed(() => {
-    const parts: string[] = [];
-
-    if (filterDateRange.value) {
-      const [start, end] = filterDateRange.value;
-      parts.push(
-        `Date: ${formatDate(start.toISOString())} → ${formatDate(
-          end.toISOString()
-        )}`
-      );
-    }
-
-    if (filterTerm.value) {
-      const label =
-        termOptions.find((t) => t.value === filterTerm.value)?.label ??
-        `Term: ${filterTerm.value}`;
-      parts.push(label);
-    }
-
-    return parts.length ? parts.join(" • ") : "Showing all available data";
+    if (!filterDateRange.value) return "Showing all available data";
+    const [start, end] = filterDateRange.value;
+    return `Date: ${formatDate(start.toISOString())} → ${formatDate(
+      end.toISOString()
+    )}`;
   });
 
   async function loadDashboard() {
@@ -90,12 +81,10 @@ export function useAdminDashboard() {
     try {
       const filters = buildDashboardFilters({
         dateRange: filterDateRange.value,
-        term: filterTerm.value,
       });
 
-      // IMPORTANT: always returns plain JSON from axios
       dashboard.value = await service.getDashboardData(filters, {
-        showError: false, // avoid duplicate ElMessage if you want
+        showError: false,
       });
     } catch (err) {
       dashboard.value = null;
@@ -109,7 +98,6 @@ export function useAdminDashboard() {
     }
   }
 
-  // chart options (plain objects)
   const attendanceStatusOption = computed(() =>
     buildAttendanceStatusOption(attendance.value)
   );
@@ -137,7 +125,6 @@ export function useAdminDashboard() {
     buildScheduleByTeacherOption(schedule.value)
   );
 
-  // arrays hardened
   const topAbsentStudents = computed(() =>
     normalizeTopAbsentStudents(attendance.value?.top_absent_students)
   );
@@ -158,13 +145,12 @@ export function useAdminDashboard() {
     loadingValue,
     errorMessageValue,
     dateRangeValue,
-    termValue,
 
-    termOptions,
     activeFilterLabel,
+    canReset,
     setDateRange,
-    setTerm,
     loadDashboard,
+    resetFilters,
 
     totalStudents,
     totalTeachers,

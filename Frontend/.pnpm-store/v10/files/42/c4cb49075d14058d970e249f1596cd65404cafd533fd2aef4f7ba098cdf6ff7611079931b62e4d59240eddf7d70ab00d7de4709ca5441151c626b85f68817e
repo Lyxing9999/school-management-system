@@ -1,0 +1,21 @@
+export default {
+  familyName: 'Cairo',
+  fullName: 'Cairo Light',
+  postscriptName: 'Cairo-Light',
+  category: 'sans-serif',
+  capHeight: 700,
+  ascent: 1303,
+  descent: -571,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 500,
+  xWidthAvg: 415,
+  subsets: {
+    latin: {
+      xWidthAvg: 415
+    },
+    thai: {
+      xWidthAvg: 235
+    }
+  }
+};

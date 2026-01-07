@@ -1,12 +1,8 @@
-import type {
-  AdminCreateClass,
-  // AdminUpdateClass,
-} from "~/api/admin/class/class.dto";
+import type { AdminCreateClass } from "~/api/admin/class/class.dto";
 import type { Field } from "~/components/types/form";
-import { ElInput, ElInputNumber, ElSwitch } from "element-plus";
-import TeacherSelect from "~/components/Selects/TeacherSelect.vue";
-import { ElSelect, ElOption } from "element-plus";
-import SubjectSelect from "~/components/Selects/SubjectSelect.vue";
+import { ElInput, ElInputNumber } from "element-plus";
+import TeacherSelect from "~/components/selects/teacher/TeacherSelect.vue";
+import SubjectSelect from "~/components/selects/subject/SubjectSelect.vue";
 export const classFormSchema: Field<AdminCreateClass>[] = [
   {
     key: "name",
@@ -23,12 +19,12 @@ export const classFormSchema: Field<AdminCreateClass>[] = [
     },
   },
   {
-    key: "teacher_id",
+    key: "homeroom_teacher_id",
     label: "Teacher",
     component: TeacherSelect,
     formItemProps: {
       required: false,
-      prop: "teacher_id",
+      prop: "homeroom_teacher_id",
       label: "Teacher",
     },
     componentProps: {

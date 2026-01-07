@@ -6,6 +6,11 @@ import type {
   UserRegisterResponse,
   MeResponse,
   RefreshApiResponse,
+  ResetPasswordConfirmPayload,
+  ResetPasswordConfirmResponse,
+  ChangePasswordForm,
+  ChangePasswordResponse,
+  UpdateMePayload,
 } from "~/api/iam/iam.dto";
 
 export class AuthApi {
@@ -35,5 +40,25 @@ export class AuthApi {
 
   async logout() {
     return this.$api.post(`${this.baseURL}/logout`).then((r) => r.data);
+  }
+
+  async confirmResetPassword(payload: ResetPasswordConfirmPayload) {
+    return this.$api
+      .post<ResetPasswordConfirmResponse>(
+        `${this.baseURL}/reset-password/confirm`,
+        payload
+      )
+      .then((r) => r.data);
+  }
+
+  async changePassword(form: ChangePasswordForm) {
+    return this.$api
+      .post<ChangePasswordResponse>(`${this.baseURL}/change-password`, form)
+      .then((r) => r.data);
+  }
+  async updateMe(payload: UpdateMePayload) {
+    return this.$api
+      .patch<MeResponse>(`${this.baseURL}/me`, payload)
+      .then((r) => r.data);
   }
 }

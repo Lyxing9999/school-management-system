@@ -5,7 +5,7 @@ import { StudentApi } from "./student/student.api";
 import { ClassApi } from "./class/class.api";
 import { SubjectApi } from "./subject/subject.api";
 import { ScheduleSlotApi } from "./schedule/schedule.api";
-import { DashboardApi } from "./dashboard/dashboard.api";
+import { TeachingAssignmentApi } from "./teaching-assignment/teaching-assignment.api";
 //service
 import { UserService } from "./user/user.service";
 import { StaffService } from "./staff/staff.service";
@@ -13,7 +13,7 @@ import { StudentService } from "./student/student.service";
 import { ClassService } from "./class/class.service";
 import { SubjectService } from "./subject/subject.service";
 import { ScheduleSlotService } from "./schedule/schedule.service";
-import { DashboardService } from "./dashboard/dashboard.service";
+import { TeachingAssignmentService } from "./teaching-assignment/teaching-assignment.service";
 /**
  * Lazy singleton pattern
  */
@@ -30,7 +30,7 @@ function createAdminService() {
     class: new ClassApi($api),
     subject: new SubjectApi($api),
     scheduleSlot: new ScheduleSlotApi($api),
-    dashboard: new DashboardApi($api),
+    teachingAssignment: new TeachingAssignmentApi($api),
   };
 
   return {
@@ -40,7 +40,9 @@ function createAdminService() {
     class: new ClassService(adminApi.class),
     subject: new SubjectService(adminApi.subject),
     scheduleSlot: new ScheduleSlotService(adminApi.scheduleSlot),
-    dashboard: new DashboardService(adminApi.dashboard),
+    teachingAssignment: new TeachingAssignmentService(
+      adminApi.teachingAssignment
+    ),
   };
 }
 

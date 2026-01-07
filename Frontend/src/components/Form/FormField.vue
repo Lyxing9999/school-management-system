@@ -5,7 +5,7 @@
 >
 import { nextTick } from "vue";
 import { ElFormItem, ElInput, ElUpload, type FormInstance } from "element-plus";
-import DisplayOnlyField from "~/components/Form/DisplayOnlyField.vue";
+import DisplayOnlyField from "~/components/form/DisplayOnlyField.vue";
 import type { Field } from "../types/form";
 import type { UploadUserFile } from "element-plus";
 
@@ -51,6 +51,11 @@ const handleInput = async () => {
   await nextTick();
   formInstance.validateField(props.field.key as string);
 };
+const resolveProps = (field: Field<any>, model: any) => {
+  return typeof field.componentProps === "function"
+    ? field.componentProps(model)
+    : field.componentProps ?? {};
+};
 </script>
 
 <template>
@@ -80,14 +85,14 @@ const handleInput = async () => {
       :auto-upload="false"
       @change="(files) => emit('upload-change', String(field.key), files)"
       @remove="(file) => emit('upload-remove', String(field.key), file)"
-      v-bind="field.componentProps"
+      v-bind="resolveProps(field, form)"
     />
 
     <component
       v-else
       v-model="form[field.key as string]"
       :is="field.component || ElInput"
-      v-bind="field.componentProps"
+      v-bind="resolveProps(field, form)"
       @input="handleInput"
       @change="handleInput"
       @blur="handleInput"

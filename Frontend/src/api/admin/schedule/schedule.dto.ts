@@ -23,6 +23,7 @@ export interface AdminCreateScheduleSlot {
   start_time: string; // e.g. "09:00" or ISO time
   end_time: string; // same format as start_time
   room?: string | null;
+  subject_id?: string;
 }
 
 /**
@@ -36,8 +37,12 @@ export interface AdminUpdateScheduleSlot {
   start_time?: string;
   end_time?: string;
   room?: string | null;
+  subject_id?: string;
 }
-
+export interface AdminAssignScheduleSlotSubject {
+  /** set to string to assign, null to clear */
+  subject_id?: string | null;
+}
 /**
  * Data for a single schedule slot
  * Python: AdminScheduleSlotDataDTO
@@ -56,6 +61,7 @@ export interface AdminUpdateScheduleSlot {
 export interface AdminScheduleSlotData extends ScheduleDTO {
   class_name: string;
   teacher_name: string;
+  subject_label: string;
 }
 
 /**
@@ -64,6 +70,9 @@ export interface AdminScheduleSlotData extends ScheduleDTO {
  */
 export interface AdminScheduleSlotList {
   items: AdminScheduleSlotData[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 /**

@@ -1,0 +1,76 @@
+.sc-popconfirm.el-popper {
+    padding: 10px 12px !important;
+    border-radius: 14px !important;
+
+    border: 1px solid color-mix(in srgb, var(--border-color) 85%, transparent) !important;
+    background: color-mix(in srgb, var(--color-card) 96%, var(--color-bg) 4%) !important;
+
+    box-shadow: 0 16px 34px var(--card-shadow) !important;
+    color: var(--text-color) !important;
+
+    /* keep it clean */
+    backdrop-filter: blur(6px);
+}
+
+/* arrow */
+.sc-popconfirm.el-popper .el-popper__arrow::before {
+    background: color-mix(in srgb, var(--color-card) 96%, var(--color-bg) 4%) !important;
+    border: 1px solid color-mix(in srgb, var(--border-color) 85%, transparent) !important;
+}
+
+/* text */
+.sc-popconfirm .el-popconfirm__main {
+    color: var(--text-color) !important;
+}
+
+.sc-popconfirm .el-popconfirm__icon {
+    color: color-mix(in srgb, var(--color-primary) 85%, var(--text-color) 15%) !important;
+}
+
+/* actions layout */
+.sc-popconfirm .el-popconfirm__action {
+    display: inline-flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* buttons: keep EP types but enforce your tokens */
+.sc-popconfirm .el-button {
+    border-radius: 10px !important;
+    font-weight: 650 !important;
+    transition:
+        background-color var(--transition-base),
+        border-color var(--transition-base),
+        color var(--transition-base),
+        transform var(--transition-base);
+}
+
+/* cancel button (usually default) */
+.sc-popconfirm .el-button:not(.el-button--primary):not(.el-button--danger) {
+    background: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%) !important;
+    border-color: color-mix(in srgb, var(--border-color) 78%, transparent) !important;
+    color: color-mix(in srgb, var(--text-color) 78%, var(--muted-color) 22%) !important;
+}
+
+.sc-popconfirm .el-button:not(.el-button--primary):not(.el-button--danger):hover {
+    background: var(--hover-bg) !important;
+    border-color: color-mix(in srgb, var(--border-color) 55%, var(--color-primary) 45%) !important;
+    color: var(--text-color) !important;
+}
+
+/* confirm button (usually primary) */
+.sc-popconfirm .el-button--primary {
+    background: color-mix(in srgb, var(--color-primary) 90%, black 10%) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 85%, transparent) !important;
+    color: white !important;
+}
+
+.sc-popconfirm .el-button--primary:hover {
+    background: color-mix(in srgb, var(--color-primary) 96%, white 4%) !important;
+}
+
+/* focus ring */
+.sc-popconfirm .el-button:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 65%, transparent);
+    outline-offset: 2px;
+}

@@ -3,7 +3,7 @@ const props = defineProps<{
   title: string;
   description?: string;
   rightText?: string;
-  padding?: string; // default "20px"
+  padding?: string;
 }>();
 
 const bodyStyle = computed(() => ({

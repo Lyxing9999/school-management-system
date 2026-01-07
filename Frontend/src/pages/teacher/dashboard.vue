@@ -2,23 +2,27 @@
 import { ref, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 
+definePageMeta({ layout: "default" });
+
 import { teacherService } from "~/api/teacher";
-import { formatDate } from "~/utils/formatDate";
+import { formatDate } from "~/utils/date/formatDate";
 
 import type {
   ClassSectionDTO,
   GradeDTO,
   AttendanceDTO,
 } from "~/api/types/school.dto";
-import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
+
+import OverviewHeader from "~/components/overview/OverviewHeader.vue";
+import BaseButton from "~/components/base/BaseButton.vue";
+
 import type {
-  TeacherScheduleListDTO,
   TeacherClassListWithSummeryDTO,
+  TeacherScheduleDTO,
+  TeacherScheduleListDTO,
 } from "~/api/teacher/dto";
-import { reportError } from "~/utils/errors";
-definePageMeta({
-  layout: "teacher",
-});
+
+import { reportError } from "~/utils/errors/errors";
 
 const teacher = teacherService();
 
@@ -43,19 +47,10 @@ type TeacherAttendanceEnriched = AttendanceDTO & {
   class_name?: string;
   student_name?: string;
   teacher_name?: string;
+  record_date: string; // normalized alias
 };
 
-type TeacherScheduleItem = TeacherScheduleListDTO & {
-  // If your DTO already has these, great. If not, these are just “enriched” fields.
-  class_id?: string;
-  class_name?: string;
-  subject_label?: string;
-  teacher_name?: string;
-  room?: string;
-  day_of_week: number; // 1=Mon..7=Sun
-  start_time: string;
-  end_time: string;
-};
+type TeacherScheduleItem = TeacherScheduleDTO;
 
 type ClassSummary = {
   total_classes: number;
@@ -77,8 +72,8 @@ const grades = ref<TeacherGradeEnriched[]>([]);
 const schedule = ref<TeacherScheduleItem[]>([]);
 const attendance = ref<TeacherAttendanceEnriched[]>([]);
 
-// Selected / focus class
 const focusClassId = ref<string | null>(null);
+const attendanceLoading = ref(false);
 
 /* ------------------------------------------------
  * Helpers
@@ -93,15 +88,98 @@ const extractErrorMessage = (err: unknown, fallback: string): string => {
 };
 
 /**
- * Normalize API responses that may be either:
- * - { items: T[] }
- * - T[]
- * - null / undefined
+ * Robust unwrap for:
+ * - ApiResponse<T>                    => { success, message, data }
+ * - axios { data: ApiResponse<T> }    => { data: { success, message, data } }
+ * - axios { data: T }                 => { data: T }
+ * - already T
  */
-function normalizeItems<T>(res: { items?: T[] } | T[] | null | undefined): T[] {
-  if (!res) return [];
-  if (Array.isArray(res)) return res;
-  return res.items ?? [];
+function unwrapData<T>(res: any): T | null {
+  if (!res) return null;
+
+  // ApiResponse<T>
+  if (
+    typeof res === "object" &&
+    res !== null &&
+    "success" in res &&
+    "data" in res
+  ) {
+    return res.data as T;
+  }
+
+  // axios { data: ApiResponse<T> }
+  if (
+    typeof res === "object" &&
+    res !== null &&
+    res.data &&
+    typeof res.data === "object" &&
+    "success" in res.data &&
+    "data" in res.data
+  ) {
+    return res.data.data as T;
+  }
+
+  // axios { data: T }
+  if (typeof res === "object" && res !== null && "data" in res) {
+    return res.data as T;
+  }
+
+  // already T
+  return res as T;
+}
+
+function getItems<T>(res: any): T[] {
+  const payload = unwrapData<any>(res);
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.items)) return payload.items as T[];
+  return [];
+}
+
+/**
+ * Backend caps page_size at 100 -> dashboard must fetch all pages.
+ * Supports optional class_id/day/time filters if backend provides them.
+ */
+async function fetchAllMySchedule(opts?: {
+  class_id?: string;
+  day_of_week?: number;
+  start_time_from?: string; // "HH:mm"
+  start_time_to?: string; // "HH:mm"
+  signal?: AbortSignal;
+}): Promise<TeacherScheduleDTO[]> {
+  const page_size = 100;
+  let page = 1;
+
+  const all: TeacherScheduleDTO[] = [];
+
+  while (true) {
+    const res = await teacher.teacher.listMySchedule(
+      {
+        page,
+        page_size,
+        class_id: opts?.class_id,
+        day_of_week: opts?.day_of_week,
+        start_time_from: opts?.start_time_from,
+        start_time_to: opts?.start_time_to,
+        signal: opts?.signal,
+      } as any,
+      { showError: false } as any
+    );
+
+    const payload = unwrapData<TeacherScheduleListDTO>(res);
+
+    const items = (payload?.items ?? []) as TeacherScheduleDTO[];
+    const total = Number(payload?.total ?? items.length);
+
+    all.push(...items);
+
+    if (items.length === 0) break;
+    if (all.length >= total) break;
+
+    page += 1;
+  }
+
+  return all;
 }
 
 /* ------------------------------------------------
@@ -111,23 +189,22 @@ function normalizeItems<T>(res: { items?: T[] } | T[] | null | undefined): T[] {
 const loadClassDetails = async (classId: string) => {
   try {
     const [gradesRes, attendanceRes] = await Promise.all([
-      teacher.teacher.listGradesForClass(classId, { showError: false }),
-      teacher.teacher.listAttendanceForClass(classId, { showError: false }),
+      teacher.teacher.listGradesForClass(classId, { showError: false } as any),
+      teacher.teacher.listAttendanceForClass(classId, {
+        showError: false,
+      } as any),
     ]);
 
-    grades.value = normalizeItems<TeacherGradeEnriched>(
-      gradesRes as { items?: TeacherGradeEnriched[] } | TeacherGradeEnriched[]
-    );
+    grades.value = getItems<TeacherGradeEnriched>(gradesRes);
 
-    attendance.value = normalizeItems<TeacherAttendanceEnriched>(
-      attendanceRes as
-        | { items?: TeacherAttendanceEnriched[] }
-        | TeacherAttendanceEnriched[]
-    );
+    const raw = getItems<any>(attendanceRes);
+    attendance.value = raw.map((a: any) => ({
+      ...a,
+      record_date: String(a.record_date ?? a.date ?? ""),
+    })) as TeacherAttendanceEnriched[];
   } catch (err) {
     reportError(err, `teacher.classDetails.load classId=${classId}`, "log");
-    const message = extractErrorMessage(err, "Failed to load class details.");
-    ElMessage.error(message);
+    ElMessage.error(extractErrorMessage(err, "Failed to load class details."));
   }
 };
 
@@ -136,29 +213,32 @@ const loadOverview = async () => {
   errorMessage.value = null;
 
   try {
-    const [classesResSummery, scheduleRes] = await Promise.all([
-      teacher.teacher.listMyClassesWithSummery({ showError: false }),
-      teacher.teacher.listMySchedule({ showError: false }),
+    // fetch classes summary + schedule in parallel
+    const [classesResSummery, scheduleAll] = await Promise.all([
+      teacher.teacher.listMyClassesWithSummery({ showError: false } as any),
+      fetchAllMySchedule(),
     ]);
 
-    const classPayload =
-      (classesResSummery as TeacherClassListWithSummeryDTO) ?? {
-        items: [],
-        summary: undefined,
-      };
+    const classPayload = unwrapData<TeacherClassListWithSummeryDTO>(
+      classesResSummery
+    ) ?? {
+      items: [],
+      summary: undefined,
+    };
 
     classes.value = (classPayload.items as TeacherClassEnriched[]) ?? [];
     classSummary.value =
       (classPayload.summary as ClassSummary | undefined) ?? null;
 
-    schedule.value = normalizeItems<TeacherScheduleItem>(
-      scheduleRes as { items?: TeacherScheduleItem[] } | TeacherScheduleItem[]
-    );
+    // set schedule (for charts + today lessons)
+    schedule.value = scheduleAll;
 
+    // Default focus class
     if (!focusClassId.value && classes.value.length > 0) {
       focusClassId.value = classes.value[0].id;
     }
 
+    // focus class details
     if (focusClassId.value) {
       await loadClassDetails(focusClassId.value);
     } else {
@@ -167,34 +247,36 @@ const loadOverview = async () => {
     }
   } catch (err: unknown) {
     reportError(err, "teacher.dashboard.loadOverview", "log");
-    const message = extractErrorMessage(
+    errorMessage.value = extractErrorMessage(
       err,
       "Failed to load teacher dashboard data."
     );
-    errorMessage.value = message;
   } finally {
     loadingOverview.value = false;
   }
 };
-const attendanceLoading = ref(false);
+
 const onFocusClassChange = async (value: string) => {
   if (!value) return;
   attendanceLoading.value = true;
   try {
     await loadClassDetails(value);
+
+    // Optional: if you want charts to reflect focus class schedule via backend filters:
+    // schedule.value = await fetchAllMySchedule({ class_id: value });
   } finally {
     attendanceLoading.value = false;
   }
 };
 
+/* ------------------------------------------------
+ * Computed
+ * ------------------------------------------------ */
+
 const focusClassName = computed(() => {
   if (!focusClassId.value) return null;
   return classes.value.find((c) => c.id === focusClassId.value)?.name ?? null;
 });
-
-/* ------------------------------------------------
- * Stats (prefer backend summary, fallback to local)
- * ------------------------------------------------ */
 
 const totalClasses = computed(() => {
   if (classSummary.value) return classSummary.value.total_classes;
@@ -204,12 +286,10 @@ const totalClasses = computed(() => {
 const totalStudents = computed(() => {
   if (classSummary.value) return classSummary.value.total_students;
 
-  // Fallback: compute from classes array
   return classes.value.reduce((sum, c) => {
     if (typeof c.student_count === "number") return sum + c.student_count;
-    if (Array.isArray((c as any).student_ids)) {
+    if (Array.isArray((c as any).student_ids))
       return sum + (c as any).student_ids.length;
-    }
     return sum;
   }, 0);
 });
@@ -217,12 +297,10 @@ const totalStudents = computed(() => {
 const totalSubjects = computed(() => {
   if (classSummary.value) return classSummary.value.total_subjects;
 
-  // Fallback: compute from classes array
   return classes.value.reduce((sum, c) => {
     if (typeof c.subject_count === "number") return sum + c.subject_count;
-    if (Array.isArray((c as any).subject_ids)) {
+    if (Array.isArray((c as any).subject_ids))
       return sum + (c as any).subject_ids.length;
-    }
     return sum;
   }, 0);
 });
@@ -233,37 +311,29 @@ const todayDayOfWeek = computed(() => {
   return jsDay === 0 ? 7 : jsDay;
 });
 
-// Today schedule: still teacher-level
 const todaySchedule = computed(() =>
-  schedule.value.filter((s) => s.day_of_week === todayDayOfWeek.value)
+  schedule.value.filter((s) => Number(s.day_of_week) === todayDayOfWeek.value)
 );
 
 const recentAttendance = computed(() =>
   attendance.value
     .slice()
-    .sort(
-      (a, b) =>
-        new Date(b.record_date).getTime() - new Date(a.record_date).getTime()
-    )
+    .sort((a, b) => {
+      const ad = new Date(a.record_date || 0).getTime();
+      const bd = new Date(b.record_date || 0).getTime();
+      return bd - ad;
+    })
     .slice(0, 8)
 );
 
 /* ------------------------------------------------
- * Lifecycle
+ * Charts
  * ------------------------------------------------ */
 
-onMounted(async () => {
-  await loadOverview();
-});
-
-/* ------------------------------------------------
- * Chart options
- * ------------------------------------------------ */
-
-/** 1) Teaching load by weekday (per focus class if schedule has class_id; otherwise all classes) */
 const scheduleByDayOption = computed(() => {
-  // If backend provides class_id on schedule, filter by focus class; otherwise use all.
-  const hasClassId = schedule.value.some((s) => (s as any).class_id);
+  // if schedule items contain class_id and focus selected -> filter
+  const hasClassId = schedule.value.some((s) => !!(s as any).class_id);
+
   const filteredSchedule =
     focusClassId.value && hasClassId
       ? schedule.value.filter((s) => (s as any).class_id === focusClassId.value)
@@ -271,8 +341,9 @@ const scheduleByDayOption = computed(() => {
 
   const counts: number[] = [];
   for (let day = 1; day <= 7; day++) {
-    const lessonsForDay = filteredSchedule.filter((s) => s.day_of_week === day);
-    counts.push(lessonsForDay.length);
+    counts.push(
+      filteredSchedule.filter((s) => Number(s.day_of_week) === day).length
+    );
   }
 
   return {
@@ -283,11 +354,7 @@ const scheduleByDayOption = computed(() => {
       data: weekdayShortLabels,
       axisTick: { alignWithLabel: true },
     },
-    yAxis: {
-      type: "value",
-      minInterval: 1,
-      name: "Lessons",
-    },
+    yAxis: { type: "value", minInterval: 1, name: "Lessons" },
     series: [
       {
         name: "Lessons",
@@ -300,7 +367,6 @@ const scheduleByDayOption = computed(() => {
   };
 });
 
-/** 2) Grade overview by subject (focus class) */
 const gradeBySubjectOption = computed(() => {
   if (!grades.value.length) {
     return {
@@ -309,11 +375,10 @@ const gradeBySubjectOption = computed(() => {
   }
 
   const map = new Map<string, { total: number; count: number }>();
-
   for (const g of grades.value) {
     const key = g.subject_label || "Unknown subject";
     const prev = map.get(key) ?? { total: 0, count: 0 };
-    const score = Number(g.score ?? 0); // safe numeric
+    const score = Number(g.score ?? 0);
     prev.total += score;
     prev.count += 1;
     map.set(key, prev);
@@ -343,12 +408,7 @@ const gradeBySubjectOption = computed(() => {
         fontSize: 11,
       },
     },
-    yAxis: {
-      type: "value",
-      min: 0,
-      max: 100,
-      name: "Avg score",
-    },
+    yAxis: { type: "value", min: 0, max: 100, name: "Avg score" },
     series: [
       {
         name: "Average score",
@@ -361,9 +421,8 @@ const gradeBySubjectOption = computed(() => {
   };
 });
 
-/** 3) Attendance overview (present / absent / excused, focus class) */
 const attendanceStatusOption = computed(() => {
-  if (attendance.value.length === 0) {
+  if (!attendance.value.length) {
     return {
       title: { text: "No attendance data yet", left: "center", top: "center" },
     };
@@ -380,20 +439,10 @@ const attendanceStatusOption = computed(() => {
   return {
     tooltip: { trigger: "item" },
     legend: { bottom: 0 },
-    series: [
-      {
-        name: "Attendance",
-        type: "pie",
-        radius: ["40%", "70%"],
-        avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 6, borderColor: "#fff", borderWidth: 1 },
-        data,
-      },
-    ],
+    series: [{ name: "Attendance", type: "pie", radius: ["40%", "70%"], data }],
   };
 });
 
-/** 4) Score distribution (focus class) – replaces old "grade by type" to avoid repetition */
 const gradeDistributionOption = computed(() => {
   if (!grades.value.length) {
     return {
@@ -401,7 +450,6 @@ const gradeDistributionOption = computed(() => {
     };
   }
 
-  // Buckets: change ranges if your grading scale is different
   const buckets = [
     { label: "0–49", min: 0, max: 49 },
     { label: "50–59", min: 50, max: 59 },
@@ -428,16 +476,8 @@ const gradeDistributionOption = computed(() => {
       },
     },
     grid: { top: 24, left: 40, right: 16, bottom: 40 },
-    xAxis: {
-      type: "category",
-      data: buckets.map((b) => b.label),
-      axisLabel: { fontSize: 11 },
-    },
-    yAxis: {
-      type: "value",
-      minInterval: 1,
-      name: "Students",
-    },
+    xAxis: { type: "category", data: buckets.map((b) => b.label) },
+    yAxis: { type: "value", minInterval: 1, name: "Students" },
     series: [
       {
         name: "Students",
@@ -449,18 +489,24 @@ const gradeDistributionOption = computed(() => {
     ],
   };
 });
+
+/* ------------------------------------------------
+ * Lifecycle
+ * ------------------------------------------------ */
+
+onMounted(async () => {
+  await loadOverview();
+});
 </script>
 
 <template>
   <div class="p-4 space-y-4">
-    <!-- Header -->
     <OverviewHeader
       title="Teacher Dashboard"
       description="Overview of your overall classes plus detailed performance and attendance for your focus class."
       :loading="loadingOverview"
       :showRefresh="false"
     >
-      <!-- Small pill next to the title -->
       <template #icon>
         <span
           v-if="focusClassName"
@@ -470,14 +516,12 @@ const gradeDistributionOption = computed(() => {
         </span>
       </template>
 
-      <!-- Extra helper text under description -->
       <template #custom-stats>
         <p v-if="!focusClassName" class="text-[11px] text-gray-500 mt-1">
           Assign a class to see focus grades and attendance here.
         </p>
       </template>
 
-      <!-- Right-side actions -->
       <template #actions>
         <div class="flex items-center gap-2">
           <el-select
@@ -508,7 +552,6 @@ const gradeDistributionOption = computed(() => {
       </template>
     </OverviewHeader>
 
-    <!-- Error -->
     <el-alert
       v-if="errorMessage"
       :title="errorMessage"
@@ -517,38 +560,32 @@ const gradeDistributionOption = computed(() => {
       class="mb-2"
     />
 
-    <!-- Stats Row -->
+    <!-- Stats -->
     <el-row :gutter="16">
       <el-col :xs="12" :sm="6" :md="6" :lg="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="card-title">Classes you teach</div>
-          <div class="text-2xl font-semibold mt-1">
-            {{ totalClasses }}
-          </div>
+        <el-card shadow="hover">
+          <div class="text-xs text-gray-500">Classes you teach</div>
+          <div class="text-2xl font-semibold mt-1">{{ totalClasses }}</div>
         </el-card>
       </el-col>
 
       <el-col :xs="12" :sm="6" :md="6" :lg="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="card-title">Total students</div>
-          <div class="text-2xl font-semibold mt-1">
-            {{ totalStudents }}
-          </div>
+        <el-card shadow="hover">
+          <div class="text-xs text-gray-500">Total students</div>
+          <div class="text-2xl font-semibold mt-1">{{ totalStudents }}</div>
         </el-card>
       </el-col>
 
       <el-col :xs="12" :sm="6" :md="6" :lg="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="card-title">Subjects taught</div>
-          <div class="text-2xl font-semibold mt-1">
-            {{ totalSubjects }}
-          </div>
+        <el-card shadow="hover">
+          <div class="text-xs text-gray-500">Subjects taught</div>
+          <div class="text-2xl font-semibold mt-1">{{ totalSubjects }}</div>
         </el-card>
       </el-col>
 
       <el-col :xs="12" :sm="6" :md="6" :lg="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="card-title">Today&apos;s Lessons</div>
+        <el-card shadow="hover">
+          <div class="text-xs text-gray-500">Today&apos;s Lessons</div>
           <div class="text-2xl font-semibold mt-1">
             {{ todaySchedule.length }}
           </div>
@@ -556,19 +593,18 @@ const gradeDistributionOption = computed(() => {
       </el-col>
     </el-row>
 
-    <!-- Row 1: Schedule + Grade by subject -->
+    <!-- Charts -->
     <el-row :gutter="16" class="mt-2">
       <el-col :xs="24" :md="12">
         <el-card shadow="hover" v-loading="loadingOverview" class="mb-4">
-          <div class="flex justify-between items-center mb-2">
-            <div>
-              <div class="font-semibold">Teaching Schedule Overview</div>
-              <div class="text-xs text-gray-500">
-                Lessons per weekday for the focus class (or all classes if
-                class_id is not available).
-              </div>
+          <div class="mb-2">
+            <div class="font-semibold">Teaching Schedule Overview</div>
+            <div class="text-xs text-gray-500">
+              Lessons per weekday for the focus class (or all classes if
+              class_id is not available).
             </div>
           </div>
+
           <ClientOnly>
             <div class="w-full" style="height: 260px">
               <VChart
@@ -590,12 +626,10 @@ const gradeDistributionOption = computed(() => {
 
       <el-col :xs="24" :md="12">
         <el-card shadow="hover" v-loading="loadingOverview" class="mb-4">
-          <div class="flex justify-between items-center mb-2">
-            <div>
-              <div class="font-semibold">Grade Overview (focus class)</div>
-              <div class="text-xs text-gray-500">
-                Average score per subject in your focus class.
-              </div>
+          <div class="mb-2">
+            <div class="font-semibold">Grade Overview (focus class)</div>
+            <div class="text-xs text-gray-500">
+              Average score per subject in your focus class.
             </div>
           </div>
 
@@ -624,17 +658,14 @@ const gradeDistributionOption = computed(() => {
       </el-col>
     </el-row>
 
-    <!-- Row 2: Attendance + Grade distribution -->
     <el-row :gutter="16" class="mt-2">
       <el-col :xs="24" :md="12">
         <el-card shadow="hover" v-loading="loadingOverview" class="mb-4">
-          <div class="flex justify-between items-center mb-2">
-            <div>
-              <div class="font-semibold">Attendance Overview (focus class)</div>
-              <div class="text-xs text-gray-500">
-                Distribution of present, absent, and excused records in the
-                focus class.
-              </div>
+          <div class="mb-2">
+            <div class="font-semibold">Attendance Overview (focus class)</div>
+            <div class="text-xs text-gray-500">
+              Distribution of present, absent, and excused records in the focus
+              class.
             </div>
           </div>
 
@@ -654,22 +685,15 @@ const gradeDistributionOption = computed(() => {
               </div>
             </template>
           </ClientOnly>
-
-          <p class="mt-2 text-[11px] text-gray-500">
-            Tip: If absences are high, use the table below to see which students
-            need follow-up.
-          </p>
         </el-card>
       </el-col>
 
       <el-col :xs="24" :md="12">
         <el-card shadow="hover" v-loading="loadingOverview" class="mb-4">
-          <div class="flex justify-between items-center mb-2">
-            <div>
-              <div class="font-semibold">Score Distribution (focus class)</div>
-              <div class="text-xs text-gray-500">
-                How many students fall into each score range.
-              </div>
+          <div class="mb-2">
+            <div class="font-semibold">Score Distribution (focus class)</div>
+            <div class="text-xs text-gray-500">
+              How many students fall into each score range.
             </div>
           </div>
 
@@ -689,16 +713,11 @@ const gradeDistributionOption = computed(() => {
               </div>
             </template>
           </ClientOnly>
-
-          <p class="mt-2 text-[11px] text-gray-500">
-            Tip: This helps you see the spread of performance – how many are
-            failing, passing, or excelling.
-          </p>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- Recent Attendance row -->
+    <!-- Recent Attendance -->
     <el-row :gutter="16" class="mt-2">
       <el-col :xs="24">
         <el-card shadow="hover">
@@ -713,15 +732,15 @@ const gradeDistributionOption = computed(() => {
 
           <el-table
             :data="recentAttendance"
-            v-loading="attendanceLoading ?? loadingOverview ?? false"
+            v-loading="attendanceLoading || loadingOverview"
             size="small"
             style="width: 100%"
             :height="320"
             border
           >
-            <el-table-column prop="record_date" label="Date" min-width="130">
+            <el-table-column label="Date" min-width="130">
               <template #default="{ row }">
-                {{ formatDate(row.record_date) }}
+                {{ formatDate(row.record_date || row.date) }}
               </template>
             </el-table-column>
 
@@ -757,13 +776,13 @@ const gradeDistributionOption = computed(() => {
             />
 
             <el-table-column
-              prop="created_at"
+              prop="lifecycle.created_at"
               label="Recorded At"
               min-width="180"
               show-overflow-tooltip
             >
               <template #default="{ row }">
-                {{ formatDate(row.created_at) }}
+                {{ formatDate(row.lifecycle?.created_at) }}
               </template>
             </el-table-column>
 
@@ -778,7 +797,3 @@ const gradeDistributionOption = computed(() => {
     </el-row>
   </div>
 </template>
-
-<style scoped>
-/* Keep this file clean; add styles only when really needed */
-</style>

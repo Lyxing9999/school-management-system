@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, provide } from "vue";
+import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from "vue";
 import debounce from "lodash-es/debounce";
+import { usePreferencesStore } from "~/stores/preferencesStore";
 
-definePageMeta({ layout: "admin" });
-import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
+definePageMeta({ layout: "default" });
+
+import SmartFormDialog from "~/components/form/SmartFormDialog.vue";
 import { UsersHeader, UsersTable } from "~/components/pages/users";
 import {
   useUserFilters,
@@ -11,7 +13,8 @@ import {
   useUserStatusInline,
   useUserHeaderStats,
   useUserForms,
-} from "~/composables/pages/users";
+  useUserResetPassword,
+} from "~/composables/features/users";
 
 import { userColumns } from "~/modules/tables/columns/admin/userColumns";
 import type {
@@ -19,9 +22,11 @@ import type {
   AdminUpdateUser,
 } from "~/api/admin/user/user.dto";
 
-import { useInlineEdit } from "~/composables/useInlineEdit";
+import { useInlineEdit } from "~/composables/table-edit/useInlineEdit";
 import { useInlineEditService } from "~/form-system/useDynamicForm.ts/useAdminForms";
 import { Role } from "~/api/types/enums/role.enum";
+
+const prefs = usePreferencesStore();
 
 /* 1) filters */
 const {
@@ -33,9 +38,12 @@ const {
   normalizeSelectedRoles,
   searchModel,
   filters,
-  isDirty,
+  isDirty: filterDirty,
   resetAll,
 } = useUserFilters();
+
+selectedRoles.value = [Role.STUDENT, Role.TEACHER, Role.ACADEMIC, Role.PARENT];
+normalizeSelectedRoles();
 
 /* 2) inline edit */
 const {
@@ -49,6 +57,8 @@ const {
   getPreviousValue,
   revertField,
   setData: setInlineData,
+  fieldErrors,
+  getFieldError,
 } = useInlineEdit<AdminGetUserItemData, AdminUpdateUser>(
   [],
   useInlineEditService("USER")
@@ -56,15 +66,17 @@ const {
 
 /* 3) paging */
 const {
+  loading,
   isFetching,
   fetchPage,
   goPage,
   currentPage,
   pageSize,
   totalRows,
-  setPageSize,
   hasFetchedOnce,
 } = useUsersPaging(filters, setInlineData);
+
+pageSize.value = prefs.getTablePageSize();
 
 /* 4) dialogs */
 const {
@@ -109,79 +121,74 @@ const {
   saveStatus,
 } = useUserStatusInline();
 
-/* init */
-onMounted(async () => {
-  selectedRoles.value = [
-    Role.STUDENT,
-    Role.TEACHER,
-    Role.ACADEMIC,
-    Role.PARENT,
-  ];
-  normalizeSelectedRoles();
-  await fetchPage(1);
-});
+const { handleResetPassword, resetLoading } = useUserResetPassword();
 
-/* filter fetching */
+/* ---------------------------
+   Refresh orchestration
+--------------------------- */
 const pendingFilterFetch = ref(false);
+const tableLoading = computed(
+  () => isFetching.value || pendingFilterFetch.value
+);
 
-const debouncedRefresh = debounce(async () => {
+const refreshFirstPage = async () => {
+  pendingFilterFetch.value = true;
   try {
     await fetchPage(1);
   } finally {
     pendingFilterFetch.value = false;
   }
+};
+
+const refreshFirstPageDebounced = debounce(() => {
+  void refreshFirstPage();
 }, 300);
 
-watch(
-  () => q.value,
-  () => {
-    pendingFilterFetch.value = true;
-    debouncedRefresh();
-  }
-);
+onBeforeUnmount(() => {
+  refreshFirstPageDebounced.cancel();
+});
+
+/* init */
+onMounted(async () => {
+  await refreshFirstPage();
+});
+
+/* filter fetching */
+watch(q, () => {
+  pendingFilterFetch.value = true;
+  refreshFirstPageDebounced();
+});
 
 watch(
   selectedRoles,
   async () => {
-    debouncedRefresh.cancel();
-    pendingFilterFetch.value = true;
-    try {
-      await fetchPage(1);
-    } finally {
-      pendingFilterFetch.value = false;
-    }
+    refreshFirstPageDebounced.cancel();
+    await refreshFirstPage();
   },
   { deep: true }
 );
 
-watch(
-  () => staffMode.value,
-  async (mode, prev) => {
-    if (mode === prev) return;
+watch(staffMode, (mode, prev) => {
+  if (mode === prev) return;
+  refreshFirstPageDebounced.cancel();
 
-    selectedRoles.value = rolesFromMode(mode);
-    normalizeSelectedRoles();
-
-    debouncedRefresh.cancel();
-    pendingFilterFetch.value = true;
-    try {
-      await fetchPage(1);
-    } finally {
-      pendingFilterFetch.value = false;
-    }
-  }
-);
+  selectedRoles.value = [...rolesFromMode(mode)];
+  normalizeSelectedRoles();
+});
 
 function handleOpenCreate() {
   openCreate(staffMode.value === "staff" ? "STAFF" : "STUDENT");
 }
+
 /* inline edit wrappers */
 function handleSaveWrapper(
   row: AdminGetUserItemData,
   field: keyof AdminGetUserItemData
 ) {
   if (field === "id") return;
-  save(row, field as keyof AdminUpdateUser).catch(() => {});
+  void save(row, field as keyof AdminUpdateUser).catch((err) => {
+    reportError(err);
+  });
 }
 
 function handleAutoSaveWrapper(
@@ -189,7 +196,9 @@ function handleAutoSaveWrapper(
   field: keyof AdminGetUserItemData
 ) {
   if (field === "id") return;
-  autoSave(row, field as keyof AdminUpdateUser).catch(() => {});
+  void autoSave(row, field as keyof AdminUpdateUser).catch((err) => {
+    reportError(err);
+  });
 }
 
 /* header stats */
@@ -198,19 +207,40 @@ const { headerState: userHeaderStats } = useUserHeaderStats(
   selectedRoles
 );
 
+/* provide */
 provide("USER_ACTIONS", {
   onDelete: removeUser,
   onOpenEdit: openEdit,
+  onResetPassword: handleResetPassword,
 });
 
 provide("USER_STATE", {
-  deleteLoading: deleteLoading,
+  deleteLoading,
   isDetailLoading: detailLoading,
+  inlineEditLoading,
+  resetPasswordLoading: resetLoading,
 });
 
-function updateStatusDraft(val: any) {
+function updateStatusDraft(val: typeof statusDraft.value) {
   statusDraft.value = val;
 }
+
+async function handlePageSizeChange(size: number) {
+  prefs.setTablePageSize(size);
+  pageSize.value = prefs.getTablePageSize();
+  await fetchPage(1);
+}
+
+watch(
+  () => prefs.tablePageSize,
+  async () => {
+    const next = prefs.getTablePageSize();
+    if (pageSize.value === next) return;
+    pageSize.value = next;
+    await fetchPage(1);
+  }
+);
+const pageSizes = computed<number[]>(() => [...prefs.ALLOWED_PAGE_SIZES]);
 </script>
 
 <template>
@@ -218,7 +248,7 @@ function updateStatusDraft(val: any) {
     <UsersHeader
       :loading="isFetching"
       :stats="userHeaderStats"
-      :isDirty="isDirty"
+      :isDirty="filterDirty"
       v-model:staffMode="staffMode"
       v-model:selectedRoles="selectedRoles"
       v-model:searchModelValue="searchModel"
@@ -231,7 +261,7 @@ function updateStatusDraft(val: any) {
     <UsersTable
       :rows="rows"
       :columns="userColumns"
-      :loading="isFetching || pendingFilterFetch"
+      :loading="tableLoading"
       :inline-edit-loading="inlineEditLoading"
       :has-fetched-once="hasFetchedOnce"
       :editingStatusRowId="editingStatusRowId"
@@ -242,23 +272,25 @@ function updateStatusDraft(val: any) {
       @save="handleSaveWrapper"
       @cancel="cancel"
       @auto-save="handleAutoSaveWrapper"
-      :getPreviousValue="getPreviousValue"
       @revert-field="revertField"
       @update-status-draft="updateStatusDraft"
       @start-edit-status="startEditStatus"
       @save-status="saveStatus"
       @cancel-edit-status="cancelEditStatus"
+      @get-field-error="getFieldError"
+      :getPreviousValue="getPreviousValue"
+      :field-errors="fieldErrors"
     />
 
     <el-row v-if="totalRows > 0" justify="end" class="mt-6">
       <el-pagination
         :current-page="currentPage"
         :page-size="pageSize"
+        :page-sizes="pageSizes"
         :total="totalRows"
         layout="total, sizes, prev, pager, next, jumper"
-        background
         @current-change="goPage"
-        @size-change="(size: number) => setPageSize(size)"
+        @size-change="handlePageSizeChange"
       />
     </el-row>
 

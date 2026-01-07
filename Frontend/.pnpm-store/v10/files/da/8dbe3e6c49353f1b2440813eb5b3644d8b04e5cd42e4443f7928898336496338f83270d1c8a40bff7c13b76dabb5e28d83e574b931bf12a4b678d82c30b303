@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Grandstander',
+  fullName: 'Grandstander Bold',
+  postscriptName: 'Grandstander-Bold',
+  category: 'display',
+  capHeight: 1291,
+  ascent: 1465,
+  descent: -530,
+  lineGap: 0,
+  unitsPerEm: 2000,
+  xHeight: 1063,
+  xWidthAvg: 996,
+  subsets: {
+    latin: {
+      xWidthAvg: 996
+    },
+    thai: {
+      xWidthAvg: 662
+    }
+  }
+};

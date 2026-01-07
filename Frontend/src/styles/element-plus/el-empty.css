@@ -1,0 +1,135 @@
+/* assets/css/element-plus/el-empty.css */
+
+/* =========================================================
+   Element Plus: el-empty (token-driven)
+   Goals:
+   - No hardcoded bg-white
+   - Uses your system tokens (light/dark)
+   - Card-like surface: rounded-xl + border + soft shadow
+   - Clean icon + description colors
+========================================================= */
+
+/* ---------------------------------------------------------
+   0) Local tokens (safe overrides)
+   Keep these aligned with your system vars.
+--------------------------------------------------------- */
+html[data-theme="light"] {
+    --empty-surface: color-mix(in srgb, var(--color-card) 94%, var(--color-bg) 6%);
+    --empty-border: color-mix(in srgb, var(--border-color) 82%, transparent);
+    --empty-shadow: var(--card-shadow);
+    --empty-title: var(--text-color);
+    --empty-desc: var(--muted-color);
+}
+
+html[data-theme="dark"] {
+    --empty-surface: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%);
+    --empty-border: color-mix(in srgb, var(--border-color) 88%, transparent);
+    --empty-shadow: var(--card-shadow);
+    --empty-title: var(--text-color);
+    --empty-desc: color-mix(in srgb, var(--muted-color) 92%, transparent);
+}
+
+/* ---------------------------------------------------------
+   1) Root container = card surface
+--------------------------------------------------------- */
+.el-empty {
+    width: 100%;
+    min-width: 0;
+
+    padding: 18px 16px !important;
+
+    background: var(--empty-surface) !important;
+    border: 1px solid var(--empty-border) !important;
+    border-radius: 14px !important;
+    /* ~rounded-xl */
+    box-shadow: 0 10px 26px var(--empty-shadow) !important;
+
+    /* smooth with your system transitions */
+    transition: background-color var(--transition-base),
+        border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+/* Keep default structure safe */
+.el-empty__description,
+.el-empty__image {
+    /* no-op */
+}
+
+/* remove default margin jump */
+.el-empty .el-empty__description p {
+    margin: 0 !important;
+}
+
+/* ---------------------------------------------------------
+   2) Icon / image sizing
+--------------------------------------------------------- */
+.el-empty__image {
+    width: 110px !important;
+    margin: 2px auto 10px auto !important;
+}
+
+.el-empty__image svg,
+.el-empty__image img {
+    width: 100% !important;
+    height: auto !important;
+    opacity: 0.95;
+}
+
+/* ---------------------------------------------------------
+   3) Description text
+--------------------------------------------------------- */
+.el-empty__description {
+    padding: 0 6px !important;
+}
+
+.el-empty__description p {
+    color: var(--empty-desc) !important;
+    font-size: 13px !important;
+    line-height: 1.35rem !important;
+}
+
+/* If you inject custom title text inside description area */
+.el-empty__description .empty-title,
+.el-empty__description h3,
+.el-empty__description strong {
+    color: var(--empty-title) !important;
+}
+
+/* ---------------------------------------------------------
+   4) Bottom slot (actions)
+--------------------------------------------------------- */
+.el-empty__bottom {
+    margin-top: 10px !important;
+}
+
+.el-empty__bottom .el-button,
+.el-empty__bottom .base-button,
+.el-empty__bottom button {
+    border-radius: 10px !important;
+}
+
+/* ---------------------------------------------------------
+   5) Optional: compact variant
+   Usage: <el-empty class="empty-compact" ... />
+--------------------------------------------------------- */
+.el-empty.empty-compact {
+    padding: 14px 14px !important;
+}
+
+.el-empty.empty-compact .el-empty__image {
+    width: 90px !important;
+    margin-bottom: 8px !important;
+}
+
+.el-empty.empty-compact .el-empty__description p {
+    font-size: 12.5px !important;
+}
+
+/* ---------------------------------------------------------
+   6) Optional: hover affordance (subtle, not loud)
+   Useful when empty card is clickable or near CTA.
+--------------------------------------------------------- */
+.el-empty.is-hoverable:hover {
+    border-color: color-mix(in srgb, var(--border-color) 60%, var(--color-primary) 40%) !important;
+    box-shadow: 0 14px 30px var(--empty-shadow) !important;
+}

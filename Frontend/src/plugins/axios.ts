@@ -1,21 +1,19 @@
-// ~/plugins/api.ts
 import axios, { type AxiosError, type AxiosRequestConfig } from "axios";
-import { useRuntimeConfig, navigateTo } from "nuxt/app";
+import { useRuntimeConfig } from "nuxt/app";
 import { useAuthStore } from "~/stores/authStore";
 
 type RetryConfig = AxiosRequestConfig & { _retry?: boolean };
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
-  const authStore = useAuthStore();
+  const auth = useAuthStore();
 
   const api = axios.create({
     baseURL: config.public.apiBase,
     timeout: 10000,
-    withCredentials: true, // refresh cookie
+    withCredentials: true,
   });
 
-  // Separate client to avoid interceptor loops
   const refreshApi = axios.create({
     baseURL: config.public.apiBase,
     timeout: 10000,
@@ -23,10 +21,9 @@ export default defineNuxtPlugin(() => {
   });
 
   api.interceptors.request.use((cfg) => {
-    const token = authStore.token; // Pinia setup-store unwraps refs
-    if (token) {
+    if (auth.token) {
       cfg.headers = cfg.headers ?? {};
-      cfg.headers.Authorization = `Bearer ${token}`;
+      (cfg.headers as any).Authorization = `Bearer ${auth.token}`;
     }
     return cfg;
   });
@@ -43,26 +40,22 @@ export default defineNuxtPlugin(() => {
     (res) => res,
     async (error: AxiosError) => {
       const original = (error.config || {}) as RetryConfig;
-
-      // Network / CORS / no response
       if (!error.response) return Promise.reject(error);
 
       const status = error.response.status;
       const url = String(original.url || "");
-
       const isAuthRoute =
         url.includes("/api/iam/login") || url.includes("/api/iam/refresh");
+
       if (status !== 401 || isAuthRoute) return Promise.reject(error);
 
-      // Already retried once => force logout
       if (original._retry) {
-        authStore.clear();
-        await navigateTo("/auth/login");
+        // do NOT navigate here; let middleware handle redirect
+        auth.resetForGuest();
         return Promise.reject(error);
       }
       original._retry = true;
 
-      // Queue while refresh in-flight
       if (isRefreshing) {
         return new Promise((resolve) => {
           queue.push((newToken: string) => {
@@ -80,13 +73,11 @@ export default defineNuxtPlugin(() => {
         const newToken = (r.data as any)?.access_token as string | undefined;
 
         if (!newToken) {
-          authStore.clear();
-          await navigateTo("/auth/login");
+          auth.resetForGuest();
           return Promise.reject(error);
         }
 
-        authStore.setToken(newToken);
-
+        auth.setToken(newToken);
         isRefreshing = false;
         flushQueue(newToken);
 
@@ -96,9 +87,7 @@ export default defineNuxtPlugin(() => {
       } catch (refreshErr) {
         isRefreshing = false;
         queue = [];
-
-        authStore.clear();
-        await navigateTo("/auth/login");
+        auth.resetForGuest();
         return Promise.reject(refreshErr);
       }
     }

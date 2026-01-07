@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
-import { ElMessage } from "element-plus";
-
+definePageMeta({ layout: false });
 import schoolLogo from "~/assets/image/school-logo-light.png";
-import googleIcon from "~/assets/icons/svg/google.svg";
 
 import { iamService } from "~/api/iam/index";
 import type { UserLoginForm } from "~/api/iam/iam.dto";
@@ -38,14 +36,9 @@ const submit = async () => {
   loading.value = true;
   try {
     await authService.login(form);
-  } catch (e) {
   } finally {
     loading.value = false;
   }
-};
-
-const loginWithGoogle = () => {
-  ElMessage.info("Google login is not implemented yet");
 };
 </script>
 
@@ -76,7 +69,7 @@ const loginWithGoogle = () => {
             />
           </el-form-item>
 
-          <el-form-item label="Password" prop="password" class="mb-6">
+          <el-form-item label="Password" prop="password" class="mb-3">
             <el-input
               v-model="form.password"
               type="password"
@@ -87,6 +80,13 @@ const loginWithGoogle = () => {
               @keyup.enter="submit"
             />
           </el-form-item>
+
+          <!-- Forgot password -->
+          <div class="flex items-center justify-end mb-6">
+            <RouterLink to="/auth/reset-password" class="auth-link text-sm">
+              Forgot password?
+            </RouterLink>
+          </div>
 
           <el-form-item>
             <el-button
@@ -100,31 +100,12 @@ const loginWithGoogle = () => {
             </el-button>
           </el-form-item>
         </el-form>
-
-        <!-- Google -->
-        <el-button
-          class="auth-google-btn w-full mt-2"
-          :disabled="loading"
-          @click="loginWithGoogle"
-        >
-          <img :src="googleIcon" alt="Google Icon" class="w-6 h-6" />
-          <span>Login with Google</span>
-        </el-button>
-
-        <!-- Register -->
-        <p class="auth-footer mt-4">
-          Don't have an account?
-          <RouterLink to="/auth/register" class="auth-link"
-            >Register here</RouterLink
-          >
-        </p>
       </div>
     </div>
   </Transition>
 </template>
 
 <style scoped>
-/* Page background alignment with your tokens */
 .auth-shell {
   min-height: calc(100vh - var(--header-height, 0px));
   display: grid;
@@ -133,7 +114,6 @@ const loginWithGoogle = () => {
   background: var(--color-bg);
 }
 
-/* Card uses theme surface + border + shadow tokens */
 .auth-card {
   width: 100%;
   max-width: 420px;
@@ -152,7 +132,6 @@ const loginWithGoogle = () => {
   margin: 0 auto;
 }
 
-/* Primary button - only uses your tokens */
 .auth-primary-btn {
   border-radius: 10px;
   font-weight: 650;
@@ -174,43 +153,7 @@ const loginWithGoogle = () => {
   transform: translateY(0px);
 }
 
-/* Google button: neutral surface with theme border + hover bg */
-.auth-google-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%);
-  color: var(--text-color);
-  transition: background var(--transition-base),
-    border-color var(--transition-base), transform var(--transition-base);
-}
-
-.auth-google-btn:hover {
-  background: var(--hover-bg);
-  border-color: color-mix(
-    in srgb,
-    var(--border-color) 55%,
-    var(--color-primary) 45%
-  );
-  transform: translateY(-0.5px);
-}
-
-.auth-google-btn:active {
-  transform: translateY(0px);
-}
-
-.auth-footer {
-  font-size: 0.875rem;
-  color: var(--muted-color);
-  text-align: center;
-}
-
 .auth-link {
-  margin-left: 6px;
   color: var(--color-primary);
   font-weight: 600;
   text-decoration: none;

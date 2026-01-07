@@ -1,4 +1,3 @@
-// ~/api/admin/dashboard/dashboard.dto.ts
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 
 // ---------- Overview ----------

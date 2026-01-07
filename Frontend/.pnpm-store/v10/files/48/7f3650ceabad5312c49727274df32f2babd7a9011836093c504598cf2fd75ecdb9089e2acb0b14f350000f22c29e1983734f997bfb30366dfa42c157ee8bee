@@ -1,0 +1,23 @@
+declare module '@capsizecss/metrics/mPLUS1Code/regular' {
+  interface MPLUS1CodeMetrics {
+    familyName: string;
+    fullName: string;
+    postscriptName: string;
+    category: string;
+    capHeight: number;
+    ascent: number;
+    descent: number;
+    lineGap: number;
+    unitsPerEm: number;
+    xHeight: number;
+    xWidthAvg: number;
+    subsets: Record<
+      'latin' | 'thai',
+      {
+        xWidthAvg: number;
+      }
+    >;
+  }
+  export const fontMetrics: MPLUS1CodeMetrics;
+  export default fontMetrics;
+}

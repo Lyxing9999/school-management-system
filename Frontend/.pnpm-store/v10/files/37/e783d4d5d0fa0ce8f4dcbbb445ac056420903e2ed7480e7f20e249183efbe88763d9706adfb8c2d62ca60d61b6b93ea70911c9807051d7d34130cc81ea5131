@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Noticia Text',
+  fullName: 'Noticia Text Italic',
+  postscriptName: 'NoticiaText-Italic',
+  category: 'serif',
+  capHeight: 1353,
+  ascent: 2202,
+  descent: -593,
+  lineGap: 0,
+  unitsPerEm: 2048,
+  xHeight: 1085,
+  xWidthAvg: 942,
+  subsets: {
+    latin: {
+      xWidthAvg: 942
+    },
+    thai: {
+      xWidthAvg: 1601
+    }
+  }
+};

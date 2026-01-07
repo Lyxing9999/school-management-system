@@ -1,0 +1,23 @@
+declare module '@capsizecss/metrics/salsa/regular' {
+  interface SalsaMetrics {
+    familyName: string;
+    fullName: string;
+    postscriptName: string;
+    category: string;
+    capHeight: number;
+    ascent: number;
+    descent: number;
+    lineGap: number;
+    unitsPerEm: number;
+    xHeight: number;
+    xWidthAvg: number;
+    subsets: Record<
+      'latin' | 'thai',
+      {
+        xWidthAvg: number;
+      }
+    >;
+  }
+  export const fontMetrics: SalsaMetrics;
+  export default fontMetrics;
+}

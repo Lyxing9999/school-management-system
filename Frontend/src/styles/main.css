@@ -21,9 +21,12 @@
 @import "./element-plus/el-tag.css";
 @import "./element-plus/el-check-tag.css";
 @import "./element-plus/el-date-picker.css";
-@import "./element-plus/overview-header.css";
 @import "./element-plus/responsive.css";
 @import "./element-plus/el-dialog.css";
+@import "./element-plus/el-descriptions.css";
+@import "./element-plus/el-empty.css";
+@import "./element-plus/el-popconfirm.css";
+@import "./element-plus/el-segmented.css";
 /* =========================================================
    0) BASE TOKENS (ALWAYS AVAILABLE)
 ========================================================= */

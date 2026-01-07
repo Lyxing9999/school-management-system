@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { eventBus } from "~/composables/useGlobalEventBus";
+import { eventBus } from "~/composables/system/useGlobalEventBus";
 useHead({
   meta: [
     {

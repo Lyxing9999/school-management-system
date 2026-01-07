@@ -1,0 +1,159 @@
+/* assets/css/element-plus/el-segmented.css */
+
+/* =========================================================
+   Element Plus: el-segmented (token-driven)
+   Goals:
+   - No white/washed background in dark mode
+   - Clean unselected + hover states
+   - Selected supports hover + focus-visible
+   - Uses your existing system tokens
+   Usage: <el-segmented class="base-segmented" ... />
+========================================================= */
+
+/* ---------------------------------------------------------
+   0) Tokens
+--------------------------------------------------------- */
+:root {
+    --seg-radius: 12px;
+    --seg-item-radius: 10px;
+    --seg-pad: 3px;
+    --seg-item-px: 14px;
+    --seg-item-py: 8px;
+}
+
+/* Light */
+html[data-theme="light"] {
+    --seg-bg: color-mix(in srgb, var(--color-card) 94%, var(--color-bg) 6%);
+    --seg-border: color-mix(in srgb, var(--border-color) 78%, transparent);
+
+    --seg-text: color-mix(in srgb, var(--text-color) 78%, var(--muted-color) 22%);
+    --seg-text-hover: var(--text-color);
+
+    --seg-hover-bg: color-mix(in srgb, var(--hover-bg) 80%, transparent);
+    --seg-pressed-bg: color-mix(in srgb, var(--active-bg) 85%, transparent);
+
+    --seg-active-bg: color-mix(in srgb, var(--color-primary) 14%, var(--color-card) 86%);
+    --seg-active-border: color-mix(in srgb, var(--color-primary) 45%, var(--seg-border) 55%);
+    --seg-active-text: var(--color-primary);
+}
+
+/* Dark */
+html[data-theme="dark"] {
+    /* IMPORTANT: prevents the “white pill” look */
+    --seg-bg: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%);
+    --seg-border: color-mix(in srgb, var(--border-color) 88%, transparent);
+
+    --seg-text: color-mix(in srgb, var(--text-color) 82%, var(--muted-color) 18%);
+    --seg-text-hover: var(--text-color);
+
+    /* Keep hover subtle (not bright) */
+    --seg-hover-bg: color-mix(in srgb, var(--hover-bg) 55%, transparent);
+    --seg-pressed-bg: color-mix(in srgb, var(--active-bg) 60%, transparent);
+
+    /* Selected must stay “tinted”, not washed out */
+    --seg-active-bg: color-mix(in srgb, var(--color-primary) 18%, var(--color-card) 82%);
+    --seg-active-border: color-mix(in srgb, var(--color-primary) 35%, var(--border-color) 65%);
+    --seg-active-text: color-mix(in srgb, var(--color-primary) 92%, var(--text-color) 8%);
+}
+
+/* ---------------------------------------------------------
+   1) Base container (kills default light background)
+--------------------------------------------------------- */
+.el-segmented.base-segmented {
+    background: var(--seg-bg) !important;
+    border: 1px solid var(--seg-border) !important;
+    border-radius: var(--seg-radius) !important;
+    padding: var(--seg-pad) !important;
+
+    /* safety */
+    box-sizing: border-box;
+}
+
+.el-segmented.base-segmented .el-segmented__group {
+    background: transparent !important;
+}
+
+/* The moving selected indicator */
+.el-segmented.base-segmented .el-segmented__item-selected {
+    background: var(--seg-active-bg) !important;
+    box-shadow: 0 0 0 1px var(--seg-active-border) inset !important;
+    border-radius: var(--seg-item-radius) !important;
+}
+
+/* ---------------------------------------------------------
+   2) Items (unselected)
+--------------------------------------------------------- */
+.el-segmented.base-segmented .el-segmented__item {
+    border-radius: var(--seg-item-radius) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+
+    padding: var(--seg-item-py) var(--seg-item-px) !important;
+}
+
+/* label */
+.el-segmented.base-segmented .el-segmented__item-label {
+    color: var(--seg-text) !important;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+/* Unselected hover (no bright/white) */
+.el-segmented.base-segmented .el-segmented__item:not(.is-selected):hover {
+    background: var(--seg-hover-bg) !important;
+}
+
+.el-segmented.base-segmented .el-segmented__item:not(.is-selected):hover .el-segmented__item-label {
+    color: var(--seg-text-hover) !important;
+}
+
+/* Pressed */
+.el-segmented.base-segmented .el-segmented__item:not(.is-selected):active {
+    background: var(--seg-pressed-bg) !important;
+}
+
+/* Focus visible (keyboard) */
+.el-segmented.base-segmented .el-segmented__item:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 65%, transparent);
+    outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------
+   3) Selected (hover + label)
+   EP uses BOTH:
+   - .el-segmented__item.is-selected
+   - .el-segmented__item-selected (moving bg)
+--------------------------------------------------------- */
+.el-segmented.base-segmented .el-segmented__item.is-selected {
+    background: transparent !important;
+    /* bg comes from __item-selected */
+}
+
+.el-segmented.base-segmented .el-segmented__item.is-selected .el-segmented__item-label {
+    color: var(--seg-active-text) !important;
+}
+
+/* Selected hover: slightly stronger surface but still dark-safe */
+.el-segmented.base-segmented .el-segmented__item.is-selected:hover~.el-segmented__item-selected,
+.el-segmented.base-segmented .el-segmented__item.is-selected:hover+.el-segmented__item-selected {
+    /* (Some EP builds place selected indicator in different DOM positions)
+     If this doesn’t apply in your build, the block below still handles hover nicely. */
+}
+
+/* Always apply hover feel on selected item itself */
+.el-segmented.base-segmented .el-segmented__item.is-selected:hover {
+    background: color-mix(in srgb, var(--seg-active-bg) 70%, var(--seg-hover-bg) 30%) !important;
+}
+
+.el-segmented.base-segmented .el-segmented__item.is-selected:active {
+    background: color-mix(in srgb, var(--seg-active-bg) 65%, var(--seg-pressed-bg) 35%) !important;
+}
+
+/* ---------------------------------------------------------
+   4) Optional: compact on mobile
+--------------------------------------------------------- */
+@media (max-width: 768px) {
+    .el-segmented.base-segmented .el-segmented__item {
+        padding: 10px 12px !important;
+    }
+}

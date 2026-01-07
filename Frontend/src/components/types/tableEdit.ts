@@ -1,3 +1,10 @@
+import type { VNode, Component } from "vue";
+export type RenderConfig = {
+  component?: Component;
+  componentProps?: Record<string, any>;
+  value?: any;
+};
+export type CellRenderValue = VNode | string | RenderConfig;
 /**
  * slots map
  */
@@ -35,14 +42,12 @@ export type InlineEditProps<
   slotName?: string;
   inlineEditActive?: boolean;
   controls?: boolean;
-  controlsSlot?: boolean;
+  revertSlots?: boolean;
   autoSave?: boolean;
   debounceMs?: number;
   customClass?: string;
   loading?: boolean;
 };
-
-import type { VNode, Component } from "vue";
 
 /**
  * Inline edit column props EditableColumn
@@ -70,10 +75,10 @@ export type InlineEditColumnProps<
   inlineEditActive?: boolean;
   placeholder?: string;
   controls?: boolean;
-  controlsSlot?: boolean;
+  revertSlots?: boolean;
   autoSave?: boolean;
   align?: "left" | "center" | "right";
-  render?: (row: R, field: F) => VNode;
+  render?: (row: R, field: F) => CellRenderValue;
   debounceMs?: number;
   operation?: boolean;
   customClass?: string;
@@ -91,12 +96,12 @@ export type ColumnConfig<T> = {
   field?: keyof T;
   inlineEditActive?: boolean;
   autoSave?: boolean;
-  render?: (row: T, field: keyof T) => VNode;
+  render?: (row: T, field: keyof T) => CellRenderValue;
   align?: "left" | "center" | "right" | undefined;
   placeholder?: string;
   clearable?: boolean;
   controls?: boolean;
-  controlsSlot?: boolean;
+  revertSlots?: boolean;
   operation?: boolean;
   debounceMs?: number;
   component?: Component;

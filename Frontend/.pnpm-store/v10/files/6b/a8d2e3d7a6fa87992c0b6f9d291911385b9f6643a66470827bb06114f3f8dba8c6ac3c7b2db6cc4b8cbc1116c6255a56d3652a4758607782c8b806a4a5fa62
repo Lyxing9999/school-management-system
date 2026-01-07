@@ -1,0 +1,21 @@
+export default {
+  familyName: 'Roboto Serif',
+  fullName: 'Roboto Serif Medium Italic',
+  postscriptName: 'RobotoSerif-MediumItalic',
+  category: 'serif',
+  capHeight: 710,
+  ascent: 927,
+  descent: -244,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 518,
+  xWidthAvg: 514,
+  subsets: {
+    latin: {
+      xWidthAvg: 514
+    },
+    thai: {
+      xWidthAvg: 400
+    }
+  }
+};

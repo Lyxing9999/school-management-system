@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Courier New',
+  fullName: 'Courier New Bold Italic',
+  postscriptName: 'CourierNewPS-BoldItalicMT',
+  category: 'monospace',
+  capHeight: 1212,
+  ascent: 1705,
+  descent: -615,
+  lineGap: 0,
+  unitsPerEm: 2048,
+  xHeight: 908,
+  xWidthAvg: 1229,
+  subsets: {
+    latin: {
+      xWidthAvg: 1229
+    },
+    thai: {
+      xWidthAvg: 1229
+    }
+  }
+};

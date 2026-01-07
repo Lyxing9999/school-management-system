@@ -1,5 +1,5 @@
 import { StaffRole } from "./enums/role.enum";
-
+import type { LifecycleDTO } from "./lifecycle.dto";
 export interface StaffBaseDataDTO {
   id: string;
   username?: string;
@@ -11,9 +11,5 @@ export interface StaffBaseDataDTO {
   phone_number: string;
   address: string;
   created_by: string;
-  created_at: string;
-  updated_at: string;
-  deleted?: boolean;
-  deleted_at?: string;
-  deleted_by?: string;
+  lifecycle: LifecycleDTO;
 }

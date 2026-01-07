@@ -1,0 +1,21 @@
+export default {
+  familyName: 'Flow Rounded',
+  fullName: 'Flow Rounded Regular',
+  postscriptName: 'FlowRounded-Regular',
+  category: 'display',
+  capHeight: 640,
+  ascent: 1000,
+  descent: -200,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 470,
+  xWidthAvg: 500,
+  subsets: {
+    latin: {
+      xWidthAvg: 500
+    },
+    thai: {
+      xWidthAvg: 572
+    }
+  }
+};

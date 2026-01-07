@@ -1,4 +1,5 @@
 import { Role, UserRole, StaffRole } from "./enums/role.enum";
+import type { LifecycleDTO } from "./lifecycle.dto";
 import { Status } from "./enums/status.enum";
 /**
  * @description User Base Data
@@ -26,8 +27,5 @@ export interface UserBaseDataDTO {
   role: Role;
   created_by: string;
   created_at: string;
-  updated_at: string;
-  deleted?: boolean;
-  deleted_at?: string;
-  deleted_by?: string;
+  lifecycle: LifecycleDTO;
 }

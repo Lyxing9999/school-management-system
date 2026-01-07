@@ -1,13 +1,82 @@
+import { computed } from "vue";
+import type { FormItemRule } from "element-plus";
+import { ElInput, ElSelect, ElOption } from "element-plus";
+
 import { roleUserOptions } from "~/utils/constants/roles";
 import type { Field } from "~/components/types/form";
-import { ElInput, ElSelect, ElOption } from "element-plus";
-import { UserFilled, Lock } from "@element-plus/icons-vue";
 import type {
   AdminCreateUser,
   AdminUpdateUser,
 } from "~/api/admin/user/user.dto";
-const roleOptionsRef = ref(roleUserOptions);
 
+/** ---- reusable rules (product-ready defaults) ---- */
+
+const usernameRules: FormItemRule[] = [
+  {
+    required: true,
+    message: "Username is required.",
+    trigger: ["blur", "change"],
+  },
+  {
+    min: 3,
+    max: 30,
+    message: "Username must be 3–30 characters.",
+    trigger: ["blur", "change"],
+  },
+  {
+    pattern: /^[a-zA-Z0-9._-]+$/,
+    message: "Use letters, numbers, dot (.), underscore (_), or dash (-) only.",
+    trigger: ["blur", "change"],
+  },
+];
+
+const emailRules: FormItemRule[] = [
+  {
+    required: true,
+    message: "Email is required.",
+    trigger: ["blur", "change"],
+  },
+  {
+    type: "email",
+    message: "Please enter a valid email address.",
+    trigger: ["blur", "change"],
+  },
+];
+
+const passwordRulesCreate: FormItemRule[] = [
+  {
+    required: true,
+    message: "Password is required.",
+    trigger: ["blur", "change"],
+  },
+  {
+    min: 8,
+    message: "Password must be at least 8 characters.",
+    trigger: ["blur", "change"],
+  },
+];
+
+const passwordRulesEdit: FormItemRule[] = [
+  {
+    validator: (_rule, value: string, callback) => {
+      // In edit: empty = keep old password
+      if (!value) return callback();
+      if (String(value).length < 8)
+        return callback(new Error("Password must be at least 8 characters."));
+      return callback();
+    },
+    trigger: ["blur", "change"],
+  },
+];
+
+const roleRules: FormItemRule[] = [
+  { required: true, message: "Role is required.", trigger: ["change"] },
+];
+
+/** options list (computed to keep it reactive-friendly) */
+const roleOptions = computed(() => roleUserOptions);
+
+/** ---------------- CREATE schema ---------------- */
 export const userFormSchema: Field<AdminCreateUser>[] = [
   {
     key: "username",
@@ -15,18 +84,14 @@ export const userFormSchema: Field<AdminCreateUser>[] = [
     component: ElInput,
     formItemProps: {
       prop: "username",
-      label: "Username",
-      rules: [
-        {
-          required: true,
-          message: "Username required",
-          trigger: ["blur", "change"],
-        },
-      ],
+      rules: usernameRules,
     },
     componentProps: {
       clearable: true,
-      placeholder: "Enter username",
+      placeholder: "e.g. bunly_2003",
+      autocomplete: "username",
+      maxlength: 30,
+      showWordLimit: true,
     },
   },
   {
@@ -35,23 +100,13 @@ export const userFormSchema: Field<AdminCreateUser>[] = [
     component: ElInput,
     formItemProps: {
       prop: "email",
-      label: "Email",
-      rules: [
-        {
-          required: true,
-          message: "Email required",
-          trigger: ["blur", "change"],
-        },
-        {
-          type: "email",
-          message: "Invalid email format",
-          trigger: ["blur", "change"],
-        },
-      ],
+      rules: emailRules,
     },
     componentProps: {
       clearable: true,
-      placeholder: "Enter email",
+      placeholder: "e.g. bunly@example.com",
+      autocomplete: "email",
+      maxlength: 254,
     },
   },
   {
@@ -60,19 +115,13 @@ export const userFormSchema: Field<AdminCreateUser>[] = [
     component: ElInput,
     formItemProps: {
       prop: "password",
-      label: "Password",
-      rules: [
-        {
-          required: true,
-          message: "Password required",
-          trigger: ["blur", "change"],
-        },
-      ],
+      rules: passwordRulesCreate,
     },
     componentProps: {
       type: "password",
       showPassword: true,
-      placeholder: "Enter password",
+      placeholder: "At least 8 characters",
+      autocomplete: "new-password",
     },
   },
   {
@@ -82,48 +131,49 @@ export const userFormSchema: Field<AdminCreateUser>[] = [
     childComponent: ElOption,
     formItemProps: {
       prop: "role",
-      label: "Role",
-      rules: [
-        {
-          required: true,
-          message: "Role required",
-          trigger: ["change"],
-        },
-      ],
+      rules: roleRules,
     },
     componentProps: {
-      placeholder: "Select role",
+      placeholder: "Select a role",
       clearable: true,
+      filterable: true,
+      class: "w-full",
     },
     childComponentProps: {
-      options: () => roleOptionsRef.value, // [{value, label}...]
+      options: () => roleOptions.value, // [{ value, label }, ...]
       valueKey: "value",
       labelKey: "label",
     },
   },
 ];
 
+/** ---------------- EDIT schema ----------------
+ * - password becomes optional (blank = keep)
+ * - role is disabled (optional; remove if you want to allow role changes)
+ */
 export const userFormSchemaEdit: Field<AdminUpdateUser>[] = userFormSchema.map(
   (f) => {
-    const field = { ...f };
+    const field = { ...f } as any;
 
     if (field.key === "password") {
-      field.componentProps = {
-        ...field.componentProps,
-        placeholder: "Leave blank to keep current password",
-      };
       field.formItemProps = {
-        ...field.formItemProps,
-        rules: [],
+        ...(field.formItemProps ?? {}),
+        rules: passwordRulesEdit,
+      };
+      field.componentProps = {
+        ...(field.componentProps ?? {}),
+        placeholder: "Leave blank to keep current password",
+        autocomplete: "new-password",
       };
     }
 
     if (field.key === "role") {
       field.componentProps = {
-        ...field.componentProps,
+        ...(field.componentProps ?? {}),
         disabled: true,
       };
     }
+
     return field as Field<AdminUpdateUser>;
   }
 );

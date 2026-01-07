@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'M PLUS Code Latin',
+  fullName: 'M PLUS Code Latin Regular',
+  postscriptName: 'MPLUSCodeLatin-Regular',
+  category: 'sans-serif',
+  capHeight: 730,
+  ascent: 1000,
+  descent: -235,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 520,
+  xWidthAvg: 500,
+  subsets: {
+    latin: {
+      xWidthAvg: 500
+    },
+    thai: {
+      xWidthAvg: 500
+    }
+  }
+};

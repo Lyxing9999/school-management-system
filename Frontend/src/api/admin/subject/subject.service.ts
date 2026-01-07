@@ -1,10 +1,13 @@
 // ~/api/subject/service.ts
-import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
+import {
+  useApiUtils,
+  type ApiCallOptions,
+} from "~/composables/system/useApiUtils";
 import type {
-  AdminSubjectListDTO,
   AdminSubjectDataDTO,
   AdminCreateSubject,
-  AdminClassNameSelectList,
+  AdminSubjectPaginatedDTO,
+  AdminSubjectNameSelectDTO,
 } from "./subject.dto";
 import { SubjectApi } from "./subject.api";
 
@@ -17,14 +20,21 @@ export class SubjectService {
   // QUERY
   // ============
 
-  async getSubjects(options?: ApiCallOptions) {
-    const data = await this.callApi<AdminSubjectListDTO>(
-      () => this.subjectApi.getSubjects(),
+  async getSubjects(
+    params?: {
+      status?: "all" | "active" | "inactive";
+      page?: number;
+      page_size?: number;
+      search?: string | null;
+    },
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<AdminSubjectPaginatedDTO>(
+      () => this.subjectApi.getSubjects(params),
       options
     );
     return data!;
   }
-
   async getSubject(id: string, options?: ApiCallOptions) {
     const data = await this.callApi<AdminSubjectDataDTO>(
       () => this.subjectApi.getSubject(id),
@@ -48,6 +58,25 @@ export class SubjectService {
     return data!;
   }
 
+  async updateSubject(
+    id: string,
+    subjectData: Partial<AdminCreateSubject>,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<AdminSubjectDataDTO>(
+      () => this.subjectApi.updateSubject(id, subjectData),
+      { showSuccess: true, ...(options ?? {}) }
+    );
+    return data!;
+  }
+  async softDeleteSubject(id: string, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminSubjectDataDTO>(
+      () => this.subjectApi.softDeleteSubject(id),
+      { showSuccess: true, ...(options ?? {}) }
+    );
+    return data!;
+  }
+
   async activateSubject(id: string, options?: ApiCallOptions) {
     const data = await this.callApi<AdminSubjectDataDTO>(
       () => this.subjectApi.activateSubject(id),
@@ -64,7 +93,7 @@ export class SubjectService {
     return data!;
   }
   async listSubjectNameSelect() {
-    const data = await this.callApi<AdminClassNameSelectList>(
+    const data = await this.callApi<AdminSubjectNameSelectDTO>(
       () => this.subjectApi.listSubjectNameSelect(),
       { showSuccess: false }
     );

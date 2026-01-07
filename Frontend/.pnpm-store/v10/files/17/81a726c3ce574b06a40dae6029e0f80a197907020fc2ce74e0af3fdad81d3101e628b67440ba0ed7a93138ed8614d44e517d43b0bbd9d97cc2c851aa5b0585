@@ -1,0 +1,21 @@
+export default {
+  familyName: 'K2D',
+  fullName: 'K2D Bold Italic',
+  postscriptName: 'K2D-BoldItalic',
+  category: 'sans-serif',
+  capHeight: 700,
+  ascent: 1048,
+  descent: -252,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 500,
+  xWidthAvg: 470,
+  subsets: {
+    latin: {
+      xWidthAvg: 470
+    },
+    thai: {
+      xWidthAvg: 586
+    }
+  }
+};

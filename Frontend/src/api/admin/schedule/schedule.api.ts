@@ -1,6 +1,8 @@
+// schedule.api.ts
 import type { AxiosInstance } from "axios";
 import type {
   AdminCreateScheduleSlot,
+  AdminAssignScheduleSlotSubject, 
   AdminGetScheduleSlotResponse,
   AdminUpdateScheduleSlot,
   AdminGetScheduleListResponse,
@@ -23,19 +25,31 @@ export class ScheduleSlotApi {
     return res.data;
   }
 
-  async getClassSchedule(classId: string) {
+  async getClassSchedule(
+    classId: string,
+    params?: { page?: number; page_size?: number }
+  ) {
     const res = await this.$api.get<AdminGetScheduleListResponse>(
-      `${this.baseURL}/classes/${classId}`
+      `${this.baseURL}/classes/${classId}`,
+      { params }
     );
     return res.data;
   }
 
-  async getTeacherSchedule(teacherId: string) {
+  async getTeacherSchedule(
+    teacherId: string,
+    params?: { page?: number; page_size?: number }
+  ) {
     const res = await this.$api.get<AdminGetScheduleListResponse>(
-      `${this.baseURL}/teachers/${teacherId}`
+      `${this.baseURL}/teachers/${teacherId}`,
+      { params }
     );
     return res.data;
   }
+
+  // ============
+  // COMMAND
+  // ============
 
   async createScheduleSlot(data: AdminCreateScheduleSlot) {
     const res = await this.$api.post<AdminGetScheduleSlotResponse>(
@@ -48,6 +62,17 @@ export class ScheduleSlotApi {
   async updateScheduleSlot(slotId: string, data: AdminUpdateScheduleSlot) {
     const res = await this.$api.patch<AdminGetScheduleSlotResponse>(
       `${this.baseURL}/slots/${slotId}`,
+      data
+    );
+    return res.data;
+  }
+
+  async updateScheduleSlotSubject(
+    slotId: string,
+    data: AdminAssignScheduleSlotSubject
+  ) {
+    const res = await this.$api.patch<AdminGetScheduleSlotResponse>(
+      `${this.baseURL}/slots/${slotId}/subject`,
       data
     );
     return res.data;

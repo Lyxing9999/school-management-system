@@ -1,0 +1,19 @@
+export default {
+  familyName: 'Averia Libre',
+  fullName: 'Averia Libre Italic',
+  postscriptName: 'AveriaLibre-Italic',
+  category: 'display',
+  ascent: 1952,
+  descent: -492,
+  lineGap: 0,
+  unitsPerEm: 2048,
+  xWidthAvg: 890,
+  subsets: {
+    latin: {
+      xWidthAvg: 890
+    },
+    thai: {
+      xWidthAvg: 1152
+    }
+  }
+};

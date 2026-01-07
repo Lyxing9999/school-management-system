@@ -1,12 +1,5 @@
-type ThemeKey = "light" | "dark";
-
+import { useTheme } from "~/composables/system/useTheme";
 export default defineNuxtPlugin(() => {
-  try {
-    const saved = (localStorage.getItem("theme") as ThemeKey | null) ?? "light";
-    const resolved = saved === "light" ? "dark" : saved;
-
-    const el = document.documentElement;
-    el.setAttribute("data-theme", resolved);
-    el.classList.toggle("dark", resolved === "dark");
-  } catch {}
+  const { initFromClient } = useTheme();
+  initFromClient();
 });

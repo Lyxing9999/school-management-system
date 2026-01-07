@@ -43,7 +43,7 @@ export function useServiceFormUser(): UseFormService<
         delete cleanData.password;
       }
       return service.user.updateUser(id, cleanData as AdminUpdateUser, {
-        showSuccess: true,
+        showError: false,
       });
     },
 

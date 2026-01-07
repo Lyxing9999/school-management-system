@@ -1,0 +1,23 @@
+declare module '@capsizecss/metrics/notoSansGunjalaGondi/700' {
+  interface NotoSansGunjalaGondiMetrics {
+    familyName: string;
+    fullName: string;
+    postscriptName: string;
+    category: string;
+    capHeight: number;
+    ascent: number;
+    descent: number;
+    lineGap: number;
+    unitsPerEm: number;
+    xHeight: number;
+    xWidthAvg: number;
+    subsets: Record<
+      'latin' | 'thai',
+      {
+        xWidthAvg: number;
+      }
+    >;
+  }
+  export const fontMetrics: NotoSansGunjalaGondiMetrics;
+  export default fontMetrics;
+}

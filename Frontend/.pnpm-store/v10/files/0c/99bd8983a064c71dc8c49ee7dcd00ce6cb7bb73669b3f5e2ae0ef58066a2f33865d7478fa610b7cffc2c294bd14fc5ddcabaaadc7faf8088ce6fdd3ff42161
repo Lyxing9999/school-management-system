@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Phudu',
+  fullName: 'Phudu SemiBold',
+  postscriptName: 'Phudu-SemiBold',
+  category: 'display',
+  capHeight: 700,
+  ascent: 1025,
+  descent: -200,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 500,
+  xWidthAvg: 455,
+  subsets: {
+    latin: {
+      xWidthAvg: 455
+    },
+    thai: {
+      xWidthAvg: 500
+    }
+  }
+};

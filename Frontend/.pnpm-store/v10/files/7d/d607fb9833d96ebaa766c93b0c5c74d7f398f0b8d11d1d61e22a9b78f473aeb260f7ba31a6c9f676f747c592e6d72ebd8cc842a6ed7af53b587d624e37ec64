@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Noto Sans Kannada',
+  fullName: 'Noto Sans Kannada Regular',
+  postscriptName: 'NotoSansKannada-Regular',
+  category: 'sans-serif',
+  capHeight: 690,
+  ascent: 809,
+  descent: -540,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 551,
+  xWidthAvg: 478,
+  subsets: {
+    latin: {
+      xWidthAvg: 478
+    },
+    thai: {
+      xWidthAvg: 599
+    }
+  }
+};

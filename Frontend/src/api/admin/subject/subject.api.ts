@@ -1,9 +1,11 @@
 import type { AxiosInstance } from "axios";
 import type {
   AdminCreateSubject,
-  AdminGetSubjectListResponse,
   AdminGetSubjectResponse,
-  AdminClassNameSelectListResponse,
+  AdminUpdateSubject,
+  SubjectStatus,
+  AdminSubjectPaginatedListResponse,
+  AdminSubjectNameSelectListResponse,
 } from "./subject.dto";
 
 export class SubjectApi {
@@ -15,8 +17,18 @@ export class SubjectApi {
   // ============
   // QUERY
   // ============
-  async getSubjects(): Promise<AdminGetSubjectListResponse> {
-    const res = await this.$api.get<AdminGetSubjectListResponse>(this.baseURL);
+  async getSubjects(params?: {
+    status?: SubjectStatus;
+    page?: number;
+    page_size?: number;
+    search?: string | null;
+  }): Promise<AdminSubjectPaginatedListResponse> {
+    const res = await this.$api.get<AdminSubjectPaginatedListResponse>(
+      this.baseURL,
+      {
+        params,
+      }
+    );
     return res.data;
   }
 
@@ -28,7 +40,7 @@ export class SubjectApi {
   }
 
   async listSubjectNameSelect() {
-    const res = await this.$api.get<AdminClassNameSelectListResponse>(
+    const res = await this.$api.get<AdminSubjectNameSelectListResponse>(
       `${this.baseURL}/names-select`
     );
     return res.data;
@@ -43,6 +55,23 @@ export class SubjectApi {
     const res = await this.$api.post<AdminGetSubjectResponse>(
       this.baseURL,
       data
+    );
+    return res.data;
+  }
+
+  async updateSubject(
+    subjectId: string,
+    data: Partial<AdminUpdateSubject>
+  ): Promise<AdminGetSubjectResponse> {
+    const res = await this.$api.patch<AdminGetSubjectResponse>(
+      `${this.baseURL}/${subjectId}`,
+      data
+    );
+    return res.data;
+  }
+  async softDeleteSubject(subjectId: string): Promise<AdminGetSubjectResponse> {
+    const res = await this.$api.patch<AdminGetSubjectResponse>(
+      `${this.baseURL}/${subjectId}/soft-delete`
     );
     return res.data;
   }

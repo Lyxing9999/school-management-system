@@ -1,0 +1,21 @@
+export default {
+  familyName: 'League Gothic',
+  fullName: 'League Gothic Regular',
+  postscriptName: 'LeagueGothic-Regular',
+  category: 'sans-serif',
+  capHeight: 1470,
+  ascent: 1935,
+  descent: -465,
+  lineGap: 0,
+  unitsPerEm: 2000,
+  xHeight: 1094,
+  xWidthAvg: 528,
+  subsets: {
+    latin: {
+      xWidthAvg: 528
+    },
+    thai: {
+      xWidthAvg: 747
+    }
+  }
+};

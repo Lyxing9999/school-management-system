@@ -1,12 +1,18 @@
 // ~/api/schedule-slot/service.ts
-import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
+import {
+  useApiUtils,
+  type ApiCallOptions,
+} from "~/composables/system/useApiUtils";
 import type {
   AdminCreateScheduleSlot,
+  AdminAssignScheduleSlotSubject,
   AdminScheduleSlotData,
   AdminUpdateScheduleSlot,
   AdminScheduleSlotList,
 } from "./schedule.dto";
 import { ScheduleSlotApi } from "./schedule.api";
+
+type ScheduleListParams = { page?: number; page_size?: number };
 
 export class ScheduleSlotService {
   private callApi = useApiUtils().callApi;
@@ -17,21 +23,30 @@ export class ScheduleSlotService {
   // QUERY METHODS
   // ============
 
-  async getClassSchedule(classId: string, options?: ApiCallOptions) {
+  async getClassSchedule(
+    classId: string,
+    params?: ScheduleListParams,
+    options?: ApiCallOptions
+  ) {
     const data = await this.callApi<AdminScheduleSlotList>(
-      () => this.scheduleSlotApi.getClassSchedule(classId),
+      () => this.scheduleSlotApi.getClassSchedule(classId, params),
       options
     );
     return data!;
   }
 
-  async getTeacherSchedule(teacherId: string, options?: ApiCallOptions) {
+  async getTeacherSchedule(
+    teacherId: string,
+    params?: ScheduleListParams,
+    options?: ApiCallOptions
+  ) {
     const data = await this.callApi<AdminScheduleSlotList>(
-      () => this.scheduleSlotApi.getTeacherSchedule(teacherId),
+      () => this.scheduleSlotApi.getTeacherSchedule(teacherId, params),
       options
     );
     return data!;
   }
+
   async getScheduleSlotById(id: string, options?: ApiCallOptions) {
     const data = await this.callApi<AdminScheduleSlotData>(
       () => this.scheduleSlotApi.getScheduleSlotById(id),
@@ -39,6 +54,7 @@ export class ScheduleSlotService {
     );
     return data!;
   }
+
   // ============
   // COMMANDS
   // ============
@@ -61,6 +77,18 @@ export class ScheduleSlotService {
   ) {
     const scheduleSlotData = await this.callApi<AdminScheduleSlotData>(
       () => this.scheduleSlotApi.updateScheduleSlot(slotId, payload),
+      { showSuccess: true, ...(options ?? {}) }
+    );
+    return scheduleSlotData!;
+  }
+
+  async updateScheduleSlotSubject(
+    slotId: string,
+    payload: AdminAssignScheduleSlotSubject,
+    options?: ApiCallOptions
+  ) {
+    const scheduleSlotData = await this.callApi<AdminScheduleSlotData>(
+      () => this.scheduleSlotApi.updateScheduleSlotSubject(slotId, payload),
       { showSuccess: true, ...(options ?? {}) }
     );
     return scheduleSlotData!;

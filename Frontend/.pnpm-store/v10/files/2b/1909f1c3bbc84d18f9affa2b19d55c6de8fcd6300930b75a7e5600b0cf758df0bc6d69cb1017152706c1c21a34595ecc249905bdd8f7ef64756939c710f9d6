@@ -1,0 +1,23 @@
+declare module '@capsizecss/metrics/athiti/300' {
+  interface AthitiMetrics {
+    familyName: string;
+    fullName: string;
+    postscriptName: string;
+    category: string;
+    capHeight: number;
+    ascent: number;
+    descent: number;
+    lineGap: number;
+    unitsPerEm: number;
+    xHeight: number;
+    xWidthAvg: number;
+    subsets: Record<
+      'latin' | 'thai',
+      {
+        xWidthAvg: number;
+      }
+    >;
+  }
+  export const fontMetrics: AthitiMetrics;
+  export default fontMetrics;
+}

@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Sarabun',
+  fullName: 'Sarabun Medium Italic',
+  postscriptName: 'Sarabun-MediumItalic',
+  category: 'sans-serif',
+  capHeight: 700,
+  ascent: 1068,
+  descent: -232,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 500,
+  xWidthAvg: 443,
+  subsets: {
+    latin: {
+      xWidthAvg: 443
+    },
+    thai: {
+      xWidthAvg: 562
+    }
+  }
+};

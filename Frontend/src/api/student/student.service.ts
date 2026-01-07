@@ -1,5 +1,8 @@
 // ~/api/student/student.service.ts
-import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
+import {
+  useApiUtils,
+  type ApiCallOptions,
+} from "~/composables/system/useApiUtils";
 import type {
   StudentClassListDTO,
   StudentAttendanceListDTO,
@@ -56,9 +59,9 @@ export class StudentService {
   /**
    * GET /student/me/grades
    */
-  async getMyGrades(params?: StudentGradesFilterDTO, options?: ApiCallOptions) {
+  async getMyGrades(options?: ApiCallOptions) {
     const data = await this.callApi<StudentGradeListDTO>(
-      () => this.studentApi.getMyGrades(params),
+      () => this.studentApi.getMyGrades(),
       {
         showError: true,
         ...(options ?? {}),

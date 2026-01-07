@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Nothing You Could Do',
+  fullName: 'Nothing You Could Do',
+  postscriptName: 'NothingYouCouldDo',
+  category: 'handwriting',
+  capHeight: 758,
+  ascent: 959,
+  descent: -407,
+  lineGap: 0,
+  unitsPerEm: 1024,
+  xHeight: 462,
+  xWidthAvg: 496,
+  subsets: {
+    latin: {
+      xWidthAvg: 496
+    },
+    thai: {
+      xWidthAvg: 410
+    }
+  }
+};

@@ -1,0 +1,21 @@
+export default {
+  familyName: 'Changa',
+  fullName: 'Changa Light',
+  postscriptName: 'Changa-Light',
+  category: 'sans-serif',
+  capHeight: 625,
+  ascent: 1227,
+  descent: -613,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 500,
+  xWidthAvg: 441,
+  subsets: {
+    latin: {
+      xWidthAvg: 441
+    },
+    thai: {
+      xWidthAvg: 600
+    }
+  }
+};

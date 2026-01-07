@@ -1,0 +1,441 @@
+/* =========================================================
+   Element Plus: el-descriptions (token-driven)
+   Goals:
+   - Clean bordered + non-bordered styles
+   - Dark mode label is NEVER light/white
+   - No weird stretching
+   - Long values wrap (IDs/emails)
+   - Zebra is OPT-IN only
+========================================================= */
+
+/* ---------------------------------------------------------
+   0) Component Tokens (derived from your system tokens)
+   NOTE:
+   - These vars are safe to keep here even if you also define
+     them in your main theme file (CSS vars just override)
+--------------------------------------------------------- */
+
+/* LIGHT */
+html[data-theme="light"] {
+    --desc-surface: var(--color-card);
+    --desc-border: color-mix(in srgb, var(--border-color) 78%, transparent);
+
+    /* label surface: subtle tint, not input-white */
+    --desc-label-bg: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%);
+    --desc-label-text: color-mix(in srgb, var(--text-color) 82%, var(--muted-color) 18%);
+
+    /* optional zebra */
+    --desc-zebra-bg: color-mix(in srgb, var(--color-card) 94%, var(--color-bg) 6%);
+
+    /* Element Plus fill tokens (prevent EP fallback) */
+    --el-fill-color: color-mix(in srgb, var(--color-card) 92%, var(--color-bg) 8%);
+    --el-fill-color-light: color-mix(in srgb, var(--color-card) 88%, var(--color-bg) 12%);
+    --el-fill-color-lighter: color-mix(in srgb, var(--color-card) 84%, var(--color-bg) 16%);
+    --el-fill-color-extra-light: color-mix(in srgb, var(--color-card) 80%, var(--color-bg) 20%);
+    --el-bg-color-overlay: var(--color-card);
+}
+
+/* DARK */
+html[data-theme="dark"] {
+    --desc-surface: var(--color-card);
+    --desc-border: color-mix(in srgb, var(--border-color) 88%, transparent);
+
+    /* Element Plus fill tokens (CRITICAL for label backgrounds) */
+    --el-fill-color: color-mix(in srgb, var(--color-bg) 72%, var(--color-card) 28%);
+    --el-fill-color-light: color-mix(in srgb, var(--color-bg) 82%, var(--color-card) 18%);
+    --el-fill-color-lighter: color-mix(in srgb, var(--color-bg) 86%, var(--color-card) 14%);
+    --el-fill-color-extra-light: color-mix(in srgb, var(--color-bg) 90%, var(--color-card) 10%);
+    --el-bg-color-overlay: var(--color-card);
+
+    /*
+    KEY FIX:
+    label must be DARKER than card.
+    Your card: --color-card (#0f172a)
+    Your bg  : --color-bg   (#0b1220)
+    So: label mixes mostly with bg.
+  */
+    --desc-label-bg: color-mix(in srgb, var(--color-bg) 82%, var(--color-card) 18%);
+    --desc-label-text: color-mix(in srgb, var(--text-color) 92%, var(--muted-color) 8%);
+
+    /* optional zebra */
+    --desc-zebra-bg: color-mix(in srgb, var(--color-bg) 60%, var(--color-card) 40%);
+}
+
+/* ---------------------------------------------------------
+   1) Element Plus variables (source of truth)
+--------------------------------------------------------- */
+.el-descriptions {
+    color: var(--text-color);
+
+    --el-descriptions-table-border: var(--desc-border);
+    --el-descriptions-item-bordered-label-background: var(--desc-label-bg);
+    --el-descriptions-item-bordered-label-text-color: var(--desc-label-text);
+}
+
+/* ---------------------------------------------------------
+   2) Header
+--------------------------------------------------------- */
+.el-descriptions__header {
+    margin-bottom: 10px;
+}
+
+.el-descriptions__title {
+    color: var(--text-color);
+    font-weight: 750;
+    letter-spacing: -0.01em;
+}
+
+.el-descriptions__extra {
+    color: var(--muted-color);
+}
+
+/* ---------------------------------------------------------
+   3) Table surface
+--------------------------------------------------------- */
+.el-descriptions__body {
+    background: transparent;
+}
+
+.el-descriptions__table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+
+    background-color: var(--desc-surface);
+    border: 1px solid var(--desc-border);
+    border-radius: 14px;
+    box-shadow: 0 10px 26px var(--card-shadow);
+
+    /* Avoid the “weird columns” effect by default */
+    table-layout: auto;
+}
+
+/* Non-bordered still clean */
+.el-descriptions:not(.is-bordered) .el-descriptions__table {
+    border-color: color-mix(in srgb, var(--desc-border) 80%, transparent);
+}
+
+/* Optional fixed layout if YOU want it:
+   <el-descriptions class="desc-fixed" ... />
+*/
+.desc-fixed .el-descriptions__table {
+    table-layout: fixed;
+}
+
+/* ---------------------------------------------------------
+   4) Cells (base)
+--------------------------------------------------------- */
+.el-descriptions__cell {
+    padding: 12px 14px;
+    vertical-align: top;
+
+    border-bottom: 1px solid color-mix(in srgb, var(--desc-border) 80%, transparent);
+
+    /* avoid rounding on cells */
+    border-radius: 0 !important;
+
+    /* allow shrink */
+    min-width: 0;
+}
+
+.el-descriptions__row:last-child .el-descriptions__cell {
+    border-bottom: 0;
+}
+
+/* Alignment helpers */
+.el-descriptions__cell.is-left {
+    text-align: left;
+}
+
+.el-descriptions__cell.is-center {
+    text-align: center;
+}
+
+.el-descriptions__cell.is-right {
+    text-align: right;
+}
+
+/* ---------------------------------------------------------
+   5) Typography
+--------------------------------------------------------- */
+.el-descriptions__label {
+    color: var(--desc-label-text);
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+/* Long values wrap (IDs/emails) */
+.el-descriptions__content {
+    color: var(--text-color);
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Nice: make very long IDs readable */
+.el-descriptions__content code,
+.el-descriptions__content .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+}
+
+/* ---------------------------------------------------------
+   6) Bordered mode borders
+--------------------------------------------------------- */
+.el-descriptions.is-bordered .el-descriptions__cell {
+    border-right: 1px solid color-mix(in srgb, var(--desc-border) 80%, transparent);
+    border-right-color: color-mix(in srgb, var(--desc-border) 80%, transparent) !important;
+    border-bottom-color: color-mix(in srgb, var(--desc-border) 80%, transparent) !important;
+}
+
+.el-descriptions.is-bordered .el-descriptions__row .el-descriptions__cell:last-child {
+    border-right: 0;
+}
+
+/* ---------------------------------------------------------
+   7) CRITICAL: label/content surfaces
+   EP applies .is-bordered-label / .is-bordered-content
+   Some versions use <th> for labels -> target th too.
+--------------------------------------------------------- */
+.el-descriptions.is-bordered .el-descriptions__cell.is-bordered-label,
+.el-descriptions.is-bordered th.el-descriptions__cell.is-bordered-label {
+    background-color: var(--desc-label-bg) !important;
+    color: var(--desc-label-text) !important;
+}
+
+.el-descriptions.is-bordered .el-descriptions__cell.is-bordered-content,
+.el-descriptions.is-bordered td.el-descriptions__cell.is-bordered-content {
+    background-color: var(--desc-surface) !important;
+    color: var(--text-color) !important;
+}
+
+/* Extra safety: some EP versions combine label class names */
+.el-descriptions.is-bordered .el-descriptions__cell.el-descriptions__label.is-bordered-label {
+    background-color: var(--desc-label-bg) !important;
+    color: var(--desc-label-text) !important;
+}
+
+/* ---------------------------------------------------------
+   8) Optional: label column sizing (prevents ugly stretching)
+   - Desktop keeps labels compact
+   - Mobile allows wrapping
+--------------------------------------------------------- */
+@media (min-width: 641px) {
+
+    /* Keep labels visually consistent without forcing weird table layout */
+    .el-descriptions__label {
+        max-width: 200px;
+    }
+}
+
+@media (max-width: 640px) {
+    .el-descriptions__label {
+        white-space: normal;
+        max-width: none;
+    }
+}
+
+/* ---------------------------------------------------------
+   9) Zebra (opt-in only)
+   Usage: <el-descriptions class="desc-zebra" ... />
+--------------------------------------------------------- */
+.el-descriptions.desc-zebra .el-descriptions__row:nth-child(even) .el-descriptions__cell {
+    background-color: var(--desc-zebra-bg);
+}
+
+/* Keep bordered label stable even when zebra is on */
+.el-descriptions.desc-zebra.is-bordered .el-descriptions__cell.is-bordered-label,
+.el-descriptions.desc-zebra.is-bordered th.el-descriptions__cell.is-bordered-label {
+    background-color: var(--desc-label-bg) !important;
+}
+
+/* ---------------------------------------------------------
+   10) Links + tags
+--------------------------------------------------------- */
+.el-descriptions__content a {
+    color: var(--color-primary);
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.el-descriptions__content a:hover {
+    text-decoration: underline;
+}
+
+.el-descriptions__content .el-tag {
+    border-radius: 10px;
+}
+
+/* ---------------------------------------------------------
+   11) Responsive padding
+--------------------------------------------------------- */
+@media (max-width: 640px) {
+    .el-descriptions__cell {
+        padding: 10px 12px;
+    }
+
+    .el-descriptions__table {
+        max-width: 100%;
+    }
+}
+
+/* ---------------------------------------------------------
+   12) Compact modifier
+   Usage: <el-descriptions class="desc-compact" ... />
+--------------------------------------------------------- */
+.desc-compact .el-descriptions__cell {
+    padding: 10px 12px;
+}
+
+.desc-compact .el-descriptions__label {
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.desc-compact .el-descriptions__content {
+    font-size: 13px;
+}
+
+
+
+/* =========================================================
+   Element Plus: DateRange (final)
+   - Desktop: 2 panels side-by-side (default EP behavior)
+   - Mobile <= 768: stack panels vertically + scroll + sticky footer
+   - Fix tooltip trigger wrapper width issues
+   - Fix popper padding
+========================================================= */
+
+/* Popper wrapper from Element Plus has padding by default; remove for date range popper */
+.date-range-popper.el-popper {
+    padding: 0 !important;
+}
+
+/* Keep desktop size reasonable (prevents “huge” look on large screens) */
+.date-range-popper .el-date-range-picker {
+    width: 640px;
+    /* stable */
+    max-width: calc(100vw - 24px);
+    /* never overflow */
+}
+
+/* ---------------------------------------------------------
+   Range editor shrink safety (input)
+--------------------------------------------------------- */
+.el-date-editor {
+    width: 100%;
+    min-width: 0;
+}
+
+/* daterange wrapper */
+.el-date-editor.el-date-editor--daterange.el-range-editor,
+.el-date-editor.el-date-editor--daterange.el-range-editor.el-input__wrapper {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* internal flex so inputs can shrink */
+.el-date-editor.el-date-editor--daterange.el-range-editor.el-input__wrapper {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px;
+}
+
+/* allow both sides to shrink */
+.el-date-editor.el-date-editor--daterange.el-range-editor .el-range-input {
+    min-width: 0 !important;
+    width: 0 !important;
+    flex: 1 1 0% !important;
+    text-align: center;
+}
+
+/* Tooltip trigger wrapper safety (only for your date input class) */
+.df-date .el-tooltip__trigger,
+.df-date .el-tooltip__trigger>* {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+@media (max-width: 768px) {
+
+    /* 1) POPPER: center as a modal */
+    .date-range-popper.el-popper {
+        position: fixed !important;
+
+        /* Center */
+        top: 50% !important;
+        left: 50% !important;
+        right: auto !important;
+        bottom: auto !important;
+        transform: translate(-50%, -50%) !important;
+
+        width: calc(100vw - 24px) !important;
+        max-width: 400px !important;
+        min-width: 0 !important;
+
+        margin: 0 !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    /* Optional: hide the arrow when it behaves like a modal */
+    .date-range-popper .el-popper__arrow {
+        display: none !important;
+    }
+
+    /* 2) PANEL: ensure it actually obeys the popper width */
+    .date-range-popper .el-picker-panel.el-date-range-picker {
+        width: 100% !important;
+        min-width: 0 !important;
+
+        /* Make height management easier */
+        display: flex !important;
+        flex-direction: column !important;
+        max-height: 70vh !important;
+    }
+
+    /* 3) BODY WRAPPER: scroll the content, keep footer visible */
+    .date-range-popper .el-picker-panel__body-wrapper {
+        flex: 1 1 auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .date-range-popper .el-picker-panel__body {
+        min-width: 0 !important;
+    }
+
+    /* 4) STACK THE TWO CALENDARS */
+    .date-range-popper .el-date-range-picker__content.is-left,
+    .date-range-popper .el-date-range-picker__content.is-right {
+        float: none !important;
+        width: 100% !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    /* Divider between the two months */
+    .date-range-popper .el-date-range-picker__content.is-left {
+        border-bottom: 1px solid var(--border-color) !important;
+        padding-bottom: 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    /* 5) FOOTER: stays visible because body wrapper scrolls */
+    .date-range-popper .el-picker-panel__footer {
+        flex: 0 0 auto !important;
+        background: var(--color-card) !important;
+        border-top: 1px solid var(--border-color) !important;
+    }
+
+    /* 6) Hide the shortcuts sidebar on mobile */
+    .date-range-popper .el-picker-panel__sidebar {
+        display: none !important;
+    }
+}

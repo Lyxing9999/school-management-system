@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Condiment',
+  fullName: 'Condiment',
+  postscriptName: 'Condiment-Regular',
+  category: 'handwriting',
+  capHeight: 327,
+  ascent: 882,
+  descent: -641,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 317,
+  xWidthAvg: 347,
+  subsets: {
+    latin: {
+      xWidthAvg: 347
+    },
+    thai: {
+      xWidthAvg: 180
+    }
+  }
+};

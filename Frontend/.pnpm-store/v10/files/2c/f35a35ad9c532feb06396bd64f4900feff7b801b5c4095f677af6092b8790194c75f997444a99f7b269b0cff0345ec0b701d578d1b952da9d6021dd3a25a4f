@@ -1,0 +1,21 @@
+export default {
+  familyName: 'Gantari',
+  fullName: 'Gantari Thin Italic',
+  postscriptName: 'Gantari-ThinItalic',
+  category: 'sans-serif',
+  capHeight: 668,
+  ascent: 950,
+  descent: -250,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 470,
+  xWidthAvg: 458,
+  subsets: {
+    latin: {
+      xWidthAvg: 458
+    },
+    thai: {
+      xWidthAvg: 496
+    }
+  }
+};

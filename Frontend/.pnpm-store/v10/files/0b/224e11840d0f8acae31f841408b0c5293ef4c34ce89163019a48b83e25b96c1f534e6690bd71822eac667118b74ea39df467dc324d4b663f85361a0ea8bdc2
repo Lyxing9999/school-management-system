@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Noto Sans Tamil',
+  fullName: 'Noto Sans Tamil Medium',
+  postscriptName: 'NotoSansTamil-Medium',
+  category: 'sans-serif',
+  capHeight: 714,
+  ascent: 870,
+  descent: -370,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 554,
+  xWidthAvg: 483,
+  subsets: {
+    latin: {
+      xWidthAvg: 483
+    },
+    thai: {
+      xWidthAvg: 600
+    }
+  }
+};

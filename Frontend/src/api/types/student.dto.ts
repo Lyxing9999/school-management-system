@@ -1,3 +1,4 @@
+import type { LifecycleDTO } from "./lifecycle.dto";
 /**
  * @description Base Student Info
  * @example
@@ -40,6 +41,5 @@ export interface StudentBaseDataDTO {
 
   status: StudentStatus | string;
 
-  created_at: string;
-  updated_at: string;
+  lifecycle: LifecycleDTO;
 }

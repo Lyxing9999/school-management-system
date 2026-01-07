@@ -2,7 +2,7 @@
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
 import type { FormProps } from "element-plus";
 import type { Field } from "../types/form";
-import SmartForm from "~/components/Form/SmartForm.vue";
+import SmartForm from "~/components/form/SmartForm.vue";
 import { ElDialog } from "element-plus";
 
 const props = defineProps<{

@@ -1,0 +1,21 @@
+export default {
+  familyName: 'Gemunu Libre',
+  fullName: 'Gemunu Libre ExtraLight',
+  postscriptName: 'GemunuLibre-ExtraLight',
+  category: 'sans-serif',
+  capHeight: 0,
+  ascent: 884,
+  descent: -200,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 0,
+  xWidthAvg: 339,
+  subsets: {
+    latin: {
+      xWidthAvg: 339
+    },
+    thai: {
+      xWidthAvg: 631
+    }
+  }
+};

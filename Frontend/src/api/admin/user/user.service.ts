@@ -1,10 +1,13 @@
-// ~/api/user/service.ts
-import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
+import {
+  useApiUtils,
+  type ApiCallOptions,
+} from "~/composables/system/useApiUtils";
 import type {
   AdminCreateUser,
   AdminUpdateUser,
   AdminGetUserData,
   AdminGetPageUserData,
+  AdminPasswordResetResponse,
 } from "./user.dto";
 import { UserApi } from "./user.api";
 import { Role } from "~/api/types/enums/role.enum";
@@ -32,7 +35,7 @@ export class UserService {
   async createUser(userData: AdminCreateUser, options?: ApiCallOptions) {
     const data = await this.callApi<AdminGetUserData>(
       () => this.userApi.createUser(userData),
-      options
+      { showSuccess: true, ...(options ?? {}) }
     );
     return data!;
   }
@@ -44,7 +47,7 @@ export class UserService {
   ) {
     const data = await this.callApi<AdminGetUserData>(
       () => this.userApi.updateUser(id, userData),
-      options
+      { showSuccess: true, ...(options ?? {}) }
     );
     return data!;
   }
@@ -69,6 +72,17 @@ export class UserService {
     const data = await this.callApi<AdminGetUserData>(
       () => this.userApi.setUserStatus(id, status),
       { showSuccess: true, showError: true }
+    );
+    return data!;
+  }
+  async requestPasswordReset(userId: string, options?: ApiCallOptions) {
+    const data = await this.callApi<AdminPasswordResetResponse>(
+      () => this.userApi.requestPasswordReset(userId),
+      {
+        showSuccess: false,
+        showError: false,
+        ...(options ?? {}),
+      }
     );
     return data!;
   }

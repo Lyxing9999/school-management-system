@@ -1,0 +1,23 @@
+declare module '@capsizecss/metrics/mulish/600italic' {
+  interface MulishMetrics {
+    familyName: string;
+    fullName: string;
+    postscriptName: string;
+    category: string;
+    capHeight: number;
+    ascent: number;
+    descent: number;
+    lineGap: number;
+    unitsPerEm: number;
+    xHeight: number;
+    xWidthAvg: number;
+    subsets: Record<
+      'latin' | 'thai',
+      {
+        xWidthAvg: number;
+      }
+    >;
+  }
+  export const fontMetrics: MulishMetrics;
+  export default fontMetrics;
+}

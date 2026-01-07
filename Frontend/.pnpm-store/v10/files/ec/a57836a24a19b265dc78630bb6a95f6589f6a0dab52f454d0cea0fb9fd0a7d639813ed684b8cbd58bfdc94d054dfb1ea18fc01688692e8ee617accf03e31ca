@@ -1,0 +1,23 @@
+declare module '@capsizecss/metrics/arefRuqaa/700' {
+  interface ArefRuqaaMetrics {
+    familyName: string;
+    fullName: string;
+    postscriptName: string;
+    category: string;
+    capHeight: number;
+    ascent: number;
+    descent: number;
+    lineGap: number;
+    unitsPerEm: number;
+    xHeight: number;
+    xWidthAvg: number;
+    subsets: Record<
+      'latin' | 'thai',
+      {
+        xWidthAvg: number;
+      }
+    >;
+  }
+  export const fontMetrics: ArefRuqaaMetrics;
+  export default fontMetrics;
+}

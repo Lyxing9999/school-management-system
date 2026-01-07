@@ -1,10 +1,8 @@
-// ~/tables/columns/admin/scheduleColumns.ts
 import { h, type ComputedRef } from "vue";
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import type { AdminScheduleSlotData } from "~/api/admin/schedule/schedule.dto";
 
 const dayOfWeekLabels = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
 export function createScheduleColumns(
   teacherLabelMap: ComputedRef<Record<string, string>>
 ): ColumnConfig<AdminScheduleSlotData>[] {
@@ -55,13 +53,26 @@ export function createScheduleColumns(
         ),
     },
     {
+      label: "Subject",
+      field: "subject_label",
+      align: "left",
+      minWidth: "220px",
+      render: (row: AdminScheduleSlotData) => {
+        const label = (row.subject_label ?? "").trim();
+        return label
+          ? h("span", label)
+          : h("span", { class: "text-[var(--el-text-color-secondary)]" }, "—");
+      },
+    },
+    {
       field: "id",
-      operation: true,
       label: "Operation",
-      inlineEditActive: false,
       align: "center",
-      minWidth: "200px",
-      smartProps: {},
+      width: "220px",
+      operation: true,
+      inlineEditActive: false,
+      useSlot: true,
+      slotName: "operation",
     },
   ];
 }

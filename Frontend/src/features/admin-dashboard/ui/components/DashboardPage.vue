@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
+import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import { useAdminDashboard } from "~/features/admin-dashboard/composables/useAdminDashboard";
 
 import DashboardFilters from "../components/DashboardFilters.vue";
@@ -29,18 +29,18 @@ const vm = useAdminDashboard();
       </template>
 
       <template #actions>
-        <DashboardFilters
-          :date-range="vm.dateRangeValue.value"
-          :term="vm.termValue.value"
-          :term-options="vm.termOptions"
-          :loading="vm.loadingValue.value"
-          @update:dateRange="vm.setDateRange"
-          @update:term="vm.setTerm"
-          @apply="vm.loadDashboard"
-        />
+        <div class="flex flex-wrap items-center gap-2">
+          <DashboardFilters
+            :date-range="vm.dateRangeValue.value"
+            :loading="vm.loadingValue.value"
+            :can-reset="vm.canReset.value"
+            @update:dateRange="vm.setDateRange"
+            @apply="vm.loadDashboard"
+            @reset="vm.resetFilters"
+          />
+        </div>
       </template>
     </OverviewHeader>
-
     <el-alert
       v-if="vm.errorMessageValue.value"
       :title="vm.errorMessageValue.value || ''"

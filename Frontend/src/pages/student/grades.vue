@@ -1,90 +1,179 @@
 <script setup lang="ts">
-definePageMeta({
-  layout: "student",
-});
+definePageMeta({ layout: "default" });
 
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 
 import { studentService } from "~/api/student";
 import type { GradeDTO } from "~/api/types/school.dto";
-import type {
-  StudentGradesFilterDTO,
-  StudentGradeListDTO,
-} from "~/api/student/student.dto";
-import { useHeaderState } from "~/composables/useHeaderState";
-import { formatDate } from "~/utils/formatDate";
-import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
-import BaseButton from "~/components/Base/BaseButton.vue";
+import type { StudentGradeListDTO } from "~/api/student/student.dto";
+
+import { useHeaderState } from "~/composables/ui/useHeaderState";
+import { formatDate } from "~/utils/date/formatDate";
+import OverviewHeader from "~/components/overview/OverviewHeader.vue";
+
 const student = studentService();
 
-/**
- * You can keep GradeDTO, but we'll also define the list item type
- * from StudentGradeListDTO in case backend adds more fields later.
- */
-type StudentGradeItem = StudentGradeListDTO["items"][number];
+type StudentGradeItem = StudentGradeListDTO["items"][number] | GradeDTO;
 
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
-const grades = ref<StudentGradeItem[] | GradeDTO[]>([]);
-const termFilter = ref<string>("");
+const grades = ref<StudentGradeItem[]>([]);
+const termFilter = ref<string>(""); // "" = all
+
+let requestSeq = 0;
+
+/* ---------------- helpers ---------------- */
+
+const safeText = (v: any, fallback = "—") => {
+  const s = String(v ?? "").trim();
+  return s ? s : fallback;
+};
+
+const toNumber = (v: any) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+const getTagType = (value?: string) => {
+  if (!value) return "info";
+  const v = value.toLowerCase();
+  if (v === "assignment") return "success";
+  if (v === "exam") return "danger";
+  if (v === "quiz") return "warning";
+  return "info";
+};
+
+const formatType = (value?: string) => {
+  if (!value) return "—";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
+const parseDate = (v: any) => {
+  const d = new Date(v ?? "");
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const extractErrorMessage = (err: any) => {
+  return (
+    err?.response?.data?.user_message ||
+    err?.response?.data?.message ||
+    err?.message ||
+    "Failed to load grades. Please try again."
+  );
+};
 
 /* ---------------- load grades ---------------- */
 
 const loadGrades = async () => {
+  const seq = ++requestSeq;
   loading.value = true;
   errorMessage.value = null;
 
   try {
-    const params: StudentGradesFilterDTO = {};
-    if (termFilter.value.trim()) {
-      params.term = termFilter.value.trim();
-    }
+    const res = await student.student.getMyGrades();
+    if (seq !== requestSeq) return;
 
-    const res = await student.student.getMyGrades(params);
-    // API shape: { items: GradeDTO[] }
     grades.value = res.items ?? [];
-  } catch (e) {
+  } catch (err: any) {
+    if (seq !== requestSeq) return;
+
+    errorMessage.value = extractErrorMessage(err);
+    grades.value = [];
   } finally {
-    loading.value = false;
+    if (seq === requestSeq) loading.value = false;
   }
 };
 
 onMounted(loadGrades);
+onBeforeUnmount(() => {
+  requestSeq++;
+});
 
-/* ---------------- helpers ---------------- */
+/* ---------------- view model ---------------- */
 
-// script
-const getTagType = (value?: string) => {
-  if (!value) return "primary";
-
-  const v = value.toLowerCase();
-  if (v === "assignment") return "success";
-  if (v === "exam") return "danger";
-  return "primary";
+type GradeRowVM = {
+  id: string;
+  subjectLabel: string;
+  className: string;
+  score: number | null;
+  type: string;
+  term: string;
+  createdAt: string; // raw for formatDate
+  createdAtDate: Date | null;
 };
 
-const formatType = (value?: string) => {
-  if (!value) return "";
-  return value.charAt(0).toUpperCase() + value.slice(1);
-};
+const rows = computed<GradeRowVM[]>(() => {
+  const list = grades.value ?? [];
+  return list
+    .map((g: any, idx) => {
+      const createdAt = g.created_at ?? g.createdAt ?? "";
+      return {
+        id: String(g._id ?? g.id ?? `${idx}`),
+        subjectLabel: safeText(g.subject_label ?? g.subjectLabel),
+        className: safeText(g.class_name ?? g.className),
+        score: toNumber(g.score),
+        type: safeText(g.type, ""),
+        term: safeText(g.term, "—"),
+        createdAt: g.lifecycle?.created_at ?? g.created_at ?? g.createdAt ?? "",
+        createdAtDate: parseDate(
+          g.lifecycle?.created_at ?? g.created_at ?? g.createdAt
+        ),
+      };
+    })
+    .sort((a, b) => {
+      // newest first
+      const ad = a.createdAtDate?.getTime() ?? 0;
+      const bd = b.createdAtDate?.getTime() ?? 0;
+      return bd - ad;
+    });
+});
+
+const termOptions = computed(() => {
+  const set = new Set<string>();
+  for (const r of rows.value) {
+    if (r.term && r.term !== "—") set.add(r.term);
+  }
+  return Array.from(set).sort();
+});
+
+const filteredRows = computed(() => {
+  if (!termFilter.value) return rows.value;
+  return rows.value.filter((r) => r.term === termFilter.value);
+});
+
+const groupedByTerm = computed(() => {
+  const map = new Map<string, GradeRowVM[]>();
+  for (const r of filteredRows.value) {
+    const key = r.term || "—";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(r);
+  }
+
+  // sort terms: put "—" last, others alphabetically
+  return [...map.entries()].sort((a, b) => {
+    if (a[0] === "—") return 1;
+    if (b[0] === "—") return -1;
+    return a[0].localeCompare(b[0]);
+  });
+});
+
 /* ---------------- overview stats ---------------- */
 
-const totalGrades = computed(() => grades.value.length);
+const totalGrades = computed(() => filteredRows.value.length);
 
-const distinctSubjects = computed(
-  () =>
-    new Set(grades.value.map((g: any) => g.subject_id || g.subject_label)).size
-);
+const distinctSubjects = computed(() => {
+  return new Set(filteredRows.value.map((g) => g.subjectLabel)).size;
+});
 
 const averageScore = computed(() => {
-  if (!grades.value.length) return null;
+  const numeric = filteredRows.value
+    .map((g) => g.score)
+    .filter((n): n is number => typeof n === "number");
 
-  const sum = grades.value.reduce((acc: number, g: any) => {
-    const s = Number(g.score);
-    return Number.isFinite(s) ? acc + s : acc;
-  }, 0);
+  if (!numeric.length) return null;
 
-  return Math.round((sum / grades.value.length) * 10) / 10; // 1 decimal
+  const sum = numeric.reduce((acc, n) => acc + n, 0);
+  return Math.round((sum / numeric.length) * 10) / 10;
 });
 
 const { headerState } = useHeaderState({
@@ -95,7 +184,7 @@ const { headerState } = useHeaderState({
       singular: "record",
       plural: "records",
       variant: "primary",
-      hideWhenZero: true,
+      hideWhenZero: false,
     },
     {
       key: "subjects",
@@ -105,7 +194,7 @@ const { headerState } = useHeaderState({
       suffix: "graded",
       variant: "secondary",
       dotClass: "bg-emerald-500",
-      hideWhenZero: true,
+      hideWhenZero: false,
     },
     {
       key: "avg_score",
@@ -114,57 +203,31 @@ const { headerState } = useHeaderState({
         averageScore.value === null ? undefined : `Average score: ${v}`,
       variant: "secondary",
       dotClass: "bg-blue-500",
-      hideWhenZero: true,
+      hideWhenZero: averageScore.value === null,
     },
   ],
 });
-const canRefresh = computed(() => !loading.value);
 
 const handleRefresh = async () => {
-  if (!canRefresh.value) return;
+  if (loading.value) return;
   await loadGrades();
 };
-</script>
 
+const clearFilter = () => {
+  termFilter.value = "";
+};
+</script>
 <template>
-  <div class="p-4 space-y-4">
-    <!-- OVERVIEW HEADER -->
+  <div class="p-4 space-y-4" v-loading="loading">
     <OverviewHeader
       title="My Grades"
       description="View your grades across subjects and terms."
       :loading="loading"
       :showRefresh="true"
-      :disabled="true"
       :stats="headerState"
       @refresh="handleRefresh"
-    >
-      <!-- Filters: term input -->
-      <template #filters>
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-500">Term:</span>
-            <el-input
-              v-model="termFilter"
-              placeholder="e.g. 2025-S1"
-              style="min-width: 200px"
-              size="small"
-              clearable
-              @keyup.enter="loadGrades"
-            />
-            <BaseButton
-              size="small"
-              type="primary"
-              :loading="loading"
-              @click="loadGrades"
-            >
-              Apply
-            </BaseButton>
-          </div>
-        </div>
-      </template>
-    </OverviewHeader>
+    />
 
-    <!-- ERROR -->
     <transition name="el-fade-in">
       <el-alert
         v-if="errorMessage"
@@ -177,59 +240,130 @@ const handleRefresh = async () => {
       />
     </transition>
 
-    <!-- MAIN CARD -->
-    <el-card shadow="hover" class="space-y-4">
-      <!-- Small header inside card (optional, but consistent) -->
+    <!-- Filters (simple, consistent) -->
+    <el-card shadow="never" class="rounded-xl">
       <div
-        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
       >
         <div>
-          <div class="text-base font-semibold text-gray-800">Grade records</div>
-          <p class="text-xs text-gray-500">
-            Each row is one grade for a subject, class and term.
-          </p>
+          <div class="font-semibold text-gray-800">Term</div>
+          <div class="text-xs text-gray-500">
+            Showing
+            <span class="font-medium text-gray-700">{{
+              filteredRows.length
+            }}</span>
+            of
+            <span class="font-medium text-gray-700">{{ rows.length }}</span>
+            records
+          </div>
         </div>
 
-        <div class="text-xs text-gray-500">
-          Total: {{ totalGrades }} record{{ totalGrades === 1 ? "" : "s" }}
+        <div class="flex items-center gap-2">
+          <el-select
+            v-model="termFilter"
+            placeholder="All terms"
+            clearable
+            class="w-56"
+            :disabled="loading"
+          >
+            <el-option
+              v-for="t in termOptions"
+              :key="t"
+              :label="t"
+              :value="t"
+            />
+          </el-select>
+
+          <el-button :disabled="loading || !termFilter" @click="clearFilter">
+            Clear
+          </el-button>
         </div>
       </div>
+    </el-card>
 
-        <!-- Grades table -->
+    <!-- Skeleton for first load -->
+    <el-card v-if="loading && !rows.length" shadow="never" class="rounded-xl">
+      <el-skeleton animated :rows="6" />
+    </el-card>
+
+    <!-- Empty -->
+    <el-empty
+      v-else-if="!loading && !filteredRows.length"
+      description="No grades found."
+      class="bg-white rounded-xl border"
+    />
+
+    <!-- Grouped by term -->
+    <div v-else class="space-y-3">
+      <el-card
+        v-for="[term, items] in groupedByTerm"
+        :key="term"
+        shadow="hover"
+        class="rounded-xl"
+      >
+        <template #header>
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <span class="font-semibold">{{
+                term === "—" ? "Other" : term
+              }}</span>
+              <span class="text-xs text-gray-500">
+                {{ items.length }} record{{ items.length === 1 ? "" : "s" }}
+              </span>
+            </div>
+
+            <!-- tiny summary (simple, not complex) -->
+            <div class="text-xs text-gray-500">
+              Avg:
+              <span class="font-medium text-gray-700">
+                {{
+                  (() => {
+                    const nums = items
+                      .map((i) => i.score)
+                      .filter((n): n is number => typeof n === "number");
+                    if (!nums.length) return "—";
+                    const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+                    return Math.round(avg * 10) / 10;
+                  })()
+                }}
+              </span>
+            </div>
+          </div>
+        </template>
+
         <el-table
-          :data="grades"
-          v-loading="loading"
+          :data="items"
           border
           size="small"
           style="width: 100%"
           highlight-current-row
+          :header-cell-style="{
+            background: '#f9fafb',
+            color: '#374151',
+            fontWeight: '600',
+            fontSize: '13px',
+          }"
         >
-          <!-- Subject label from backend -->
           <el-table-column
-            prop="subject_label"
+            prop="subjectLabel"
             label="Subject"
-            min-width="200"
+            min-width="220"
             show-overflow-tooltip
           />
-
-          <!-- Class name -->
           <el-table-column
-            prop="class_name"
+            prop="className"
             label="Class"
             min-width="180"
             show-overflow-tooltip
           />
 
-          <!-- Score -->
-          <el-table-column
-            prop="score"
-            label="Score"
-            min-width="80"
-            align="right"
-          />
+          <el-table-column label="Score" min-width="90" align="right">
+            <template #default="{ row }">
+              <span class="font-medium">{{ row.score ?? "—" }}</span>
+            </template>
+          </el-table-column>
 
-          <!-- Type as small tag -->
-          <el-table-column label="Type" min-width="110">
+          <el-table-column label="Type" min-width="130">
             <template #default="{ row }">
               <el-tag size="small" effect="plain" :type="getTagType(row.type)">
                 {{ formatType(row.type) }}
@@ -237,31 +371,17 @@ const handleRefresh = async () => {
             </template>
           </el-table-column>
 
-          <!-- Term -->
-          <el-table-column
-            prop="term"
-            label="Term"
-            min-width="120"
-            show-overflow-tooltip
-          />
-
-          <!-- Created date -->
-          <el-table-column label="Recorded At" min-width="140">
+          <el-table-column label="Recorded" min-width="160">
             <template #default="{ row }">
-              {{ formatDate(row.created_at) }}
+              <span class="text-xs text-gray-600">
+                {{
+                  formatDate(row.lifecycle?.createdAt ?? row.createdAt ?? "—")
+                }}
+              </span>
             </template>
           </el-table-column>
         </el-table>
-
-        <!-- Empty state -->
-        <div
-          v-if="!loading && !grades.length"
-          class="text-center text-gray-500 text-sm py-4"
-        >
-          No grades found for this filter.
-        </div>
-    </el-card>
+      </el-card>
+    </div>
   </div>
 </template>
-
-<style scoped></style>

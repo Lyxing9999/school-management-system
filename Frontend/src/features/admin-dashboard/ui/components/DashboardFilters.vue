@@ -1,55 +1,133 @@
 <script setup lang="ts">
-import type { DateRange, TermValue } from "../../model/filters";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import type { DateRange } from "../../model/filters";
 
-defineProps<{
+const props = defineProps<{
   dateRange: DateRange;
-  term: TermValue;
-  termOptions: Array<{ label: string; value: TermValue }>;
   loading?: boolean;
+  canReset?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: "update:dateRange", v: DateRange): void;
-  (e: "update:term", v: TermValue): void;
   (e: "apply"): void;
+  (e: "reset"): void;
 }>();
+
+/** Normalize DateRange coming from Element Plus */
+function normalizeDateRange(v: unknown): DateRange {
+  if (!v) return null;
+  if (!Array.isArray(v)) return null;
+  if (v.length !== 2) return null;
+
+  const [a, b] = v as any[];
+  if (!(a instanceof Date) || !(b instanceof Date)) return null;
+  return [a, b];
+}
+
+/** Auto-apply with small debounce to avoid double calls */
+let t: ReturnType<typeof setTimeout> | null = null;
+function scheduleApply() {
+  if (t) clearTimeout(t);
+  t = setTimeout(() => emit("apply"), 250);
+}
+
+onBeforeUnmount(() => {
+  if (t) clearTimeout(t);
+});
+
+/** Date change handler */
+function onDateRangeChange(v: unknown) {
+  const normalized = normalizeDateRange(v);
+  emit("update:dateRange", normalized);
+
+  // apply immediately (but debounced)
+  scheduleApply();
+}
+
+/** Reset: clear range + apply */
+function onReset() {
+  emit("update:dateRange", null);
+  emit("reset"); // optional: if parent tracks reset intent
+  scheduleApply();
+}
+
+/** Optional: apply once when popper closes (if you prefer less requests)
+ *  If you want this, uncomment and remove scheduleApply() above.
+ */
+// function onPickerVisibleChange(visible: boolean) {
+//   if (!visible) scheduleApply();
+// }
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="df-bar">
     <el-date-picker
-      :model-value="dateRange"
-      @update:model-value="(v) => emit('update:dateRange', v as DateRange)"
+      class="df-date"
+      popper-class="date-range-popper"
+      placement="bottom-start"
+      :teleported="true"
+      :model-value="props.dateRange"
+      @update:model-value="onDateRangeChange"
       type="daterange"
       size="small"
       range-separator="→"
       start-placeholder="From"
       end-placeholder="To"
       format="YYYY-MM-DD"
+      :disabled="props.loading"
+      :clearable="true"
+      :popper-options="{
+        strategy: 'fixed',
+        modifiers: [
+          { name: 'offset', options: { offset: [0, 8] } },
+          {
+            name: 'preventOverflow',
+            options: { padding: 12, boundary: 'viewport' },
+          },
+          { name: 'flip', options: { padding: 12, boundary: 'viewport' } },
+          {
+            name: 'computeStyles',
+            options: { adaptive: false, gpuAcceleration: false },
+          },
+        ],
+      }"
     />
-
-    <el-select
-      :model-value="term"
-      @update:model-value="(v) => emit('update:term', v as TermValue)"
-      placeholder="Term"
-      size="small"
-      style="min-width: 140px"
-    >
-      <el-option
-        v-for="t in termOptions"
-        :key="t.value || 'all'"
-        :label="t.label"
-        :value="t.value"
-      />
-    </el-select>
 
     <BaseButton
       plain
-      :loading="loading"
-      class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
-      @click="emit('apply')"
+      size="small"
+      class="df-reset"
+      :disabled="props.loading || props.canReset === false"
+      @click="onReset"
     >
-      Apply filters
+      Reset
     </BaseButton>
   </div>
 </template>
+
+<style scoped>
+.df-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.df-date {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Mobile: stack */
+@media (max-width: 768px) {
+  .df-bar {
+    grid-template-columns: 1fr;
+  }
+  .df-reset {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>

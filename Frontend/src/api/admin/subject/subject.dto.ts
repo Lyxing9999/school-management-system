@@ -1,14 +1,8 @@
-// ~/api/admin/subject/dto.ts
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 import type { SubjectDTO } from "~/api/types/school.dto";
-/* ================================
- * SUBJECT MANAGEMENT (Admin)
- * ================================ */
 
-/**
- * Payload for creating a subject
- * Python: AdminCreateSubjectSchema
- */
+export type SubjectStatus = "all" | "active" | "inactive";
+
 export interface AdminCreateSubject {
   name: string;
   code: string;
@@ -16,24 +10,41 @@ export interface AdminCreateSubject {
   allowed_grade_levels?: number[] | null;
 }
 
-export interface AdminSubjectDataDTO extends SubjectDTO {}
+export type AdminUpdateSubject = Partial<AdminCreateSubject>;
+
 /**
- * List wrapper
- * Python: AdminSubjectListDTO
+ * Admin item DTO (matches Python AdminSubjectDataDTO)
  */
-export interface AdminSubjectListDTO {
-  items: AdminSubjectDataDTO[];
+export interface AdminSubjectDataDTO extends SubjectDTO {
+  // If your backend returns lifecycle in subject docs, keep this.
+  // If not returned yet, you can remove it or keep optional.
+  lifecycle?: {
+    created_at?: string | null;
+    updated_at?: string | null;
+    deleted_at?: string | null;
+    deleted_by?: string | null;
+  } | null;
 }
 
-export interface AdminClassNameSelectList {
+/**
+ * Paginated wrapper (matches Python AdminSubjectPaginatedDTO)
+ */
+export interface AdminSubjectPaginatedDTO {
+  items: AdminSubjectDataDTO[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface AdminSubjectNameSelectDTO {
   items: { id: string; name: string }[];
 }
-
 /**
  * Wrapped responses
  */
 export type AdminGetSubjectResponse = ApiResponse<AdminSubjectDataDTO>;
-export type AdminGetSubjectListResponse = ApiResponse<AdminSubjectListDTO>;
-
-export type AdminClassNameSelectListResponse =
-  ApiResponse<AdminClassNameSelectList>;
+export type AdminSubjectPaginatedListResponse =
+  ApiResponse<AdminSubjectPaginatedDTO>;
+export type AdminSubjectNameSelectListResponse =
+  ApiResponse<AdminSubjectNameSelectDTO>;

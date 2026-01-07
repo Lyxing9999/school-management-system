@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Noto Serif Tibetan',
+  fullName: 'Noto Serif Tibetan Thin',
+  postscriptName: 'NotoSerifTibetan-Thin',
+  category: 'serif',
+  capHeight: 714,
+  ascent: 1466,
+  descent: -1349,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 678,
+  xWidthAvg: 442,
+  subsets: {
+    latin: {
+      xWidthAvg: 442
+    },
+    thai: {
+      xWidthAvg: 600
+    }
+  }
+};

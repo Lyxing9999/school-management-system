@@ -1,7 +1,6 @@
 import type { AxiosInstance } from "axios";
 import type {
   AdminCreateClass,
-  AdminGetClassListResponse,
   AdminGetClassResponse,
   AdminClassNameSelectListResponse,
   AdminStudentsInClassSelectResponse,
@@ -9,6 +8,9 @@ import type {
   AdminUpdateClassRelationsDTO,
   SearchStudentsParams,
   AdminStudentSelectPagedResultResponse,
+  AdminGetClassPaginatedResponse,
+  ListClassesParams,
+  AdminSubjectSelectListResponse,
 } from "./class.dto";
 
 export class ClassApi {
@@ -21,9 +23,17 @@ export class ClassApi {
   // QUERY
   // ============
 
-  async getClasses() {
+  async getClasses(params?: ListClassesParams) {
     return this.$api
-      .get<AdminGetClassListResponse>(this.baseURL)
+      .get<AdminGetClassPaginatedResponse>(this.baseURL, {
+        params: {
+          q: params?.q ?? undefined,
+          page: params?.page ?? 1,
+          limit: params?.limit ?? 10,
+          include_deleted: params?.include_deleted ?? undefined,
+          deleted_only: params?.deleted_only ?? undefined,
+        },
+      })
       .then((res) => res.data);
   }
 
@@ -116,6 +126,13 @@ export class ClassApi {
       .put<AdminUpdateClassRelationsResponse>(
         `${this.baseURL}/${classID}/relations`,
         payload
+      )
+      .then((res) => res.data);
+  }
+  async listSubjectsSelectInClass(classId: string) {
+    return this.$api
+      .get<AdminSubjectSelectListResponse>(
+        `${this.baseURL}/${classId}/subjects/select`
       )
       .then((res) => res.data);
   }

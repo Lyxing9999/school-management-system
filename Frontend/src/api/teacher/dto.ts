@@ -9,6 +9,29 @@ import type {
   ScheduleDTO,
 } from "~/api/types/school.dto";
 
+import type { StudentBaseDataDTO } from "../types/student.dto";
+export interface PagedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+export interface TeacherStudentDataDTO extends StudentBaseDataDTO {}
+export type GradeEnriched = GradeDTO & {
+  student_name?: string;
+  student_name_en?: string;
+  student_name_kh?: string;
+
+  class_name?: string;
+  subject_label?: string;
+  teacher_name?: string;
+
+  student_id?: string;
+  subject_id?: string;
+  class_id?: string;
+};
 /**
  * Python: TeacherStudentNameSelectDTO
  */
@@ -70,11 +93,10 @@ export interface TeacherAttendanceListDTO {
 }
 
 /**
- * Python: TeacherGradeListDTO
+ * Python: TeacherGradeListDTOPage
  */
-export interface TeacherGradeListDTO {
-  items: GradeDTO[];
-}
+
+export type TeacherGradePagedDTO = PagedResult<GradeEnriched>;
 
 /**
  * Request DTOs
@@ -109,8 +131,19 @@ export interface TeacherChangeGradeTypeDTO {
   type: GradeType;
 }
 
+export interface TeacherScheduleDTO extends ScheduleDTO {
+  class_name?: string;
+  subject_id?: string;
+  subject_label?: string;
+  teacher_name?: string;
+
+  day_label?: string;
+}
 export interface TeacherScheduleListDTO {
-  items: ScheduleDTO[];
+  items: TeacherScheduleDTO[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 export interface TeacherClassSummaryDTO {
@@ -135,7 +168,7 @@ export type TeacherUpdateGradeScoreResponse = ApiResponse<GradeDTO>;
 export type TeacherChangeGradeTypeResponse = ApiResponse<GradeDTO>;
 export type TeacherListClassAttendanceResponse =
   ApiResponse<TeacherAttendanceListDTO>;
-export type TeacherListClassGradesResponse = ApiResponse<TeacherGradeListDTO>;
+export type TeacherListClassGradesResponse = ApiResponse<TeacherGradePagedDTO>;
 
 export type TeacherSubjectsSelectNameListResponse =
   ApiResponse<TeacherSubjectSelectNameListDTO>;
@@ -152,3 +185,27 @@ export type TeacherListMyScheduleResponse = ApiResponse<TeacherScheduleListDTO>;
 
 export type TeacherClassListWithSummeryResponse =
   ApiResponse<TeacherClassListWithSummeryDTO>;
+
+export type TeacherStudentDataResponse = ApiResponse<TeacherStudentDataDTO>;
+
+// ---------- Mutations: soft delete / restore ----------
+
+export interface TeacherSoftDeleteResultDTO {
+  modified_count: number;
+  deleted: boolean;
+}
+
+export interface TeacherRestoreResultDTO {
+  modified_count: number;
+  restored: boolean;
+}
+
+// Wrapped responses
+export type TeacherSoftDeleteGradeResponse =
+  ApiResponse<TeacherSoftDeleteResultDTO>;
+export type TeacherRestoreGradeResponse = ApiResponse<TeacherRestoreResultDTO>;
+
+export type TeacherSoftDeleteAttendanceResponse =
+  ApiResponse<TeacherSoftDeleteResultDTO>;
+export type TeacherRestoreAttendanceResponse =
+  ApiResponse<TeacherRestoreResultDTO>;

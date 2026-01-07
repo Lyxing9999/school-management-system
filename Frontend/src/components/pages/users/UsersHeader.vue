@@ -29,15 +29,16 @@ const emit = defineEmits<{
     description="Manage all users, roles and staff accounts."
     :loading="loading"
     :stats="stats"
-    :showRefresh="true"
+    :show-refresh="true"
     :show-search="true"
     :show-reset="true"
     :reset-disabled="!isDirty"
-    v-model:searchModelValue="(props.searchModelValue as any)"
-    @update:searchModelValue="(v) => emit('update:searchModelValue', v)"
+    :search-model-value="searchModelValue"
+    @update:searchModelValue="(v: string) => emit('update:searchModelValue', v)"
     @refresh="emit('refresh')"
     @reset="emit('reset')"
-    ><template #filters>
+  >
+    <template #filters>
       <el-row :gutter="12" align="middle" class="w-full">
         <!-- Mode -->
         <el-col :xs="24" :sm="24" :md="12">
@@ -77,11 +78,11 @@ const emit = defineEmits<{
     </template>
 
     <template #actions>
-      <BaseButton plain :loading="loading" @click="emit('refresh')">
-        Refresh
-      </BaseButton>
-
-      <BaseButton type="primary" @click="emit('open-create')">
+      <BaseButton
+        type="primary"
+        :disabled="loading"
+        @click="emit('open-create')"
+      >
         Add {{ staffMode === "staff" ? "Staff" : "Student" }}
       </BaseButton>
     </template>

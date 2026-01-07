@@ -1,0 +1,21 @@
+export default {
+  familyName: 'Petrona',
+  fullName: 'Petrona Light Italic',
+  postscriptName: 'Petrona-LightItalic',
+  category: 'serif',
+  capHeight: 641,
+  ascent: 858,
+  descent: -270,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 443,
+  xWidthAvg: 401,
+  subsets: {
+    latin: {
+      xWidthAvg: 401
+    },
+    thai: {
+      xWidthAvg: 600
+    }
+  }
+};

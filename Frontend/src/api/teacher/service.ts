@@ -1,10 +1,12 @@
-// ~/api/teacher/service.ts
-import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
+import {
+  useApiUtils,
+  type ApiCallOptions,
+} from "~/composables/system/useApiUtils";
 import { TeacherApi } from "./api";
 import type {
   TeacherClassListDTO,
   TeacherAttendanceListDTO,
-  TeacherGradeListDTO,
+  TeacherGradePagedDTO,
   TeacherMarkAttendanceDTO,
   TeacherChangeAttendanceStatusDTO,
   TeacherAddGradeDTO,
@@ -16,7 +18,10 @@ import type {
   TeacherStudentNameListDTO,
   TeacherScheduleListDTO,
   TeacherClassListWithSummeryDTO,
+  TeacherSoftDeleteResultDTO,
+  TeacherRestoreResultDTO,
 } from "./dto";
+import type { ListGradesQuery } from "./api";
 import type { AttendanceDTO, GradeDTO } from "~/api/types/school.dto";
 
 export class TeacherService {
@@ -27,143 +32,165 @@ export class TeacherService {
   // ----------
   // Classes
   // ----------
-
-  async listMyClasses(options?: ApiCallOptions) {
-    const data = await this.callApi<TeacherClassListDTO>(
+  listMyClasses(options?: ApiCallOptions) {
+    return this.callApi<TeacherClassListDTO>(
       () => this.teacherApi.listMyClasses(),
       options
     );
-    return data!;
   }
-  async listMyClassesWithSummery(options?: ApiCallOptions) {
-    const data = await this.callApi<TeacherClassListWithSummeryDTO>(
+
+  listMyClassesWithSummery(options?: ApiCallOptions) {
+    return this.callApi<TeacherClassListWithSummeryDTO>(
       () => this.teacherApi.listMyClassesWithSummery(),
       options
     );
-    return data!;
   }
-  async listClassNameSelect(options?: ApiCallOptions) {
-    const data = await this.callApi<TeacherClassSelectNameListDTO>(
+
+  listClassNameSelect(options?: ApiCallOptions) {
+    return this.callApi<TeacherClassSelectNameListDTO>(
       () => this.teacherApi.listClassNameSelect(),
       options
     );
-    return data!;
   }
 
-  async listStudentsInClass(classId: string, options?: ApiCallOptions) {
-    const data = await this.callApi<TeacherStudentSelectNameListDTO>(
+  listStudentsInClass(classId: string, options?: ApiCallOptions) {
+    return this.callApi<TeacherStudentSelectNameListDTO>(
       () => this.teacherApi.listStudentsInClass(classId),
       options
     );
-    return data!;
   }
 
-  async listSubjectsInClass(classId: string, options?: ApiCallOptions) {
-    const data = await this.callApi<TeacherSubjectSelectNameListDTO>(
+  listSubjectsInClass(classId: string, options?: ApiCallOptions) {
+    return this.callApi<TeacherSubjectSelectNameListDTO>(
       () => this.teacherApi.listSubjectsInClass(classId),
       options
     );
-    return data!;
   }
 
-  async listStudentNamesOptionsClass(
-    classId: string,
-    options?: ApiCallOptions
-  ) {
-    const data = await this.callApi<TeacherStudentNameListDTO>(
+  listStudentNamesOptionsClass(classId: string, options?: ApiCallOptions) {
+    return this.callApi<TeacherStudentNameListDTO>(
       () => this.teacherApi.listStudentNamesOptionsClass(classId),
       options
     );
-    return data!;
   }
 
   // ----------
   // Attendance
   // ----------
-
-  async markAttendance(
-    payload: TeacherMarkAttendanceDTO,
-    options?: ApiCallOptions
-  ) {
-    const data = await this.callApi<AttendanceDTO>(
+  markAttendance(payload: TeacherMarkAttendanceDTO, options?: ApiCallOptions) {
+    return this.callApi<AttendanceDTO>(
       () => this.teacherApi.markAttendance(payload),
       options
     );
-    return data!;
   }
 
-  async changeAttendanceStatus(
+  changeAttendanceStatus(
     attendanceId: string,
     payload: TeacherChangeAttendanceStatusDTO,
     options?: ApiCallOptions
   ) {
-    const data = await this.callApi<AttendanceDTO>(
+    return this.callApi<AttendanceDTO>(
       () => this.teacherApi.changeAttendanceStatus(attendanceId, payload),
       options
     );
-    return data!;
   }
 
-  async listAttendanceForClass(classId: string, options?: ApiCallOptions) {
-    const data = await this.callApi<TeacherAttendanceListDTO>(
-      () => this.teacherApi.listAttendanceForClass(classId),
+  listAttendanceForClass(
+    classId: string,
+    params?: { date?: string },
+    options?: ApiCallOptions
+  ) {
+    return this.callApi<TeacherAttendanceListDTO>(
+      () => this.teacherApi.listAttendanceForClass(classId, params),
       options
     );
-    return data!;
+  }
+  softDeleteAttendance(attendanceId: string, options?: ApiCallOptions) {
+    return this.callApi<TeacherSoftDeleteResultDTO>(
+      () => this.teacherApi.softDeleteAttendance(attendanceId),
+      options
+    );
   }
 
+  restoreAttendance(attendanceId: string, options?: ApiCallOptions) {
+    return this.callApi<TeacherRestoreResultDTO>(
+      () => this.teacherApi.restoreAttendance(attendanceId),
+      options
+    );
+  }
   // ----------
   // Grades
   // ----------
-
-  async addGrade(payload: TeacherAddGradeDTO, options?: ApiCallOptions) {
-    const data = await this.callApi<GradeDTO>(
+  addGrade(payload: TeacherAddGradeDTO, options?: ApiCallOptions) {
+    return this.callApi<GradeDTO>(
       () => this.teacherApi.addGrade(payload),
       options
     );
-    return data!;
   }
 
-  async updateGradeScore(
+  updateGradeScore(
     gradeId: string,
     payload: TeacherUpdateGradeScoreDTO,
     options?: ApiCallOptions
   ) {
-    const data = await this.callApi<GradeDTO>(
+    return this.callApi<GradeDTO>(
       () => this.teacherApi.updateGradeScore(gradeId, payload),
       options
     );
-    return data!;
   }
 
-  async changeGradeType(
+  changeGradeType(
     gradeId: string,
     payload: TeacherChangeGradeTypeDTO,
     options?: ApiCallOptions
   ) {
-    const data = await this.callApi<GradeDTO>(
+    return this.callApi<GradeDTO>(
       () => this.teacherApi.changeGradeType(gradeId, payload),
       options
     );
-    return data!;
   }
 
-  async listGradesForClass(classId: string, options?: ApiCallOptions) {
-    const data = await this.callApi<TeacherGradeListDTO>(
-      () => this.teacherApi.listGradesForClass(classId),
+  listGradesForClass(
+    classId: string,
+    query?: ListGradesQuery,
+    options?: ApiCallOptions
+  ) {
+    return this.callApi<TeacherGradePagedDTO>(
+      () => this.teacherApi.listGradesForClass(classId, query),
       options
     );
-    return data!;
+  }
+  softDeleteGrade(gradeId: string, options?: ApiCallOptions) {
+    return this.callApi<TeacherSoftDeleteResultDTO>(
+      () => this.teacherApi.softDeleteGrade(gradeId),
+      options
+    );
   }
 
-  // ----------
-  // list my schedule
-  // ----------
-  async listMySchedule(options?: ApiCallOptions) {
-    const data = await this.callApi<TeacherScheduleListDTO>(
-      () => this.teacherApi.listMySchedule(),
+  restoreGrade(gradeId: string, options?: ApiCallOptions) {
+    return this.callApi<TeacherRestoreResultDTO>(
+      () => this.teacherApi.restoreGrade(gradeId),
       options
     );
-    return data!;
+  }
+  // ----------
+  // Schedule
+  // ----------
+  listMySchedule(
+    params?: {
+      page?: number;
+      page_size?: number;
+      signal?: AbortSignal;
+      class_id?: string;
+      day_of_week?: number;
+      start_time_from?: string;
+      start_time_to?: string;
+    },
+    options?: ApiCallOptions
+  ) {
+    return this.callApi<TeacherScheduleListDTO>(
+      () => this.teacherApi.listMySchedule(params),
+      options
+    );
   }
 }

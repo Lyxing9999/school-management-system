@@ -1,0 +1,23 @@
+declare module '@capsizecss/metrics/ibarraRealNova/500italic' {
+  interface IbarraRealNovaMetrics {
+    familyName: string;
+    fullName: string;
+    postscriptName: string;
+    category: string;
+    capHeight: number;
+    ascent: number;
+    descent: number;
+    lineGap: number;
+    unitsPerEm: number;
+    xHeight: number;
+    xWidthAvg: number;
+    subsets: Record<
+      'latin' | 'thai',
+      {
+        xWidthAvg: number;
+      }
+    >;
+  }
+  export const fontMetrics: IbarraRealNovaMetrics;
+  export default fontMetrics;
+}

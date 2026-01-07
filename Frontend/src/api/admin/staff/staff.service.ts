@@ -1,5 +1,8 @@
 // ~/api/staff/service.ts
-import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
+import {
+  useApiUtils,
+  type ApiCallOptions,
+} from "~/composables/system/useApiUtils";
 import type {
   AdminCreateStaff,
   AdminUpdateStaff,

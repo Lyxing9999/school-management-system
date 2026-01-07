@@ -1,160 +1,137 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
+import { storeToRefs } from "pinia";
 
-definePageMeta({
-  layout: "admin",
-});
+definePageMeta({ layout: "default" });
 
-// --------------------
-// Base Components
-// --------------------
-import SmartFormDialog from "~/components/Form/SmartFormDialog.vue";
-import BaseButton from "~/components/Base/BaseButton.vue";
-import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
-import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
+/* ------------------------------------
+ * Base components
+ * ---------------------------------- */
+import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
+import SmartFormDialog from "~/components/form/SmartFormDialog.vue";
+import BaseButton from "~/components/base/BaseButton.vue";
+import ActionButtons from "~/components/buttons/ActionButtons.vue";
+import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 
-// Element Plus
-import { ElRadioGroup, ElRadioButton, ElSwitch } from "element-plus";
+/* ------------------------------------
+ * Element Plus
+ * ---------------------------------- */
+import {
+  ElMessageBox,
+  ElMessage,
+  ElRadioGroup,
+  ElRadioButton,
+  ElSwitch,
+} from "element-plus";
+import { Refresh } from "@element-plus/icons-vue";
 
-// --------------------
-// Services & Types
-// --------------------
+/* ------------------------------------
+ * Services & types
+ * ---------------------------------- */
 import { adminService } from "~/api/admin";
 import type {
   AdminSubjectDataDTO,
-  AdminSubjectListDTO,
   AdminCreateSubject,
+  AdminUpdateSubject,
+  SubjectStatus,
 } from "~/api/admin/subject/subject.dto";
-// For grade labels in table
-import { gradeOptions } from "~/modules/forms/admin/subject/subject.schema";
-import { reportError } from "~/utils/errors";
-// Dynamic form system
-import { useDynamicCreateFormReactive } from "~/form-system/useDynamicForm.ts/useAdminForms";
-import { subjectColumns } from "~/modules/tables/columns/admin/subjectColumns";
+import type { ColumnConfig } from "~/components/types/tableEdit";
 
-// Pagination composable
-import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
-import { useHeaderState } from "~/composables/useHeaderState";
+/* ------------------------------------
+ * Dynamic create form system
+ * ---------------------------------- */
+import { useDynamicCreateFormReactive } from "~/form-system/useDynamicForm.ts/useAdminForms";
+
+/* ------------------------------------
+ * Table columns
+ * ---------------------------------- */
+import { subjectColumns } from "~/modules/tables/columns/admin/subjectColumns";
+import { applyInlineEditMode } from "~/utils/table/applyInlineEditMode";
+
+/* ------------------------------------
+ * Pagination composable
+ * ---------------------------------- */
+import { usePaginatedFetch } from "~/composables/data/usePaginatedFetch";
+
+/* ------------------------------------
+ * Header stats composable
+ * ---------------------------------- */
+import { useHeaderState } from "~/composables/ui/useHeaderState";
+
+/* ------------------------------------
+ * Preferences (Pinia)
+ * ---------------------------------- */
+import { usePreferencesStore } from "~/stores/preferencesStore";
+
+/* ------------------------------------
+ * Inline edit
+ * ---------------------------------- */
+import { useInlineEdit } from "~/composables/table-edit/useInlineEdit";
+
+/* ------------------------------------
+ * Utils
+ * ---------------------------------- */
+import { reportError } from "~/utils/errors/errors";
 
 const adminApi = adminService();
 
-/* ---------------------- filter state ---------------------- */
+/* ===========================
+ *  STATE
+ * =========================== */
+type SubjectFilter = SubjectStatus; // "all" | "active" | "inactive"
 
-type SubjectFilter = "all" | "active" | "inactive";
-const activeFilter = ref<SubjectFilter>("all");
+const prefs = usePreferencesStore();
+const { tablePageSize, inlineEditMode } = storeToRefs(prefs);
 
-/* ---------------------- paginated fetch (reusing composable) ---------------------- */
+const activeFilter = ref<SubjectFilter>("active");
+const searchModel = ref(""); // OverviewHeader search model
 
+/* ---------------------- columns (inline edit mode) ---------------------- */
+const resolvedSubjectColumns = computed(() =>
+  applyInlineEditMode(
+    subjectColumns as ColumnConfig<AdminSubjectDataDTO>[],
+    inlineEditMode.value
+  )
+);
+
+/* ===========================
+ *  PAGINATED FETCH (SERVER)
+ * =========================== */
 const {
   data: subjects,
-  loading: tableLoading,
   error: tableError,
   currentPage,
   pageSize,
   totalRows,
+  initialLoading,
+  fetching,
   fetchPage,
   goPage,
 } = usePaginatedFetch<AdminSubjectDataDTO, SubjectFilter>(
   async (filter, page, pageSize, _signal) => {
-    const res: AdminSubjectListDTO | undefined =
-      await adminApi.subject.getSubjects();
+    const search = searchModel.value.trim();
 
-    const allItems = res?.items ?? [];
+    const res = await adminApi.subject.getSubjects({
+      status: filter,
+      page,
+      page_size: pageSize,
+      search: search.length ? search : null,
+    });
 
-    const filtered =
-      filter === "all"
-        ? allItems
-        : filter === "active"
-        ? allItems.filter((s) => s.is_active)
-        : allItems.filter((s) => !s.is_active);
-
-    const total = filtered.length;
-    const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
-
-    return { items, total };
+    return { items: res.items ?? [], total: res.total ?? 0 };
   },
-  1,
-  10,
-  activeFilter
+  {
+    initialPage: 1,
+    pageSizeRef: tablePageSize,
+    filter: activeFilter,
+  }
 );
 
-/* ---------------------- grade options display helper ---------------------- */
+const tableLoading = computed(() => initialLoading.value || fetching.value);
 
-function formatAllowedGrades(levels?: number[]) {
-  if (!levels || !levels.length) return "-";
-  return levels
-    .map(
-      (lvl) =>
-        gradeOptions.value.find((g) => g.value === lvl)?.label || `Grade ${lvl}`
-    )
-    .join(", ");
-}
-
-/* ---------------------- CREATE FORM (dynamic) ---------------------- */
-
-const createMode = ref<"SUBJECT">("SUBJECT");
-
-const {
-  formDialogVisible: createFormVisible,
-  formData: createFormData,
-  schema: baseCreateFormSchema,
-  saveForm: saveCreateForm,
-  cancelForm: cancelCreateForm,
-  openForm: openCreateForm,
-  loading: createFormLoading,
-} = useDynamicCreateFormReactive(createMode);
-
-const createDialogWidth = computed(() => "40%");
-const createDialogKey = ref(0);
-
-async function openCreateDialog() {
-  createDialogKey.value++;
-  await openCreateForm();
-}
-
-async function handleSaveCreateForm(payload: Partial<AdminCreateSubject>) {
-  await saveCreateForm(payload);
-  await fetchPage(1);
-}
-
-function handleCancelCreateForm() {
-  cancelCreateForm();
-}
-
-/* ---------------------- actions: refresh + toggle ---------------------- */
-
-async function fetchSubjects() {
-  await fetchPage(currentPage.value || 1);
-}
-
-const statusLoading = ref<Record<string, boolean>>({});
-
-async function toggleSubjectActive(row: AdminSubjectDataDTO) {
-  const id = row.id;
-  const previous = row.is_active;
-
-  statusLoading.value[id] = true;
-
-  try {
-    if (row.is_active) {
-      await adminApi.subject.activateSubject(id);
-    } else {
-      await adminApi.subject.deactivateSubject(id);
-    }
-    await fetchPage(currentPage.value || 1);
-  } catch (err) {
-    reportError(err, `subject.toggleActive id=${id}`, "log");
-    row.is_active = previous;
-
-    // Optional (recommended UX):
-    // ElMessage.error("Failed to update subject status.");
-  } finally {
-    statusLoading.value[id] = false;
-  }
-}
-/* ---------------------- header stats ---------------------- */
-
+/* ===========================
+ *  HEADER STATS
+ * =========================== */
 const totalSubjects = computed(() => totalRows.value ?? 0);
 
 const { headerState: subjectHeaderStats } = useHeaderState({
@@ -181,17 +158,141 @@ const { headerState: subjectHeaderStats } = useHeaderState({
   ],
 });
 
-/* ---------------------- watch filter ---------------------- */
+/* ===========================
+ *  CREATE SUBJECT (DYNAMIC FORM)
+ * =========================== */
+const createMode = ref<"SUBJECT">("SUBJECT");
 
-watch(activeFilter, () => {
-  fetchPage(1);
+const {
+  formDialogVisible: createFormVisible,
+  formData: createFormData,
+  schema: baseCreateFormSchema,
+  saveForm: saveCreateForm,
+  cancelForm: cancelCreateForm,
+  openForm: openCreateForm,
+  loading: createFormLoading,
+} = useDynamicCreateFormReactive(createMode);
+
+const createFormDialogWidth = computed(() => "40%");
+
+async function openCreateDialog() {
+  await openCreateForm();
+}
+
+async function handleSaveCreateForm(payload: Partial<AdminCreateSubject>) {
+  const created = await saveCreateForm(payload);
+  if (!created) return;
+  await fetchPage(1);
+}
+
+function handleCancelCreateForm() {
+  cancelCreateForm();
+}
+
+/* ===========================
+ *  ACTIONS
+ * =========================== */
+async function fetchSubjects() {
+  await fetchPage(currentPage.value || 1);
+}
+
+const statusLoading = ref<Record<string | number, boolean>>({});
+
+async function toggleSubjectActive(row: AdminSubjectDataDTO) {
+  const id = String(row.id);
+  const previous = row.is_active;
+
+  statusLoading.value[id] = true;
+
+  try {
+    if (row.is_active) await adminApi.subject.activateSubject(id);
+    else await adminApi.subject.deactivateSubject(id);
+
+    await fetchPage(currentPage.value || 1);
+  } catch (err) {
+    reportError(err, `subject.toggleActive id=${id}`, "log");
+    row.is_active = previous;
+    ElMessage.error("Failed to update subject status.");
+  } finally {
+    statusLoading.value[id] = false;
+  }
+}
+
+/* ===========================
+ *  INLINE EDIT
+ * =========================== */
+const inlineSubjectService = {
+  update: async (id: string, payload: Partial<AdminSubjectDataDTO>) =>
+    await adminApi.subject.updateSubject(
+      id,
+      payload as unknown as AdminUpdateSubject,
+      { showError: false }
+    ),
+  delete: async (id: string) => {
+    await adminApi.subject.softDeleteSubject(id);
+    await fetchPage(currentPage.value || 1);
+  },
+};
+
+const {
+  data: rows,
+  save,
+  cancel,
+  remove: removeSubject,
+  deleteLoading,
+  inlineEditLoading,
+  autoSave,
+  getPreviousValue,
+  revertField,
+  setData: setInlineData,
+} = useInlineEdit<AdminSubjectDataDTO, AdminSubjectDataDTO>([], {
+  value: inlineSubjectService,
 });
 
-/* ---------------------- lifecycle ---------------------- */
+watch(subjects, (newRows) => setInlineData(newRows ?? []), { immediate: true });
 
-onMounted(() => {
-  fetchPage(1);
+function asEditable(
+  field: keyof AdminSubjectDataDTO
+): keyof AdminSubjectDataDTO | null {
+  if (field === "id") return null;
+  return field;
+}
+
+/* ===========================
+ *  DELETE (WITH CONFIRM)
+ * =========================== */
+async function handleSoftDelete(row: AdminSubjectDataDTO) {
+  try {
+    await ElMessageBox.confirm(
+      "Are you sure you want to soft delete this subject?",
+      "Warning",
+      { confirmButtonText: "Yes", cancelButtonText: "No", type: "warning" }
+    );
+    await removeSubject(row);
+  } catch {
+    // canceled => do nothing
+  }
+}
+
+/* ===========================
+ *  LIFECYCLE
+ * =========================== */
+onMounted(() => fetchPage(1));
+watch(activeFilter, () => fetchPage(1));
+
+let searchTimer: any = null;
+watch(searchModel, () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => fetchPage(1), 350);
 });
+
+const allowedGradesOnly = (grades: unknown): number[] => {
+  if (!Array.isArray(grades)) return [];
+  return grades
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 12)
+    .sort((a, b) => a - b);
+};
 </script>
 
 <template>
@@ -200,20 +301,56 @@ onMounted(() => {
       title="Subjects"
       description="Manage subjects and their availability across the school."
       :loading="tableLoading"
-      :showRefresh="false"
       :stats="subjectHeaderStats"
+      :show-refresh="true"
+      :show-search="true"
+      :show-reset="true"
+      :reset-disabled="activeFilter === 'active' && !searchModel.trim()"
+      :search-model-value="searchModel"
+      @update:searchModelValue="(v: string) => (searchModel = v)"
+      @refresh="fetchSubjects"
+      @reset="
+        () => {
+          activeFilter = 'active';
+          searchModel = '';
+          fetchPage(1);
+        }
+      "
     >
       <template #filters>
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-500">Status:</span>
-            <ElRadioGroup v-model="activeFilter" size="small">
-              <ElRadioButton label="all">All</ElRadioButton>
-              <ElRadioButton label="active">Active</ElRadioButton>
-              <ElRadioButton label="inactive">Inactive</ElRadioButton>
-            </ElRadioGroup>
-          </div>
-        </div>
+        <el-row :gutter="12" align="middle" class="w-full">
+          <!-- Search label left (OverviewHeader renders the input) -->
+          <el-col :xs="24" :sm="24" :md="12">
+            <div class="flex flex-wrap items-center gap-2 w-full">
+              <span class="text-xs text-gray-500 whitespace-nowrap"
+                >Search:</span
+              >
+              <span class="text-xs text-gray-500 whitespace-nowrap">
+                (type and pause)
+              </span>
+            </div>
+          </el-col>
+
+          <!-- Status right -->
+          <el-col :xs="24" :sm="24" :md="12">
+            <div
+              class="flex flex-wrap items-center gap-2 md:justify-end w-full"
+            >
+              <span class="text-xs text-gray-500 whitespace-nowrap"
+                >Status:</span
+              >
+              <ElRadioGroup
+                v-model="activeFilter"
+                size="small"
+                :disabled="tableLoading"
+              >
+                <ElRadioButton label="all">All</ElRadioButton>
+                <ElRadioButton label="active">Active</ElRadioButton>
+                <ElRadioButton label="inactive">Inactive</ElRadioButton>
+              </ElRadioGroup>
+            </div>
+          </el-col>
+        </el-row>
       </template>
 
       <template #actions>
@@ -226,7 +363,11 @@ onMounted(() => {
           Refresh
         </BaseButton>
 
-        <BaseButton type="primary" @click="openCreateDialog">
+        <BaseButton
+          type="primary"
+          :disabled="tableLoading"
+          @click="openCreateDialog"
+        >
           Add Subject
         </BaseButton>
       </template>
@@ -234,38 +375,81 @@ onMounted(() => {
 
     <el-card>
       <SmartTable
-        :data="subjects"
-        :columns="subjectColumns"
+        :data="rows"
+        :columns="resolvedSubjectColumns"
         :loading="tableLoading"
+        :inline-edit-loading="inlineEditLoading"
+        @save="save"
+        @cancel="cancel"
+        @auto-save="autoSave"
       >
-        <template #description="{ row }">
-          <div class="description-cell">
-            <span
-              v-if="row.description"
-              class="description-text"
-              :title="row.description"
-            >
-              {{ row.description }}
-            </span>
-
-            <span v-else class="description-empty">
-              <span>No description</span>
-            </span>
-          </div>
-        </template>
-
-        <template #allowedGrades="{ row }">
-          <span>{{ formatAllowedGrades(row.allowed_grade_levels) }}</span>
-        </template>
-
-        <template #operation="{ row }">
+        <template #status="{ row }">
           <ElSwitch
             v-model="row.is_active"
-            :loading="statusLoading[row.id]"
-            @change="() => toggleSubjectActive(row)"
+            :loading="statusLoading[String(row.id)]"
+            @change="toggleSubjectActive(row)"
           />
         </template>
+        <template #allowedGrades="{ row }">
+          <div class="flex flex-wrap gap-1">
+            <el-tag
+              v-for="g in allowedGradesOnly(row.allowed_grade_levels)"
+              :key="g"
+              size="small"
+              class="tag-primary"
+            >
+              {{ g }}
+            </el-tag>
+
+            <el-tag
+              v-if="!allowedGradesOnly(row.allowed_grade_levels).length"
+              size="small"
+              class="tag-muted"
+            >
+              None
+            </el-tag>
+          </div>
+        </template>
+        <template #operation="{ row }">
+          <ActionButtons
+            :rowId="row.id"
+            deleteContent="Delete subject"
+            :deleteLoading="deleteLoading[row.id] ?? false"
+            :detailLoading="false"
+            :showDetail="false"
+            :showDelete="true"
+            @delete="handleSoftDelete(row)"
+          />
+        </template>
+
+        <template #revertSlots="{ row, field }">
+          <el-tooltip
+            :content="
+              (() => {
+                const f = asEditable(field);
+                return f ? `Previous: ${getPreviousValue(row, f)}` : '—';
+              })()
+            "
+            placement="top"
+          >
+            <el-icon
+              class="cursor-pointer"
+              @click="
+                (() => {
+                  const f = asEditable(field);
+                  if (f) revertField(row, f);
+                })()
+              "
+            >
+              <Refresh />
+            </el-icon>
+          </el-tooltip>
+        </template>
       </SmartTable>
+
+      <div v-if="(rows?.length ?? 0) === 0 && !tableLoading" class="p-6">
+        <el-empty description="No subjects found" />
+      </div>
     </el-card>
 
     <el-row v-if="totalRows > 0" justify="end" class="m-4">
@@ -277,17 +461,11 @@ onMounted(() => {
         layout="total, sizes, prev, pager, next, jumper"
         background
         @current-change="goPage"
-        @size-change="
-          (size: number) => {
-            pageSize = size;
-            fetchPage(1);
-          }
-        "
+        @size-change="(size: number) => prefs.setTablePageSize(size)"
       />
     </el-row>
 
     <SmartFormDialog
-      :key="createDialogKey"
       v-model:visible="createFormVisible"
       v-model="createFormData"
       :fields="baseCreateFormSchema"
@@ -296,7 +474,7 @@ onMounted(() => {
       @save="handleSaveCreateForm"
       @cancel="handleCancelCreateForm"
       :useElForm="true"
-      :width="createDialogWidth"
+      :width="createFormDialogWidth"
     />
   </div>
 </template>
@@ -306,22 +484,36 @@ onMounted(() => {
   padding: 0 10px;
 }
 
-.description-cell {
-  display: flex;
-  align-items: center;
-  max-width: 260px;
+.tag-primary {
+  border-radius: 10px !important;
+
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 16%,
+    var(--color-card) 84%
+  ) !important;
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary) 45%, var(--border-color) 55%) !important;
+  color: var(--color-primary) !important;
+
+  font-weight: 650;
 }
 
-.description-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-}
+.tag-muted {
+  border-radius: 10px !important;
 
-.description-empty {
-  font-size: 12px;
-  color: #9ca3af;
-  font-style: italic;
+  background: color-mix(
+    in srgb,
+    var(--color-card) 92%,
+    var(--color-bg) 8%
+  ) !important;
+  border: 1px solid color-mix(in srgb, var(--border-color) 75%, transparent) !important;
+  color: color-mix(
+    in srgb,
+    var(--text-color) 70%,
+    var(--muted-color) 30%
+  ) !important;
+
+  font-weight: 600;
 }
 </style>

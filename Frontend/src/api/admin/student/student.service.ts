@@ -1,4 +1,7 @@
-import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
+import {
+  useApiUtils,
+  type ApiCallOptions,
+} from "~/composables/system/useApiUtils";
 import { StudentApi } from "./student.api";
 
 import type {
@@ -6,7 +9,7 @@ import type {
   AdminGetStudentData,
   AdminUpdateStudent,
   StudentBaseDataDTO,
-  AdminStudentNameSelectDTO,
+  AdminStudentListSelectDTO,
 } from "./student.dto";
 
 export class StudentService {
@@ -46,7 +49,7 @@ export class StudentService {
     return data!;
   }
   async listStudentNamesSelect(options?: ApiCallOptions) {
-    const data = await this.callApi<AdminStudentNameSelectDTO>(
+    const data = await this.callApi<AdminStudentListSelectDTO>(
       () => this.studentApi.listStudentNamesSelect(),
       options
     );

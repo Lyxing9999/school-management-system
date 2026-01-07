@@ -10,7 +10,8 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     sortable: true,
     controls: false,
     autoSave: true,
-    controlsSlot: true,
+    revertSlots: true,
+
     minWidth: "150px",
     rules: [
       { required: true, message: "Please input username", trigger: "blur" },
@@ -29,26 +30,15 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     label: "Email",
     controls: false,
     autoSave: true,
-    controlsSlot: true,
+    revertSlots: true,
     minWidth: "300px",
 
     component: ElInput,
     componentProps: {
       placeholder: "Enter email",
       class: "w-full",
-      style: { width: "100%" }, 
+      style: { width: "100%" },
     },
-
-    childComponentProps: { appendValue: "@gmail.com" },
-
-    rules: [
-      { required: true, message: "Email required", trigger: "blur" },
-      {
-        pattern: /^[^@.]+$/,
-        message: "Do not type @ or . — it will be added automatically",
-        trigger: "blur",
-      },
-    ],
   },
   {
     field: "status",
@@ -62,25 +52,32 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     label: "Role",
     width: "120px",
     align: "center",
-    render: (row: AdminGetUserItemData, field: keyof AdminGetUserItemData) => {
-      const role = row[field];
-      let type: "success" | "danger" | "warning" = "success";
-      if (role === "admin") type = "danger";
-      else if (role === "teacher") type = "warning";
-      return h(ElTag, { type }, role);
+    render: (row: AdminGetUserItemData, _field: keyof AdminGetUserItemData) => {
+      const role = String(row.role ?? "");
+
+      let tagType: "success" | "danger" | "warning" = "success";
+      if (role === "admin") tagType = "danger";
+      else if (role === "teacher") tagType = "warning";
+
+      return h(
+        ElTag,
+        { type: tagType, effect: "plain", size: "small" },
+        { default: () => role || "N/A" }
+      );
     },
   },
-
   {
     field: "created_by_name",
     label: "Created By",
-    inlineEditActive: true,
     controls: false,
-    controlsSlot: false,
     minWidth: "140px",
     align: "center",
-    render: (row: AdminGetUserItemData, field: keyof AdminGetUserItemData) =>
-      h("span", { style: { color: "#999" } }, row[field]),
+    render: (row: AdminGetUserItemData) =>
+      h(
+        "span",
+        { style: { color: "#999" } },
+        String(row.created_by_name ?? "—")
+      ),
   },
 
   {
@@ -89,7 +86,7 @@ export const userColumns: ColumnConfig<AdminGetUserItemData>[] = [
     label: "Operation",
     inlineEditActive: false,
     align: "center",
-    minWidth: "200px",
+    minWidth: "300px",
     smartProps: {},
   },
 ];

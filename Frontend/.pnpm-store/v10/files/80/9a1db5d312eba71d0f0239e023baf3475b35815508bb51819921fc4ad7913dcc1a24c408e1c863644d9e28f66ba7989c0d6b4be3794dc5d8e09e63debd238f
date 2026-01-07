@@ -1,0 +1,21 @@
+module.exports = {
+  familyName: 'Playwrite FR Moderne',
+  fullName: 'Playwrite FR Moderne Thin',
+  postscriptName: 'PlaywriteFRModerne-Thin',
+  category: 'handwriting',
+  capHeight: 1100,
+  ascent: 1550,
+  descent: -607,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 500,
+  xWidthAvg: 513,
+  subsets: {
+    latin: {
+      xWidthAvg: 513
+    },
+    thai: {
+      xWidthAvg: 1009
+    }
+  }
+};

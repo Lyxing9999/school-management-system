@@ -2,77 +2,121 @@ import tailwindcss from "@tailwindcss/vite";
 import { visualizer } from "rollup-plugin-visualizer";
 import { defineNuxtConfig } from "nuxt/config";
 
+const isProd = process.env.NODE_ENV === "production";
+const isAnalyze = process.env.ANALYZE === "true";
+const isVercel = !!process.env.VERCEL;
+
 export default defineNuxtConfig({
   srcDir: "src/",
   compatibilityDate: "2025-05-29",
 
+  ssr: true,
+
   modules: ["@element-plus/nuxt", "@pinia/nuxt"],
-  devtools: true,
+
+  devtools: { enabled: !isProd },
 
   css: ["~/styles/main.css", "~/styles/sidebar.scss"],
 
-  vite: {
-    plugins: [tailwindcss(), visualizer({ open: false })],
-    define: {
-      __DEV__: true,
-    },
-    server: {
-      watch: { usePolling: true },
-      host: "0.0.0.0",
-    },
-  },
-
-  ssr: false,
-
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE,
-      calendarificApiKey: process.env.NUXT_PUBLIC_CALENDARIFIC_API_KEY,
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || "",
+      calendarificApiKey: process.env.NUXT_PUBLIC_CALENDARIFIC_API_KEY || "",
     },
-  },
-
-  router: {
-    middleware: ["auth"],
-  },
-
-  darkMode: "class",
-
-  optimizeDeps: {
-    include: [
-      "lodash-es",
-      "@fullcalendar/core",
-      "@fullcalendar/daygrid",
-      "@fullcalendar/interaction",
-    ],
   },
 
   app: {
     head: {
+      htmlAttrs: { lang: "en" },
+      title: "School System",
+      titleTemplate: "%s · School System",
+      meta: [
+        { charset: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        {
+          name: "description",
+          content:
+            "School management dashboard for attendance, grades, and schedules.",
+        },
+      ],
       script: [
         {
-          children: `(function(){try{
-          var t=localStorage.getItem('theme')||'light';
-          var r=(t==='light')?'dark':t;
-          var el=document.documentElement;
-          el.setAttribute('data-theme', r);
-          if(r==='dark') el.classList.add('dark'); else el.classList.remove('dark');
-        }catch(e){}})();`,
+          innerHTML: `(function(){try{
+            var t=localStorage.getItem('theme')||'light';
+            var r = t;
+            var el=document.documentElement;
+            el.setAttribute('data-theme', r);
+            if(r==='dark') el.classList.add('dark'); else el.classList.remove('dark');
+          }catch(e){}})();`,
         },
       ],
     },
   },
 
-  test: {
-    globals: true,
-    environment: "jsdom",
-    vite: true,
-    setupFiles: "./src/test/setup.ts",
-    deps: {
-      inline: ["element-plus"],
+  vite: {
+    plugins: [
+      tailwindcss(),
+      ...(isAnalyze
+        ? [
+            visualizer({
+              open: true,
+              gzipSize: true,
+              brotliSize: true,
+              filename: ".nuxt/stats.html",
+            }),
+          ]
+        : []),
+    ],
+
+    define: {
+      __DEV__: !isProd,
     },
+
+    server: !isProd
+      ? {
+          watch: { usePolling: true },
+          host: "0.0.0.0",
+        }
+      : undefined,
+
+    optimizeDeps: !isProd
+      ? {
+          include: [
+            "lodash-es",
+            "@fullcalendar/core",
+            "@fullcalendar/daygrid",
+            "@fullcalendar/interaction",
+          ],
+        }
+      : undefined,
+
+    build: {
+      sourcemap: false,
+      minify: "esbuild",
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (!id.includes("node_modules")) return;
+
+            if (id.includes("element-plus")) return "vendor_element-plus";
+            if (id.includes("@fullcalendar")) return "vendor_fullcalendar";
+            if (id.includes("echarts")) return "vendor_echarts";
+            if (id.includes("chart.js")) return "vendor_chartjs";
+            if (id.includes("lodash-es")) return "vendor_lodash";
+
+            return "vendor";
+          },
+        },
+      },
+    },
+
+    esbuild: isProd ? { drop: ["console", "debugger"] } : undefined,
   },
 
+  // ✅ keep this conditional, but note:
+  // On Vercel, SSR works with preset vercel.
+  // Locally, node-server lets you `nuxi preview`.
   nitro: {
-    preset: "vercel",
+    preset: isVercel ? "vercel" : "node-server",
   },
 });

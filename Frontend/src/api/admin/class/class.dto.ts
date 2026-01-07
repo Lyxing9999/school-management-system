@@ -13,26 +13,27 @@ import type { AdminStudentNameSelectDTO } from "~/api/admin/student/student.dto"
  */
 export interface AdminCreateClass {
   name: string;
-  teacher_id?: string | null;
+  homeroom_teacher_id?: string | null;
   subject_ids?: string[] | null;
   max_students?: number | null;
 }
 
 export interface AdminClassNameSelectDTO {
-  id: string;
-  name: string;
+  value: string;
+  lable: string;
 }
 export interface AdminStudentsInClassSelectDTO {
   items: AdminStudentNameSelectDTO[];
 }
 export interface AdminClassDataDTO extends ClassSectionDTO {
   // enriched fields from backend
-  teacher_name?: string | null;
+  homeroom_teacher_name?: string | null;
   subject_labels?: string[];
-
+  enrolled_count?: number;
   // convenience counts from backend
   student_count?: number;
   subject_count?: number;
+
 }
 
 /**
@@ -51,13 +52,13 @@ export interface AdminClassNameSelectListDTO {
 }
 export type AdminUpdateClassRelationsDTO = {
   student_ids: string[];
-  teacher_id: string | null;
+  homeroom_teacher_id: string | null;
 };
 
 export type AdminUpdateClassRelationsResultDTO = {
   class_id: string;
-  teacher_changed: boolean;
-  teacher_id: string | null;
+  homeroom_teacher_changed: boolean;
+  homeroom_teacher_id: string | null;
   enrolled_count: number;
   added: string[];
   removed: string[];
@@ -87,7 +88,30 @@ export type AdminStudentSelectDTO = {
 };
 export type AdminStudentSelectPagedResultDTO =
   PagedResult<AdminStudentSelectDTO>;
+export interface AdminClassPaginatedDTO {
+  items: AdminClassDataDTO[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+export type AdminSubjectSelectDTO = {
+  value: string; // subject_id
+  label: string; // "Name (CODE)"
+};
 
+export type AdminSubjectSelectListDTO = {
+  items: AdminSubjectSelectDTO[];
+};
+
+// query params for server-side list
+export type ListClassesParams = {
+  q?: string;
+  page?: number;
+  limit?: number; // maps to backend page_size
+  include_deleted?: boolean;
+  deleted_only?: boolean;
+};
 /**
  * Wrapped responses
  */
@@ -105,3 +129,8 @@ export type AdminUpdateClassRelationsResponse =
 
 export type AdminStudentSelectPagedResultResponse =
   ApiResponse<AdminStudentSelectPagedResultDTO>;
+export type AdminGetClassPaginatedResponse =
+  ApiResponse<AdminClassPaginatedDTO>;
+
+export type AdminSubjectSelectListResponse =
+  ApiResponse<AdminSubjectSelectListDTO>;

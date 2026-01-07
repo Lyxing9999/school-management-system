@@ -1,0 +1,23 @@
+declare module '@capsizecss/metrics/playwriteCA/300' {
+  interface PlaywriteCAMetrics {
+    familyName: string;
+    fullName: string;
+    postscriptName: string;
+    category: string;
+    capHeight: number;
+    ascent: number;
+    descent: number;
+    lineGap: number;
+    unitsPerEm: number;
+    xHeight: number;
+    xWidthAvg: number;
+    subsets: Record<
+      'latin' | 'thai',
+      {
+        xWidthAvg: number;
+      }
+    >;
+  }
+  export const fontMetrics: PlaywriteCAMetrics;
+  export default fontMetrics;
+}

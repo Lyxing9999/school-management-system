@@ -1,0 +1,23 @@
+declare module '@capsizecss/metrics/kleeOne/600' {
+  interface KleeOneMetrics {
+    familyName: string;
+    fullName: string;
+    postscriptName: string;
+    category: string;
+    capHeight: number;
+    ascent: number;
+    descent: number;
+    lineGap: number;
+    unitsPerEm: number;
+    xHeight: number;
+    xWidthAvg: number;
+    subsets: Record<
+      'latin' | 'thai',
+      {
+        xWidthAvg: number;
+      }
+    >;
+  }
+  export const fontMetrics: KleeOneMetrics;
+  export default fontMetrics;
+}

@@ -1,0 +1,21 @@
+export default {
+  familyName: 'REM',
+  fullName: 'REM SemiBold',
+  postscriptName: 'REM-SemiBold',
+  category: 'sans-serif',
+  capHeight: 700,
+  ascent: 980,
+  descent: -270,
+  lineGap: 0,
+  unitsPerEm: 1000,
+  xHeight: 513,
+  xWidthAvg: 498,
+  subsets: {
+    latin: {
+      xWidthAvg: 498
+    },
+    thai: {
+      xWidthAvg: 586
+    }
+  }
+};

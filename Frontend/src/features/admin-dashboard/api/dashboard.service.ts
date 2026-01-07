@@ -1,4 +1,7 @@
-import { useApiUtils, type ApiCallOptions } from "~/utils/useApiUtils";
+import {
+  useApiUtils,
+  type ApiCallOptions,
+} from "~/composables/system/useApiUtils";
 import { DashboardApi } from "./dashboard.api";
 import type {
   AdminDashboardDTO,

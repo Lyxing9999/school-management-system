@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import SmartTable from "~/components/TableEdit/core/SmartTable.vue";
-import ActionButtons from "~/components/TableEdit/Button/ActionButtons.vue";
+import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
+import ActionButtons from "~/components/table-edit/button/ActionButtons.vue";
 import type {
   AdminGetUserItemData,
   AdminUpdateUser,
 } from "~/api/admin/user/user.dto";
 import { Status } from "~/api/types/enums/status.enum";
-import InlineStatusCell from "~/components/TableEdit/cells/InlineStatusCell.vue";
+import InlineStatusCell from "~/components/table-edit/cells/InlineStatusCell.vue";
+import type { ColumnConfig } from "~/components/types/tableEdit";
+
 type Row = AdminGetUserItemData;
 type RowField = keyof Row;
 type EditableField = Extract<keyof AdminGetUserItemData, keyof AdminUpdateUser>;
 
 const props = defineProps<{
   rows: Row[];
-  columns: any[];
+  columns: ColumnConfig<Row>[];
   loading: boolean;
   inlineEditLoading: Record<string | number, boolean>;
   hasFetchedOnce: boolean;
@@ -47,13 +49,24 @@ const statusOptions = [
   { label: "Inactive", value: Status.INACTIVE },
   { label: "Suspended", value: Status.SUSPENDED },
 ];
+import { applyInlineEditMode } from "~/utils/table/applyInlineEditMode";
+import { usePreferencesStore } from "~/stores/preferencesStore";
+
+const prefs = usePreferencesStore();
+
+const resolvedUserColumns = computed(() =>
+  applyInlineEditMode(
+    props.columns as ColumnConfig<Row>[],
+    prefs.inlineEditMode
+  )
+);
 </script>
 
 <template>
   <el-card>
     <SmartTable
       :data="rows"
-      :columns="columns"
+      :columns="resolvedUserColumns"
       :loading="loading"
       :has-fetched-once="hasFetchedOnce"
       :inline-edit-loading="inlineEditLoading"
@@ -61,7 +74,7 @@ const statusOptions = [
       @cancel="(row: Row) => emit('cancel', row)"
       @auto-save="(row: Row, field: RowField) => { const f = asEditable(field); if (f) emit('auto-save', row, f); }"
     >
-      <template #controlsSlot="{ row, field }">
+      <template #revertSlots="{ row, field }">
         <el-tooltip
           :content="(() => {
             const f = asEditable(field as RowField);

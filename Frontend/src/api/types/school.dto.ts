@@ -1,7 +1,7 @@
-// ~/api/school/dto.ts
 export type AttendanceStatus = "present" | "absent" | "excused";
 export type GradeType = "exam" | "assignment"; // adjust if you have more types
-
+import type { LifecycleDTO } from "./lifecycle.dto";
+import type { Status } from "./enums/status.enum";
 /**
  * Python: ClassSectionDTO
  *
@@ -11,12 +11,12 @@ export type GradeType = "exam" | "assignment"; // adjust if you have more types
 export interface ClassSectionDTO {
   id: string;
   name: string;
-  teacher_id: string | null;
+  homeroom_teacher_id: string | null;
   student_ids: string[];
   subject_ids: string[];
+  status: Status;
   max_students: number | null;
-  created_at?: string; // ISO datetime (optional if backend doesn’t include)
-  updated_at?: string; // ISO datetime
+  lifecycle: LifecycleDTO;
 }
 
 /**
@@ -27,8 +27,9 @@ export interface AttendanceDTO {
   student_id: string;
   class_id: string;
   teacher_id: string;
-  date: string; // ISO date (YYYY-MM-DD)
+  record_date: string;
   status: AttendanceStatus;
+  lifecycle: LifecycleDTO;
 }
 
 /**
@@ -43,6 +44,7 @@ export interface GradeDTO {
   term: string | null;
   score: number;
   type: GradeType;
+  lifecycle: LifecycleDTO;
 }
 
 /**
@@ -56,6 +58,7 @@ export interface ScheduleDTO {
   start_time: string; // "HH:MM:SS" or ISO time
   end_time: string;
   room: string | null;
+  lifecycle: LifecycleDTO;
 }
 
 /**
@@ -68,6 +71,5 @@ export interface SubjectDTO {
   description: string | null;
   allowed_grade_levels: number[] | null;
   is_active: boolean;
-  created_at: string; // ISO datetime
-  updated_at: string; // ISO datetime
+  lifecycle: LifecycleDTO;
 }

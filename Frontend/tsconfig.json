@@ -50,6 +50,6 @@
     "src/**/*.vue",
     "src/types/**/*.d.ts",
     ".nuxt/**/*.d.ts",
-    "env.d.ts", "src/**/*.ts", "src/**/*.vue", "src/services/formServices", "src/composables/pages/users/useUsersPaging.ts"  ],
+    "env.d.ts", "src/**/*.ts", "src/**/*.vue", "src/services/formServices", "src/composables/features/users/useUsersPaging.ts"  ],
   "exclude": ["node_modules"]
 }

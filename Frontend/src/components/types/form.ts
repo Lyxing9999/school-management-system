@@ -7,7 +7,7 @@ export type Field<T = Record<string, any>> = {
   displayOnly?: boolean;
   formItemProps?: Partial<FormItemProps>;
   component?: Component;
-  componentProps?: Record<string, unknown>;
+  componentProps?: Record<string, any> | ((model: T) => Record<string, any>);
   childComponent?: Component;
   childComponentProps?: {
     options?:

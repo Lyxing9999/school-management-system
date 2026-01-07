@@ -1,34 +1,34 @@
-import type { AdminDashboardFilterDTO } from "../api/dashboard.dto";
+// features/admin-dashboard/model/filters.ts
 
-export type TermValue = "" | "S1" | "S2";
 export type DateRange = [Date, Date] | null;
 
-export const termOptions: Array<{ label: string; value: TermValue }> = [
-  { label: "All terms", value: "" },
-  { label: "Semester 1", value: "S1" },
-  { label: "Semester 2", value: "S2" },
-];
+export type DashboardFiltersInput = {
+  dateRange: DateRange;
+};
 
-export function formatDateParam(d: Date): string {
-  // "YYYY-MM-DD"
-  return d.toISOString().slice(0, 10);
+function formatDateParam(d: Date): string {
+  // UTC date-only (stable for API)
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-export function buildDashboardFilters(args: {
-  dateRange: DateRange;
-  term: TermValue;
-}): AdminDashboardFilterDTO {
-  const filters: AdminDashboardFilterDTO = {};
+export function buildDashboardFilters(input: DashboardFiltersInput) {
+  const params: Record<string, string> = {};
+  const { dateRange } = input;
 
-  if (args.dateRange) {
-    const [start, end] = args.dateRange;
-    filters.date_from = formatDateParam(start);
-    filters.date_to = formatDateParam(end);
+  if (dateRange) {
+    const [start, end] = dateRange;
+    params.date_from = formatDateParam(start);
+    params.date_to = formatDateParam(end);
   }
 
-  if (args.term) {
-    filters.term = args.term;
-  }
-
-  return filters;
+  return params;
+}
+export function normalizeDateRange(v: unknown): DateRange {
+  if (!v || !Array.isArray(v) || v.length !== 2) return null;
+  const [a, b] = v;
+  if (!(a instanceof Date) || !(b instanceof Date)) return null;
+  return [a, b];
 }

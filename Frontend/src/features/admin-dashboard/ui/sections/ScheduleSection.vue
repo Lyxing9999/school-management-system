@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { EChartsOption } from "echarts";
+
 import VizCard from "../components/VizCard.vue";
 import DataTableCard from "../components/DataTableCard.vue";
 
@@ -15,41 +16,30 @@ const safeScheduleTeacherRows = computed(() =>
   Array.isArray(props.scheduleTeacherRows) ? props.scheduleTeacherRows : []
 );
 </script>
+
 <template>
   <el-row :gutter="16" class="mt-2">
     <el-col :xs="24" :md="12">
       <VizCard
         title="Lessons by weekday"
         :loading="loading"
-        :option-exists="!!byWeekdayOption"
+        :option="byWeekdayOption"
         empty-text="No schedule data"
-      >
-        <VChart
-          v-if="byWeekdayOption"
-          :option="byWeekdayOption"
-          autoresize
-          class="w-full h-full"
-        />
-      </VizCard>
+        :height="260"
+      />
     </el-col>
 
     <el-col :xs="24" :md="12">
       <DataTableCard title="Teaching load by teacher" :loading="loading">
+        <!-- Chart card inside the table card -->
         <VizCard
           title="Teaching load chart"
           :loading="loading"
-          :option-exists="!!byTeacherOption"
+          :option="byTeacherOption"
           empty-text="No teacher schedule data"
           :height="260"
           class="!border-0 !shadow-none"
-        >
-          <VChart
-            v-if="byTeacherOption"
-            :option="byTeacherOption"
-            autoresize
-            class="w-full h-full"
-          />
-        </VizCard>
+        />
 
         <el-table
           :data="safeScheduleTeacherRows"

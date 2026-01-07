@@ -5,15 +5,15 @@ import { ElMessage } from "element-plus";
 import type { AxiosError } from "axios";
 
 /* -------------------- Page Meta -------------------- */
-definePageMeta({ layout: "admin" });
+definePageMeta({ layout: "default" });
 
 /* -------------------- Base UI -------------------- */
-import OverviewHeader from "~/components/Overview/OverviewHeader.vue";
-import BaseButton from "~/components/Base/BaseButton.vue";
+import OverviewHeader from "~/components/overview/OverviewHeader.vue";
+import BaseButton from "~/components/base/BaseButton.vue";
 
 /* -------------------- Composables -------------------- */
-import { usePaginatedFetch } from "~/composables/usePaginatedFetch";
-import { useHeaderState } from "~/composables/useHeaderState";
+import { usePaginatedFetch } from "~/composables/data/usePaginatedFetch";
+import { useHeaderState } from "~/composables/ui/useHeaderState";
 
 /* -------------------- Services -------------------- */
 import { adminService } from "~/api/admin";

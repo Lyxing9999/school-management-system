@@ -1,29 +1,33 @@
-// src/plugins/echarts.client.ts  (or echarts.ts)
-import { defineNuxtPlugin } from "nuxt/app";
-import VueECharts from "vue-echarts";
-import { use } from "echarts/core";
+import { defineNuxtPlugin } from "#app";
 
-import { CanvasRenderer } from "echarts/renderers";
-import { BarChart, LineChart, PieChart } from "echarts/charts";
-import {
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-} from "echarts/components";
+export default defineNuxtPlugin(async (nuxtApp) => {
+  // Extra safety (client-only file already, but this prevents edge cases)
+  if (import.meta.server) return;
 
-// Register only the components you need
-use([
-  CanvasRenderer,
-  BarChart,
-  LineChart,
-  PieChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-]);
+  // Import ONLY on client
+  const [{ use }, { CanvasRenderer }, charts, components, VueECharts] =
+    await Promise.all([
+      import("echarts/core"),
+      import("echarts/renderers"),
+      import("echarts/charts"),
+      import("echarts/components"),
+      import("vue-echarts"),
+    ] as const);
 
-export default defineNuxtPlugin((nuxtApp) => {
-  nuxtApp.vueApp.component("VChart", VueECharts);
+  const { BarChart, LineChart, PieChart } = charts;
+  const { GridComponent, TooltipComponent, LegendComponent, TitleComponent } =
+    components;
+
+  use([
+    CanvasRenderer,
+    BarChart,
+    LineChart,
+    PieChart,
+    GridComponent,
+    TooltipComponent,
+    LegendComponent,
+    TitleComponent,
+  ]);
+
+  nuxtApp.vueApp.component("VChart", VueECharts.default);
 });

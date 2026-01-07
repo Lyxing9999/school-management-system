@@ -1,45 +1,40 @@
-// ~/stores/authStore.ts
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import type { UserBaseDataDTO } from "~/api/types/user.dto";
 
 export const useAuthStore = defineStore("auth", () => {
-  const token = ref<string>("");
+  const token = ref("");
   const user = ref<UserBaseDataDTO | null>(null);
-  const isReady = ref<boolean>(false);
+
+  // "bootstrap finished" (not "logged in")
+  const isReady = ref(false);
 
   const isAuthenticated = computed(() => !!token.value);
 
-  function setToken(next: string) {
-    token.value = next;
+  function setToken(v: string) {
+    token.value = v;
   }
-
-  function setUser(next: UserBaseDataDTO | null) {
-    user.value = next;
+  function setUser(v: UserBaseDataDTO | null) {
+    user.value = v;
   }
-
-  function clear() {
-    token.value = "";
-    user.value = null;
-  }
-
   function setReady(v: boolean) {
     isReady.value = v;
   }
 
+  function resetForGuest() {
+    token.value = "";
+    user.value = null;
+    isReady.value = true;
+  }
+
   return {
-    // state
     token,
     user,
     isReady,
-
-    // getters
     isAuthenticated,
-
-    // actions
     setToken,
     setUser,
-    clear,
     setReady,
+    resetForGuest,
   };
 });
