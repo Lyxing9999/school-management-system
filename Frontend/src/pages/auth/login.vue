@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
-definePageMeta({ layout: false });
+definePageMeta({ layout: false, middleware: [] });
 import schoolLogo from "~/assets/image/school-logo-light.png";
 
 import { iamService } from "~/api/iam/index";
@@ -107,14 +107,22 @@ const submit = async () => {
 
 <style scoped>
 .auth-shell {
-  background: var(--color-bg, #0b1220);
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--color-bg, #f5f7fb);
 }
 
 .auth-card {
-  background: var(--color-card, #111827);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-  box-shadow: 0 10px 30px var(--card-shadow, rgba(0, 0, 0, 0.35));
-  color: var(--text-color, #e5e7eb);
+  width: 100%;
+  max-width: 420px;
+  padding: 28px;
+  border-radius: 14px;
+  background: var(--color-card, #ffffff);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  box-shadow: 0 10px 30px var(--card-shadow, rgba(0, 0, 0, 0.1));
+  color: var(--text-color, #111827);
 }
 .auth-logo {
   display: block;
