@@ -1,7 +1,7 @@
 import { useAuthStore } from "~/stores/authStore";
 import { Role } from "~/api/types/enums/role.enum";
-import type { RouteLocationNormalized } from "vue-router";
 import { watch } from "vue";
+import type { RouteLocationNormalized } from "vue-router";
 
 const routeRoles: Record<string, Role[]> = {
   "/admin": [Role.ADMIN],
@@ -14,13 +14,24 @@ const routeRoles: Record<string, Role[]> = {
   "/hr": [Role.HR],
 };
 
+const isProtectedPath = (path: string) =>
+  path === "/" ||
+  path === "/home" ||
+  Object.keys(routeRoles).some((prefix) => path.startsWith(prefix));
+
 export default defineNuxtRouteMiddleware(
   async (to: RouteLocationNormalized) => {
-    if (import.meta.server) return;
-
 
     if (to.path.startsWith("/auth")) return;
 
+    if (process.server) {
+      if (isProtectedPath(to.path)) {
+        return navigateTo("/auth/login", { redirectCode: 302 });
+      }
+      return;
+    }
+
+    // client side
     const auth = useAuthStore();
 
     if (!auth.isReady) {
@@ -38,11 +49,9 @@ export default defineNuxtRouteMiddleware(
       });
     }
 
-    if ((to.path === "/" || to.path === "/home") && !auth.isAuthenticated) {
+    if (isProtectedPath(to.path) && !auth.isAuthenticated) {
       return navigateTo("/auth/login");
     }
-
-    if (!auth.isAuthenticated) return navigateTo("/auth/login");
 
     const role = auth.user?.role;
     for (const [prefix, allowed] of Object.entries(routeRoles)) {
