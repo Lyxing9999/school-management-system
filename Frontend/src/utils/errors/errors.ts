@@ -1,4 +1,4 @@
-import { isDev } from "~/utils/env/env";
+import { isDev } from "../env";
 
 type ReportMode = "log" | "crash-in-dev";
 
