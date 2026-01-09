@@ -40,11 +40,6 @@ export default defineNuxtConfig({
             "School management dashboard for attendance, grades, and schedules.",
         },
       ],
-      script: [
-        {
-          innerHTML: `(function(){try{ ... localStorage ... }catch(e){}})();`,
-        },
-      ],
     },
   },
 
