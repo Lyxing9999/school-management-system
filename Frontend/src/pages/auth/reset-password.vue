@@ -3,7 +3,7 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "nuxt/app";
 import type { FormInstance, FormRules } from "element-plus";
 import { ElMessage } from "element-plus";
-definePageMeta({ layout: false, middleware: [] });
+definePageMeta({ layout: undefined, middleware: [] });
 import schoolLogo from "~/assets/image/school-logo-light.png";
 import { useIamService } from "~/api/iam/index";
 import { reportError } from "~/utils/errors/errors";

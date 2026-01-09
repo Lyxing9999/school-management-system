@@ -12,15 +12,12 @@ export default defineNuxtConfig({
 
   ssr: true,
 
-
   routeRules: {
-    // protected areas: don't SSR (auth is client-side + cross-domain cookie refresh)
     "/admin/**": { ssr: false },
     "/teacher/**": { ssr: false },
     "/student/**": { ssr: false },
 
-    // auth pages can remain SSR
-    "/auth/**": { ssr: true },
+    "/auth/**": { ssr: false },
     "/": { ssr: true },
   },
 
@@ -55,10 +52,9 @@ export default defineNuxtConfig({
         {
           innerHTML: `(function(){try{
             var t=localStorage.getItem('theme')||'light';
-            var r = t;
             var el=document.documentElement;
-            el.setAttribute('data-theme', r);
-            if(r==='dark') el.classList.add('dark'); else el.classList.remove('dark');
+            el.setAttribute('data-theme', t);
+            if(t==='dark') el.classList.add('dark'); else el.classList.remove('dark');
           }catch(e){}})();`,
         },
       ],
@@ -80,10 +76,6 @@ export default defineNuxtConfig({
         : []),
     ],
 
-    define: {
-      __DEV__: !isProd,
-    },
-
     server: !isProd
       ? {
           watch: { usePolling: true },
@@ -103,8 +95,8 @@ export default defineNuxtConfig({
       : undefined,
 
     build: {
-      sourcemap: false,
-      minify: "esbuild",
+      sourcemap: !isProd, // dev only
+      minify: isProd ? "esbuild" : false,
       rollupOptions: {
         output: {
           manualChunks(id: string) {

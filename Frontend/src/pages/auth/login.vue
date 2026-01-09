@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
-definePageMeta({ layout: false, middleware: [] });
+definePageMeta({ layout: undefined, middleware: [] });
 import schoolLogo from "~/assets/image/school-logo-light.png";
 
 import { useIamService } from "~/api/iam/index";
