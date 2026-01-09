@@ -3,8 +3,7 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "nuxt/app";
 import type { FormInstance, FormRules } from "element-plus";
 import schoolLogo from "~/assets/image/school-logo-light.png";
-import { useIamService } from "~/api/iam/useIamService";
-const { auth: authService } = useIamService();
+const { $authService } = useNuxtApp();
 const route = useRoute();
 const router = useRouter();
 
@@ -55,7 +54,7 @@ const submit = async () => {
 
   loading.value = true;
   try {
-    const ok = await authService.confirmResetPassword({
+    const ok = await $authService.confirmResetPassword({
       token: form.token,
       new_password: form.new_password,
     });

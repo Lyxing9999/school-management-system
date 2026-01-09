@@ -13,7 +13,7 @@ import {
 } from "@element-plus/icons-vue";
 
 import { useAuthStore } from "~/stores/authStore";
-import { useIamService } from "~/api/iam/useIamService";
+
 import { useNotificationStore } from "~/stores/notificationStore";
 import NotificationDrawer from "~/components/notifications/NotificationDrawer.vue";
 import { storeToRefs } from "pinia";
@@ -25,7 +25,7 @@ import { usePreferencesStore } from "~/stores/preferencesStore";
 const emit = defineEmits<{ (e: "toggle-sidebar"): void }>();
 
 const authStore = useAuthStore();
-const iam = useIamService();
+const { $authService } = useNuxtApp();
 
 const notif = useNotificationStore();
 const { unreadCount } = storeToRefs(notif);
@@ -59,7 +59,7 @@ const handleSettingsClick = async () =>
   navigateTo({ path: settingsRoute.value, query: { tab: "account" } });
 
 const handleLogoutClick = async () => {
-  await iam.auth.logout();
+  await $authService.auth.logout();
 };
 
 let timer: number | null = null;

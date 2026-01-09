@@ -14,7 +14,6 @@ import { storeToRefs } from "pinia";
 import BaseButton from "~/components/base/BaseButton.vue";
 import NotificationDrawer from "~/components/notifications/NotificationDrawer.vue";
 
-import { useIamService } from "~/api/iam/useIamService";
 import { useAuthStore } from "~/stores/authStore";
 import { Role } from "~/api/types/enums/role.enum";
 
@@ -39,7 +38,7 @@ const router = useRouter();
 const msg = useMessage();
 
 const authStore = useAuthStore();
-const iam = useIamService();
+const { $authService } = useNuxtApp();
 
 const notifStore = useNotificationStore();
 const { unreadCount } = storeToRefs(notifStore);
@@ -294,7 +293,7 @@ onMounted(async () => {
 
   try {
     if (!authStore.isReady) {
-      await iam.auth.getMe();
+      await $authService.auth.getMe();
     }
     hydrateProfile();
     await refreshUnread();
@@ -307,7 +306,7 @@ onMounted(async () => {
    Header actions
 ------------------------- */
 async function logout() {
-  await iam.auth.logout();
+  await $authService.auth.logout();
 }
 
 function goDashboard() {

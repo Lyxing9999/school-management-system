@@ -4,10 +4,9 @@ import type { FormInstance, FormRules } from "element-plus";
 
 import schoolLogo from "~/assets/image/school-logo-light.png";
 
-import { useIamService } from "~/api/iam/useIamService";
 import type { UserLoginForm } from "~/api/iam/iam.dto";
 
-const authService = useIamService();
+const { $authService } = useNuxtApp();
 
 const loading = ref(false);
 const formRef = ref<FormInstance>();
@@ -34,7 +33,7 @@ const submit = async () => {
 
   loading.value = true;
   try {
-    await authService.auth.login(form);
+    await $authService.login(form);
   } finally {
     loading.value = false;
   }

@@ -51,6 +51,7 @@ export default defineNuxtConfig({
   },
   devServer: !isProd ? { host: "0.0.0.0" } : undefined,
   vite: {
+    sourcemap: true,
     plugins: [
       tailwindcss(),
       ...(visualizerPlugin
