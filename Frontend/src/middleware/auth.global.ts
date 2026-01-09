@@ -21,19 +21,38 @@ const isProtectedPath = (path: string) =>
 
 export default defineNuxtRouteMiddleware(
   async (to: RouteLocationNormalized) => {
-
     if (to.path.startsWith("/auth")) return;
 
+    const auth = useAuthStore();
+
+    // ---------- SERVER (SSR) ----------
     if (process.server) {
-      if (isProtectedPath(to.path)) {
+      // Read cookies on server (available during SSR request)
+      const token = useCookie<string | null>("access_token", {
+        path: "/",
+      }).value;
+      const role = useCookie<Role | null>("user_role", { path: "/" }).value;
+
+      // Set store so SSR render can reflect auth state
+      auth.setToken(token ?? "");
+      auth.setUser(role ? ({ role } as any) : null); // optional minimal user
+      auth.setReady(true);
+
+      if (isProtectedPath(to.path) && !token) {
         return navigateTo("/auth/login", { redirectCode: 302 });
       }
+
+      // Role guard on server
+      for (const [prefix, allowed] of Object.entries(routeRoles)) {
+        if (to.path.startsWith(prefix) && (!role || !allowed.includes(role))) {
+          return navigateTo("/auth/login", { redirectCode: 302 });
+        }
+      }
+
       return;
     }
 
-    // client side
-    const auth = useAuthStore();
-
+    // ---------- CLIENT ----------
     if (!auth.isReady) {
       await new Promise<void>((resolve) => {
         const stop = watch(
@@ -53,9 +72,12 @@ export default defineNuxtRouteMiddleware(
       return navigateTo("/auth/login");
     }
 
-    const role = auth.user?.role;
+    const clientRole = auth.user?.role;
     for (const [prefix, allowed] of Object.entries(routeRoles)) {
-      if (to.path.startsWith(prefix) && (!role || !allowed.includes(role))) {
+      if (
+        to.path.startsWith(prefix) &&
+        (!clientRole || !allowed.includes(clientRole))
+      ) {
         return navigateTo("/auth/login");
       }
     }

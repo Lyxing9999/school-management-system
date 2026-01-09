@@ -14,7 +14,7 @@ import { storeToRefs } from "pinia";
 import BaseButton from "~/components/base/BaseButton.vue";
 import NotificationDrawer from "~/components/notifications/NotificationDrawer.vue";
 
-import { useIamService } from "~/api/iam";
+import { useIamService } from "~/api/iam/useIamService";
 import { useAuthStore } from "~/stores/authStore";
 import { Role } from "~/api/types/enums/role.enum";
 

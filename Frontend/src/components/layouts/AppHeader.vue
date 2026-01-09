@@ -13,7 +13,7 @@ import {
 } from "@element-plus/icons-vue";
 
 import { useAuthStore } from "~/stores/authStore";
-import { useIamService } from "~/api/iam";
+import { useIamService } from "~/api/iam/useIamService";
 import { useNotificationStore } from "~/stores/notificationStore";
 import NotificationDrawer from "~/components/notifications/NotificationDrawer.vue";
 import { storeToRefs } from "pinia";

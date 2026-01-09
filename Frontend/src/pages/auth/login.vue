@@ -4,10 +4,10 @@ import type { FormInstance, FormRules } from "element-plus";
 definePageMeta({ layout: false, middleware: [] });
 import schoolLogo from "~/assets/image/school-logo-light.png";
 
-import { useIamService } from "~/api/iam/index";
+import { useIamService } from "~/api/iam/useIamService";
 import type { UserLoginForm } from "~/api/iam/iam.dto";
 
-const authService = useIamService().auth;
+const { auth: authService } = useIamService();
 
 const loading = ref(false);
 const formRef = ref<FormInstance>();
