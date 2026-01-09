@@ -1,7 +1,7 @@
 import { useAuthStore } from "~/stores/authStore";
 import { Role } from "~/api/types/enums/role.enum";
 import type { RouteLocationNormalized } from "vue-router";
-
+import { watch } from "vue";
 
 const routeRoles: Record<string, Role[]> = {
   "/admin": [Role.ADMIN],
