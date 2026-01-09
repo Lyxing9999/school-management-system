@@ -3,7 +3,6 @@ from typing import Optional, List
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
-
 from app.contexts.core.errors.app_base_exception import handle_exception
 
 
@@ -12,28 +11,16 @@ def _parse_csv(value: str) -> List[str]:
 
 
 def _normalize_origin(origin: str) -> str:
-    """
-    Normalize an origin to browser-expected form:
-    - remove trailing slash
-    - keep scheme://host[:port]
-    """
-    o = (origin or "").strip().rstrip("/")
-    return o
+    return (origin or "").strip().rstrip("/")
 
 
 def _is_valid_origin(origin: str) -> bool:
-    """
-    Very practical validation for CORS origins:
-    - must be absolute URL with scheme http/https
-    - must have netloc
-    """
     try:
         u = urlparse(origin)
         if u.scheme not in ("http", "https"):
             return False
         if not u.netloc:
             return False
-        # Browser Origin never includes path/query/fragment
         if u.path not in ("", "/"):
             return False
         if u.query or u.fragment:
@@ -45,12 +32,10 @@ def _is_valid_origin(origin: str) -> bool:
 
 class Settings:
     def __init__(self):
-        # Load .env only if present; keep it safe for prod (prod should use real env vars)
+        # Loads .env locally; in production you should set real env vars
         load_dotenv()
 
         self.DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
-
-        # Feature flags
         self.ENABLE_GOOGLE_OAUTH: bool = os.getenv("ENABLE_GOOGLE_OAUTH", "false").lower() == "true"
 
         # Core
@@ -64,6 +49,12 @@ class Settings:
         # Frontend
         self.FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000").strip().rstrip("/")
 
+        # Cookie config (IMPORTANT for prod)
+        self.COOKIE_SECURE: str = os.getenv("COOKIE_SECURE", "false")  # string; cookies.py converts to bool
+        self.COOKIE_SAMESITE: str = os.getenv("COOKIE_SAMESITE", "Lax")
+        self.COOKIE_DOMAIN: Optional[str] = os.getenv("COOKIE_DOMAIN") or None
+        self.COOKIE_PATH: str = os.getenv("COOKIE_PATH", "/api/iam")
+
         # Google OAuth
         self.GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID")
         self.GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -72,18 +63,17 @@ class Settings:
         # Telegram
         self.TELEGRAM_BOT_TOKEN: Optional[str] = os.getenv("TELEGRAM_BOT_TOKEN")
 
-        # CORS origins (exact origins only when credentials are enabled)
+        # CORS
         raw_origins = os.getenv(
             "CORS_ALLOWED_ORIGINS",
             "http://localhost:3000,http://127.0.0.1:3000",
         )
-
         origins = [_normalize_origin(x) for x in _parse_csv(raw_origins)]
-        # Always include frontend url if defined
+
         if self.FRONTEND_URL:
             origins.append(_normalize_origin(self.FRONTEND_URL))
 
-        # De-duplicate while preserving order
+        # de-dupe
         seen = set()
         clean: List[str] = []
         for o in origins:
@@ -97,16 +87,13 @@ class Settings:
         self._validate()
 
     def _validate(self):
-        # 1) Production safety: secret key must exist in non-debug
         if not self.DEBUG and not self.SECRET_KEY:
             raise handle_exception(ValueError("SECRET_KEY must be set when DEBUG=false."))
 
-        # 2) CORS origin validation (prevents silent browser failures)
         bad = [o for o in self.CORS_ALLOWED_ORIGINS if not _is_valid_origin(o)]
         if bad:
             raise handle_exception(ValueError(f"Invalid CORS origin(s): {bad}"))
 
-        # 3) Google OAuth validation only when enabled
         if self.ENABLE_GOOGLE_OAUTH and (not self.GOOGLE_CLIENT_ID or not self.GOOGLE_CLIENT_SECRET):
             raise handle_exception(
                 ValueError("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set when ENABLE_GOOGLE_OAUTH=true.")

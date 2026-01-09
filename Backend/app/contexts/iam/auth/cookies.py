@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from app.contexts.core.config.setting import settings
 
 COOKIE_NAME = "refresh_token"
@@ -16,8 +17,6 @@ def set_refresh_cookie(resp, refresh_token: str):
 
     # Browser rule: SameSite=None MUST be Secure (HTTPS)
     if str(samesite).lower() == "none" and not secure:
-        # In production, this should be treated as misconfig.
-        # In dev, you should not use None.
         raise ValueError("Invalid cookie config: SameSite=None requires Secure=True (HTTPS).")
 
     resp.set_cookie(
@@ -25,9 +24,9 @@ def set_refresh_cookie(resp, refresh_token: str):
         refresh_token,
         httponly=True,
         secure=secure,
-        samesite=samesite,       # "Lax" (dev) or "None" (prod cross-site)
-        domain=domain,           # None is fine for same host; use ".domain.com" for subdomains
-        path=path,               # must match clear_refresh_cookie
+        samesite=samesite,     # "Lax" (dev) or "None" (prod cross-site)
+        domain=domain,         # usually None for Render/Vercel different domains
+        path=path,             # must match clear_refresh_cookie
         max_age=14 * 24 * 3600,
     )
 
@@ -38,7 +37,6 @@ def clear_refresh_cookie(resp):
     domain = getattr(settings, "COOKIE_DOMAIN", None)
     path = getattr(settings, "COOKIE_PATH", "/api/iam")
 
-    # Deleting cookies must match attributes (path/domain)
     resp.delete_cookie(
         COOKIE_NAME,
         domain=domain,

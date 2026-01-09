@@ -12,6 +12,18 @@ export default defineNuxtConfig({
 
   ssr: true,
 
+
+  routeRules: {
+    // protected areas: don't SSR (auth is client-side + cross-domain cookie refresh)
+    "/admin/**": { ssr: false },
+    "/teacher/**": { ssr: false },
+    "/student/**": { ssr: false },
+
+    // auth pages can remain SSR
+    "/auth/**": { ssr: true },
+    "/": { ssr: true },
+  },
+
   modules: ["@element-plus/nuxt", "@pinia/nuxt"],
 
   devtools: { enabled: !isProd },
@@ -97,13 +109,11 @@ export default defineNuxtConfig({
         output: {
           manualChunks(id: string) {
             if (!id.includes("node_modules")) return;
-
             if (id.includes("element-plus")) return "vendor_element-plus";
             if (id.includes("@fullcalendar")) return "vendor_fullcalendar";
             if (id.includes("echarts")) return "vendor_echarts";
             if (id.includes("chart.js")) return "vendor_chartjs";
             if (id.includes("lodash-es")) return "vendor_lodash";
-
             return "vendor";
           },
         },
@@ -113,9 +123,6 @@ export default defineNuxtConfig({
     esbuild: isProd ? { drop: ["console", "debugger"] } : undefined,
   },
 
-  // ✅ keep this conditional, but note:
-  // On Vercel, SSR works with preset vercel.
-  // Locally, node-server lets you `nuxi preview`.
   nitro: {
     preset: isVercel ? "vercel" : "node-server",
   },
