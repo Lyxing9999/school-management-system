@@ -6,7 +6,6 @@ export const useAuthStore = defineStore("auth", () => {
   const token = ref("");
   const user = ref<UserBaseDataDTO | null>(null);
 
-  // "bootstrap finished" (not "logged in")
   const isReady = ref(false);
 
   const isAuthenticated = computed(() => !!token.value);

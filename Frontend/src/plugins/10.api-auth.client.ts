@@ -1,4 +1,9 @@
-import type { AxiosError, AxiosRequestConfig } from "axios";
+import type {
+  AxiosError,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from "axios";
 import { useAuthStore } from "~/stores/authStore";
 
 type RetryConfig = AxiosRequestConfig & { _retry?: boolean };
@@ -11,7 +16,7 @@ export default defineNuxtPlugin(() => {
 
   const auth = useAuthStore();
 
-  $api.interceptors.request.use((cfg) => {
+  $api.interceptors.request.use((cfg: InternalAxiosRequestConfig) => {
     if (auth.token) {
       cfg.headers = cfg.headers ?? {};
       (cfg.headers as any).Authorization = `Bearer ${auth.token}`;
@@ -28,7 +33,7 @@ export default defineNuxtPlugin(() => {
   }
 
   $api.interceptors.response.use(
-    (res) => res,
+    (res: AxiosResponse) => res,
     async (error: AxiosError) => {
       if (!error.response) return Promise.reject(error);
 
@@ -42,7 +47,7 @@ export default defineNuxtPlugin(() => {
       if (status !== 401 || isAuthRoute) return Promise.reject(error);
 
       if (original._retry) {
-        auth.resetForGuest(); // clear token + user
+        auth.resetForGuest();
         return Promise.reject(error);
       }
       original._retry = true;

@@ -313,6 +313,10 @@ async function logout() {
 function goDashboard() {
   navigateTo("/admin/dashboard");
 }
+const autoRefreshBadge = computed<boolean>({
+  get: () => notifAutoRefresh.value,
+  set: (v) => prefs.setNotifAutoRefresh(v),
+});
 </script>
 
 <template>
@@ -634,10 +638,7 @@ function goDashboard() {
                       </div>
                     </div>
 
-                    <el-switch
-                      :model-value="notifAutoRefresh"
-                      @update:model-value="(v) => setNotifAutoRefresh(!!v)"
-                    />
+                    <ElSwitch v-model="autoRefreshBadge" />
                   </div>
 
                   <el-divider />

@@ -213,6 +213,10 @@ function goDashboard() {
     home === "attendance" ? "/student/attendance" : "/student/dashboard"
   );
 }
+const autoRefreshBadge = computed<boolean>({
+  get: () => notifAutoRefresh.value,
+  set: (v) => prefs.setNotifAutoRefresh(v),
+});
 </script>
 
 <template>
@@ -430,13 +434,7 @@ function goDashboard() {
                         Keeps the header badge updated.
                       </div>
                     </div>
-
-                    <el-switch
-                      :model-value="notifAutoRefresh"
-                      @update:model-value="
-                        (val) => setNotifAutoRefresh(Boolean(val))
-                      "
-                    />
+                    <ElSwitch v-model="autoRefreshBadge" />
                   </div>
 
                   <el-divider />
