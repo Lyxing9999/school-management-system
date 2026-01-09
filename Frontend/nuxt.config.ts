@@ -1,3 +1,4 @@
+// nuxt.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import { visualizer } from "rollup-plugin-visualizer";
 import { defineNuxtConfig } from "nuxt/config";
@@ -9,18 +10,13 @@ const isVercel = !!process.env.VERCEL;
 export default defineNuxtConfig({
   srcDir: "src/",
   compatibilityDate: "2025-05-29",
-  css: ["~/styles/main.css", "~/styles/sidebar.scss"],
+
+ 
+  ssr: false,
+
   modules: ["@element-plus/nuxt", "@pinia/nuxt"],
-  ssr: true,
 
-  routeRules: {
-    "/admin/**": { ssr: false },
-    "/teacher/**": { ssr: false },
-    "/student/**": { ssr: false },
-
-    "/auth/**": { ssr: false },
-    "/": { ssr: true },
-  },
+  css: ["~/styles/main.css", "~/styles/sidebar.scss"],
 
   devtools: { enabled: !isProd },
 
@@ -74,10 +70,7 @@ export default defineNuxtConfig({
     ],
 
     server: !isProd
-      ? {
-          watch: { usePolling: true },
-          host: "0.0.0.0",
-        }
+      ? { watch: { usePolling: true }, host: "0.0.0.0" }
       : undefined,
 
     optimizeDeps: !isProd
@@ -92,7 +85,7 @@ export default defineNuxtConfig({
       : undefined,
 
     build: {
-      sourcemap: !isProd, // dev only
+      sourcemap: !isProd,
       minify: isProd ? "esbuild" : false,
       rollupOptions: {
         output: {
@@ -112,6 +105,7 @@ export default defineNuxtConfig({
     esbuild: isProd ? { drop: ["console", "debugger"] } : undefined,
   },
 
+  // Keeping this is fine on Vercel.
   nitro: {
     preset: isVercel ? "vercel" : "node-server",
   },

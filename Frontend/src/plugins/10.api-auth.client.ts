@@ -1,3 +1,4 @@
+// src/plugins/10.api-auth.client.ts
 import type {
   AxiosError,
   AxiosRequestConfig,
@@ -35,11 +36,12 @@ export default defineNuxtPlugin(() => {
   $api.interceptors.response.use(
     (res: AxiosResponse) => res,
     async (error: AxiosError) => {
+      // backend down / network error
       if (!error.response) return Promise.reject(error);
 
       const original = (error.config || {}) as RetryConfig;
-
       const status = error.response.status;
+
       const url = String(original.url || "");
       const isAuthRoute =
         url.includes("/api/iam/login") || url.includes("/api/iam/refresh");
