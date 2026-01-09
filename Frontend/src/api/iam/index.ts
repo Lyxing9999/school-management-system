@@ -1,17 +1,13 @@
-//api
-import { AuthApi } from "./iam.api";
+import type { AxiosInstance } from "axios";
 
-//service
+// api  
+import { AuthApi } from "./iam.api";
+// service
 import { AuthService } from "./iam.service";
 
-let _iamService: ReturnType<typeof createIamService> | null = null;
-
-function createIamService() {
-  const { $api } = useNuxtApp();
-  if (!$api) throw new Error("$api is undefined.");
-
+export function createIamService(api: AxiosInstance) {
   const iamApi = {
-    auth: new AuthApi($api),
+    auth: new AuthApi(api),
   };
 
   return {
@@ -19,4 +15,11 @@ function createIamService() {
   };
 }
 
-export const iamService = () => (_iamService ??= createIamService());
+export function useIamService() {
+  const { $api } = useNuxtApp();
+  if (!$api)
+    throw new Error(
+      "$api is undefined. Check that src/plugins/00.api.ts is universal (not .client.ts)."
+    );
+  return createIamService($api as AxiosInstance);
+}

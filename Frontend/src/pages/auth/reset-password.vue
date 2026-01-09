@@ -5,10 +5,10 @@ import type { FormInstance, FormRules } from "element-plus";
 import { ElMessage } from "element-plus";
 definePageMeta({ layout: false, middleware: [] });
 import schoolLogo from "~/assets/image/school-logo-light.png";
-import { iamService } from "~/api/iam/index";
+import { useIamService } from "~/api/iam/index";
 import { reportError } from "~/utils/errors/errors";
 
-const authService = iamService().auth; // ensure authService exposes confirmResetPassword()
+const authService = useIamService().auth; // ensure authService exposes confirmResetPassword()
 const route = useRoute();
 const router = useRouter();
 

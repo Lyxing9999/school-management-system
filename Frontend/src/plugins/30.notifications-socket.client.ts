@@ -13,8 +13,6 @@ export default defineNuxtPlugin(() => {
 
   const auth = useAuthStore();
   const notif = useNotificationStore();
-
-  // IMPORTANT: must be your backend origin in production
   const baseURL = useRuntimeConfig().public.apiBase;
 
   const g = globalThis as any;

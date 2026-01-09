@@ -13,7 +13,7 @@ import {
 } from "@element-plus/icons-vue";
 
 import { useAuthStore } from "~/stores/authStore";
-import { iamService } from "~/api/iam";
+import { useIamService } from "~/api/iam";
 import { useNotificationStore } from "~/stores/notificationStore";
 import NotificationDrawer from "~/components/notifications/NotificationDrawer.vue";
 import { storeToRefs } from "pinia";
@@ -25,7 +25,7 @@ import { usePreferencesStore } from "~/stores/preferencesStore";
 const emit = defineEmits<{ (e: "toggle-sidebar"): void }>();
 
 const authStore = useAuthStore();
-const iam = iamService();
+const iam = useIamService();
 
 const notif = useNotificationStore();
 const { unreadCount } = storeToRefs(notif);
@@ -62,15 +62,12 @@ const handleLogoutClick = async () => {
   await iam.auth.logout();
 };
 
-
 let timer: number | null = null;
 
 async function refreshUnreadSafe() {
   try {
     await notif.refreshUnread();
-  } catch {
-
-  }
+  } catch {}
 }
 
 function startPolling() {
@@ -91,7 +88,6 @@ function onVisibility() {
 
 onMounted(async () => {
   await refreshUnreadSafe();
-
 
   window.addEventListener("focus", refreshUnreadSafe);
   document.addEventListener("visibilitychange", onVisibility);

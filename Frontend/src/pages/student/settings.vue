@@ -14,7 +14,7 @@ import { storeToRefs } from "pinia";
 import BaseButton from "~/components/base/BaseButton.vue";
 import NotificationDrawer from "~/components/notifications/NotificationDrawer.vue";
 
-import { iamService } from "~/api/iam";
+import { useIamService } from "~/api/iam";
 import { useAuthStore } from "~/stores/authStore";
 import { Role } from "~/api/types/enums/role.enum";
 
@@ -34,7 +34,7 @@ const router = useRouter();
 const msg = useMessage();
 
 const authStore = useAuthStore();
-const iam = iamService();
+const iam = useIamService();
 
 const notifStore = useNotificationStore();
 const { unreadCount } = storeToRefs(notifStore);
