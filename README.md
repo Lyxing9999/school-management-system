@@ -695,7 +695,7 @@ NUXT_PUBLIC_CALENDARIFIC_API_KEY=your_calendarific_api_key_here
 
 ---
 
-**Version**: 1.0.0 (Production Ready)  
+**Version**: 1.0.0 (MVP Ready / Portfolio Release)  
 **Last Updated**: January 2026  
 **Database Collections**: 11+  
 **API Endpoints**: 80+

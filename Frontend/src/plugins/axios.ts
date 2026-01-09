@@ -1,4 +1,3 @@
-// ~/plugins/axios.ts
 import axios, { type AxiosError, type AxiosRequestConfig } from "axios";
 import { useRuntimeConfig } from "nuxt/app";
 import { useAuthStore } from "~/stores/authStore";
@@ -6,8 +5,16 @@ import { ElMessage } from "element-plus";
 
 type RetryConfig = AxiosRequestConfig & { _retry?: boolean };
 
+function isCanceled(err: any) {
+  return (
+    err?.code === "ERR_CANCELED" ||
+    err?.name === "CanceledError" ||
+    err?.message === "canceled" ||
+    err?.message === "Request aborted"
+  );
+}
+
 function isNetworkError(err: AxiosError) {
-  // Axios: no response => network/CORS/DNS/down/timeout
   return !err.response;
 }
 
@@ -25,9 +32,6 @@ export default defineNuxtPlugin(() => {
   const auth = useAuthStore();
 
   const baseURL = config.public.apiBase;
-  if (!baseURL) {
-    console.warn("[api] Missing runtimeConfig.public.apiBase");
-  }
 
   const api = axios.create({
     baseURL,
@@ -68,15 +72,20 @@ export default defineNuxtPlugin(() => {
   api.interceptors.response.use(
     (res) => res,
     async (error: AxiosError) => {
+      if (isCanceled(error)) {
+        return Promise.reject(error);
+      }
+
       const original = (error.config || {}) as RetryConfig;
 
       if (isNetworkError(error)) {
+        if (isCanceled(error)) return Promise.reject(error);
+
         if (typeof navigator !== "undefined" && navigator.onLine === false) {
           toastOnce("You are offline. Please check your internet connection.");
         } else if (isTimeoutError(error)) {
           toastOnce("Request timed out. Please try again.");
         } else {
-          // This covers: backend down, DNS fail, CORS blocked, etc.
           toastOnce("Server is unreachable. Please try again later.");
         }
         return Promise.reject(error);
@@ -131,6 +140,8 @@ export default defineNuxtPlugin(() => {
       } catch (refreshErr: any) {
         isRefreshing = false;
         queue = [];
+
+        if (isCanceled(refreshErr)) return Promise.reject(refreshErr);
 
         const axErr = refreshErr as AxiosError;
         if (axErr && !axErr.response) {
