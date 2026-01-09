@@ -1,22 +1,21 @@
 <script setup lang="ts">
 import { ref, reactive } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
-definePageMeta({ layout: false, middleware: [] });
+
 import schoolLogo from "~/assets/image/school-logo-light.png";
 
 import { useIamService } from "~/api/iam/useIamService";
 import type { UserLoginForm } from "~/api/iam/iam.dto";
 
-const { auth: authService } = useIamService();
+const authService = useIamService();
 
 const loading = ref(false);
 const formRef = ref<FormInstance>();
-
+definePageMeta({ layout: false, middleware: [] });
 const form = reactive<UserLoginForm>({
   email: "",
   password: "",
 });
-
 const rules: FormRules = {
   email: [
     { required: true, message: "Please enter email", trigger: "blur" },
@@ -35,7 +34,7 @@ const submit = async () => {
 
   loading.value = true;
   try {
-    await authService.login(form);
+    await authService.auth.login(form);
   } finally {
     loading.value = false;
   }

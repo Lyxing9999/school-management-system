@@ -1,7 +1,7 @@
 import { useMessage } from "~/composables/common/useMessage";
 import { useRouter, useCookie } from "nuxt/app";
 import { useAuthStore } from "~/stores/authStore";
-import { AuthApi } from "~/api/iam/iam.api";
+import type { AuthApi } from "~/api/iam/iam.api";
 import { Role } from "~/api/types/enums/role.enum";
 import type {
   UserRegisterForm,
@@ -19,37 +19,43 @@ type AuthCookieUser = {
 };
 
 export class AuthService {
-  private router = useRouter();
-  private authStore = useAuthStore();
-  private message = useMessage();
+  private router;
+  private authStore;
+  private message;
 
-  // SSR-safe cookies (available on server + client)
-  private tokenCookie = useCookie<string | null>("access_token", {
-    sameSite: "lax",
-    path: "/",
-  });
+  private tokenCookie;
+  private roleCookie;
+  private studentHomeCookie;
+  private userCookie;
 
-  private roleCookie = useCookie<Role | null>("user_role", {
-    sameSite: "lax",
-    path: "/",
-  });
-  private studentHomeCookie = useCookie<"dashboard" | "attendance" | null>(
-    "student_home",
-    {
+  constructor(private authApi: AuthApi) {
+    this.router = useRouter();
+    this.authStore = useAuthStore();
+    this.message = useMessage();
+
+    this.tokenCookie = useCookie<string | null>("access_token", {
       sameSite: "lax",
       path: "/",
-    }
-  );
-  /**
-   * Optional (non-sensitive) cache so header can show name immediately
-   * without waiting for /me (works on refresh).
-   */
-  private userCookie = useCookie<AuthCookieUser | null>("user_cache", {
-    sameSite: "lax",
-    path: "/",
-  });
+    });
 
-  constructor(private authApi: AuthApi) {}
+    this.roleCookie = useCookie<Role | null>("user_role", {
+      sameSite: "lax",
+      path: "/",
+    });
+
+    this.studentHomeCookie = useCookie<"dashboard" | "attendance" | null>(
+      "student_home",
+      {
+        sameSite: "lax",
+        path: "/",
+      }
+    );
+
+    this.userCookie = useCookie<AuthCookieUser | null>("user_cache", {
+      sameSite: "lax",
+      path: "/",
+    });
+  }
 
   private validateCredentials(form: UserRegisterForm | UserLoginForm): boolean {
     if (!form.email || !form.password) {
@@ -60,30 +66,25 @@ export class AuthService {
   }
 
   private persistAuth(token: string, user: any) {
-    // Cookies
     this.tokenCookie.value = token;
     this.roleCookie.value = user.role;
 
-    // Minimal cache for instant header
     this.userCookie.value = {
       id: String(user.id),
       username: user.username,
       role: user.role,
     };
 
-    // Pinia
     this.authStore.setToken(token);
     this.authStore.setUser(user);
     this.authStore.setReady(true);
   }
 
   private clearAuth() {
-    // Cookies
     this.tokenCookie.value = null;
     this.roleCookie.value = null;
     this.userCookie.value = null;
 
-    // Pinia
     this.authStore.setToken("");
     this.authStore.setUser(null);
     this.authStore.setReady(true);
@@ -92,7 +93,6 @@ export class AuthService {
   async login(form: UserLoginForm): Promise<void | null> {
     if (!this.validateCredentials(form)) return null;
 
-    // while logging in, you may setReady(false) if you want
     this.authStore.setReady(false);
 
     try {
@@ -226,6 +226,7 @@ export class AuthService {
   async getMe() {
     return this.authApi.getMe();
   }
+
   async updateMe(payload: UpdateMePayload) {
     try {
       const data = await this.authApi.updateMe(payload);
@@ -236,7 +237,6 @@ export class AuthService {
         return null;
       }
 
-      // keep cookies + store in sync
       this.authStore.setUser(user);
       this.userCookie.value = {
         id: String(user.id),

@@ -1,4 +1,3 @@
-// src/plugins/10.api-auth.client.ts
 import type {
   AxiosError,
   AxiosRequestConfig,

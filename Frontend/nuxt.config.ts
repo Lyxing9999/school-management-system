@@ -1,22 +1,29 @@
-// nuxt.config.ts
 import tailwindcss from "@tailwindcss/vite";
-import { visualizer } from "rollup-plugin-visualizer";
 import { defineNuxtConfig } from "nuxt/config";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
 
 const isProd = process.env.NODE_ENV === "production";
 const isAnalyze = process.env.ANALYZE === "true";
 const isVercel = !!process.env.VERCEL;
 
+let visualizerPlugin: any = null;
+if (isAnalyze) {
+  try {
+    visualizerPlugin = require("rollup-plugin-visualizer").visualizer;
+  } catch {
+    visualizerPlugin = null;
+  }
+}
+
 export default defineNuxtConfig({
   srcDir: "src/",
   compatibilityDate: "2025-05-29",
-
   ssr: true,
 
   modules: ["@element-plus/nuxt", "@pinia/nuxt"],
-
   css: ["~/styles/main.css", "~/styles/sidebar.scss"],
-
   devtools: { enabled: !isProd },
 
   runtimeConfig: {
@@ -42,13 +49,13 @@ export default defineNuxtConfig({
       ],
     },
   },
-
+  devServer: !isProd ? { host: "0.0.0.0" } : undefined,
   vite: {
     plugins: [
       tailwindcss(),
-      ...(isAnalyze
+      ...(visualizerPlugin
         ? [
-            visualizer({
+            visualizerPlugin({
               open: true,
               gzipSize: true,
               brotliSize: true,
@@ -58,10 +65,7 @@ export default defineNuxtConfig({
         : []),
     ],
 
-    server: !isProd
-      ? { watch: { usePolling: true }, host: "0.0.0.0" }
-      : undefined,
-
+    server: !isProd ? { watch: { usePolling: true } } : undefined,
     optimizeDeps: !isProd
       ? {
           include: [
@@ -72,29 +76,8 @@ export default defineNuxtConfig({
           ],
         }
       : undefined,
-
-    build: {
-      sourcemap: !isProd,
-      minify: isProd ? "esbuild" : false,
-      rollupOptions: {
-        output: {
-          manualChunks(id: string) {
-            if (!id.includes("node_modules")) return;
-            if (id.includes("element-plus")) return "vendor_element-plus";
-            if (id.includes("@fullcalendar")) return "vendor_fullcalendar";
-            if (id.includes("echarts")) return "vendor_echarts";
-            if (id.includes("chart.js")) return "vendor_chartjs";
-            if (id.includes("lodash-es")) return "vendor_lodash";
-            return "vendor";
-          },
-        },
-      },
-    },
-
-    esbuild: isProd ? { drop: ["console", "debugger"] } : undefined,
   },
 
-  // Keeping this is fine on Vercel.
   nitro: {
     preset: isVercel ? "vercel" : "node-server",
   },
