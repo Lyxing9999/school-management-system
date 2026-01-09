@@ -162,22 +162,14 @@ const submit = async () => {
 
 <style scoped>
 .auth-shell {
-  min-height: calc(100vh - var(--header-height, 0px));
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: var(--color-bg);
+  background: var(--color-bg, #0b1220);
 }
 
 .auth-card {
-  width: 100%;
-  max-width: 440px;
-  padding: 28px;
-  border-radius: 14px;
-  background: var(--color-card);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 10px 30px var(--card-shadow);
-  color: var(--text-color);
+  background: var(--color-card, #111827);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 10px 30px var(--card-shadow, rgba(0, 0, 0, 0.35));
+  color: var(--text-color, #e5e7eb);
 }
 
 .auth-logo {
