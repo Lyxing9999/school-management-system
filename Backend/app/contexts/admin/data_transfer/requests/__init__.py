@@ -20,7 +20,8 @@ from .class_schemas import (
     AdminAssignTeacherToClassSchema,
     AdminUnAssignTeacherToClassSchema,
     AdminEnrollStudentToClassSchema,
-    AdminUpdateClassRelationsSchema
+    AdminUpdateClassRelationsSchema,
+    AdminSetClassStatusSchema
 )
 
 from .subject_schemas import (
@@ -60,6 +61,7 @@ __all__ = [
     "AdminUnAssignTeacherToClassSchema",
     "AdminEnrollStudentToClassSchema",
     "AdminUpdateClassRelationsSchema",
+    "AdminSetClassStatusSchema",
 
     # Subject
     "AdminCreateSubjectSchema",

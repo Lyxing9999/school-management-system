@@ -11,10 +11,11 @@ import {
   ElOption,
   ElInput,
   ElForm,
-  ElFormItem,
+  ElAlert,
 } from "element-plus";
 
 import { teacherService } from "~/api/teacher";
+import { useAuthStore } from "~/stores/authStore";
 import type { GradeType } from "~/api/types/school.dto";
 import type {
   TeacherAddGradeDTO,
@@ -28,10 +29,7 @@ import TeacherStudentSelect from "~/components/selects/subject/TeacherClassStude
 import TeacherSubjectSelect from "~/components/selects/subject/TeacherSubjectSelect.vue";
 
 import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
-
-import type { Field } from "~/components/types/form";
 import SmartFormDialog from "~/components/form/SmartFormDialog.vue";
-
 import ActionButtons from "~/components/buttons/ActionButtons.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
@@ -41,8 +39,23 @@ import { useHeaderState } from "~/composables/ui/useHeaderState";
 import { usePaginatedFetch } from "~/composables/data/usePaginatedFetch";
 import { reportError } from "~/utils/errors/errors";
 import { usePreferencesStore } from "~/stores/preferencesStore";
+import { buildTeacherGradeColumns } from "~/features/teacher-grade/columns";
+import type { Field } from "~/components/types/form";
 
 const teacherApi = teacherService();
+const authStore = useAuthStore();
+
+/* ---------------------- Permissions ---------------------- */
+
+const isHomeroomView = ref(false);
+
+function canEditGrade(row: GradeEnriched): boolean {
+  // if backend sends can_edit -> use it
+  if (typeof (row as any).can_edit === "boolean") return (row as any).can_edit;
+
+  const myId = authStore.user?.id;
+  return !!myId && String((row as any).teacher_id) === String(myId);
+}
 
 /* ---------------------- selection / errors ---------------------- */
 
@@ -54,34 +67,20 @@ const deleteLoadingId = ref<string | null>(null);
 const isDetailLoading = (id: string) => detailLoadingId.value === id;
 const isDeleteLoading = (id: string) => deleteLoadingId.value === id;
 
-import { buildTeacherGradeColumns } from "~/features/teacher-grade/columns";
-
-const gradeColumns = computed(() =>
-  buildTeacherGradeColumns({
-    onEdit: openEditGradeDialog,
-    onDelete: handleDeleteGrade,
-  })
-);
-
-/* ---------------------- term dropdown --------------------------- */
+/* ---------------------- filters (NO YEAR IN TERM FILTER) ---------------------- */
 
 type TermShort = "" | "S1" | "S2";
+
+const filterType = ref<GradeType | "">("");
+const filterQuery = ref<string>("");
+const filterTerm = ref<TermShort>(""); // IMPORTANT: keep string only (never undefined)
+
+/* ---------------------- term options (S1/S2 only) ---------------------- */
 
 const termOptions: Array<{ label: string; value: Exclude<TermShort, ""> }> = [
   { label: "Semester 1", value: "S1" },
   { label: "Semester 2", value: "S2" },
 ];
-
-function buildTermFull(short: TermShort, year = new Date().getFullYear()) {
-  if (!short) return null;
-  return `${year}-${short}`; // "2026-S1"
-}
-
-/* ---------------------- header filters -------------------------- */
-
-const filterTerm = ref<TermShort>("");
-const filterType = ref<GradeType | "">("");
-const filterQuery = ref<string>("");
 
 /* ---------------------- debounce search ------------------------- */
 
@@ -110,6 +109,25 @@ const prefs = usePreferencesStore();
 const { tablePageSize } = storeToRefs(prefs);
 const pageSizeOptions = computed(() => prefs.getAllowedPageSizes());
 
+/* ---------------------- columns (NO TERM COLUMN) ---------------------- */
+
+const gradeColumns = computed(() => {
+  const cols = buildTeacherGradeColumns({
+    onEdit: openEditGradeDialog,
+    onDelete: handleDeleteGrade,
+  });
+
+  return cols;
+});
+
+/* ---------------------- term required (FORM ONLY) ---------------------- */
+
+// UI shows S1/S2, backend expects YYYY-S1 / YYYY-S2
+function buildTermFull(short: Exclude<TermShort, "">): string {
+  const year = new Date().getFullYear();
+  return `${year}-${short}`;
+}
+
 /* ---------------------- fetch page helper ----------------------- */
 
 function unwrapPaged(
@@ -135,22 +153,32 @@ const {
   async (classId, page, size, signal) => {
     if (!classId) return { items: [], total: 0 };
 
-    const term = filterTerm.value || undefined;
     const type = filterType.value || undefined;
     const q = debouncedQuery.value || undefined;
+
+    // send "S1"/"S2" only (backend supports suffix match)
+    const term = (filterTerm.value || "") as TermShort;
+    const termParam = term ? term : undefined;
+
     const sort = "-created_at";
 
     const res = await teacherApi.teacher.listGradesForClass(
       classId,
-      { page, page_size: size, term, type, q, sort },
+      { page, page_size: size, type, q, term: termParam, sort },
       { signal, showError: false }
     );
 
     const payload = unwrapPaged(res);
 
+    if (typeof (payload as any).is_homeroom === "boolean") {
+      isHomeroomView.value = (payload as any).is_homeroom;
+    } else {
+      isHomeroomView.value = false;
+    }
+
     return {
-      items: payload.items ?? [],
-      total: Number(payload.total ?? 0),
+      items: (payload as any).items ?? [],
+      total: Number((payload as any).total ?? 0),
     };
   },
   {
@@ -171,7 +199,7 @@ type AddGradeFormModel = Omit<
   "type" | "term" | "class_id" | "score"
 > & {
   type: GradeType | "";
-  term: TermShort;
+  term: TermShort; // REQUIRED in form (must be S1/S2)
   score: number | null;
 };
 
@@ -199,13 +227,14 @@ const addDialogLoading = ref(false);
 const editDialogVisible = ref(false);
 const editDialogLoading = ref(false);
 
-/* ---------------------- SmartForm fields ------------------------ */
+/* ---------------------- SmartForm fields (TERM REQUIRED HERE) ------------------------ */
 
 const addGradeFields = computed<Field<AddGradeFormModel>[]>(() => [
   {
     key: "student_id",
     label: "Student",
     component: TeacherStudentSelect,
+    formItemProps: { required: true },
     componentProps: {
       classId: selectedClassId.value || "",
       reload: true,
@@ -218,6 +247,7 @@ const addGradeFields = computed<Field<AddGradeFormModel>[]>(() => [
     key: "subject_id",
     label: "Subject",
     component: TeacherSubjectSelect,
+    formItemProps: { required: true },
     componentProps: {
       classId: selectedClassId.value || "",
       placeholder: "Select subject",
@@ -228,6 +258,7 @@ const addGradeFields = computed<Field<AddGradeFormModel>[]>(() => [
     key: "score",
     label: "Score (0–100)",
     component: ElInputNumber,
+    formItemProps: { required: true },
     componentProps: { min: 0, max: 100, style: "width: 100%" },
   },
   {
@@ -235,6 +266,7 @@ const addGradeFields = computed<Field<AddGradeFormModel>[]>(() => [
     label: "Type",
     component: ElSelect,
     childComponent: ElOption,
+    formItemProps: { required: true },
     childComponentProps: {
       options: [
         { label: "Exam", value: "exam" },
@@ -252,14 +284,15 @@ const addGradeFields = computed<Field<AddGradeFormModel>[]>(() => [
     label: "Term",
     component: ElSelect,
     childComponent: ElOption,
+    formItemProps: { required: true },
     childComponentProps: {
       options: termOptions,
       labelKey: "label",
       valueKey: "value",
     },
     componentProps: {
-      placeholder: "Select term",
-      clearable: true,
+      placeholder: "Select term (S1 or S2)",
+      clearable: false,
       style: "width: 100%",
     },
   },
@@ -298,7 +331,10 @@ const showingText = computed(() => {
 
 const averageScore = computed(() => {
   if (!gradeList.value.length) return null;
-  const sum = gradeList.value.reduce((acc, g) => acc + Number(g.score ?? 0), 0);
+  const sum = gradeList.value.reduce(
+    (acc, g) => acc + Number((g as any).score ?? 0),
+    0
+  );
   return Math.round((sum / gradeList.value.length) * 10) / 10;
 });
 
@@ -317,42 +353,71 @@ const loadGrades = async () => {
     errorMessage.value = error.value.message ?? "Failed to load grades.";
 };
 
+const suspendAutoFetch = ref(false);
+
 watch(
   () => selectedClassId.value,
   async (v) => {
     if (!v) {
       errorMessage.value = null;
+      isHomeroomView.value = false;
       return;
     }
     await resetAndFetch();
   }
 );
 
-watch([filterTerm, filterType], async () => {
+watch(filterType, async () => {
+  if (suspendAutoFetch.value) return;
   if (!selectedClassId.value) return;
   await resetAndFetch();
 });
 
 watch(debouncedQuery, async () => {
+  if (suspendAutoFetch.value) return;
+  if (!selectedClassId.value) return;
+  await resetAndFetch();
+});
+
+watch(filterTerm, async () => {
+  if (suspendAutoFetch.value) return;
   if (!selectedClassId.value) return;
   await resetAndFetch();
 });
 
 /* ---------------------- RESET BUTTON ---------------------------- */
 
+const hasActiveFilters = computed(() => {
+  return (
+    !!filterType.value ||
+    !!(filterQuery.value || "").trim() ||
+    !!filterTerm.value
+  );
+});
+
+const canReset = computed(() => {
+  return hasClassSelected.value && !loading.value && hasActiveFilters.value;
+});
+
 const resetFilters = async () => {
-  filterTerm.value = "";
-  filterType.value = "";
-  filterQuery.value = "";
-  debouncedQuery.value = "";
+  if (!selectedClassId.value) return;
+
+  suspendAutoFetch.value = true;
 
   if (queryTimer) {
     clearTimeout(queryTimer);
     queryTimer = null;
   }
 
-  if (selectedClassId.value) {
+  filterType.value = "";
+  filterQuery.value = "";
+  debouncedQuery.value = "";
+  filterTerm.value = "";
+
+  try {
     await fetchPage(1);
+  } finally {
+    suspendAutoFetch.value = false;
   }
 };
 
@@ -363,6 +428,12 @@ const submitAddGrade = async (): Promise<boolean> => {
 
   if (!selectedClassId.value) {
     ElMessage.warning("Please select a class first.");
+    return false;
+  }
+
+  // TERM REQUIRED (FORM ONLY)
+  if (!form.term) {
+    ElMessage.warning("Term is required.");
     return false;
   }
 
@@ -383,11 +454,12 @@ const submitAddGrade = async (): Promise<boolean> => {
       class_id: selectedClassId.value,
       score: form.score,
       type: form.type as GradeType,
-      term: buildTermFull(form.term),
+      term: buildTermFull(form.term as Exclude<TermShort, "">),
     };
 
     const dto = await teacherApi.teacher.addGrade(payload, {
-      showError: false,
+      showError: true,
+      showSuccess: true,
     });
 
     if (!dto) {
@@ -396,11 +468,9 @@ const submitAddGrade = async (): Promise<boolean> => {
     }
 
     await fetchPage(1);
-    ElMessage.success("Grade added.");
     return true;
   } catch (err: any) {
     reportError(err, "grade.add.submit", "log");
-    ElMessage.error("Failed to add grade.");
     return false;
   }
 };
@@ -438,9 +508,12 @@ const handleCancelAddDialog = () => {
 /* ---------------------- edit grade ------------------------------ */
 
 const openEditGradeDialog = async (row: GradeEnriched) => {
-  detailLoadingId.value = row.id;
+  detailLoadingId.value = (row as any).id;
   try {
-    editGradeForm.value = { grade_id: row.id, score: row.score ?? null };
+    editGradeForm.value = {
+      grade_id: (row as any).id,
+      score: (row as any).score ?? null,
+    };
     editDialogVisible.value = true;
   } finally {
     detailLoadingId.value = null;
@@ -463,15 +536,14 @@ const submitEditGrade = async (): Promise<boolean> => {
     const payload: TeacherUpdateGradeScoreDTO = { score: form.score };
 
     await teacherApi.teacher.updateGradeScore(form.grade_id, payload, {
-      showError: false,
+      showError: true,
+      showSuccess: true,
     });
 
     await fetchPage(currentPage.value || 1);
-    ElMessage.success("Grade updated.");
     return true;
   } catch (err: any) {
     reportError(err, "grade.edit.submit", "log");
-    ElMessage.error("Failed to update grade.");
     return false;
   }
 };
@@ -491,11 +563,10 @@ const handleCancelEditDialog = () => {
   editDialogVisible.value = false;
 };
 
+/* ---------------------- delete grade ------------------------------ */
 
-
-/* ---------------------- delete grade (UI only for now) ---------- */
 const handleDeleteGrade = async (row: GradeEnriched) => {
-  const id = String(row.id);
+  const id = String((row as any).id);
   deleteLoadingId.value = id;
 
   try {
@@ -521,11 +592,12 @@ const handleDeleteGrade = async (row: GradeEnriched) => {
 
     await fetchPage(currentPage.value || 1);
   } catch (err) {
-    // cancel is not an error; ignore
+    // ignore cancel/close
   } finally {
     deleteLoadingId.value = null;
   }
 };
+
 /* ---------------------- header stats ---------------------------- */
 
 const canAddGrade = computed(() => !!selectedClassId.value && !loading.value);
@@ -578,10 +650,8 @@ const handlePageSizeChange = async (size: number) => {
       :showRefresh="false"
     >
       <template #filters>
-        <!-- Responsive Element Plus filter form -->
         <el-form class="filters-form" label-position="top">
           <el-row :gutter="12">
-            <!-- Class -->
             <el-col :xs="24" :sm="12" :md="8" :lg="6">
               <el-form-item label="Class">
                 <TeacherClassSelect
@@ -592,27 +662,6 @@ const handlePageSizeChange = async (size: number) => {
               </el-form-item>
             </el-col>
 
-            <!-- Term -->
-            <el-col :xs="24" :sm="12" :md="8" :lg="6">
-              <el-form-item label="Term">
-                <el-select
-                  v-model="filterTerm"
-                  clearable
-                  placeholder="All"
-                  class="w-full"
-                  :disabled="!hasClassSelected"
-                >
-                  <el-option
-                    v-for="opt in termOptions"
-                    :key="opt.value"
-                    :label="opt.label"
-                    :value="opt.value"
-                  />
-                </el-select>
-              </el-form-item>
-            </el-col>
-
-            <!-- Type -->
             <el-col :xs="24" :sm="12" :md="8" :lg="6">
               <el-form-item label="Type">
                 <el-select
@@ -630,26 +679,45 @@ const handlePageSizeChange = async (size: number) => {
               </el-form-item>
             </el-col>
 
-            <!-- Search -->
-            <el-col :xs="24" :sm="12" :md="12" :lg="6">
+            <!-- TERM FILTER: S1/S2 ONLY (NO YEAR) -->
+            <el-col :xs="24" :sm="12" :md="8" :lg="6">
+              <el-form-item label="Term">
+                <el-select
+                  v-model="filterTerm"
+                  clearable
+                  placeholder="All"
+                  class="w-full"
+                  :disabled="!hasClassSelected"
+                  @clear="filterTerm = ''"
+                >
+                  <el-option
+                    v-for="opt in termOptions"
+                    :key="opt.value"
+                    :label="opt.label"
+                    :value="opt.value"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+
+            <el-col :xs="24" :sm="12" :md="12" :lg="8">
               <el-form-item label="Search">
                 <el-input
                   v-model="filterQuery"
                   clearable
-                  placeholder="Student, subject, term..."
+                  placeholder="Student, subject..."
                   class="w-full"
                   :disabled="!hasClassSelected"
                 />
               </el-form-item>
             </el-col>
 
-            <!-- Reset button (aligns nicely as a column) -->
             <el-col :xs="24" :sm="12" :md="6" :lg="4">
-              <el-form-item label=" ">
+              <el-form-item label="&nbsp;" class="reset-item">
                 <BaseButton
                   plain
                   class="w-full !border-[color:var(--border-color)] !text-[color:var(--text-color)] hover:!bg-[var(--hover-bg)]"
-                  :disabled="!hasClassSelected || loading"
+                  :disabled="!canReset"
                   @click="resetFilters"
                 >
                   Reset
@@ -696,6 +764,27 @@ const handlePageSizeChange = async (size: number) => {
       />
     </transition>
 
+    <transition name="el-fade-in">
+      <div v-if="isHomeroomView && selectedClassId" class="mb-6">
+        <el-alert
+          type="info"
+          show-icon
+          :closable="false"
+          class="rounded-lg border border-blue-200"
+        >
+          <template #title>
+            <span class="font-semibold text-blue-900">Homeroom View</span>
+          </template>
+          <template #default>
+            <div class="text-blue-800 text-sm mt-1">
+              You can see all grades. You can only edit grades for subjects you
+              are assigned to.
+            </div>
+          </template>
+        </el-alert>
+      </div>
+    </transition>
+
     <el-card v-if="isFirstLoad" shadow="never" class="rounded-xl">
       <el-skeleton animated :rows="7" />
     </el-card>
@@ -720,15 +809,38 @@ const handlePageSizeChange = async (size: number) => {
     >
       <SmartTable :data="gradeList" :columns="gradeColumns" :loading="loading">
         <template #operation="{ row }">
-          <ActionButtons
-            :rowId="row.id"
-            :detailContent="`Edit ${String(row.type || 'grade')}`"
-            :deleteContent="`Remove ${String(row.type || 'grade')}`"
-            :detailLoading="isDetailLoading(row.id)"
-            :deleteLoading="isDeleteLoading(row.id)"
-            @detail="() => openEditGradeDialog(row)"
-            @delete="() => handleDeleteGrade(row)"
-          />
+          <div class="flex justify-center items-center h-full gap-2">
+            <ActionButtons
+              v-if="canEditGrade(row)"
+              :rowId="row.id"
+              :detailContent="`Edit`"
+              :deleteContent="`Delete`"
+              :detailLoading="isDetailLoading(row.id)"
+              :deleteLoading="isDeleteLoading(row.id)"
+              solid
+              @detail="() => openEditGradeDialog(row)"
+              @delete="() => handleDeleteGrade(row)"
+            />
+
+            <div
+              v-else
+              class="flex flex-col items-center justify-center opacity-80 min-w-[100px]"
+            >
+              <el-tag
+                type="info"
+                size="small"
+                effect="plain"
+                class="mb-1 cursor-default bg-gray-50 border-gray-200 text-gray-500"
+              >
+                Read Only
+              </el-tag>
+              <span
+                class="text-[10px] text-[var(--muted-color)] whitespace-nowrap"
+              >
+                by {{ row.teacher_name }}
+              </span>
+            </div>
+          </div>
         </template>
       </SmartTable>
 
@@ -747,6 +859,7 @@ const handlePageSizeChange = async (size: number) => {
     </TableCard>
 
     <SmartFormDialog
+      :key="addDialogVisible.toString()"
       v-model:visible="addDialogVisible"
       v-model="gradeForm"
       :fields="addGradeFields"
@@ -758,6 +871,7 @@ const handlePageSizeChange = async (size: number) => {
     />
 
     <SmartFormDialog
+      :key="editDialogVisible.toString()"
       v-model:visible="editDialogVisible"
       v-model="editGradeForm"
       :fields="editGradeFields"
@@ -771,17 +885,28 @@ const handlePageSizeChange = async (size: number) => {
 </template>
 
 <style scoped>
-/* default desktop/tablet inline layout */
 .filters-form :deep(.el-form-item) {
   margin-bottom: 0;
 }
-
-/* Make each item a consistent width on desktop */
-.filter-item {
-  min-width: 220px;
+/* Muted / disabled-looking table cells */
+:deep(.cell-text--muted),
+:deep(.col-muted .cell-text),
+:deep(.col-muted .cell-muted-wrap) {
+  color: var(--muted-color) !important;
+  opacity: 0.85;
 }
 
-/* Mobile: stacked filters, full width */
+/* If DateTimeCell renders multiple lines, keep them muted too */
+:deep(.col-muted .date-time-cell),
+:deep(.col-muted .date-time-cell *) {
+  color: var(--muted-color) !important;
+  opacity: 0.85;
+}
+
+/* Optional: slightly de-emphasize background without breaking theme */
+:deep(.col-muted) {
+  background: transparent;
+}
 @media (max-width: 767px) {
   .filters-form {
     display: grid;
@@ -797,7 +922,6 @@ const handlePageSizeChange = async (size: number) => {
   }
 
   .filters-form :deep(.el-form-item__label) {
-    /* nicer on mobile (above input) */
     display: block;
     width: 100%;
     padding: 0 0 4px 0;
@@ -809,17 +933,9 @@ const handlePageSizeChange = async (size: number) => {
     width: 100%;
   }
 
-  /* ensure selects/inputs expand */
   .filters-form :deep(.el-input),
-  .filters-form :deep(.el-select) {
-    width: 100%;
-  }
-
-  .filter-item {
-    min-width: 0;
-  }
-
-  .filter-actions {
+  .filters-form :deep(.el-select),
+  .filters-form :deep(.el-input-number) {
     width: 100%;
   }
 }

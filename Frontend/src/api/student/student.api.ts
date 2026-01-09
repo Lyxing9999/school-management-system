@@ -35,13 +35,13 @@ export class StudentApi {
     return res.data;
   }
 
-  async getMyGrades() {
+  async getMyGrades(params?: StudentGradesFilterDTO) {
     const res = await this.$api.get<StudentGetGradesResponse>(
-      `${this.baseURL}/grades`
+      `${this.baseURL}/grades`,
+      { params }
     );
     return res.data;
   }
-
   async getMySchedule(params?: StudentScheduleFilterDTO) {
     const res = await this.$api.get<StudentGetScheduleResponse>(
       `${this.baseURL}/schedule`,

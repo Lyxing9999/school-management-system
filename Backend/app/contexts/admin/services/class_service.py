@@ -11,7 +11,7 @@ from app.contexts.notifications.services.notification_service import Notificatio
 from app.contexts.notifications.utils.recipient_resolver import NotificationRecipientResolver
 from app.contexts.notifications.types import NotifType
 
-from app.contexts.school.domain.class_section import ClassSection
+from app.contexts.school.domain.class_section import ClassSection, ClassSectionStatus 
 from app.contexts.admin.data_transfer.requests import AdminCreateClassSchema, AdminUpdateClassRelationsSchema
 
 from app.contexts.shared.model_converter import mongo_converter
@@ -221,6 +221,9 @@ class ClassAdminService:
 
         return cls
 
+    def admin_set_class_status(self, class_id: str, status: ClassSectionStatus) -> Optional[dict]:
+        return self.school_service.set_class_status(class_id, status)
+
     def admin_enroll_student(self, class_id: str, student_id: str) -> ClassSection | None:
         cls = self.school_service.enroll_student_to_class(
             class_id=class_id,
@@ -384,3 +387,7 @@ class ClassAdminService:
 
     def admin_list_subjects_select_in_class(self, class_id: str) -> List[dict]:
         return self.admin_read_model.admin_list_subjects_select_in_class(class_id)
+
+
+
+    

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 definePageMeta({ layout: "default" });
 
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { ElMessage } from "element-plus";
 
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
+import TableCard from "~/components/cards/TableCard.vue";
 
 import { studentService } from "~/api/student";
 import { formatDate } from "~/utils/date/formatDate";
@@ -22,7 +23,6 @@ const student = studentService();
 /* -----------------------------
  * Types (frontend view models)
  * ---------------------------- */
-
 type ClassItem = StudentClassListDTO["items"][number] & {
   subject_labels?: string[];
   teacher_name?: string;
@@ -47,30 +47,55 @@ type ScheduleItem = StudentScheduleListDTO["items"][number] & {
 /* -----------------------------
  * State
  * ---------------------------- */
-
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
 const myClass = ref<ClassItem | null>(null);
-
 const schedule = ref<ScheduleItem[]>([]);
 const grades = ref<GradeItem[]>([]);
 const attendance = ref<AttendanceItem[]>([]);
 
+/** prevent stale responses overriding newer refreshes */
+let requestSeq = 0;
+const hasFetchedOnce = ref(false);
+
 /* -----------------------------
  * Helpers
  * ---------------------------- */
+const safeText = (v: any, fallback = "—") => {
+  const s = String(v ?? "").trim();
+  return s ? s : fallback;
+};
 
 const normalizeStatusCode = (val: unknown): string => {
   if (val == null) return "";
   return String(val).toLowerCase();
 };
 
+const statusTag = (val: unknown) => {
+  const s = normalizeStatusCode(val);
+  if (s === "present") return "success";
+  if (s === "excused") return "warning";
+  if (s === "late") return "info";
+  if (s === "absent") return "danger";
+  return "info";
+};
+
+const statusLabel = (val: unknown) => {
+  const s = normalizeStatusCode(val);
+  if (!s) return "—";
+  if (s === "present") return "Present";
+  if (s === "absent") return "Absent";
+  if (s === "excused") return "Excused";
+  if (s === "late") return "Late";
+  return String(val);
+};
+
 const dayShort = (day: number) =>
   (["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][day - 1] as string) ?? "—";
 
 const timeRange = (row: any) =>
-  `${row.start_time ?? "—"} - ${row.end_time ?? "—"}`;
+  `${safeText(row?.start_time)} - ${safeText(row?.end_time)}`;
 
 const getRecordDate = (row: any) =>
   row?.record_date ?? row?.date ?? row?.lifecycle?.created_at ?? null;
@@ -79,74 +104,86 @@ const getCreatedAt = (row: any) =>
   row?.lifecycle?.created_at ?? row?.created_at ?? null;
 
 /* -----------------------------
- * Loaders (MVP: no filters, assume 1 class)
+ * Loaders
  * ---------------------------- */
-
 const loadMyClass = async () => {
   const res = await student.student.getMyClasses({ showError: true });
   const items = (res.items ?? []) as ClassItem[];
-
-  // MVP: student has one class; if multiple exist, take the first
   myClass.value = items[0] ?? null;
 };
 
 const loadSchedule = async () => {
-  // If your backend supports class_id filter, keep it to reduce payload.
-  // If not supported, it will be ignored safely.
   const res = await student.student.getMySchedule(
     myClass.value?.id ? { class_id: myClass.value.id } : undefined,
-    { showError: true, showSuccess: false }
+    { showError: true, showSuccess: false } as any
   );
-
   schedule.value = (res.items ?? []) as ScheduleItem[];
 };
 
 const loadGrades = async () => {
-  const res = await student.student.getMyGrades({
-    showError: true,
-    showSuccess: false,
-  });
-
+  const res = await student.student.getMyGrades({});
   grades.value = (res.items ?? []) as GradeItem[];
 };
 
 const loadAttendance = async () => {
   const res = await student.student.getMyAttendance(
     myClass.value?.id ? { class_id: myClass.value.id } : undefined,
-    { showError: true, showSuccess: false }
+    { showError: true, showSuccess: false } as any
   );
-
   attendance.value = (res.items ?? []) as AttendanceItem[];
 };
 
 const loadDashboard = async () => {
+  const seq = ++requestSeq;
+
   loading.value = true;
   errorMessage.value = null;
 
   try {
     await loadMyClass();
     await Promise.all([loadSchedule(), loadGrades(), loadAttendance()]);
-  } catch (err: unknown) {
+    if (seq !== requestSeq) return;
+
+    hasFetchedOnce.value = true;
+  } catch (err: any) {
+    if (seq !== requestSeq) return;
+
     reportError(err, "student.dashboard.load", "log");
+
     errorMessage.value =
-      err instanceof Error ? err.message : "Failed to load dashboard.";
-    ElMessage.error(errorMessage.value);
+      err?.response?.data?.user_message ||
+      err?.response?.data?.message ||
+      err?.message ||
+      "Failed to load dashboard.";
+
+    myClass.value = myClass.value ?? null;
+    schedule.value = [];
+    grades.value = [];
+    attendance.value = [];
+    hasFetchedOnce.value = true;
   } finally {
-    loading.value = false;
+    if (seq === requestSeq) loading.value = false;
   }
 };
 
+const handleRefresh = async () => {
+  if (loading.value) return;
+  await loadDashboard();
+  ElMessage.success("Dashboard refreshed");
+};
+
 onMounted(loadDashboard);
+onBeforeUnmount(() => {
+  requestSeq++;
+});
 
 /* -----------------------------
  * Computed: overview stats
  * ---------------------------- */
-
 const totalSubjects = computed(() => {
   const cls: any = myClass.value;
   if (!cls) return 0;
 
-  // Prefer subject_ids; fallback to subject_labels
   const ids = (cls.subject_ids ?? []) as string[];
   if (ids.length) return new Set(ids).size;
 
@@ -171,7 +208,7 @@ const statusSummary = computed(() => {
   };
 
   for (const rec of attendance.value as any[]) {
-    const s = normalizeStatusCode(rec.status);
+    const s = normalizeStatusCode((rec as any).status);
     if (s === "present") summary.present++;
     else if (s === "absent") summary.absent++;
     else if (s === "excused") summary.excused++;
@@ -198,18 +235,17 @@ const todayDayOfWeek = computed(() => {
 
 const todaySchedule = computed(() => {
   const rows = (schedule.value as any[]).filter(
-    (s) => Number(s.day_of_week) === todayDayOfWeek.value
+    (s) => Number((s as any).day_of_week) === todayDayOfWeek.value
   );
-
-  // Sort by start_time
   return rows.sort((a, b) =>
-    String(a.start_time ?? "").localeCompare(String(b.start_time ?? ""))
+    String((a as any).start_time ?? "").localeCompare(
+      String((b as any).start_time ?? "")
+    )
   );
 });
 
 const recentGrades = computed(() => {
   const rows = (grades.value as any[]).slice();
-
   return rows
     .sort(
       (a, b) =>
@@ -221,7 +257,6 @@ const recentGrades = computed(() => {
 
 const recentAttendance = computed(() => {
   const rows = (attendance.value as any[]).slice();
-
   return rows
     .sort(
       (a, b) =>
@@ -233,12 +268,10 @@ const recentAttendance = computed(() => {
 
 /* -----------------------------
  * Chart options (ECharts)
- * - assumes <VChart> is available in your project
+ * - assumes <VChart> exists
  * ---------------------------- */
-
 const attendanceStatusOption = computed(() => {
   const rows = attendance.value as any[];
-
   if (!rows.length) {
     return {
       title: { text: "No attendance data", left: "center", top: "center" },
@@ -247,7 +280,7 @@ const attendanceStatusOption = computed(() => {
 
   const counts = new Map<string, number>();
   for (const r of rows) {
-    const k = normalizeStatusCode(r.status) || "unknown";
+    const k = normalizeStatusCode((r as any).status) || "unknown";
     counts.set(k, (counts.get(k) ?? 0) + 1);
   }
 
@@ -286,7 +319,7 @@ const scoreTrendOption = computed(() => {
   }
 
   const x = rows.map((r) => formatDate(getCreatedAt(r)));
-  const y = rows.map((r) => Number(r.score ?? 0));
+  const y = rows.map((r) => Number((r as any).score ?? 0));
 
   return {
     tooltip: { trigger: "axis" },
@@ -309,9 +342,10 @@ const avgBySubjectOption = computed(() => {
   >();
 
   for (const g of rows) {
-    const label = g.subject_label ?? g.subject_id ?? "Unknown";
+    const label =
+      (g as any).subject_label ?? (g as any).subject_id ?? "Unknown";
     const cur = map.get(label) || { label, total: 0, count: 0, avg: 0 };
-    cur.total += Number(g.score ?? 0);
+    cur.total += Number((g as any).score ?? 0);
     cur.count += 1;
     cur.avg = cur.total / cur.count;
     map.set(label, cur);
@@ -338,34 +372,24 @@ const avgBySubjectOption = computed(() => {
   };
 });
 
-/* -----------------------------
- * Header pill text (MVP)
- * ---------------------------- */
-
 const headerPill = computed(() => {
-  const cls = myClass.value?.name ?? "My class";
+  const cls = safeText((myClass.value as any)?.name, "My class");
   const avg =
     averageScore.value == null ? "N/A" : averageScore.value.toFixed(1);
   const pr = presentRate.value == null ? "N/A" : `${presentRate.value}%`;
   return `${cls} • Avg: ${avg} • Present: ${pr}`;
 });
-
-/* -----------------------------
- * Actions
- * ---------------------------- */
-
-const handleRefresh = async () => {
-  await loadDashboard();
-};
 </script>
 
 <template>
-  <div class="p-4 space-y-4">
+  <div class="p-4 space-y-4 max-w-6xl mx-auto pb-10" v-loading="loading">
     <OverviewHeader
       title="Student Dashboard"
       description="Quick overview of your class, schedule, grades, and attendance."
       :loading="loading"
       :showRefresh="true"
+      :showSearch="false"
+      :showReset="false"
       @refresh="handleRefresh"
     >
       <template #icon>
@@ -382,298 +406,463 @@ const handleRefresh = async () => {
       :title="errorMessage"
       type="error"
       show-icon
-      class="rounded-xl"
+      closable
+      class="rounded-xl border border-red-200/60 shadow-sm"
+      @close="errorMessage = null"
     />
 
-    <!-- Overview cards -->
-    <el-row :gutter="16">
-      <el-col :xs="12" :sm="6">
-        <el-card shadow="hover">
-          <div class="text-xs text-gray-500 mb-1">My Class</div>
-          <div class="text-base font-semibold truncate">
-            {{ myClass?.name ?? "—" }}
-          </div>
-          <div class="text-[10px] text-gray-400 mt-1">
-            {{
-              myClass?.teacher_name ? `Teacher: ${myClass.teacher_name}` : " "
-            }}
-          </div>
-        </el-card>
-      </el-col>
+    <!-- Skeleton first load -->
+    <el-card
+      v-if="loading && !hasFetchedOnce"
+      shadow="never"
+      class="rounded-2xl border"
+      style="
+        background: color-mix(in srgb, var(--color-card) 96%, transparent);
+        border-color: var(--border-color);
+      "
+    >
+      <el-skeleton animated :rows="10" />
+    </el-card>
 
-      <el-col :xs="12" :sm="6">
-        <el-card shadow="hover">
-          <div class="text-xs text-gray-500 mb-1">Subjects</div>
-          <div class="text-2xl font-semibold">{{ totalSubjects }}</div>
-        </el-card>
-      </el-col>
+    <template v-else>
+      <!-- MOBILE READY STAT CARDS:
+           - xxs (<=480): full width 1 column
+           - xs (>=480): 2 columns
+           - sm (>=768): 4 columns
+      -->
+      <el-row :gutter="16" class="stats-row">
+        <el-col :span="24" :xs="24" :sm="6">
+          <el-card class="stat-card" shadow="hover">
+            <div class="text-xs mb-1" style="color: var(--muted-color)">
+              My Class
+            </div>
+            <div
+              class="text-xl font-semibold truncate"
+              style="color: var(--text-color)"
+            >
+              {{ myClass?.name ?? "—" }}
+            </div>
+            <div class="text-[10px] mt-1" style="color: var(--muted-color)">
+              {{
+                myClass?.teacher_name ? `Teacher: ${myClass.teacher_name}` : " "
+              }}
+            </div>
+          </el-card>
+        </el-col>
 
-      <el-col :xs="12" :sm="6">
-        <el-card shadow="hover">
-          <div class="text-xs text-gray-500 mb-1">Average Score</div>
-          <div class="text-2xl font-semibold">
-            <span v-if="averageScore !== null">{{
-              averageScore.toFixed(1)
-            }}</span>
-            <span v-else class="text-gray-400">N/A</span>
-          </div>
-        </el-card>
-      </el-col>
+        <el-col :span="24" :xs="24" :sm="6">
+          <el-card class="stat-card" shadow="hover">
+            <div class="text-xs mb-1" style="color: var(--muted-color)">
+              Subjects
+            </div>
+            <div
+              class="text-2xl font-semibold"
+              style="color: var(--text-color)"
+            >
+              {{ totalSubjects }}
+            </div>
+          </el-card>
+        </el-col>
 
-      <el-col :xs="12" :sm="6">
-        <el-card shadow="hover">
-          <div class="text-xs text-gray-500 mb-1">Present Rate</div>
-          <div class="text-2xl font-semibold">
-            <span v-if="presentRate !== null">{{ presentRate }}%</span>
-            <span v-else class="text-gray-400">N/A</span>
-          </div>
-          <div class="text-[10px] text-gray-400 mt-1">
-            {{ statusSummary.present }} present •
-            {{ statusSummary.absent }} absent •
-            {{ statusSummary.excused }} excused • {{ statusSummary.late }} late
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        <el-col :span="24" :xs="24" :sm="6">
+          <el-card class="stat-card" shadow="hover">
+            <div class="text-xs mb-1" style="color: var(--muted-color)">
+              Average Score
+            </div>
+            <div
+              class="text-2xl font-semibold"
+              style="color: var(--text-color)"
+            >
+              <span v-if="averageScore !== null">{{
+                averageScore.toFixed(1)
+              }}</span>
+              <span v-else style="color: var(--muted-color)">N/A</span>
+            </div>
+          </el-card>
+        </el-col>
 
-    <!-- Main grid -->
-    <el-row :gutter="16">
-      <!-- LEFT -->
-      <el-col :xs="24" :md="14">
-        <el-card shadow="hover" class="mb-4" v-loading="loading">
-          <div class="font-semibold mb-2">Today’s Schedule</div>
+        <el-col :span="24" :xs="24" :sm="6">
+          <el-card class="stat-card" shadow="hover">
+            <div class="text-xs mb-1" style="color: var(--muted-color)">
+              Present Rate
+            </div>
+            <div
+              class="text-2xl font-semibold"
+              style="color: var(--text-color)"
+            >
+              <span v-if="presentRate !== null">{{ presentRate }}%</span>
+              <span v-else style="color: var(--muted-color)">N/A</span>
+            </div>
+            <div class="text-[10px] mt-1" style="color: var(--muted-color)">
+              {{ statusSummary.present }} present •
+              {{ statusSummary.absent }} absent •
+              {{ statusSummary.excused }} excused •
+              {{ statusSummary.late }} late
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
 
-          <el-table
-            :data="todaySchedule"
-            size="small"
-            border
-            style="width: 100%"
+      <!-- Main grid (already mobile stacking because :xs="24") -->
+      <el-row :gutter="16">
+        <el-col :xs="24" :md="14">
+          <TableCard
+            title="Today’s Schedule"
+            description="Sorted by start time."
+            class="mb-4"
+            padding="16px"
           >
-            <el-table-column label="Day" width="90" align="center">
-              <template #default="{ row }">{{
-                dayShort(Number(row.day_of_week))
-              }}</template>
-            </el-table-column>
+            <div class="table-scroll">
+              <el-table
+                :data="todaySchedule"
+                size="small"
+                border
+                style="width: 100%"
+                class="app-table"
+                highlight-current-row
+              >
+                <el-table-column label="Day" width="90" align="center">
+                  <template #default="{ row }">
+                    {{ dayShort(Number(row.day_of_week)) }}
+                  </template>
+                </el-table-column>
 
-            <el-table-column
-              prop="subject_label"
-              label="Subject"
-              min-width="180"
-              show-overflow-tooltip
-            >
-              <template #default="{ row }">
-                <span class="text-gray-800">{{
-                  row.subject_label ?? "—"
-                }}</span>
-              </template>
-            </el-table-column>
-
-            <el-table-column label="Time" min-width="130">
-              <template #default="{ row }">
-                <span class="font-mono text-xs">{{ timeRange(row) }}</span>
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              prop="room"
-              label="Room"
-              min-width="110"
-              show-overflow-tooltip
-            />
-            <template #empty>
-              <div class="text-center text-gray-500 text-xs py-3">
-                No lessons scheduled for today.
-              </div>
-            </template>
-          </el-table>
-        </el-card>
-
-        <el-card shadow="hover" class="mb-4" v-loading="loading">
-          <div class="font-semibold mb-2">Recent Grades</div>
-
-          <el-table
-            :data="recentGrades"
-            size="small"
-            border
-            style="width: 100%"
-          >
-            <el-table-column
-              prop="subject_label"
-              label="Subject"
-              min-width="190"
-              show-overflow-tooltip
-            >
-              <template #default="{ row }">
-                {{ row.subject_label ?? row.subject_id ?? "—" }}
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              prop="score"
-              label="Score"
-              width="90"
-              align="center"
-            />
-            <el-table-column
-              prop="type"
-              label="Type"
-              width="110"
-              align="center"
-            />
-            <el-table-column
-              prop="term"
-              label="Term"
-              width="90"
-              align="center"
-            />
-
-            <el-table-column
-              label="Recorded At"
-              min-width="180"
-              show-overflow-tooltip
-            >
-              <template #default="{ row }">
-                {{ formatDate(getCreatedAt(row)) }}
-              </template>
-            </el-table-column>
-
-            <template #empty>
-              <div class="text-center text-gray-500 text-xs py-3">
-                No grade records yet.
-              </div>
-            </template>
-          </el-table>
-        </el-card>
-
-        <el-card shadow="hover" v-loading="loading">
-          <div class="font-semibold mb-2">Recent Attendance</div>
-
-          <el-table
-            :data="recentAttendance"
-            size="small"
-            border
-            style="width: 100%"
-          >
-            <el-table-column label="Date" min-width="140">
-              <template #default="{ row }">
-                {{ formatDate(getRecordDate(row)) }}
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              prop="status"
-              label="Status"
-              width="120"
-              align="center"
-            >
-              <template #default="{ row }">
-                <el-tag
-                  size="small"
-                  :type="
-                    normalizeStatusCode(row.status) === 'present'
-                      ? 'success'
-                      : normalizeStatusCode(row.status) === 'excused'
-                      ? 'warning'
-                      : normalizeStatusCode(row.status) === 'late'
-                      ? 'info'
-                      : 'danger'
-                  "
+                <el-table-column
+                  prop="subject_label"
+                  label="Subject"
+                  min-width="180"
+                  show-overflow-tooltip
                 >
-                  {{ row.status }}
-                </el-tag>
+                  <template #default="{ row }">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span
+                        class="inline-block h-2 w-2 rounded-full"
+                        style="background: var(--color-primary)"
+                      />
+                      <span class="truncate" style="color: var(--text-color)">
+                        {{ row.subject_label ?? "—" }}
+                      </span>
+                    </div>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="Time" min-width="130">
+                  <template #default="{ row }">
+                    <span
+                      class="font-mono text-xs"
+                      style="color: var(--text-color)"
+                    >
+                      {{ timeRange(row) }}
+                    </span>
+                  </template>
+                </el-table-column>
+
+                <el-table-column
+                  prop="room"
+                  label="Room"
+                  min-width="110"
+                  show-overflow-tooltip
+                />
+
+                <template #empty>
+                  <div
+                    class="text-center text-xs py-3"
+                    style="color: var(--muted-color)"
+                  >
+                    No lessons scheduled for today.
+                  </div>
+                </template>
+              </el-table>
+            </div>
+          </TableCard>
+
+          <TableCard
+            title="Recent Grades"
+            description="Latest 6 grade records."
+            class="mb-4"
+            padding="16px"
+          >
+            <div class="table-scroll">
+              <el-table
+                :data="recentGrades"
+                size="small"
+                border
+                style="width: 100%"
+                class="app-table"
+                highlight-current-row
+              >
+                <el-table-column
+                  prop="subject_label"
+                  label="Subject"
+                  min-width="190"
+                  show-overflow-tooltip
+                >
+                  <template #default="{ row }">
+                    {{ row.subject_label ?? row.subject_id ?? "—" }}
+                  </template>
+                </el-table-column>
+
+                <el-table-column
+                  prop="score"
+                  label="Score"
+                  width="90"
+                  align="center"
+                />
+                <el-table-column
+                  prop="type"
+                  label="Type"
+                  width="110"
+                  align="center"
+                />
+                <el-table-column
+                  prop="term"
+                  label="Term"
+                  width="90"
+                  align="center"
+                />
+
+                <el-table-column
+                  label="Recorded At"
+                  min-width="180"
+                  show-overflow-tooltip
+                >
+                  <template #default="{ row }">
+                    {{ formatDate(getCreatedAt(row)) }}
+                  </template>
+                </el-table-column>
+
+                <template #empty>
+                  <div
+                    class="text-center text-xs py-3"
+                    style="color: var(--muted-color)"
+                  >
+                    No grade records yet.
+                  </div>
+                </template>
+              </el-table>
+            </div>
+          </TableCard>
+
+          <TableCard
+            title="Recent Attendance"
+            description="Latest 8 attendance records."
+            padding="16px"
+          >
+            <div class="table-scroll">
+              <el-table
+                :data="recentAttendance"
+                size="small"
+                border
+                style="width: 100%"
+                class="app-table"
+                highlight-current-row
+              >
+                <el-table-column label="Date" min-width="140">
+                  <template #default="{ row }">
+                    {{ formatDate(getRecordDate(row)) }}
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="Status" width="130" align="center">
+                  <template #default="{ row }">
+                    <el-tag
+                      size="small"
+                      :type="statusTag(row.status)"
+                      effect="plain"
+                    >
+                      {{ statusLabel(row.status) }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+
+                <el-table-column
+                  prop="teacher_name"
+                  label="Marked By"
+                  min-width="170"
+                  show-overflow-tooltip
+                />
+
+                <el-table-column
+                  label="Recorded At"
+                  min-width="180"
+                  show-overflow-tooltip
+                >
+                  <template #default="{ row }">
+                    {{ formatDate(row?.lifecycle?.created_at) }}
+                  </template>
+                </el-table-column>
+
+                <template #empty>
+                  <div
+                    class="text-center text-xs py-3"
+                    style="color: var(--muted-color)"
+                  >
+                    No attendance records yet.
+                  </div>
+                </template>
+              </el-table>
+            </div>
+          </TableCard>
+        </el-col>
+
+        <el-col :xs="24" :md="10">
+          <TableCard
+            title="Attendance Status Summary"
+            description="Distribution by status."
+            class="mb-4"
+            padding="16px"
+          >
+            <ClientOnly>
+              <div class="chart-box chart-box--sm">
+                <VChart
+                  :option="attendanceStatusOption"
+                  autoresize
+                  class="w-full h-full"
+                />
+              </div>
+
+              <template #fallback>
+                <div class="chart-fallback">Loading chart...</div>
               </template>
-            </el-table-column>
+            </ClientOnly>
+          </TableCard>
 
-            <el-table-column
-              prop="teacher_name"
-              label="Marked By"
-              min-width="170"
-              show-overflow-tooltip
-            />
+          <TableCard
+            title="Score Trend"
+            description="Score over time."
+            class="mb-4"
+            padding="16px"
+          >
+            <ClientOnly>
+              <div class="chart-box chart-box--sm">
+                <VChart
+                  :option="scoreTrendOption"
+                  autoresize
+                  class="w-full h-full"
+                />
+              </div>
 
-            <el-table-column
-              label="Recorded At"
-              min-width="180"
-              show-overflow-tooltip
-            >
-              <template #default="{ row }">
-                {{ formatDate(row?.lifecycle?.created_at) }}
+              <template #fallback>
+                <div class="chart-fallback">Loading chart...</div>
               </template>
-            </el-table-column>
+            </ClientOnly>
+          </TableCard>
 
-            <template #empty>
-              <div class="text-center text-gray-500 text-xs py-3">
-                No attendance records yet.
+          <TableCard
+            title="Avg Score by Subject"
+            description="Average per subject."
+            padding="16px"
+          >
+            <ClientOnly>
+              <div class="chart-box chart-box--md">
+                <VChart
+                  :option="avgBySubjectOption"
+                  autoresize
+                  class="w-full h-full"
+                />
               </div>
-            </template>
-          </el-table>
-        </el-card>
-      </el-col>
 
-      <!-- RIGHT -->
-      <el-col :xs="24" :md="10">
-        <el-card shadow="hover" class="mb-4" v-loading="loading">
-          <div class="font-semibold mb-2">Attendance Status Summary</div>
-          <ClientOnly>
-            <div class="w-full" style="height: 240px">
-              <VChart
-                :option="attendanceStatusOption"
-                autoresize
-                class="w-full h-full"
-              />
-            </div>
-            <template #fallback>
-              <div
-                class="flex items-center justify-center h-[240px] text-xs text-gray-500"
-              >
-                Loading chart...
-              </div>
-            </template>
-          </ClientOnly>
-        </el-card>
-
-        <el-card shadow="hover" class="mb-4" v-loading="loading">
-          <div class="font-semibold mb-2">Score Trend</div>
-          <ClientOnly>
-            <div class="w-full" style="height: 240px">
-              <VChart
-                :option="scoreTrendOption"
-                autoresize
-                class="w-full h-full"
-              />
-            </div>
-            <template #fallback>
-              <div
-                class="flex items-center justify-center h-[240px] text-xs text-gray-500"
-              >
-                Loading chart...
-              </div>
-            </template>
-          </ClientOnly>
-        </el-card>
-
-        <el-card shadow="hover" v-loading="loading">
-          <div class="font-semibold mb-2">Avg Score by Subject</div>
-          <ClientOnly>
-            <div class="w-full" style="height: 260px">
-              <VChart
-                :option="avgBySubjectOption"
-                autoresize
-                class="w-full h-full"
-              />
-            </div>
-            <template #fallback>
-              <div
-                class="flex items-center justify-center h-[260px] text-xs text-gray-500"
-              >
-                Loading chart...
-              </div>
-            </template>
-          </ClientOnly>
-        </el-card>
-      </el-col>
-    </el-row>
+              <template #fallback>
+                <div class="chart-fallback">Loading chart...</div>
+              </template>
+            </ClientOnly>
+          </TableCard>
+        </el-col>
+      </el-row>
+    </template>
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+/* keep consistent with your token system */
+:deep(.el-card) {
+  border-radius: 16px;
+}
+
+/* Stat card styling (consistent tokens) */
+.stat-card {
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--color-card) 96%, transparent);
+  width: 100%;
+  height: 100%;
+}
+
+/* MOBILE layout:
+   - On very small screens, reduce spacing and let cards be full width
+*/
+@media (max-width: 480px) {
+  .stats-row {
+    --el-row-gutter: 12px;
+  }
+}
+
+/* Table tokens (avoid hard-coded gray/white) */
+:deep(.app-table) {
+  --el-table-border-color: var(--border-color);
+  --el-table-header-bg-color: color-mix(
+    in srgb,
+    var(--color-card) 88%,
+    var(--color-bg) 12%
+  );
+  --el-table-header-text-color: var(--text-color);
+  --el-table-text-color: var(--text-color);
+  --el-table-row-hover-bg-color: var(--hover-bg);
+  --el-table-current-row-bg-color: var(--active-bg);
+}
+
+:deep(.app-table .el-table__header-wrapper th) {
+  font-weight: 650;
+  font-size: 13px;
+}
+
+/* MOBILE TABLE FIX:
+   el-table can overflow on small screens. Wrap it.
+*/
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* make table minimum width so columns stay readable */
+:deep(.table-scroll .el-table) {
+  min-width: 620px;
+}
+
+/* Chart sizes responsive */
+.chart-box {
+  width: 100%;
+}
+
+/* default desktop heights */
+.chart-box--sm {
+  height: 240px;
+}
+.chart-box--md {
+  height: 260px;
+}
+
+/* mobile reduce chart heights */
+@media (max-width: 640px) {
+  .chart-box--sm {
+    height: 200px;
+  }
+  .chart-box--md {
+    height: 220px;
+  }
+}
+
+.chart-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-color);
+  font-size: 12px;
+  height: 200px;
+}
+
+:deep(.app-table.el-table--border .el-table__inner-wrapper::after),
+:deep(.app-table.el-table--border::after),
+:deep(.app-table.el-table--border::before) {
+  background-color: var(--border-color);
+}
+</style>

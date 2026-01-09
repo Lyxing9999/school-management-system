@@ -34,7 +34,7 @@ class NotificationService:
         entity_id: Optional[str] = None,
         data: Optional[Dict[str, Any]] = None,
     ) -> dict:
-        safe_data = normalize_value(data or {})  
+        safe_data = normalize_value(data or {})
 
         doc = {
             "user_id": str(user_id),
@@ -65,7 +65,7 @@ class NotificationService:
             "message": doc.get("message"),
             "entity_type": doc.get("entity_type"),
             "entity_id": doc.get("entity_id"),
-            "data": normalize_value(doc.get("data") or {}),  
+            "data": normalize_value(doc.get("data") or {}),
             "read_at": _iso(doc.get("read_at")),
             "created_at": _iso(doc.get("created_at")),
         }

@@ -52,5 +52,6 @@ def list_subject_names_in_class(class_id: str):
         class_id=class_id,
         teacher_id=teacher_id,
     )
+
     items = mongo_converter.list_to_dto(subjects, TeacherSubjectNameSelectDTO)
     return TeacherSubjectSelectNameListDTO(items=items)

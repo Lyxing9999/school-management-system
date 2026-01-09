@@ -1,12 +1,14 @@
+
 from __future__ import annotations
+
 from bson import ObjectId
+
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.school.domain.grade import GradeRecord, GradeType
-from app.contexts.school.errors.grade_exceptions import (
-    NotSubjectTeacherException,
-)
 from app.contexts.school.errors.class_exceptions import ClassNotFoundException
 from app.contexts.school.errors.subject_exceptions import SubjectNotFoundException
+from app.contexts.school.errors.grade_exceptions import InvalidTermException
+
 
 class GradeFactory:
     """
@@ -15,30 +17,35 @@ class GradeFactory:
     Responsibilities:
     - Ensure teacher is allowed to grade this subject/class
     - Ensure student is enrolled in the class/subject
-    - Delegate score validation to domain
+    - Delegate score/type/term validation to domain (GradeRecord)
     """
 
     def __init__(
         self,
         class_read_model,
         subject_read_model,
-        # enrollment_read_model,
         teacher_assignment_read_model,
     ):
-        """
-        :param class_read_model: e.g. get_by_id(class_id)
-        :param subject_read_model: e.g. get_by_id(subject_id)
-        :param enrollment_read_model: e.g. is_student_enrolled(student_id, class_id)
-        :param teacher_assignment_read_model: e.g. can_teacher_grade(teacher_id, class_id, subject_id)
-        """
         self.class_read_model = class_read_model
         self.subject_read_model = subject_read_model
-        # self.enrollment_read_model = enrollment_read_model
         self.teacher_assignment_read_model = teacher_assignment_read_model
 
     def _normalize_id(self, id_: str | ObjectId) -> ObjectId:
         return mongo_converter.convert_to_object_id(id_)
 
+    def _require_term(self, term: str) -> str:
+        """
+        Strong requirement at factory layer for clearer errors.
+        Domain will still validate the format strictly.
+        """
+        if term is None:
+            raise InvalidTermException(received_value=None, expected="YYYY-S1 or YYYY-S2")
+
+        t = str(term).strip()
+        if not t:
+            raise InvalidTermException(received_value=term, expected="YYYY-S1 or YYYY-S2")
+
+        return t
 
     def create_grade(
         self,
@@ -47,18 +54,23 @@ class GradeFactory:
         score: float,
         type: GradeType | str,
         teacher_id: str | ObjectId,
+        *,
+        term: str,  # REQUIRED now
         class_id: str | ObjectId | None = None,
-        term: str | None = None,
     ) -> GradeRecord:
         # Normalize IDs
         student_obj_id = self._normalize_id(student_id)
         subject_obj_id = self._normalize_id(subject_id)
         teacher_obj_id = self._normalize_id(teacher_id)
+
         class_obj_id: ObjectId | None = None
         if class_id is not None:
             class_obj_id = self._normalize_id(class_id)
 
-        # 1. Optional: verify subject/class exist
+        # Require non-empty term early
+        term = self._require_term(term)
+
+        # 1) Verify subject/class exist
         subject_doc = self.subject_read_model.get_by_id(subject_obj_id)
         if not subject_doc:
             raise SubjectNotFoundException(subject_obj_id)
@@ -68,22 +80,12 @@ class GradeFactory:
             if not class_doc:
                 raise ClassNotFoundException(class_obj_id)
 
-        # 2. Check teacher can grade this subject/class
 
-        # 3. Check student enrollment (if class is specified)
-        # TODO: skip it for now 
-        # if class_obj_id is not None:
-        #     if not self.enrollment_read_model.is_student_enrolled(student_obj_id, class_obj_id):
-        #         raise StudentNotEnrolledForSubjectException(
-        #             student_obj_id, subject_obj_id, class_obj_id
-        #         )
-
-        # 4. Create domain model (GradeRecord will validate score and type)
         return GradeRecord(
             student_id=student_obj_id,
             subject_id=subject_obj_id,
             score=score,
-            type=type, 
+            type=type,
             class_id=class_obj_id,
             teacher_id=teacher_obj_id,
             term=term,

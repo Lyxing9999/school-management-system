@@ -10,6 +10,8 @@ from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.teacher.data_transfer.responses import (
     TeacherScheduleListDTO,
     TeacherScheduleDTO,
+    TeacherScheduleSlotSelectListDTO,
+    TeacherScheduleSlotSelectDTO,
 )
 
 
@@ -50,3 +52,31 @@ def get_schedule():
         page_size=page_size,
         pages=pages,
     )
+
+
+@teacher_bp.route("/schedule/slot-select", methods=["GET"])
+@role_required(["teacher"])
+@wrap_response
+def get_schedule_slot_select():
+    teacher_id = get_current_staff_id()
+
+    class_id = request.args.get("class_id", type=str)
+    if not class_id:
+        raise ValueError("class_id is required")
+
+
+    date = request.args.get("date", type=str)  # "YYYY-MM-DD"
+    day_of_week = request.args.get("day_of_week", type=int)  # optional fallback
+    limit = request.args.get("limit", default=200, type=int)
+    
+    items = g.teacher_service.list_schedule_slot_select_for_teacher(
+        teacher_id=teacher_id,
+        class_id=class_id,
+        date=date,
+        day_of_week=day_of_week,
+        limit=limit,
+    )
+
+    dto_items = mongo_converter.list_to_dto(items, TeacherScheduleSlotSelectDTO)
+
+    return TeacherScheduleSlotSelectListDTO(items=dto_items)

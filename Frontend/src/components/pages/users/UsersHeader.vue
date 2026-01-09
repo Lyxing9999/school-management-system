@@ -79,6 +79,14 @@ const emit = defineEmits<{
 
     <template #actions>
       <BaseButton
+        plain
+        :loading="loading"
+        class="!border-[color:var(--color-primary)] !text-[color:var(--color-primary)] hover:!bg-[var(--color-primary-light-7)]"
+        @click="emit('refresh')"
+      >
+        Refresh
+      </BaseButton>
+      <BaseButton
         type="primary"
         :disabled="loading"
         @click="emit('open-create')"

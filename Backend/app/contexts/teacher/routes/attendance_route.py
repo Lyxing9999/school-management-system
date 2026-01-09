@@ -49,21 +49,29 @@ def change_attendance_status(attendance_id: str):
 
 
 
+
+
 @teacher_bp.route("/classes/<class_id>/attendance", methods=["GET"])
 @role_required(["teacher"])
 @wrap_response
 def list_attendance_for_class_enriched(class_id: str):
     teacher_id = get_current_staff_id()
-    date_str = request.args.get("date") 
+
+    date_str = request.args.get("date")                 # "YYYY-MM-DD" or None
+    subject_id = request.args.get("subject_id")         # optional
+    schedule_slot_id = request.args.get("schedule_slot_id")  # optional
 
     docs = g.teacher_service.list_attendance_for_class_enriched(
         teacher_id=teacher_id,
         class_id=class_id,
         record_date=date_str,
+        subject_id=subject_id,
+        schedule_slot_id=schedule_slot_id,
     )
 
     items = mongo_converter.list_to_dto(docs, TeacherAttendanceDTO)
     return TeacherAttendanceListDTO(items=items)
+
 
 @teacher_bp.route("/attendance/<attendance_id>", methods=["DELETE"])
 @role_required(["teacher"])

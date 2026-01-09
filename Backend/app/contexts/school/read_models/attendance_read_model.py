@@ -1,3 +1,6 @@
+# app/contexts/school/read_models/attendance_read_model.py
+from __future__ import annotations
+
 from datetime import datetime, date as date_type, time, timedelta
 from typing import Optional, List, Dict, Union, Any
 
@@ -13,10 +16,24 @@ from app.contexts.school.domain.attendance import AttendanceStatus, today_kh
 
 class AttendanceReadModel(MongoErrorMixin):
     """
-    Canonical persisted date field: record_date = "YYYY-MM-DD" string (recommended)
+    Canonical persisted date field:
+      - record_date = "YYYY-MM-DD" string (recommended)
+
     Backward compatible:
       - record_date may be datetime (midnight)
       - legacy field: date (datetime midnight)
+
+    Recommended schema for subject/slot attendance:
+      attendance: {
+        student_id,
+        class_id,
+        subject_id,
+        schedule_slot_id,
+        status,
+        record_date,             # "YYYY-MM-DD" string (canonical)
+        marked_by_teacher_id,
+        lifecycle...
+      }
     """
 
     def __init__(self, db: Database):
@@ -25,30 +42,50 @@ class AttendanceReadModel(MongoErrorMixin):
     # -----------------------------
     # Helpers
     # -----------------------------
+    def _oid(self, id_: Union[str, ObjectId]) -> ObjectId:
+        return mongo_converter.convert_to_object_id(id_)
 
     def get_by_id(self, id_: Union[str, ObjectId]) -> dict | None:
         return self._collection.find_one({"_id": self._oid(id_)})
 
-    def _oid(self, id_: Union[str, ObjectId]) -> ObjectId:
-        return mongo_converter.convert_to_object_id(id_)
-
-    def _to_midnight_dt(self, d: Union[date_type, datetime]) -> datetime:
+    @staticmethod
+    def _to_midnight_dt(d: Union[date_type, datetime]) -> datetime:
         if isinstance(d, date_type) and not isinstance(d, datetime):
             return datetime.combine(d, time.min)
         return d
 
+    @staticmethod
+    def _date_str(d: date_type) -> str:
+        return d.isoformat()
+
     def _q(
         self,
         extra: Optional[Dict[str, Any]] = None,
+        *,
         show_deleted: ShowDeleted = "active",
     ) -> Dict[str, Any]:
-
         return by_show_deleted(show_deleted, dict(extra or {}))
+
+    def _date_match_any_storage(self, record_date: date_type) -> Dict[str, Any]:
+        """
+        Match canonical + legacy storage formats for record date.
+        - record_date: "YYYY-MM-DD" string
+        - record_date: datetime midnight (legacy)
+        - date: datetime midnight (legacy)
+        """
+        dt0 = self._to_midnight_dt(record_date)
+        s = self._date_str(record_date)
+        return {
+            "$or": [
+                {"record_date": s},      # canonical string
+                {"record_date": dt0},    # legacy datetime
+                {"date": dt0},           # legacy field
+            ]
+        }
 
     # -----------------------------
     # Date normalization for aggregations
     # -----------------------------
-
     def _normalized_record_date_add_fields_stage(self) -> Dict[str, Any]:
         """
         Produces record_date_dt as BSON Date regardless of:
@@ -103,14 +140,41 @@ class AttendanceReadModel(MongoErrorMixin):
         if date_from:
             rng["$gte"] = date_from
         if date_to:
+            # if date_to at midnight -> treat as inclusive date and move to next day
             if date_to.time() == time.min:
                 date_to = date_to + timedelta(days=1)
             rng["$lt"] = date_to
         return {"$match": {"record_date_dt": rng}}
 
     # -----------------------------
-    # Queries
+    # Queries (single record)
     # -----------------------------
+    def get_by_student_class_subject_slot_date(
+        self,
+        *,
+        student_id: Union[str, ObjectId],
+        class_id: Union[str, ObjectId],
+        subject_id: Union[str, ObjectId],
+        schedule_slot_id: Union[str, ObjectId],
+        record_date: date_type,
+        show_deleted: ShowDeleted = "active",
+    ) -> Optional[Dict[str, Any]]:
+        sid = self._oid(student_id)
+        cid = self._oid(class_id)
+        subid = self._oid(subject_id)
+        slotid = self._oid(schedule_slot_id)
+
+        q = self._q(
+            {
+                "student_id": sid,
+                "class_id": cid,
+                "subject_id": subid,
+                "schedule_slot_id": slotid,
+                **self._date_match_any_storage(record_date),
+            },
+            show_deleted=show_deleted,
+        )
+        return self._collection.find_one(q)
 
     def get_by_student_class_date(
         self,
@@ -118,78 +182,64 @@ class AttendanceReadModel(MongoErrorMixin):
         class_id: Union[str, ObjectId],
         record_date: Optional[date_type] = None,
         show_deleted: ShowDeleted = "active",
-    ) -> Optional[Dict]:
+    ) -> Optional[Dict[str, Any]]:
         """
-        Handles both storage formats:
-        - record_date stored as "YYYY-MM-DD" string (canonical)
-        - record_date stored as datetime midnight
-        - legacy `date` stored as datetime midnight
+        Old behavior (class-level attendance, no subject/slot).
         """
         effective_date = record_date or today_kh()
-
-        record_dt = self._to_midnight_dt(effective_date)
-        record_str = record_dt.strftime("%Y-%m-%d")
-
         sid = self._oid(student_id)
         cid = self._oid(class_id)
 
-        query = self._q(
+        q = self._q(
             {
                 "student_id": sid,
                 "class_id": cid,
-                "$or": [
-                    {"record_date": record_str},  
-                    {"record_date": record_dt}, 
-                    {"date": record_dt},        
-                ],
+                **self._date_match_any_storage(effective_date),
             },
             show_deleted=show_deleted,
         )
+        return self._collection.find_one(q)
 
-        return self._collection.find_one(query)
-
+    # -----------------------------
+    # Queries (lists)
+    # -----------------------------
     def list_attendance_for_student(
         self,
         student_id: Union[str, ObjectId],
+        *,
         show_deleted: ShowDeleted = "active",
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         sid = self._oid(student_id)
-        return list(
-            self._collection.find(self._q({"student_id": sid}, show_deleted=show_deleted).sort(FIELDS.k(FIELDS.created_at), -1))
-            )
-        
+        q = self._q({"student_id": sid}, show_deleted=show_deleted)
+        return list(self._collection.find(q).sort(FIELDS.k(FIELDS.created_at), -1))
 
     def list_attendance_for_teacher(
         self,
         teacher_id: Union[str, ObjectId],
+        *,
         show_deleted: ShowDeleted = "active",
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         tid = self._oid(teacher_id)
-
-        return list(
-            self._collection.find(
-                self._q(
-                    {
-                        "$or": [
-                            {"marked_by_teacher_id": tid},
-                            {"teacher_id": tid},
-                        ]
-                    },
-                    show_deleted=show_deleted,
-                )
-            )
+        q = self._q(
+            {
+                "$or": [
+                    {"marked_by_teacher_id": tid},
+                    {"teacher_id": tid},  # legacy compatibility
+                ]
+            },
+            show_deleted=show_deleted,
         )
-
+        return list(self._collection.find(q).sort(FIELDS.k(FIELDS.created_at), -1))
 
     def list_attendance_for_class(
         self,
         class_id: Union[str, ObjectId],
+        *,
         show_deleted: ShowDeleted = "active",
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         cid = self._oid(class_id)
-        return list(
-            self._collection.find(self._q({"class_id": cid}, show_deleted=show_deleted))
-        )
+        q = self._q({"class_id": cid}, show_deleted=show_deleted)
+        return list(self._collection.find(q).sort(FIELDS.k(FIELDS.created_at), -1))
 
 
     def list_attendance_for_class_by_date(
@@ -197,66 +247,65 @@ class AttendanceReadModel(MongoErrorMixin):
         class_id: Union[str, ObjectId],
         *,
         record_date: Union[date_type, str, None] = None,
+        subject_id: Union[str, ObjectId, None] = None,
+        subject_ids: Optional[List[Union[str, ObjectId]]] = None,  # NEW
+        schedule_slot_id: Union[str, ObjectId, None] = None,
         show_deleted: ShowDeleted = "active",
     ) -> List[Dict[str, Any]]:
         cid = self._oid(class_id)
+        extra: Dict[str, Any] = {"class_id": cid}
 
+        # subject filters
+        if subject_id is not None and str(subject_id).strip() != "":
+            extra["subject_id"] = self._oid(subject_id)
+        elif subject_ids:
+            # allow multiple subjects (for non-homeroom teachers)
+            values: List[Any] = []
+            for sid in subject_ids:
+                if sid is None:
+                    continue
+                oid = self._oid(sid)
+                values.append(oid)
+                values.append(str(oid))  # tolerate string storage
+            if values:
+                extra["subject_id"] = {"$in": values}
 
+        # slot filter
+        if schedule_slot_id is not None and str(schedule_slot_id).strip() != "":
+            slot_oid = self._oid(schedule_slot_id)
+            extra["schedule_slot_id"] = {"$in": [slot_oid, str(slot_oid)]}
+
+        # no date => latest by created_at
         if record_date is None or str(record_date).strip() == "":
-            q = self._q({"class_id": cid}, show_deleted=show_deleted)
+            q = self._q(extra, show_deleted=show_deleted)
             return list(self._collection.find(q).sort(FIELDS.k(FIELDS.created_at), -1))
 
         if isinstance(record_date, str):
             record_date = datetime.strptime(record_date, "%Y-%m-%d").date()
 
-        record_dt = self._to_midnight_dt(record_date)   
-        record_str = record_dt.strftime("%Y-%m-%d")     
-
         q = self._q(
             {
-                "class_id": cid,
-                "$or": [
-                    {"record_date": record_str},  
-                    {"record_date": record_dt},   
-                    {"date": record_dt},          
-                ],
+                **extra,
+                **self._date_match_any_storage(record_date),
             },
             show_deleted=show_deleted,
         )
-
         return list(self._collection.find(q).sort(FIELDS.k(FIELDS.created_at), -1))
-
-
-
-    def list_attendance_for_class_and_student(
-        self,
-        class_id: Union[str, ObjectId],
-        student_id: Optional[Union[str, ObjectId]] = None,
-        show_deleted: ShowDeleted = "active",
-    ) -> List[Dict]:
-        cid = self._oid(class_id)
-        extra: Dict[str, Any] = {"class_id": cid}
-
-        if student_id is not None:
-            sid = self._oid(student_id)
-            extra["student_id"] = sid
-
-        return list(self._collection.find(self._q(extra, show_deleted=show_deleted)).sort(FIELDS.k(FIELDS.created_at), -1))
-
     # -----------------------------
     # Latest (DEFAULT: latest by record_date)
     # -----------------------------
-
     def get_latest_attendance(
         self,
+        *,
         class_id: Union[str, ObjectId] | None = None,
         student_id: Union[str, ObjectId] | None = None,
         teacher_id: Union[str, ObjectId] | None = None,
+        subject_id: Union[str, ObjectId] | None = None,
+        schedule_slot_id: Union[str, ObjectId] | None = None,
         show_deleted: ShowDeleted = "active",
     ) -> Optional[Dict[str, Any]]:
         """
-        Default "latest": latest by normalized record_date (record_date_dt),
-        tie-break by _id.
+        Latest by normalized record_date (record_date_dt), tie-break by _id.
         """
         extra: Dict[str, Any] = {}
 
@@ -265,6 +314,12 @@ class AttendanceReadModel(MongoErrorMixin):
 
         if student_id is not None:
             extra["student_id"] = self._oid(student_id)
+
+        if subject_id is not None:
+            extra["subject_id"] = self._oid(subject_id)
+
+        if schedule_slot_id is not None:
+            extra["schedule_slot_id"] = self._oid(schedule_slot_id)
 
         if teacher_id is not None:
             tid = self._oid(teacher_id)
@@ -282,6 +337,44 @@ class AttendanceReadModel(MongoErrorMixin):
             )
         )
         return docs[0] if docs else None
+
+    def list_attendance_for_class_and_student(
+        self,
+        *,
+        class_id: Union[str, ObjectId],
+        student_id: Union[str, ObjectId],
+        record_date: Union[date_type, str, None] = None,
+        subject_id: Union[str, ObjectId, None] = None,
+        schedule_slot_id: Union[str, ObjectId, None] = None,
+        show_deleted: ShowDeleted = "active",
+    ) -> List[Dict[str, Any]]:
+        cid = self._oid(class_id)
+        sid = self._oid(student_id)
+
+        extra: Dict[str, Any] = {
+            "class_id": cid,
+            "student_id": sid,
+        }
+
+        if subject_id is not None and str(subject_id).strip() != "":
+            extra["subject_id"] = self._oid(subject_id)
+
+        if schedule_slot_id is not None and str(schedule_slot_id).strip() != "":
+            extra["schedule_slot_id"] = self._oid(schedule_slot_id)
+
+        # if no date => return recent student records for that class
+        if record_date is None or str(record_date).strip() == "":
+            q = self._q(extra, show_deleted=show_deleted)
+            return list(self._collection.find(q).sort(FIELDS.k(FIELDS.created_at), -1))
+
+        if isinstance(record_date, str):
+            record_date = datetime.strptime(record_date, "%Y-%m-%d").date()
+
+        q = self._q({**extra, **self._date_match_any_storage(record_date)}, show_deleted=show_deleted)
+        return list(self._collection.find(q).sort(FIELDS.k(FIELDS.created_at), -1))
+
+
+
 
     # -----------------------------
     # Aggregations

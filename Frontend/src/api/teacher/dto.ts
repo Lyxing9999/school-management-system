@@ -1,4 +1,3 @@
-// ~/api/teacher/dto.ts
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 import type {
   ClassSectionDTO,
@@ -10,6 +9,10 @@ import type {
 } from "~/api/types/school.dto";
 
 import type { StudentBaseDataDTO } from "../types/student.dto";
+
+/* ---------------------------------------------
+ * Shared paging
+ * ------------------------------------------- */
 export interface PagedResult<T> {
   items: T[];
   total: number;
@@ -18,8 +21,16 @@ export interface PagedResult<T> {
   pages: number;
 }
 
+/* ---------------------------------------------
+ * Teacher -> Students
+ * ------------------------------------------- */
 export interface TeacherStudentDataDTO extends StudentBaseDataDTO {}
+
+/* ---------------------------------------------
+ * Enriched Grades
+ * ------------------------------------------- */
 export type GradeEnriched = GradeDTO & {
+  // enriched
   student_name?: string;
   student_name_en?: string;
   student_name_kh?: string;
@@ -28,84 +39,107 @@ export type GradeEnriched = GradeDTO & {
   subject_label?: string;
   teacher_name?: string;
 
+  // common id echoes (some backends include these redundantly)
   student_id?: string;
   subject_id?: string;
   class_id?: string;
+  teacher_id?: string;
 };
-/**
- * Python: TeacherStudentNameSelectDTO
- */
+
+/* ---------------------------------------------
+ * Enriched Attendance
+ * ------------------------------------------- */
+export type AttendanceEnriched = AttendanceDTO & {
+  // enriched
+  student_name?: string;
+  class_name?: string;
+  teacher_name?: string;
+
+  // optional for subject/slot attendance
+  subject_id?: string;
+  schedule_slot_id?: string;
+  subject_label?: string;
+
+  // optional slot pack (if backend provides)
+  day_of_week?: number;
+  start_time?: string;
+  end_time?: string;
+  room?: string;
+};
+
+/* ---------------------------------------------
+ * Select DTOs (name-select)
+ * These are consistent: { id, name }
+ * ------------------------------------------- */
 export interface TeacherStudentNameSelectDTO {
   id: string;
   name: string;
+}
+export interface TeacherStudentSelectNameListDTO {
+  items: TeacherStudentNameSelectDTO[];
 }
 
 export interface TeacherStudentNameDTO {
   id: string;
   name: string;
 }
-
 export interface TeacherStudentNameListDTO {
   items: TeacherStudentNameDTO[];
 }
 
-/**
- * Python: TeacherStudentSelectNameListDTO
- */
-export interface TeacherStudentSelectNameListDTO {
-  items: TeacherStudentNameSelectDTO[];
-}
-
-/**
- * Python: TeacherSubjectNameSelectDTO
- */
 export interface TeacherSubjectNameSelectDTO {
   id: string;
   name: string;
 }
-
-/**
- * Python: TeacherSubjectSelectNameListDTO
- */
 export interface TeacherSubjectSelectNameListDTO {
   items: TeacherSubjectNameSelectDTO[];
 }
 
-/**
- * Python: TeacherClassSelectNameListDTO
- */
+export interface TeacherClassNameSelectDTO {
+  id: string;
+  name: string;
+}
 export interface TeacherClassSelectNameListDTO {
-  items: TeacherClassListDTO[];
+  items: TeacherClassNameSelectDTO[];
 }
 
-/**
- * Python: TeacherClassListDTO
- */
+/* ---------------------------------------------
+ * Class list DTOs
+ * ------------------------------------------- */
 export interface TeacherClassListDTO {
   items: ClassSectionDTO[];
 }
 
-/**
- * Python: TeacherAttendanceListDTO
- */
+/* ---------------------------------------------
+ * Attendance list DTOs
+ * ------------------------------------------- */
 export interface TeacherAttendanceListDTO {
-  items: AttendanceDTO[];
+  items: AttendanceEnriched[];
+  // If you later add pagination on backend, you can extend here:
+  // total?: number;
 }
 
-/**
- * Python: TeacherGradeListDTOPage
- */
+/* ---------------------------------------------
+ * Grades paged DTO
+ * ------------------------------------------- */
+export type TeacherGradePagedDTO = PagedResult<GradeEnriched> & {
+  // backend dump frontend
+  is_homeroom?: boolean;
+  can_edit?: boolean;
+};
 
-export type TeacherGradePagedDTO = PagedResult<GradeEnriched>;
-
-/**
+/* ---------------------------------------------
  * Request DTOs
  * mirror app.contexts.teacher.data_transfer.requests.*
- */
-
+ * ------------------------------------------- */
 export interface TeacherMarkAttendanceDTO {
   student_id: string;
   class_id: string;
+
+  // REQUIRED by backend
+  subject_id: string;
+  schedule_slot_id: string;
+
   status: AttendanceStatus;
   record_date?: string; // "YYYY-MM-DD"
 }
@@ -131,14 +165,21 @@ export interface TeacherChangeGradeTypeDTO {
   type: GradeType;
 }
 
+/* ---------------------------------------------
+ * Schedule DTOs (enriched)
+ * ------------------------------------------- */
 export interface TeacherScheduleDTO extends ScheduleDTO {
   class_name?: string;
+
   subject_id?: string;
   subject_label?: string;
+
   teacher_name?: string;
 
+  // optional UI convenience
   day_label?: string;
 }
+
 export interface TeacherScheduleListDTO {
   items: TeacherScheduleDTO[];
   total: number;
@@ -146,6 +187,9 @@ export interface TeacherScheduleListDTO {
   page_size: number;
 }
 
+/* ---------------------------------------------
+ * Class summary DTOs
+ * ------------------------------------------- */
 export interface TeacherClassSummaryDTO {
   total_classes: number;
   total_students: number;
@@ -157,39 +201,9 @@ export interface TeacherClassListWithSummeryDTO {
   summary: TeacherClassSummaryDTO;
 }
 
-/**
- * Wrapped responses
- */
-export type TeacherGetClassesResponse = ApiResponse<TeacherClassListDTO>;
-export type TeacherMarkAttendanceResponse = ApiResponse<AttendanceDTO>;
-export type TeacherChangeAttendanceStatusResponse = ApiResponse<AttendanceDTO>;
-export type TeacherAddGradeResponse = ApiResponse<GradeDTO>;
-export type TeacherUpdateGradeScoreResponse = ApiResponse<GradeDTO>;
-export type TeacherChangeGradeTypeResponse = ApiResponse<GradeDTO>;
-export type TeacherListClassAttendanceResponse =
-  ApiResponse<TeacherAttendanceListDTO>;
-export type TeacherListClassGradesResponse = ApiResponse<TeacherGradePagedDTO>;
-
-export type TeacherSubjectsSelectNameListResponse =
-  ApiResponse<TeacherSubjectSelectNameListDTO>;
-export type TeacherStudentsSelectNameListResponse =
-  ApiResponse<TeacherStudentSelectNameListDTO>;
-
-export type TeacherClassSelectNameListResponse =
-  ApiResponse<TeacherClassSelectNameListDTO>;
-
-export type TeacherStudentNameListResponse =
-  ApiResponse<TeacherStudentNameListDTO>;
-
-export type TeacherListMyScheduleResponse = ApiResponse<TeacherScheduleListDTO>;
-
-export type TeacherClassListWithSummeryResponse =
-  ApiResponse<TeacherClassListWithSummeryDTO>;
-
-export type TeacherStudentDataResponse = ApiResponse<TeacherStudentDataDTO>;
-
-// ---------- Mutations: soft delete / restore ----------
-
+/* ---------------------------------------------
+ * Mutations: soft delete / restore
+ * ------------------------------------------- */
 export interface TeacherSoftDeleteResultDTO {
   modified_count: number;
   deleted: boolean;
@@ -200,12 +214,65 @@ export interface TeacherRestoreResultDTO {
   restored: boolean;
 }
 
-// Wrapped responses
-export type TeacherSoftDeleteGradeResponse =
-  ApiResponse<TeacherSoftDeleteResultDTO>;
-export type TeacherRestoreGradeResponse = ApiResponse<TeacherRestoreResultDTO>;
+/* ---------------------------------------------
+ * Schedule Slot Select (Attendance needs both:
+ * schedule_slot_id + subject_id)
+ * ------------------------------------------- */
+export interface TeacherScheduleSlotSelectDTO {
+  value: string; // schedule_slot_id
+  label: string; // "07:30–08:15 • Math (Room A)"
+
+  subject_id?: string;
+  subject_label?: string;
+
+  class_id?: string;
+  day_of_week?: number;
+  start_time?: string;
+  end_time?: string;
+  room?: string;
+}
+
+export interface TeacherScheduleSlotSelectListDTO {
+  items: TeacherScheduleSlotSelectDTO[];
+}
+
+export type TeacherScheduleSlotSelectListResponse =
+  ApiResponse<TeacherScheduleSlotSelectListDTO>;
+/* ---------------------------------------------
+ * Wrapped responses
+ * ------------------------------------------- */
+export type TeacherGetClassesResponse = ApiResponse<TeacherClassListDTO>;
+export type TeacherClassListWithSummeryResponse =
+  ApiResponse<TeacherClassListWithSummeryDTO>;
+
+export type TeacherClassSelectNameListResponse =
+  ApiResponse<TeacherClassSelectNameListDTO>;
+export type TeacherStudentsSelectNameListResponse =
+  ApiResponse<TeacherStudentSelectNameListDTO>;
+export type TeacherStudentNameListResponse =
+  ApiResponse<TeacherStudentNameListDTO>;
+export type TeacherSubjectsSelectNameListResponse =
+  ApiResponse<TeacherSubjectSelectNameListDTO>;
+
+export type TeacherMarkAttendanceResponse = ApiResponse<AttendanceDTO>;
+export type TeacherChangeAttendanceStatusResponse = ApiResponse<AttendanceDTO>;
+export type TeacherListClassAttendanceResponse =
+  ApiResponse<TeacherAttendanceListDTO>;
+
+export type TeacherAddGradeResponse = ApiResponse<GradeDTO>;
+export type TeacherUpdateGradeScoreResponse = ApiResponse<GradeDTO>;
+export type TeacherChangeGradeTypeResponse = ApiResponse<GradeDTO>;
+export type TeacherListClassGradesResponse = ApiResponse<TeacherGradePagedDTO>;
+
+export type TeacherListMyScheduleResponse = ApiResponse<TeacherScheduleListDTO>;
 
 export type TeacherSoftDeleteAttendanceResponse =
   ApiResponse<TeacherSoftDeleteResultDTO>;
 export type TeacherRestoreAttendanceResponse =
   ApiResponse<TeacherRestoreResultDTO>;
+
+export type TeacherSoftDeleteGradeResponse =
+  ApiResponse<TeacherSoftDeleteResultDTO>;
+export type TeacherRestoreGradeResponse = ApiResponse<TeacherRestoreResultDTO>;
+
+export type TeacherStudentDataResponse = ApiResponse<TeacherStudentDataDTO>;

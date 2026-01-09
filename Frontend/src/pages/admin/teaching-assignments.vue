@@ -22,6 +22,7 @@ import {
   ElMessage,
   ElMessageBox,
   ElTag,
+  ElText,
 } from "element-plus";
 
 /* Services */
@@ -116,7 +117,16 @@ const {
 );
 
 const tableLoading = computed(() => initialLoading.value || fetching.value);
+const detailLoading = ref<Record<string | number, boolean>>({});
+const deleteLoading = ref<Record<string | number, boolean>>({});
 
+function setRowLoading(
+  map: typeof detailLoading,
+  id: string | number,
+  value: boolean
+) {
+  map.value = { ...map.value, [id]: value };
+}
 /* ---------------- derived UI states ---------------- */
 const showTable = computed(
   () =>
@@ -225,11 +235,10 @@ async function unassign(row: AssignmentRow) {
       cancelButtonText: "No",
     });
 
-    await api.teachingAssignment.unassignForClass(
-      classId,
-      { subject_id: String(row.subject_id) },
-      { showError: false, showSuccess: true } as any
-    );
+    await api.teachingAssignment.unassignForClass(classId, row.subject_id, {
+      showError: false,
+      showSuccess: true,
+    } as any);
 
     await fetchPage(currentPage.value || 1);
   } catch (err: any) {
@@ -239,20 +248,22 @@ async function unassign(row: AssignmentRow) {
 }
 
 /* ---------------- table columns ---------------- */
+import type { ColumnConfig } from "~/components/types/tableEdit";
 function tagTypeForTeacher(v: any) {
   return v ? "success" : "info";
 }
 
-const columns = computed(() => [
+const columns = computed<ColumnConfig<AssignmentRow>[]>(() => [
   {
     label: "Subject",
     field: "subject_label",
-    render: (row: AssignmentRow) => row.subject_label || row.subject_id,
+    render: (row) => row.subject_label || row.subject_id,
+    minWidth: "200px",
   },
   {
     label: "Teacher",
     field: "teacher_name",
-    render: (row: AssignmentRow) => ({
+    render: (row) => ({
       component: ElTag,
       componentProps: {
         type: tagTypeForTeacher(row.teacher_name),
@@ -261,16 +272,36 @@ const columns = computed(() => [
       },
       value: row.teacher_name || row.teacher_id || "Unassigned",
     }),
+    minWidth: "200px",
   },
+
   {
     label: "Created",
-    field: "lifecycle.created_at",
-    render: (row: AssignmentRow) => formatDate(row?.lifecycle?.created_at),
+    field: "lifecycle",
+    render: (row) => ({
+      component: ElText,
+      componentProps: {
+        size: "small",
+        type: "info",
+        class: "cell-muted-el",
+      },
+      value: formatDate(row.lifecycle?.created_at) || "-",
+    }),
+    minWidth: "180px",
   },
   {
     label: "Updated",
-    field: "lifecycle.updated_at",
-    render: (row: AssignmentRow) => formatDate(row?.lifecycle?.updated_at),
+    field: "lifecycle",
+    render: (row) => ({
+      component: ElText,
+      componentProps: {
+        size: "small",
+        type: "info",
+        class: "cell-muted-el",
+      },
+      value: formatDate(row.lifecycle?.updated_at) || "-",
+    }),
+    minWidth: "180px",
   },
   {
     field: "id",
@@ -371,8 +402,12 @@ watch(
             :rowId="row.id"
             detailContent="Change teacher"
             deleteContent="Unassign"
-            @detail="() => openAssignDialog(row)"
-            @delete="() => unassign(row)"
+            :onDetail="() => openAssignDialog(row)"
+            :onDelete="() => unassign(row)"
+            :detailLoading="Boolean(detailLoading[row.id])"
+            :deleteLoading="Boolean(deleteLoading[row.id])"
+            detailText="Assign"
+            deleteText="Unassign"
           />
         </template>
       </SmartTable>

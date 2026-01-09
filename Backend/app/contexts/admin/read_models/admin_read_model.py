@@ -15,7 +15,8 @@ from app.contexts.shared.services.display_name_service import DisplayNameService
 from app.contexts.staff.read_models.staff_read_model import StaffReadModel
 from app.contexts.student.read_models.student_read_model import StudentReadModel
 from app.contexts.student.domain.student import StudentStatus
-
+from app.contexts.school.read_models.teacher_assignment_read_model import TeacherAssignmentReadModel
+    
 class AdminReadModel(MongoErrorMixin):
     """
     High-level read-model facade for admin screens.
@@ -45,6 +46,9 @@ class AdminReadModel(MongoErrorMixin):
             subject_read_model=self._subject_read_model,
             student_read_model=self._student_read_model,
         )
+
+        self._assignment_read_model: Final[TeacherAssignmentReadModel] = TeacherAssignmentReadModel(self.db)
+
 
     def _oid(self, id_: Union[str, ObjectId]) -> ObjectId:
         return mongo_converter.convert_to_object_id(id_)
@@ -162,7 +166,9 @@ class AdminReadModel(MongoErrorMixin):
             include_deleted=include_deleted,
             deleted_only=deleted_only,
             page=page,
-            page_size=page_size,
+            page_size=page_size,    
+            only_active_status=False,        
+            sort_archived_last=True,       
         )
         enriched = self._display_name_service.enrich_classes(docs) if docs else []
         return enriched, total
@@ -338,3 +344,13 @@ class AdminReadModel(MongoErrorMixin):
 
     def admin_count_classes_for_teacher(self, homeroom_teacher_id: Union[str, ObjectId]) -> int:
         return self._class_read_model.count_classes_for_teacher(homeroom_teacher_id)
+
+    
+
+    def list_teacher_select_for_class_subject(self, class_id: str, subject_id: str) -> List[Dict[str, str]]:
+        teacher_ids = self._assignment_read_model.list_teacher_ids_for_class_subject(class_id, subject_id)
+        if not teacher_ids:
+            return []
+        # You likely already have something like this; if not, add it:
+        # returns [{value: "...", label: "..."}]
+        return self._display_name_service.teacher_select_options_for_ids(teacher_ids)

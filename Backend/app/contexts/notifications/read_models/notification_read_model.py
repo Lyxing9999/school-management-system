@@ -1,9 +1,10 @@
 from typing import Optional, Sequence, Union
+from datetime import datetime
 from bson import ObjectId
 from pymongo.database import Database
-from datetime import datetime
 
 NotifTypeArg = Union[str, Sequence[str]]
+
 
 class NotificationReadModel:
     def __init__(self, db: Database):
@@ -28,12 +29,7 @@ class NotificationReadModel:
             else:
                 q["type"] = str(type)
 
-        cur = (
-            self.col.find(q)
-            .sort("created_at", -1)
-            .limit(int(limit))
-        )
-
+        cur = self.col.find(q).sort("created_at", -1).limit(int(limit))
         return [self._to_dto(d) for d in cur]
 
     def count_unread(self, *, user_id: str, type: Optional[NotifTypeArg] = None) -> int:
@@ -48,8 +44,14 @@ class NotificationReadModel:
         return int(self.col.count_documents(q))
 
     def mark_read(self, *, user_id: str, notification_id: str) -> int:
+        # small safety: if invalid ObjectId => 0 (instead of raising)
+        try:
+            oid = ObjectId(notification_id)
+        except Exception:
+            return 0
+
         res = self.col.update_one(
-            {"_id": ObjectId(notification_id), "user_id": str(user_id), "read_at": None},
+            {"_id": oid, "user_id": str(user_id), "read_at": None},
             {"$set": {"read_at": datetime.utcnow()}},
         )
         return int(res.modified_count)

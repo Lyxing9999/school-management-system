@@ -17,18 +17,14 @@ const props = withDefaults(
     editingRowId: string | number | null;
     draft: StatusValue;
 
-    options: StatusOption[];
+    options: { label: string; value: StatusValue }[];
 
     tagType: (v?: StatusValue | null) => any;
     formatLabel: (v?: StatusValue | null) => string;
 
     tooltip?: string;
     size?: "small" | "default" | "large";
-
-    /** Disable interactions (e.g., inlineEditLoading) */
     disabled?: boolean;
-
-    /** Saving/loading (e.g., statusSaving) */
     loading?: boolean;
   }>(),
   {

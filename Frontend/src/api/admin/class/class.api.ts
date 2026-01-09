@@ -12,7 +12,7 @@ import type {
   ListClassesParams,
   AdminSubjectSelectListResponse,
 } from "./class.dto";
-
+import type { ClassStatus } from "~/api/types/enums/class-status.enum";
 export class ClassApi {
   constructor(
     private $api: AxiosInstance,
@@ -110,6 +110,13 @@ export class ClassApi {
       .delete<AdminGetClassResponse>(
         `${this.baseURL}/${classID}/students/${studentID}`
       )
+      .then((res) => res.data);
+  }
+  async setClassStatus(classID: string, status: ClassStatus) {
+    return this.$api
+      .patch<AdminGetClassResponse>(`${this.baseURL}/${classID}/status`, {
+        status,
+      })
       .then((res) => res.data);
   }
   async softDeleteClass(classId: string) {

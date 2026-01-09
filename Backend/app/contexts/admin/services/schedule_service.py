@@ -337,3 +337,6 @@ class ScheduleAdminService:
 
     def admin_count_schedules_for_teacher(self, teacher_id: str | ObjectId) -> int:
         return self.admin_read_model.admin_count_schedules_for_teacher(teacher_id)
+
+    def admin_list_teacher_select_for_class_subject(self, class_id: str, subject_id: str) -> List[Dict[str, str]]:
+        return self.admin_read_model.list_teacher_select_for_class_subject(class_id, subject_id)

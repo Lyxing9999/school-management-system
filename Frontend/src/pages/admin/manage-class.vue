@@ -14,6 +14,7 @@ import ActionButtons from "~/components/buttons/ActionButtons.vue";
 import StudentEnrollmentSelect from "~/components/selects/student/StudentEnrollmentSelect.vue";
 import TeacherSelect from "~/components/selects/teacher/TeacherSelect.vue";
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
+import InlineStatusCell from "~/components/table-edit/cells/InlineStatusCell.vue";
 
 /* ------------------------------------
  * Element Plus
@@ -29,6 +30,7 @@ import type {
   AdminClassDataDTO,
 } from "~/api/admin/class/class.dto";
 import type { Field } from "~/components/types/form";
+import { ClassStatus } from "~/api/types/enums/class-status.enum";
 
 /* ------------------------------------
  * Dynamic create form system
@@ -41,7 +43,7 @@ import { useDynamicCreateFormReactive } from "~/form-system/useDynamicForm.ts/us
 import { classColumns } from "~/modules/tables/columns/admin/classColumns";
 
 /* ------------------------------------
- * Pagination composable (NEW API)
+ * Pagination composable
  * ---------------------------------- */
 import { usePaginatedFetch } from "~/composables/data/usePaginatedFetch";
 
@@ -59,6 +61,11 @@ import { usePreferencesStore } from "~/stores/preferencesStore";
  * Utils
  * ---------------------------------- */
 import { reportError } from "~/utils/errors/errors";
+
+/* ------------------------------------
+ * Inline status composable (your wrapper)
+ * ---------------------------------- */
+import { useClassSectionStatusInline } from "~/composables/features/class/useClassSectionStatusInline";
 
 const adminApi = adminService();
 
@@ -79,8 +86,8 @@ const { tablePageSize } = storeToRefs(prefs);
 /* ===========================
  *  STATE
  * =========================== */
-const searchModel = ref(""); // bound to OverviewHeader search
-const dummyFilter = ref(""); // satisfies composable generic
+const searchModel = ref("");
+const dummyFilter = ref("");
 
 /* ===========================
  *  PAGINATED FETCH (SERVER)
@@ -99,7 +106,6 @@ const {
   async (_unusedFilter, page, size, _signal) => {
     const q = searchModel.value.trim();
 
-    // Backend expected to return { items, total }
     const res = await adminApi.class.getClasses({
       q: q.length ? q : undefined,
       page,
@@ -125,6 +131,30 @@ async function fetchClasses(page = currentPage.value || 1) {
 }
 
 /* ===========================
+ *  STATUS INLINE (CLASS)
+ * =========================== */
+const statusOptions = [
+  { label: "Active", value: ClassStatus.ACTIVE },
+  { label: "Inactive", value: ClassStatus.INACTIVE },
+  { label: "Archived", value: ClassStatus.ARCHIVED },
+];
+
+const {
+  editingStatusRowId,
+  statusDraft,
+  statusSaving,
+  statusTagType,
+  formatStatusLabel,
+  startEditStatus,
+  cancelEditStatus,
+  saveStatus,
+} = useClassSectionStatusInline();
+
+function updateStatusDraft(val: ClassStatus) {
+  statusDraft.value = val;
+}
+
+/* ===========================
  *  SUBJECT OPTIONS (ASYNC)
  * =========================== */
 const subjectOptions = ref<{ value: string; label: string }[]>([]);
@@ -135,7 +165,6 @@ async function fetchSubjectOptions() {
 
   subjectOptionsLoading.value = true;
   try {
-    // If your subject endpoint is paginated, change this to request a big page_size.
     const res: any = await adminApi.subject.getSubjects();
     const items = res?.items ?? res ?? [];
     subjectOptions.value = (items ?? []).map((s: any) => ({
@@ -183,6 +212,7 @@ const createFormSchema = computed(() =>
     } satisfies Field<AdminCreateClass>;
   })
 );
+
 const createFormDialogWidth = computed(() => "50%");
 
 async function openCreateDialog() {
@@ -193,7 +223,6 @@ async function openCreateDialog() {
 async function handleSaveCreateForm(payload: Partial<AdminCreateClass>) {
   const created = await saveCreateForm(payload);
   if (!created) return;
-
   await fetchPage(1);
 }
 
@@ -215,9 +244,7 @@ const manageRelationsForm = ref<ManageClassRelationsForm>({
   homeroom_teacher_id: null,
 });
 
-/** snapshot of server truth when dialog opens */
 const manageRelationsInitial = ref<ManageClassRelationsForm | null>(null);
-
 const currentClassForStudents = ref<AdminClassRow | null>(null);
 
 const detailLoading = ref<Record<string | number, boolean>>({});
@@ -434,7 +461,6 @@ async function handleSoftDelete(row: AdminClassRow) {
     deleteLoading.value[row.id] = true;
     await adminApi.class.softDeleteClass(row.id);
 
-    // if you deleted last row on page, go back
     const page = currentPage.value || 1;
     await fetchClasses(page);
 
@@ -477,7 +503,6 @@ const { headerState: classHeaderStats } = useHeaderState({
  *  PAGINATION HANDLERS
  * =========================== */
 function handlePageSizeChange(size: number) {
-  // composable watches tablePageSize and will fetchPage(1) automatically
   prefs.setTablePageSize(size);
 }
 
@@ -550,6 +575,24 @@ onMounted(() => fetchPage(1));
             @delete="handleSoftDelete(row as AdminClassRow)"
             :deleteLoading="deleteLoading[row.id] ?? false"
             :detailLoading="detailLoading[row.id] ?? false"
+          />
+        </template>
+
+        <template #status="{ row }">
+          <InlineStatusCell
+            :row-id="row.id"
+            :value="(row.status ?? ClassStatus.ACTIVE) as any"
+            :editing-row-id="editingStatusRowId"
+            :draft="statusDraft"
+            :options="statusOptions"
+            :tag-type="statusTagType"
+            :format-label="formatStatusLabel"
+            :disabled="tableLoading || (deleteLoading[row.id] ?? false)"
+            :loading="statusSaving?.[String(row.id)] ?? false"
+            @start="startEditStatus(row as any)"
+            @cancel="cancelEditStatus()"
+            @save="(val) => saveStatus(row as any, val as ClassStatus)"
+            @update:draft="(val) => updateStatusDraft(val as ClassStatus)"
           />
         </template>
       </SmartTable>

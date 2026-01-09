@@ -1,5 +1,5 @@
 from typing import Any, Final, Dict, List, Optional, Union
-
+from datetime import datetime
 from bson import ObjectId
 from pymongo.database import Database
 
@@ -100,7 +100,71 @@ class StudentStatsReadModel(MongoErrorMixin):
             return None
 
         return class_doc
+    def _enrich_attendance_with_schedule_and_subject(
+        self,
+        items: List[Dict[str, Any]],
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> List[Dict[str, Any]]:
+        if not items:
+            return []
 
+        # collect ids
+        slot_ids: List[ObjectId] = []
+        subject_ids: List[ObjectId] = []
+
+        for it in items:
+            sid = self._oid(it.get("schedule_slot_id"))
+            if sid:
+                slot_ids.append(sid)
+
+            subid = self._oid(it.get("subject_id"))
+            if subid:
+                subject_ids.append(subid)
+
+        # fetch schedules by ids
+        schedules_by_id: Dict[str, Dict[str, Any]] = {}
+        if slot_ids:
+            schedule_docs = self._schedule_read.list_by_ids(slot_ids, show_deleted=show_deleted)
+            for s in schedule_docs:
+                _id = s.get("_id")
+                if _id is not None:
+                    schedules_by_id[str(_id)] = s
+
+        # fetch subjects by ids
+        subjects_by_id: Dict[str, Dict[str, Any]] = {}
+        if subject_ids:
+            subject_docs = self._subject_read.list_by_ids(subject_ids, show_deleted=show_deleted)
+            for sub in subject_docs:
+                _id = sub.get("_id")
+                if _id is not None:
+                    subjects_by_id[str(_id)] = sub
+
+        # attach schedule + subject fields
+        for it in items:
+            slot_key = str(it.get("schedule_slot_id")) if it.get("schedule_slot_id") is not None else None
+            sub_key = str(it.get("subject_id")) if it.get("subject_id") is not None else None
+
+            # schedule
+            if slot_key and slot_key in schedules_by_id:
+                s = schedules_by_id[slot_key]
+                it["day_of_week"] = s.get("day_of_week")
+                it["start_time"] = s.get("start_time")
+                it["end_time"] = s.get("end_time")
+                it["room"] = s.get("room")
+
+                # if attendance subject_id missing, fallback from schedule.subject_id
+                if not it.get("subject_id") and s.get("subject_id") is not None:
+                    it["subject_id"] = str(s.get("subject_id"))
+
+            # subject
+            if sub_key and sub_key in subjects_by_id:
+                sub = subjects_by_id[sub_key]
+                name = (sub.get("name") or "").strip()
+                code = (sub.get("code") or "").strip()
+                it["subject_label"] = f"{name} ({code})" if (name and code) else (name or code)
+
+        return items
     # -------------------------
     # Public methods
     # -------------------------
@@ -168,7 +232,7 @@ class StudentStatsReadModel(MongoErrorMixin):
             return []
 
         class_id = class_doc["_id"]
-        schedule_docs = self._schedule_read.list_schedules_for_classes([class_id], show_deleted=show_deleted)  # ensure supported
+        schedule_docs = self._schedule_read.list_schedules_for_classes([class_id], show_deleted=show_deleted) 
         if not schedule_docs:
             return []
 
@@ -206,21 +270,49 @@ class StudentStatsReadModel(MongoErrorMixin):
         if not records:
             return []
 
-        return self._display.enrich_attendance(records)
+        enriched = self._display.enrich_attendance(records)
 
+
+        enriched = self._enrich_attendance_with_schedule_and_subject(enriched, show_deleted=show_deleted)
+
+        return enriched
     def list_my_grades_enriched(
         self,
         student_id: Union[str, ObjectId],
         *,
         show_deleted: ShowDeleted = "active",
-    ) -> List[Dict[str, Any]]:
+        page: int = 1,
+        page_size: int = 10,
+        term: Optional[str] = None,
+        grade_type: Optional[str] = None,
+        q: Optional[str] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        class_id: Optional[Union[str, ObjectId]] = None,
+        subject_id: Optional[Union[str, ObjectId]] = None,
+        sort: str = "-created_at",
+    ) -> Dict[str, Any]:
         stu_doc = self._get_active_student_doc(student_id, show_deleted=show_deleted)
         if not stu_doc:
-            return []
+            return {"items": [], "total": 0, "page": page, "page_size": page_size, "pages": 1}
 
         sid = stu_doc["_id"]
-        records = self._grade_read.list_grades_for_student_paged(sid, show_deleted=show_deleted)  # ensure supported
-        if not records:
-            return []
 
-        return self._display.enrich_grades(records)
+        records = self._grade_read.list_grades_for_student_paged(
+            sid,
+            page=page,
+            page_size=page_size,
+            term=term,
+            grade_type=grade_type,
+            q=q,
+            date_from=date_from,
+            date_to=date_to,
+            class_id=class_id,
+            subject_id=subject_id,
+            show_deleted=show_deleted,
+            sort=sort,
+        )
+
+        items = records.get("items") or []
+        records["items"] = self._display.enrich_grades(items)
+        return records

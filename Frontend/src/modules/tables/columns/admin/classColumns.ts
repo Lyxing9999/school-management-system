@@ -1,26 +1,7 @@
 import { h } from "vue";
-import { ElTag } from "element-plus";
+
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import type { AdminClassDataDTO } from "~/api/admin/class/class.dto";
-
-function normalizeStatus(status?: string | null) {
-  return (status || "").trim().toLowerCase();
-}
-
-function getStatusTagType(status?: string | null) {
-  const s = normalizeStatus(status);
-  if (["active", "enabled", "open"].includes(s)) return "success";
-  if (["inactive", "disabled", "closed"].includes(s)) return "info";
-  if (["archived", "deleted"].includes(s)) return "warning";
-  return "danger";
-}
-
-function formatStatus(status?: string | null) {
-  const s = normalizeStatus(status);
-  if (!s) return "Unknown";
-  // Title Case: "active" -> "Active"
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 export const classColumns: ColumnConfig<AdminClassDataDTO>[] = [
   {
@@ -38,20 +19,11 @@ export const classColumns: ColumnConfig<AdminClassDataDTO>[] = [
     render: (row) => h("span", row.homeroom_teacher_name || "No teacher"),
   },
   {
-    label: "Status",
     field: "status",
-    align: "center",
-    width: "110px",
-    render: (row) =>
-      h(
-        ElTag,
-        {
-          type: getStatusTagType(row.status),
-          effect: "plain",
-          size: "small",
-        },
-        () => formatStatus(row.status)
-      ),
+    label: "Status",
+    width: "130px",
+    useSlot: true,
+    slotName: "status",
   },
   {
     label: "Enrolled",

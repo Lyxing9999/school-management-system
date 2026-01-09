@@ -16,6 +16,8 @@ const props = defineProps<{
   detailLoading: boolean;
   deleteLoading: boolean;
   size?: "small" | "default" | "large" | string;
+  detailText?: string;
+  deleteText?: string;
 }>();
 
 // Optional type for slots
@@ -49,7 +51,7 @@ defineSlots<{
         <template #iconPre>
           <el-icon class="mr-2"><View /></el-icon>
         </template>
-        Detail
+        {{ detailText || "Detail" }}
       </BaseButton>
     </ElTooltip>
 
@@ -69,7 +71,7 @@ defineSlots<{
         <template #iconPre>
           <el-icon class="mr-2"><Delete /></el-icon>
         </template>
-        Delete
+        {{ deleteText || "Delete" }}
       </BaseButton>
     </ElTooltip>
 

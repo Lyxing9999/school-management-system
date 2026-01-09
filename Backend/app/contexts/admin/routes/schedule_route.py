@@ -138,3 +138,16 @@ def admin_list_schedules_for_teacher_enriched(teacher_id: str):
 def admin_get_schedule_by_id(slot_id: str):
     slot = g.admin.schedule_service.admin_get_schedule_by_id(slot_id=slot_id)
     return mongo_converter.doc_to_dto(slot, AdminScheduleSlotDataDTO)
+
+
+@admin_bp.route("/schedule/teacher-select", methods=["GET"])
+@role_required(["admin"])
+@wrap_response
+def admin_schedule_teacher_select():
+    class_id = request.args.get("class_id", type=str)
+    subject_id = request.args.get("subject_id", type=str)
+    if not class_id or not subject_id:
+        return {"items": []}
+
+    items = g.admin.schedule_service.admin_list_teacher_select_for_class_subject(class_id, subject_id)
+    return {"items": items}

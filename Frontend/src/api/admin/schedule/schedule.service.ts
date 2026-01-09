@@ -9,6 +9,8 @@ import type {
   AdminScheduleSlotData,
   AdminUpdateScheduleSlot,
   AdminScheduleSlotList,
+  AdminTeacherSelectListDTO,
+  AdminTeacherSelectQuery,
 } from "./schedule.dto";
 import { ScheduleSlotApi } from "./schedule.api";
 
@@ -100,5 +102,16 @@ export class ScheduleSlotService {
       { showSuccess: true, ...(options ?? {}) }
     );
     return scheduleSlotData!;
+  }
+
+  async listTeacherSelectByAssignment(
+    params: AdminTeacherSelectQuery,
+    options?: ApiCallOptions
+  ) {
+    const data = await this.callApi<AdminTeacherSelectListDTO>(
+      () => this.scheduleSlotApi.listTeacherSelectByAssignment(params),
+      options
+    );
+    return data!;
   }
 }

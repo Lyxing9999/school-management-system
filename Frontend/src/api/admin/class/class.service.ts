@@ -17,6 +17,7 @@ import {
   useApiUtils,
   type ApiCallOptions,
 } from "~/composables/system/useApiUtils";
+import { ClassStatus } from "~/api/types/enums/class-status.enum";
 import { ClassApi } from "./class.api";
 
 export class ClassService {
@@ -129,7 +130,17 @@ export class ClassService {
     );
     return classData!;
   }
-
+  async setClassStatus(
+    classId: string,
+    status: ClassStatus,
+    options?: ApiCallOptions
+  ) {
+    const classData = await this.callApi<AdminClassDataDTO>(
+      () => this.classApi.setClassStatus(classId, status),
+      { showSuccess: true, ...(options ?? {}) }
+    );
+    return classData!;
+  }
   async updateRelations(
     classId: string,
     payload: AdminUpdateClassRelationsDTO,

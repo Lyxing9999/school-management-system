@@ -6,7 +6,7 @@ from pymongo.database import Database
 from bson import ObjectId
 
 from app.contexts.shared.model_converter import mongo_converter
-
+from app.contexts.core.config.setting import settings
 from app.contexts.admin.read_models.admin_read_model import AdminReadModel
 from app.contexts.admin.data_transfer.requests import (
     AdminCreateUserSchema,

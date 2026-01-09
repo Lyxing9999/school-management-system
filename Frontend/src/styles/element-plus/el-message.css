@@ -1,0 +1,62 @@
+/* Put this in a GLOBAL file (ex: assets/css/element-plus-message.css)
+   and include it in nuxt.config.ts -> css: ["~/assets/css/element-plus-message.css"] */
+
+:root {
+    /* ensure message is always above el-dialog / overlay */
+    --kb-message-z: 99999;
+}
+
+/* Base */
+.el-message {
+    z-index: var(--kb-message-z) !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--border-color) !important;
+    background: color-mix(in srgb, var(--color-card) 92%, var(--hover-bg) 8%) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+    padding: 10px 14px !important;
+    backdrop-filter: blur(10px);
+}
+
+.el-message .el-message__content {
+    color: var(--text-color) !important;
+    font-weight: 650;
+}
+
+.el-message .el-message__closeBtn {
+    color: var(--muted-color) !important;
+}
+
+.el-message .el-message__closeBtn:hover {
+    color: var(--text-color) !important;
+}
+
+/* Variants: add a left accent + better borders */
+.el-message--success {
+    border-color: color-mix(in srgb, var(--el-color-success) 25%, var(--border-color) 75%) !important;
+    box-shadow: inset 4px 0 0 color-mix(in srgb, var(--el-color-success) 70%, transparent), 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
+
+.el-message--warning {
+    border-color: color-mix(in srgb, var(--el-color-warning) 25%, var(--border-color) 75%) !important;
+    box-shadow: inset 4px 0 0 color-mix(in srgb, var(--el-color-warning) 70%, transparent), 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
+
+.el-message--error {
+    border-color: color-mix(in srgb, var(--el-color-danger) 25%, var(--border-color) 75%) !important;
+    box-shadow: inset 4px 0 0 color-mix(in srgb, var(--el-color-danger) 70%, transparent), 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
+
+.el-message--info {
+    border-color: color-mix(in srgb, var(--color-primary) 18%, var(--border-color) 82%) !important;
+    box-shadow: inset 4px 0 0 color-mix(in srgb, var(--color-primary) 60%, transparent), 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Dark mode: make the surface darker */
+html[data-theme="dark"] .el-message {
+    background: color-mix(in srgb, var(--color-bg) 70%, var(--color-card) 30%) !important;
+    border-color: color-mix(in srgb, var(--border-color) 70%, black 30%) !important;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45) !important;
+}
+
+
+

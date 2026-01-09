@@ -47,11 +47,6 @@ const menus: Record<RoleKey, MenuItem[]> = {
       icon: "Calendar",
       route: ROUTES.ADMIN.MANAGE_SCHEDULES,
     },
-    {
-      title: "System Events",
-      icon: "Tickets",
-      route: ROUTES.ADMIN.SYSTEM_EVENTS,
-    },
     { title: "Notifications", icon: "Bell", route: ROUTES.ADMIN.NOTIFICATIONS },
     { title: "Settings", icon: "Setting", route: ROUTES.ADMIN.SETTINGS },
   ],
@@ -84,12 +79,13 @@ const menus: Record<RoleKey, MenuItem[]> = {
     },
     { title: "My Schedule", icon: "Timer", route: ROUTES.STUDENT.MY_SCHEDULE },
     { title: "Attendance", icon: "Finished", route: ROUTES.STUDENT.ATTENDANCE },
-    { title: "Events", icon: "Calendar", route: ROUTES.STUDENT.EVENTS },
+
     {
       title: "Notifications",
       icon: "Bell",
       route: ROUTES.STUDENT.NOTIFICATIONS,
     },
+    { title: "Calendar", icon: "Calendar", route: ROUTES.STUDENT.CALENDAR },
     { title: "Settings", icon: "Setting", route: ROUTES.STUDENT.SETTINGS },
   ],
 };

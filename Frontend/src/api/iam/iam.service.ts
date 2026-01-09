@@ -33,7 +33,13 @@ export class AuthService {
     sameSite: "lax",
     path: "/",
   });
-
+  private studentHomeCookie = useCookie<"dashboard" | "attendance" | null>(
+    "student_home",
+    {
+      sameSite: "lax",
+      path: "/",
+    }
+  );
   /**
    * Optional (non-sensitive) cache so header can show name immediately
    * without waiting for /me (works on refresh).
@@ -261,12 +267,19 @@ export class AuthService {
       case Role.ADMIN:
         await this.router.push("/admin/dashboard");
         return;
+
       case Role.TEACHER:
         await this.router.push("/teacher/dashboard");
         return;
-      case Role.STUDENT:
-        await this.router.push("/student/dashboard");
+
+      case Role.STUDENT: {
+        const home = this.studentHomeCookie.value || "dashboard";
+        await this.router.push(
+          home === "attendance" ? "/student/attendance" : "/student/dashboard"
+        );
         return;
+      }
+
       default:
         this.clearAuth();
         this.message.showError("Unknown role. Please login again.");

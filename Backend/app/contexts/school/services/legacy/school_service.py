@@ -24,6 +24,12 @@ class SchoolService:
     def assign_teacher_to_class(self, *args, **kwargs):
         return self._facade.class_service.assign_teacher_to_class(*args, **kwargs)
 
+
+    def set_class_status(self, *args, **kwargs):
+        return self._facade.class_service.set_class_status(*args, **kwargs)
+
+    
+
     def soft_delete_class(self, *args, **kwargs):
         return self._facade.class_service.soft_delete_class(*args, **kwargs)
 
@@ -47,8 +53,8 @@ class SchoolService:
     def update_class_relations(self, *args, **kwargs):
         return self._facade.class_relations_service.apply(*args, **kwargs)
     # -------- Attendance --------
-    def mark_attendance(self, *args, **kwargs):
-        return self._facade.attendance_service.mark_attendance(*args, **kwargs)
+    def mark_attendance_session(self, *args, **kwargs):
+        return self._facade.attendance_service.mark_attendance_session(*args, **kwargs)
 
     def change_attendance_status(self, *args, **kwargs):
         return self._facade.attendance_service.change_attendance_status(*args, **kwargs)

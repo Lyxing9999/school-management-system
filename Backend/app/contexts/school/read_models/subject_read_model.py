@@ -96,7 +96,24 @@ class SubjectReadModel(MongoErrorMixin):
         except Exception as e:
             self._handle_mongo_error("get_code_by_id", e)
             return None
+    def list_by_ids(
+        self,
+        ids: Iterable[str | ObjectId],
+        *,
+        show_deleted: ShowDeleted = "active",
+        projection: Optional[Dict[str, int]] = None,
+        session=None,
+    ) -> List[Dict[str, Any]]:
+        oids = [mongo_converter.convert_to_object_id(x) for x in (ids or []) if x]
+        if not oids:
+            return []
 
+        query = by_show_deleted(show_deleted, {"_id": {"$in": oids}})
+        try:
+            return list(self.collection.find(query, projection=projection, session=session))
+        except Exception as e:
+            self._handle_mongo_error("list_by_ids", e)
+            return []
     def list_paginated(
         self,
         extra: Optional[Dict[str, Any]] = None,

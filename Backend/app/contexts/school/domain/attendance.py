@@ -1,4 +1,4 @@
-
+# app/contexts/school/domain/attendance.py
 from datetime import datetime, date as date_type
 from enum import Enum
 from bson import ObjectId
@@ -25,10 +25,17 @@ class AttendanceStatus(str, Enum):
 
 
 class AttendanceRecord:
+    """
+    Session attendance:
+      - one record per student per schedule session (class+subject+slot) per date
+    """
+
     def __init__(
         self,
         student_id: ObjectId | str,
         class_id: ObjectId | str,
+        subject_id: ObjectId | str,
+        schedule_slot_id: ObjectId | str,
         status: AttendanceStatus | str,
         *,
         id: ObjectId | None = None,
@@ -37,12 +44,17 @@ class AttendanceRecord:
         lifecycle: Lifecycle | None = None,
     ) -> None:
         self.id = id or ObjectId()
+
         self.student_id = student_id if isinstance(student_id, ObjectId) else ObjectId(student_id)
         self.class_id = class_id if isinstance(class_id, ObjectId) else ObjectId(class_id)
+        self.subject_id = subject_id if isinstance(subject_id, ObjectId) else ObjectId(subject_id)
+        self.schedule_slot_id = (
+            schedule_slot_id if isinstance(schedule_slot_id, ObjectId) else ObjectId(schedule_slot_id)
+        )
 
         self._status = self._validate_status(status)
 
-        # CANONICAL
+        # canonical date (KH school date)
         self.record_date = record_date or today_kh()
 
         self.marked_by_teacher_id = (
@@ -54,7 +66,7 @@ class AttendanceRecord:
         self.lifecycle = lifecycle or Lifecycle()
         self._validate_date_not_in_future()
 
-    # ---- compatibility alias (old code that uses .date won't break) ----
+    # ---- backward compatibility alias ----
     @property
     def date(self) -> date_type:
         return self.record_date

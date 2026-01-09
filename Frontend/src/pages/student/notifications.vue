@@ -1,8 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: "default" });
 
-import { computed, onMounted, ref, watch } from "vue";
-import { useRoute, navigateTo } from "nuxt/app";
+import { computed, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import {
   Bell,
@@ -22,7 +21,6 @@ import type { NotificationDTO } from "~/api/notifications/notification.dto";
 
 import { formatDate } from "~/utils/date/formatDate";
 
-const route = useRoute();
 const msg = useMessage();
 
 const notif = useNotificationStore();
@@ -31,51 +29,14 @@ const { unreadCount } = storeToRefs(notif);
 type FilterMode = "all" | "unread";
 
 /* -----------------------------
-   State (sync with query)
+   Local State (NO route sync)
 ----------------------------- */
-const filter = ref<FilterMode>(
-  String(route.query.filter ?? "all") === "unread" ? "unread" : "all"
-);
-const q = ref<string>(String(route.query.q ?? ""));
-const limit = ref<number>(Number(route.query.limit ?? 30) || 30);
+const filter = ref<FilterMode>("all");
+const q = ref<string>("");
+const limit = ref<number>(30);
 
 const loading = ref(false);
 const items = ref<NotificationDTO[]>([]);
-
-/* -----------------------------
-   Query -> State
------------------------------ */
-watch(
-  () => route.query.filter,
-  (v) => (filter.value = String(v ?? "all") === "unread" ? "unread" : "all")
-);
-watch(
-  () => route.query.q,
-  (v) => (q.value = String(v ?? ""))
-);
-watch(
-  () => route.query.limit,
-  (v) => {
-    const n = Number(v ?? 30);
-    limit.value = [30, 50, 100].includes(n) ? n : 30;
-  }
-);
-
-/* -----------------------------
-   State -> Query
------------------------------ */
-function setRouteQuery() {
-  navigateTo({
-    path: route.path,
-    query: {
-      ...route.query,
-      filter: filter.value,
-      q: q.value || undefined,
-      limit: limit.value !== 30 ? String(limit.value) : undefined,
-    },
-  });
-}
-watch([filter, q], () => setRouteQuery());
 
 /* -----------------------------
    UI computed list
@@ -170,20 +131,14 @@ async function markAllRead() {
 }
 
 /* -----------------------------
-   Click row: open notification
+   Click row: NO navigation
 ----------------------------- */
 async function openNotification(n: NotificationDTO) {
-  // 1) mark read if unread
+  // only mark read; do NOT navigate anywhere
   if (!n.read_at) await markRead(n);
 
-  // 2) navigate if route exists
-  const r = (n.data as any)?.route;
-  if (r) {
-    navigateTo(String(r));
-    return;
-  }
-
-  // fallback: do nothing (still allowed: it becomes read)
+  // optional: open drawer or show details, but no route push
+  // openDrawer()
 }
 
 onMounted(async () => {
@@ -420,10 +375,6 @@ onMounted(async () => {
 
 .meta-dot {
   opacity: 0.7;
-}
-
-.meta-time {
-  white-space: nowrap;
 }
 
 .actions {

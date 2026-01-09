@@ -2,6 +2,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional, Literal
 
+
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -56,23 +57,16 @@ class StudentGradesFilterSchema(BaseModel):
     )
 
 
-class StudentScheduleFilterSchema(BaseModel):
-    """
-    Used for: GET /student/me/schedule
-    """
-    model_config = ConfigDict(
-        str_strip_whitespace=True,
-        extra="ignore",
-    )
 
-    day_of_week: Optional[int] = Field(
-        None,
-        ge=1,
-        le=7,
-        description="1=Monday, 7=Sunday (optional)",
-    )
-    class_id: Optional[str] = Field(
-        None,
-        description="Filter by specific class (optional)",
-    )
+class StudentGradesFilterSchema(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
 
+    page: int = Field(1, ge=1)
+    page_size: int = Field(10, ge=1, le=100)
+
+    class_id: Optional[str] = None
+    subject_id: Optional[str] = None
+    term: Optional[str] = None  # "2025-S1"
+
+    grade_type: Optional[str] = None
+    q: Optional[str] = None

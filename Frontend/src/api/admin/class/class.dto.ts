@@ -33,7 +33,6 @@ export interface AdminClassDataDTO extends ClassSectionDTO {
   // convenience counts from backend
   student_count?: number;
   subject_count?: number;
-
 }
 
 /**

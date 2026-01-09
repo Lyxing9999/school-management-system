@@ -6,7 +6,7 @@ import {
 import type {
   StudentClassListDTO,
   StudentAttendanceListDTO,
-  StudentGradeListDTO,
+  StudentGradePagedDTO,
   StudentScheduleListDTO,
   StudentAttendanceFilterDTO,
   StudentGradesFilterDTO,
@@ -59,9 +59,9 @@ export class StudentService {
   /**
    * GET /student/me/grades
    */
-  async getMyGrades(options?: ApiCallOptions) {
-    const data = await this.callApi<StudentGradeListDTO>(
-      () => this.studentApi.getMyGrades(),
+  async getMyGrades(params?: StudentGradesFilterDTO, options?: ApiCallOptions) {
+    const data = await this.callApi<StudentGradePagedDTO>(
+      () => this.studentApi.getMyGrades(params),
       {
         showError: true,
         ...(options ?? {}),

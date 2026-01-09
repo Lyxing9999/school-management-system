@@ -19,7 +19,7 @@ class IClassSectionRepository(ABC):
     def insert(self, section: ClassSection, *, session=None) -> ClassSection: ...
 
     @abstractmethod
-    def update(self, section: ClassSection, *, session=None) -> bool: ...
+    def update(self, section: ClassSection, *, session=None) -> Optional[ClassSection]: ...
 
     @abstractmethod
     def find_by_id(self, id: ObjectId, *, session=None) -> Optional[ClassSection]: ...
@@ -49,18 +49,24 @@ class MongoClassSectionRepository(IClassSectionRepository):
         payload = self.mapper.to_persistence(section)
         self.collection.insert_one(payload, session=session)
         return section
-
-    def update(self, section: ClassSection, *, session=None) -> bool:
+        
+    def update(self, section: ClassSection, *, session=None) -> Optional[ClassSection]:
         payload = self.mapper.to_persistence(section)
         _id = payload.pop("_id")
 
-        result = self.collection.update_one(
+        # DO NOT set "lifecycle.updated_at" here; update lifecycle object only
+        lifecycle = payload.get("lifecycle") or {}
+        lifecycle["updated_at"] = now_utc()
+        payload["lifecycle"] = lifecycle
+
+        doc = self.collection.find_one_and_update(
             not_deleted({"_id": _id}),
-            {"$set": (payload | {"lifecycle.updated_at": now_utc()})},
+            {"$set": payload},
+            return_document=ReturnDocument.AFTER,
             session=session,
         )
-        return result.matched_count > 0
-
+        return None if not doc else self.mapper.to_domain(doc)
+        
     def find_by_id(self, id: ObjectId, *, session=None) -> Optional[ClassSection]:
         doc = self.collection.find_one(not_deleted({"_id": id}), session=session)
         return None if not doc else self.mapper.to_domain(doc)

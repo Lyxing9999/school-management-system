@@ -22,7 +22,7 @@ export default defineNuxtPlugin(() => {
     g.__notif_socket_state__ ??
     (g.__notif_socket_state__ = { socket: null, token: null });
 
-  const isDev = import.meta.env.DEV;
+  const isDev = import.meta.dev;
 
   const disconnect = () => {
     if (!state.socket) return;
@@ -54,14 +54,13 @@ export default defineNuxtPlugin(() => {
 
     if (isDev) {
       socket.onAny((event, payload) => {
-        // dev only
         console.log("[socket:any]", event, payload);
       });
     }
 
     socket.on("connect", async () => {
       if (isDev) console.log("[socket] connected", socket.id);
-      await notif.refreshUnread(); // sync after connect/reconnect
+      await notif.refreshUnread();
     });
 
     socket.on("notification:new", (payload: any) => {

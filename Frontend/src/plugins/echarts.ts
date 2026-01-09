@@ -1,6 +1,4 @@
-import { defineNuxtPlugin } from "#app";
-
-export default defineNuxtPlugin(async (nuxtApp) => {
+export default defineNuxtPlugin(async (nuxtApp: any) => {
   // Extra safety (client-only file already, but this prevents edge cases)
   if (import.meta.server) return;
 

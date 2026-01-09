@@ -1,7 +1,7 @@
+from __future__ import annotations
 
 from datetime import datetime, date as date_type
 from typing import Any, Optional
-
 from bson import ObjectId
 
 from app.contexts.school.domain.attendance import AttendanceRecord, AttendanceStatus
@@ -9,14 +9,6 @@ from app.contexts.shared.lifecycle.domain import Lifecycle
 
 
 class AttendanceMapper:
-    """
-    Persistence decisions:
-    - store record_date as ISO string 'YYYY-MM-DD' (KH school date)
-    - store lifecycle nested
-    """
-
-    # ---------- parsing helpers ----------
-
     @staticmethod
     def _parse_object_id(raw: Any) -> Optional[ObjectId]:
         if raw is None:
@@ -24,9 +16,19 @@ class AttendanceMapper:
         if isinstance(raw, ObjectId):
             return raw
         try:
-            return ObjectId(str(raw))
+            s = str(raw).strip()
+            if not s:
+                return None
+            return ObjectId(s)
         except Exception:
             return None
+
+    @staticmethod
+    def _require_object_id(raw: Any, field: str) -> ObjectId:
+        oid = AttendanceMapper._parse_object_id(raw)
+        if not oid:
+            raise ValueError(f"Invalid ObjectId for {field}: {raw!r}")
+        return oid
 
     @staticmethod
     def _parse_datetime(raw: Any) -> Optional[datetime]:
@@ -35,20 +37,18 @@ class AttendanceMapper:
         if isinstance(raw, datetime):
             return raw
         if isinstance(raw, str):
+            s = raw.strip()
+            if not s:
+                return None
             try:
-                return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                # Handles "Z"
+                return datetime.fromisoformat(s.replace("Z", "+00:00"))
             except Exception:
                 return None
         return None
 
     @staticmethod
     def _parse_record_date(raw: Any) -> Optional[date_type]:
-        """
-        Backward compatible:
-        - if stored as 'YYYY-MM-DD' string -> parse
-        - if stored as datetime -> take .date()
-        - if stored as date -> use directly
-        """
         if raw is None:
             return None
         if isinstance(raw, date_type) and not isinstance(raw, datetime):
@@ -56,41 +56,48 @@ class AttendanceMapper:
         if isinstance(raw, datetime):
             return raw.date()
         if isinstance(raw, str):
+            s = raw.strip()
+            if not s:
+                return None
+            # Accept "YYYY-MM-DD" and ISO datetimes
             try:
-                return date_type.fromisoformat(raw)
+                return date_type.fromisoformat(s)
             except ValueError:
-                # also accept ISO datetime strings
                 try:
-                    return datetime.fromisoformat(raw.replace("Z", "+00:00")).date()
+                    return datetime.fromisoformat(s.replace("Z", "+00:00")).date()
                 except Exception:
                     return None
         return None
+
+    @staticmethod
+    def _require_record_date(raw: Any) -> date_type:
+        d = AttendanceMapper._parse_record_date(raw)
+        if not d:
+            raise ValueError(f"record_date is required and must be ISO date. got={raw!r}")
+        return d
 
     @staticmethod
     def _parse_status(raw: Any) -> AttendanceStatus:
         if isinstance(raw, AttendanceStatus):
             return raw
         if isinstance(raw, str):
-            # normalize common accidental formats
             v = raw.strip().lower()
-            try:
-                return AttendanceStatus(v)
-            except ValueError:
-                return AttendanceStatus.PRESENT
-        return AttendanceStatus.PRESENT
-
-    # ---------- public API ----------
+            return AttendanceStatus(v)  # let ValueError bubble if invalid
+        # If backend stored enum value directly, you can expand here if needed
+        raise ValueError(f"Invalid attendance status: {raw!r}")
 
     @staticmethod
     def to_domain(data: dict | AttendanceRecord) -> AttendanceRecord:
         if isinstance(data, AttendanceRecord):
             return data
 
-        record_date = AttendanceMapper._parse_record_date(
-            data.get("record_date") if "record_date" in data else data.get("date")
-        )
+        # Support legacy field name "date"
+        raw_date = data.get("record_date") if "record_date" in data else data.get("date")
+        record_date = AttendanceMapper._require_record_date(raw_date)
 
-        status = AttendanceMapper._parse_status(data.get("status", AttendanceStatus.PRESENT.value))
+        status = AttendanceMapper._parse_status(
+            data.get("status", AttendanceStatus.PRESENT.value)
+        )
 
         lc_raw = data.get("lifecycle") or {}
         lifecycle = Lifecycle(
@@ -100,25 +107,33 @@ class AttendanceMapper:
             deleted_by=AttendanceMapper._parse_object_id(lc_raw.get("deleted_by") or data.get("deleted_by")),
         )
 
-
         return AttendanceRecord(
-            id=data.get("_id"),
-            student_id=data["student_id"],
-            class_id=data["class_id"],
+            id=AttendanceMapper._parse_object_id(data.get("_id")) or AttendanceMapper._parse_object_id(data.get("id")),
+            student_id=AttendanceMapper._require_object_id(data.get("student_id"), "student_id"),
+            class_id=AttendanceMapper._require_object_id(data.get("class_id"), "class_id"),
+            subject_id=AttendanceMapper._require_object_id(data.get("subject_id"), "subject_id"),
+            schedule_slot_id=AttendanceMapper._require_object_id(data.get("schedule_slot_id"), "schedule_slot_id"),
             status=status,
-            record_date=record_date,  
-            marked_by_teacher_id=data.get("marked_by_teacher_id"),
+            record_date=record_date,
+            marked_by_teacher_id=AttendanceMapper._parse_object_id(data.get("marked_by_teacher_id")),
             lifecycle=lifecycle,
         )
 
     @staticmethod
     def to_persistence(record: AttendanceRecord) -> dict:
         lc = record.lifecycle
+
+        if record.record_date is None:
+            # If you decide record_date is required, fail loudly here too.
+            raise ValueError("AttendanceRecord.record_date is required")
+
         return {
             "_id": record.id,
             "student_id": record.student_id,
             "class_id": record.class_id,
-            "status": record.status.value,  
+            "subject_id": record.subject_id,
+            "schedule_slot_id": record.schedule_slot_id,
+            "status": record.status.value,
             "record_date": record.record_date.isoformat(),
             "marked_by_teacher_id": record.marked_by_teacher_id,
             "lifecycle": {

@@ -1,10 +1,11 @@
+<!-- ~/pages/student/classes.vue (or your actual path) -->
 <script setup lang="ts">
 definePageMeta({ layout: "default" });
 
 import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 
 import { studentService } from "~/api/student";
-import type { StudentClassListDTO } from "~/api/student/student.dto";
+import type { StudentClassSectionDTO } from "~/api/student/student.dto";
 import { formatDate } from "~/utils/date/formatDate";
 
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
@@ -13,11 +14,9 @@ import BaseButton from "~/components/base/BaseButton.vue";
 
 const student = studentService();
 
-type StudentClassItem = StudentClassListDTO["items"][number];
-
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
-const classes = ref<StudentClassItem[]>([]);
+const classes = ref<StudentClassSectionDTO[]>([]);
 
 let requestSeq = 0;
 
@@ -59,7 +58,9 @@ const loadClasses = async () => {
     const res = await student.student.getMyClasses({ showError: false });
     if (seq !== requestSeq) return;
 
-    classes.value = res.items ?? [];
+    // backend returns: { success, message, data: { items: [...] } }
+    const payload = (res as any)?.data ?? res;
+    classes.value = (payload?.items ?? []) as StudentClassSectionDTO[];
   } catch (err: any) {
     if (seq !== requestSeq) return;
 
@@ -77,7 +78,7 @@ onBeforeUnmount(() => {
 
 /* ---------------- view model ---------------- */
 
-type ClassVM = {
+type ClassRow = {
   id: string;
   name: string;
   teacherName: string;
@@ -93,36 +94,67 @@ type ClassVM = {
   updatedAtRaw: string | null;
 };
 
-const rows = computed<ClassVM[]>(() => {
+const rows = computed<ClassRow[]>(() => {
   return (classes.value ?? []).map((c: any, idx) => {
     const subjectLabels: string[] = Array.isArray(c.subject_labels)
       ? c.subject_labels
+      : Array.isArray(c.subjectLabels)
+      ? c.subjectLabels
       : [];
 
     const subjectCount =
       Number(
         c.subject_count ??
-          (Array.isArray(c.subject_ids) ? c.subject_ids.length : 0)
+          c.subjectCount ??
+          (Array.isArray(c.subject_ids) ? c.subject_ids.length : 0) ??
+          (Array.isArray(c.subjectIds) ? c.subjectIds.length : 0)
       ) || 0;
 
-    const studentCount = Number(c.student_count ?? c.enrolled_count ?? 0) || 0;
+    const studentCount =
+      Number(
+        c.student_count ??
+          c.studentCount ??
+          c.enrolled_count ??
+          c.enrolledCount ??
+          0
+      ) || 0;
 
     const maxStudents =
       c.max_students === null || c.max_students === undefined
-        ? null
+        ? c.maxStudents ?? null
         : Number(c.max_students);
+
+    const teacherName =
+      c.homeroom_teacher_name ??
+      c.homeroomTeacherName ??
+      c.teacher_name ??
+      c.teacherName ??
+      "—";
 
     return {
       id: String(c.id ?? c._id ?? `${idx}`),
       name: safeText(c.name, "—"),
-      teacherName: safeText(c.teacher_name, "—"),
+      teacherName: safeText(teacherName, "—"),
       status: safeText(c.status, "—"),
+
       subjectLabels,
       subjectCount,
+
       studentCount,
       maxStudents: Number.isFinite(maxStudents) ? maxStudents : null,
-      createdAtRaw: c.lifecycle?.created_at ?? c.created_at ?? null,
-      updatedAtRaw: c.lifecycle?.updated_at ?? c.updated_at ?? null,
+
+      createdAtRaw:
+        c.lifecycle?.created_at ??
+        c.lifecycle?.createdAt ??
+        c.created_at ??
+        c.createdAt ??
+        null,
+      updatedAtRaw:
+        c.lifecycle?.updated_at ??
+        c.lifecycle?.updatedAt ??
+        c.updated_at ??
+        c.updatedAt ??
+        null,
     };
   });
 });
@@ -278,7 +310,7 @@ const handleRefresh = async () => {
         </div>
       </template>
 
-      <!-- capacity progress (nice “finished” touch) -->
+      <!-- capacity progress -->
       <div
         class="rounded-xl border px-4 py-3 mb-4"
         style="
@@ -464,7 +496,6 @@ const handleRefresh = async () => {
   overflow: hidden;
 }
 
-/* subtle top accent to make it feel “designed” */
 .class-card::before {
   content: "";
   position: absolute;
@@ -486,7 +517,6 @@ const handleRefresh = async () => {
   gap: 12px;
 }
 
-/* meta tiles */
 .meta-tile {
   border-radius: 14px;
   border: 1px solid var(--border-color);

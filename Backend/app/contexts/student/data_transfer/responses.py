@@ -38,8 +38,7 @@ class StudentBaseDataDTO(BaseModel):
 class StudentClassSectionDTO(ClassSectionDTO):
     student_count: int
     subject_count: int
-    teacher_id: Optional[str] = None
-    teacher_name: str
+    homeroom_teacher_name: Optional[str] = None
     subject_labels: List[str] = []
 
 
@@ -82,9 +81,12 @@ class StudentGradeDTO(BaseModel):
     term: str | None = None
     lifecycle: LifecycleDTO
 
-class StudentGradeListDTO(BaseModel):
+class StudentGradePagedDTO(BaseModel):
     items: List[StudentGradeDTO]
-
+    total: int
+    page: int
+    page_size: int
+    pages: int
 
 class StudentScheduleListDTO(BaseModel):
     items: List[StudentScheduleDTO]
@@ -93,19 +95,32 @@ class StudentScheduleListDTO(BaseModel):
 
 class StudentAttendanceDTO(BaseModel):
     id: str
+
     student_id: str
     student_name: Optional[str] = None
 
     class_id: Optional[str] = None
     class_name: Optional[str] = None
 
+
+    subject_id: Optional[str] = None
+    subject_label: Optional[str] = None
+
+
+    schedule_slot_id: Optional[str] = None
+    day_of_week: Optional[int] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    room: Optional[str] = None
+
     status: AttendanceStatus
     record_date: date
 
-    marked_by_teacher_id: str
+    marked_by_teacher_id: Optional[str] = None
     teacher_name: Optional[str] = None
 
     lifecycle: LifecycleDTO
+
 
 class StudentAttendanceListDTO(BaseModel):
     items: List[StudentAttendanceDTO]

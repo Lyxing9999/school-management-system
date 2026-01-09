@@ -1,7 +1,7 @@
-// ~/api/teacher/api.ts
 import type { AxiosInstance } from "axios";
 import type {
   TeacherGetClassesResponse,
+  TeacherClassListWithSummeryResponse,
   TeacherMarkAttendanceDTO,
   TeacherMarkAttendanceResponse,
   TeacherChangeAttendanceStatusDTO,
@@ -19,12 +19,13 @@ import type {
   TeacherClassSelectNameListResponse,
   TeacherStudentNameListResponse,
   TeacherListMyScheduleResponse,
-  TeacherClassListWithSummeryResponse,
   TeacherSoftDeleteAttendanceResponse,
   TeacherRestoreAttendanceResponse,
   TeacherSoftDeleteGradeResponse,
   TeacherRestoreGradeResponse,
+  TeacherScheduleSlotSelectListResponse,
 } from "./dto";
+
 export type ListGradesQuery = {
   page?: number;
   page_size?: number;
@@ -33,13 +34,26 @@ export type ListGradesQuery = {
   q?: string; // search
   sort?: string; // "-created_at"
 };
+
+export type ListAttendanceQuery = {
+  date?: string; // "YYYY-MM-DD"
+  subject_id?: string;
+  schedule_slot_id?: string;
+  // show_deleted?: "active" | "all" | "deleted"  // if you expose it
+};
+export type ScheduleSlotSelectQuery = {
+  class_id: string;
+  date?: string; // "YYYY-MM-DD" (recommended)
+  day_of_week?: number; // optional fallback
+  limit?: number; // optional
+};
+
 export class TeacherApi {
   constructor(private $api: AxiosInstance, private baseURL = "/api/teacher") {}
 
   // ----------
   // Classes
   // ----------
-
   async listMyClasses() {
     const res = await this.$api.get<TeacherGetClassesResponse>(
       `${this.baseURL}/me/classes`
@@ -60,12 +74,14 @@ export class TeacherApi {
     );
     return res.data;
   }
+
   async listStudentsInClass(classId: string) {
     const res = await this.$api.get<TeacherStudentsSelectNameListResponse>(
       `${this.baseURL}/me/classes/${classId}/students`
     );
     return res.data;
   }
+
   async listStudentNamesOptionsClass(classId: string) {
     const res = await this.$api.get<TeacherStudentNameListResponse>(
       `${this.baseURL}/me/classes/${classId}/students/name-select`
@@ -83,7 +99,6 @@ export class TeacherApi {
   // ----------
   // Attendance
   // ----------
-
   async markAttendance(payload: TeacherMarkAttendanceDTO) {
     const res = await this.$api.post<TeacherMarkAttendanceResponse>(
       `${this.baseURL}/attendance`,
@@ -103,13 +118,14 @@ export class TeacherApi {
     return res.data;
   }
 
-  async listAttendanceForClass(classId: string, params?: { date?: string }) {
+  async listAttendanceForClass(classId: string, params?: ListAttendanceQuery) {
     const res = await this.$api.get<TeacherListClassAttendanceResponse>(
       `${this.baseURL}/classes/${classId}/attendance`,
       { params }
     );
     return res.data;
   }
+
   async softDeleteAttendance(attendanceId: string) {
     const res = await this.$api.delete<TeacherSoftDeleteAttendanceResponse>(
       `${this.baseURL}/attendance/${attendanceId}`
@@ -123,10 +139,10 @@ export class TeacherApi {
     );
     return res.data;
   }
+
   // ----------
   // Grades
   // ----------
-
   async addGrade(payload: TeacherAddGradeDTO) {
     const res = await this.$api.post<TeacherAddGradeResponse>(
       `${this.baseURL}/grades`,
@@ -158,6 +174,7 @@ export class TeacherApi {
     );
     return res.data;
   }
+
   async softDeleteGrade(gradeId: string) {
     const res = await this.$api.delete<TeacherSoftDeleteGradeResponse>(
       `${this.baseURL}/grades/${gradeId}`
@@ -171,10 +188,10 @@ export class TeacherApi {
     );
     return res.data;
   }
+
   // ----------
   // Schedule
   // ----------
-
   async listMySchedule(params?: {
     page?: number;
     page_size?: number;
@@ -199,6 +216,14 @@ export class TeacherApi {
       }
     );
 
+    return res.data;
+  }
+
+  async listScheduleSlotSelect(query: ScheduleSlotSelectQuery) {
+    const res = await this.$api.get<TeacherScheduleSlotSelectListResponse>(
+      `${this.baseURL}/schedule/slot-select`,
+      { params: query }
+    );
     return res.data;
   }
 }

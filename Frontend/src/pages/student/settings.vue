@@ -7,7 +7,7 @@ import {
   onBeforeUnmount,
   watch,
 } from "vue";
-import { useRoute, useRouter, navigateTo } from "nuxt/app";
+import { useRoute, useRouter, navigateTo, useCookie } from "nuxt/app";
 import type { FormInstance, FormRules } from "element-plus";
 import { storeToRefs } from "pinia";
 
@@ -19,10 +19,7 @@ import { useAuthStore } from "~/stores/authStore";
 import { Role } from "~/api/types/enums/role.enum";
 
 import { useNotificationStore } from "~/stores/notificationStore";
-import {
-  usePreferencesStore,
-  type InlineEditMode,
-} from "~/stores/preferencesStore";
+import { usePreferencesStore } from "~/stores/preferencesStore";
 
 import { useTheme } from "~/composables/system/useTheme";
 import { useMessage } from "~/composables/common/useMessage";
@@ -43,18 +40,18 @@ const notifStore = useNotificationStore();
 const { unreadCount } = storeToRefs(notifStore);
 
 const prefs = usePreferencesStore();
-const { inlineEditMode, notifAutoRefresh } = storeToRefs(prefs);
+const { notifAutoRefresh } = storeToRefs(prefs);
 
 const { isDark, toggle: toggleTheme } = useTheme();
 
 /* -------------------------
-   Role
+   Role (Student only)
 ------------------------- */
 const user = computed(() => authStore.user);
 const isStudent = computed(() => user.value?.role === Role.STUDENT);
 
 /* -------------------------
-   Tabs (Student MVP)
+   Tabs (Student)
 ------------------------- */
 type TabKey = "account" | "notifications" | "appearance" | "preferences";
 const allowedTabs: TabKey[] = [
@@ -63,7 +60,6 @@ const allowedTabs: TabKey[] = [
   "appearance",
   "preferences",
 ];
-
 const activeTab = ref<TabKey>("account");
 
 watch(
@@ -80,7 +76,7 @@ watch(activeTab, (t) => {
 });
 
 /* -------------------------
-   Responsive: descriptions columns
+   Responsive
 ------------------------- */
 const isMobile = ref(false);
 let mq: MediaQueryList | null = null;
@@ -106,12 +102,11 @@ const descCols = computed(() => (isMobile.value ? 1 : 2));
 const pageLoading = ref(false);
 
 /* -------------------------
-   Student profile (read-only UI)
+   Student profile (read-only)
 ------------------------- */
 const profileRef = ref<FormInstance>();
 const profileForm = reactive({ email: "", username: "" });
 
-// kept for consistent UI, but student cannot submit
 const profileRules: FormRules = {
   email: [
     { required: true, message: "Email is required", trigger: "blur" },
@@ -130,18 +125,37 @@ function hydrateProfile() {
 }
 
 /* -------------------------
-   Preferences (Student MVP)
+   Student Start Page (COOKIE)
+------------------------- */
+type StudentHome = "dashboard" | "attendance";
+
+const studentHomeCookie = useCookie<StudentHome | null>("student_home", {
+  sameSite: "lax",
+  path: "/",
+});
+
+const studentHome = ref<StudentHome>("dashboard");
+
+function hydrateStudentHome() {
+  studentHome.value =
+    studentHomeCookie.value === "attendance" ? "attendance" : "dashboard";
+}
+
+function setStudentHome(v: StudentHome) {
+  studentHome.value = v;
+  studentHomeCookie.value = v;
+
+  msg.showSuccess(
+    v === "attendance" ? "Start page: Attendance" : "Start page: Dashboard"
+  );
+}
+
+/* -------------------------
+   Preferences
 ------------------------- */
 const pageSizeOptions = computed<number[]>(() => prefs.getAllowedPageSizes());
 const effectivePageSize = computed(() => prefs.getTablePageSize());
 const recommendedPageSize = computed(() => prefs.DEFAULT_TABLE_PAGE_SIZE);
-
-function setInlineEditMode(mode: InlineEditMode) {
-  prefs.setInlineEditMode(mode);
-  msg.showSuccess(
-    `Inline edit mode: ${mode === "auto" ? "Auto-save" : "Manual"}`
-  );
-}
 
 function setDefaultPageSize(size: number) {
   prefs.setTablePageSize(size);
@@ -179,6 +193,7 @@ onMounted(async () => {
       await iam.auth.me();
     }
     hydrateProfile();
+    hydrateStudentHome();
     await refreshUnread();
   } finally {
     pageLoading.value = false;
@@ -193,7 +208,10 @@ async function logout() {
 }
 
 function goDashboard() {
-  navigateTo("/student/dashboard");
+  const home = studentHome.value || "dashboard";
+  navigateTo(
+    home === "attendance" ? "/student/attendance" : "/student/dashboard"
+  );
 }
 </script>
 
@@ -215,12 +233,12 @@ function goDashboard() {
         </div>
 
         <div class="settings-header__right">
-          <BaseButton plain size="small" @click="goDashboard"
-            >Dashboard</BaseButton
-          >
-          <BaseButton type="danger" plain size="small" @click="logout"
-            >Logout</BaseButton
-          >
+          <BaseButton plain size="small" @click="goDashboard">
+            Dashboard
+          </BaseButton>
+          <BaseButton type="danger" plain size="small" @click="logout">
+            Logout
+          </BaseButton>
         </div>
       </div>
 
@@ -283,11 +301,12 @@ function goDashboard() {
 
               <!-- Quick -->
               <el-card shadow="never">
-                <template #header
-                  ><span class="font-medium">Quick</span></template
-                >
+                <template #header>
+                  <span class="font-medium">Quick</span>
+                </template>
 
                 <div class="space-y-4 text-sm">
+                  <!-- Theme -->
                   <div class="flex items-center justify-between">
                     <div>
                       <div class="font-medium">Theme</div>
@@ -295,20 +314,21 @@ function goDashboard() {
                         {{ isDark ? "Dark" : "Light" }}
                       </div>
                     </div>
-                    <BaseButton plain size="small" @click="toggleTheme()"
-                      >Toggle</BaseButton
-                    >
+                    <BaseButton plain size="small" @click="toggleTheme()">
+                      Toggle
+                    </BaseButton>
                   </div>
 
                   <el-divider />
 
+                  <!-- Start Page -->
                   <div>
-                    <div class="font-medium">Inline edit</div>
+                    <div class="font-medium">Start page</div>
                     <div class="text-[var(--muted-color)] mt-1">
                       {{
-                        inlineEditMode === "auto"
-                          ? "Auto-save"
-                          : "Manual confirm"
+                        studentHome === "attendance"
+                          ? "Open Attendance first"
+                          : "Open Dashboard first"
                       }}
                     </div>
 
@@ -316,22 +336,38 @@ function goDashboard() {
                       <el-button
                         size="small"
                         :type="
-                          inlineEditMode === 'auto' ? 'primary' : 'default'
+                          studentHome === 'dashboard' ? 'primary' : 'default'
                         "
-                        @click="setInlineEditMode('auto')"
+                        @click="setStudentHome('dashboard')"
                       >
-                        Auto
+                        Dashboard
                       </el-button>
 
                       <el-button
                         size="small"
                         :type="
-                          inlineEditMode === 'manual' ? 'primary' : 'default'
+                          studentHome === 'attendance' ? 'primary' : 'default'
                         "
-                        @click="setInlineEditMode('manual')"
+                        @click="setStudentHome('attendance')"
                       >
-                        Manual
+                        Attendance
                       </el-button>
+                    </div>
+                  </div>
+
+                  <el-divider />
+
+                  <!-- Access note -->
+                  <div class="space-y-2">
+                    <div class="font-medium">Access</div>
+                    <el-alert
+                      type="info"
+                      show-icon
+                      :closable="false"
+                      title="Your account is managed by the school."
+                    />
+                    <div class="text-[var(--muted-color)] m-2">
+                      If you need changes, contact your admin.
                     </div>
                   </div>
                 </div>
@@ -339,28 +375,28 @@ function goDashboard() {
             </div>
 
             <el-card shadow="never" class="mt-4">
-              <template #header
-                ><span class="font-medium">Details</span></template
-              >
+              <template #header>
+                <span class="font-medium">Details</span>
+              </template>
 
               <el-descriptions :column="descCols" border class="mt-2">
-                <el-descriptions-item label="Role">{{
-                  user?.role
-                }}</el-descriptions-item>
-                <el-descriptions-item label="Status">{{
-                  user?.status
-                }}</el-descriptions-item>
-                <el-descriptions-item label="Email">{{
-                  user?.email
-                }}</el-descriptions-item>
-                <el-descriptions-item label="Username">{{
-                  user?.username
-                }}</el-descriptions-item>
+                <el-descriptions-item label="Role">
+                  {{ user?.role }}
+                </el-descriptions-item>
+                <el-descriptions-item label="Status">
+                  {{ user?.status }}
+                </el-descriptions-item>
+                <el-descriptions-item label="Email">
+                  {{ user?.email }}
+                </el-descriptions-item>
+                <el-descriptions-item label="Username">
+                  {{ user?.username }}
+                </el-descriptions-item>
               </el-descriptions>
 
               <div v-if="isStudent" class="mt-3 text-sm hint-text">
-                You can change theme and preferences, but account fields are
-                managed by the school.
+                Students can change theme and basic preferences. Account fields
+                are managed by the school.
               </div>
             </el-card>
           </el-tab-pane>
@@ -374,7 +410,8 @@ function goDashboard() {
               </span>
             </template>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- IMPORTANT: items-start prevents equal-height stretching -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
               <el-card shadow="never" class="lg:col-span-2">
                 <template #header>
                   <div class="flex items-center justify-between">
@@ -393,7 +430,13 @@ function goDashboard() {
                         Keeps the header badge updated.
                       </div>
                     </div>
-                    <el-switch v-model="notifAutoRefresh" />
+
+                    <el-switch
+                      :model-value="notifAutoRefresh"
+                      @update:model-value="
+                        (val) => setNotifAutoRefresh(Boolean(val))
+                      "
+                    />
                   </div>
 
                   <el-divider />
@@ -405,9 +448,9 @@ function goDashboard() {
                         Use the bell icon in the header.
                       </div>
                     </div>
-                    <el-button size="small" plain @click="openDrawer"
-                      >Open</el-button
-                    >
+                    <el-button size="small" plain @click="openDrawer">
+                      Open
+                    </el-button>
                   </div>
 
                   <el-divider />
@@ -431,17 +474,22 @@ function goDashboard() {
                 </div>
               </el-card>
 
-              <el-card shadow="never">
-                <template #header
-                  ><span class="font-medium">Actions</span></template
-                >
+              <el-card shadow="never" class="self-start">
+                <template #header>
+                  <span class="font-medium">Actions</span>
+                </template>
+
                 <div class="space-y-2">
-                  <el-button class="w-full" plain @click="refreshUnread"
-                    >Refresh unread</el-button
-                  >
-                  <el-button class="w-full" plain @click="openDrawer"
-                    >Open drawer</el-button
-                  >
+                  <div>
+                    <el-button class="action-btn" plain @click="refreshUnread">
+                      Refresh unread
+                    </el-button>
+                  </div>
+                  <div>
+                    <el-button class="action-btn" plain @click="openDrawer">
+                      Open drawer
+                    </el-button>
+                  </div>
                 </div>
               </el-card>
             </div>
@@ -459,9 +507,9 @@ function goDashboard() {
             </template>
 
             <el-card shadow="never">
-              <template #header
-                ><span class="font-medium">Theme</span></template
-              >
+              <template #header>
+                <span class="font-medium">Theme</span>
+              </template>
 
               <div class="flex items-center justify-between">
                 <div>
@@ -476,8 +524,9 @@ function goDashboard() {
                   plain
                   size="small"
                   @click="toggleTheme()"
-                  >Toggle</BaseButton
                 >
+                  Toggle
+                </BaseButton>
               </div>
             </el-card>
           </el-tab-pane>
@@ -493,9 +542,9 @@ function goDashboard() {
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <el-card shadow="never" class="lg:col-span-2">
-                <template #header
-                  ><span class="font-medium">Table defaults</span></template
-                >
+                <template #header>
+                  <span class="font-medium">Table defaults</span>
+                </template>
 
                 <div class="space-y-4">
                   <div class="flex items-start justify-between gap-4">
@@ -503,18 +552,18 @@ function goDashboard() {
                       <div class="font-medium">Default page size</div>
                       <div class="text-sm text-[var(--muted-color)]">
                         Recommended:
-                        <span class="font-medium">{{
-                          recommendedPageSize
-                        }}</span>
+                        <span class="font-medium">
+                          {{ recommendedPageSize }}
+                        </span>
                       </div>
 
                       <div class="mt-2 flex items-center gap-2">
-                        <el-tag type="info"
-                          >Current: {{ effectivePageSize }}</el-tag
-                        >
-                        <el-tag type="success"
-                          >Recommended: {{ recommendedPageSize }}</el-tag
-                        >
+                        <el-tag type="info">
+                          Current: {{ effectivePageSize }}
+                        </el-tag>
+                        <el-tag type="success">
+                          Recommended: {{ recommendedPageSize }}
+                        </el-tag>
                       </div>
                     </div>
 
@@ -532,46 +581,30 @@ function goDashboard() {
                         />
                       </el-select>
 
-                      <el-button plain @click="resetDefaultPageSize"
-                        >Reset</el-button
-                      >
+                      <el-button plain @click="resetDefaultPageSize">
+                        Reset
+                      </el-button>
                     </div>
                   </div>
                 </div>
               </el-card>
 
               <el-card shadow="never">
-                <template #header
-                  ><span class="font-medium">Inline editing</span></template
-                >
+                <template #header>
+                  <span class="font-medium">Help</span>
+                </template>
 
-                <div class="space-y-3">
-                  <div class="text-sm text-[var(--muted-color)]">
-                    Auto-save updates instantly. Manual requires explicit save
-                    per cell.
+                <div class="space-y-3 text-sm">
+                  <div class="text-[var(--muted-color)]">
+                    If data looks wrong, try refreshing and reloading the page.
                   </div>
 
-                  <div class="flex gap-2">
-                    <el-button
-                      size="small"
-                      class="w-full"
-                      :type="inlineEditMode === 'auto' ? 'primary' : 'default'"
-                      @click="setInlineEditMode('auto')"
-                    >
-                      Auto-save
-                    </el-button>
-
-                    <el-button
-                      size="small"
-                      class="w-full"
-                      :type="
-                        inlineEditMode === 'manual' ? 'primary' : 'default'
-                      "
-                      @click="setInlineEditMode('manual')"
-                    >
-                      Manual
-                    </el-button>
-                  </div>
+                  <el-alert
+                    type="warning"
+                    show-icon
+                    :closable="false"
+                    title="If the issue persists, contact your administrator."
+                  />
                 </div>
               </el-card>
             </div>
@@ -615,6 +648,16 @@ function goDashboard() {
 .hint-text {
   color: var(--muted-color);
 }
+
+/* Actions buttons: equal width + equal height + no wrap */
+.action-btn {
+  width: 100% !important;
+  height: 40px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 768px) {
   .form-grid {
     grid-template-columns: 1fr;

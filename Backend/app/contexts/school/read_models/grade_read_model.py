@@ -18,7 +18,7 @@ from app.contexts.shared.lifecycle.filters import (
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.student.read_models.student_read_model import StudentReadModel
 from app.contexts.school.read_models.subject_read_model import SubjectReadModel
-
+from app.contexts.school.domain.grade import GradeType
 PASS_MARK: int = 50
 SortDir = Literal[1, -1]
 
@@ -185,6 +185,7 @@ class GradeReadModel:
         *,
         class_id: Optional[Union[str, ObjectId]] = None,
         student_id: Optional[Union[str, ObjectId]] = None,
+        subject_id: Optional[Union[str, ObjectId]] = None,
         term: Optional[str] = None,
         grade_type: Optional[str] = None,
         q: Optional[str] = None,
@@ -200,11 +201,13 @@ class GradeReadModel:
         if student_id is not None:
             match["student_id"] = self._oid(student_id)
 
+        if subject_id is not None:
+            match["subject_id"] = self._oid(subject_id)
+
         match.update(self._term_filter(term))
         match.update(self._type_filter(grade_type))
         match.update(self._search_filter(q))
 
-        # created_at range
         match.update(
             build_date_range(
                 FIELDS.k(FIELDS.created_at),
@@ -214,7 +217,6 @@ class GradeReadModel:
             )
         )
 
-        # lifecycle filter LAST
         return self._q(match, show_deleted=show_deleted)
 
     # -----------------------------
@@ -226,62 +228,50 @@ class GradeReadModel:
         self,
         *,
         class_id: Union[str, ObjectId],
-        teacher_id: Optional[Union[str, ObjectId]] = None,   
+        teacher_id: Optional[Union[str, ObjectId]] = None,
         subject_id: Optional[Union[str, ObjectId]] = None,
         page: int = 1,
         page_size: int = 10,
         term: Optional[str] = None,
         grade_type: Optional[str] = None,
         q: Optional[str] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
         sort: str = "-created_at",
-        show_deleted: str = "active",
+        show_deleted: ShowDeleted = "active",
+        projection: Optional[Dict[str, int]] = None,
     ) -> Dict[str, Any]:
+        page, page_size, skip = self._normalize_page(page, page_size)
 
-        cid = self._oid(class_id)
-        base: Dict[str, Any] = {"class_id": cid}
+        match = self._build_match(
+            class_id=class_id,
+            term=term,
+            grade_type=grade_type,
+            q=q,
+            date_from=date_from,
+            date_to=date_to,
+            show_deleted=show_deleted,
+        )
 
-        if teacher_id:
-            base["teacher_id"] = self._oid(teacher_id)
+        # optional extra filters
+        if teacher_id is not None:
+            match["teacher_id"] = self._oid(teacher_id)
 
-        if subject_id:
-            base["subject_id"] = self._oid(subject_id)
+        if subject_id is not None:
+            match["subject_id"] = self._oid(subject_id)
 
-        if term:
-            base["term"] = term
+        total = int(self.collection.count_documents(match))
+        sort_spec = self._sort(sort)
 
-        if grade_type:
-            base["type"] = grade_type
-
-        query = by_show_deleted(show_deleted, base)
-
-        # paging
-        page = max(int(page or 1), 1)
-        page_size = max(int(page_size or 10), 1)
-        skip = (page - 1) * page_size
-
-        # sort
-        sort_field = FIELDS.k(FIELDS.created_at)
-        sort_dir = -1
-        if sort and sort.startswith("-"):
-            sort_dir = -1
-            sort_field = sort[1:]
-        elif sort and sort.startswith("+"):
-            sort_dir = 1
-            sort_field = sort[1:]
-
-        if sort_field == "created_at":
-            sort_field = FIELDS.k(FIELDS.created_at)
-
-        total = int(self.collection.count_documents(query))
-
-        items = list(
-            self.collection.find(query)
-            .sort(sort_field, sort_dir)
+        cursor = (
+            self.collection.find(match, projection)
+            .sort(sort_spec)
             .skip(skip)
             .limit(page_size)
         )
 
-        pages = math.ceil(total / page_size) if page_size else 0
+        items = [self._normalize_out_ids(doc) for doc in cursor]
+        pages = max((total + page_size - 1) // page_size, 1)
 
         return {
             "items": items,
@@ -290,7 +280,6 @@ class GradeReadModel:
             "page_size": page_size,
             "pages": pages,
         }
-
     def list_grades_for_student_paged(
         self,
         student_id: Union[str, ObjectId],
@@ -302,6 +291,8 @@ class GradeReadModel:
         q: Optional[str] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
+        class_id: Optional[Union[str, ObjectId]] = None,
+        subject_id: Optional[Union[str, ObjectId]] = None,
         show_deleted: ShowDeleted = "active",
         sort: str = "-created_at",
         projection: Optional[Dict[str, int]] = None,
@@ -315,6 +306,8 @@ class GradeReadModel:
             q=q,
             date_from=date_from,
             date_to=date_to,
+            class_id=class_id,
+            subject_id=subject_id,
             show_deleted=show_deleted,
         )
 

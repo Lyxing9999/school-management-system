@@ -94,7 +94,7 @@ async function refreshUnread() {
 async function load() {
   loading.value = true;
   try {
-    const res = await notifApi.listLatest(limit.value);
+    const res = await notifApi.listLatest({ limit: limit.value });
     const raw = (res as any)?.data?.items ?? (res as any)?.items ?? [];
     items.value = Array.isArray(raw) ? raw : [];
     await refreshUnread();
@@ -110,7 +110,7 @@ async function markRead(n: NotificationDTO) {
   if (!n?.id || n.read_at) return;
 
   const prev = n.read_at;
-  n.read_at = new Date().toISOString(); 
+  n.read_at = new Date().toISOString();
 
   try {
     await notifApi.markRead(String(n.id));
@@ -227,6 +227,7 @@ onMounted(async () => {
 
         <el-empty
           v-else-if="!visibleItems.length"
+          class="mt-6"
           description="No notifications found."
         />
 

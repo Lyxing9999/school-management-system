@@ -12,10 +12,10 @@ from app.contexts.admin.data_transfer.requests import (
     AdminAssignTeacherToClassSchema,
     AdminEnrollStudentToClassSchema,
     AdminUpdateClassRelationsSchema,
+    AdminSetClassStatusSchema,
 )
 
 from app.contexts.school.data_transfer.responses import (
-    UpdateClassRelationsRequest,
     UpdateClassRelationsResult,
 )
 from app.contexts.admin.mapper.school_admin_mapper import SchoolAdminMapper
@@ -102,6 +102,17 @@ def admin_enroll_student_to_class(class_id: str):
     section = g.admin.class_service.admin_enroll_student(class_id=class_id, student_id=payload.student_id)
     
     return SchoolAdminMapper.class_to_dto(section)
+
+@admin_bp.route("/classes/<class_id>/status", methods=["PATCH"])
+@role_required(["admin"])
+@wrap_response
+def admin_set_class_status(class_id: str):
+    payload = pydantic_converter.convert_to_model(request.json, AdminSetClassStatusSchema)
+    section = g.admin.class_service.admin_set_class_status(class_id=class_id, status=payload.status)
+    
+    return SchoolAdminMapper.class_to_dto(section)
+
+
 
 
 @admin_bp.route("/classes/<class_id>/students/<student_id>", methods=["DELETE"])

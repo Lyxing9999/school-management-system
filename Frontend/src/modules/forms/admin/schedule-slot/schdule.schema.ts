@@ -6,7 +6,7 @@ import type {
 import type { Field } from "~/components/types/form";
 import { ElSelect, ElOption, ElTimeSelect, ElInput } from "element-plus";
 import ClassSelect from "~/components/selects/class/ClassSelect.vue";
-import TeacherSelect from "~/components/selects/teacher/TeacherSelect.vue";
+import TeacherSelectByAssignment from "~/components/selects/teacher/TeacherSelectByAssignment.vue";
 import { dayOptions } from "~/utils/constants/dayOptions";
 
 import ClassSubjectSelect from "~/components/selects/composite/ClassSubjectSelect.vue";
@@ -40,11 +40,17 @@ export const scheduleFormSchema: Field<AdminCreateScheduleSlot>[] = [
   {
     key: "teacher_id",
     label: "Teacher",
-    component: TeacherSelect,
+    component: TeacherSelectByAssignment,
     formItemProps: { required: true, prop: "teacher_id", label: "Teacher" },
-    componentProps: { placeholder: "Select teacher", clearable: true },
+    componentProps: (model) => ({
+      classId: model.class_id || "",
+      subjectId: model.subject_id || null,
+      placeholder: model.subject_id
+        ? "Select assigned teacher"
+        : "Select teacher",
+      disabled: !model.class_id,
+    }),
   },
-
   {
     key: "day_of_week",
     label: "Day of Week",

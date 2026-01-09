@@ -3,8 +3,10 @@ definePageMeta({ layout: "default" });
 
 import { ref, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
+
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import TableCard from "~/components/cards/TableCard.vue";
+
 import { teacherService } from "~/api/teacher";
 import type { ClassSectionDTO } from "~/api/types/school.dto";
 
@@ -41,29 +43,22 @@ type DisplayClassRow = TeacherClassEnriched & {
   roleLabel: "Homeroom" | "Subject Teacher";
   roleType: "success" | "warning";
 
-  // Show homeroom teacher for the class (even if current user is homeroom)
   homeroomDisplay: string;
 
-  // IMPORTANT: what the teacher can actually teach/manage grades for
   mySubjects: string[];
-
-  // Optional overview list (only show for homeroom)
   classSubjects: string[];
 };
 
 const classes = ref<TeacherClassEnriched[]>([]);
 
-/**
- * Sort:
- * - homeroom classes first
- * - then by name
- */
+/* ---------- sorting ---------- */
 const sortedClasses = computed(() => {
   const items = [...classes.value];
   items.sort((a, b) => {
     const ah = Boolean(a.is_homeroom);
     const bh = Boolean(b.is_homeroom);
     if (ah !== bh) return ah ? -1 : 1;
+
     return String(a.name || "").localeCompare(String(b.name || ""), undefined, {
       sensitivity: "base",
     });
@@ -71,6 +66,7 @@ const sortedClasses = computed(() => {
   return items;
 });
 
+/* ---------- display mapping ---------- */
 const displayClasses = computed<DisplayClassRow[]>(() =>
   sortedClasses.value.map((c) => {
     const studentCount = c.enrolled_count ?? 0;
@@ -83,18 +79,12 @@ const displayClasses = computed<DisplayClassRow[]>(() =>
 
     const isHomeroom = Boolean(c.is_homeroom);
 
-    // ✅ Always: what I teach (this drives what I can grade / manage)
     const mySubjects = (c.assigned_subject_labels ?? []).filter(Boolean);
-
-    // ✅ Overview only (do NOT assume homeroom teaches all of these)
     const classSubjects = (c.subject_labels ?? []).filter(Boolean);
 
     const roleLabel = isHomeroom ? "Homeroom" : "Subject Teacher";
     const roleType: "success" | "warning" = isHomeroom ? "success" : "warning";
 
-    // Homeroom teacher display:
-    // - If I am homeroom => "Me"
-    // - Else => show homeroom teacher name
     const homeroomDisplay = isHomeroom ? "Me" : c.homeroom_teacher_name || "—";
 
     return {
@@ -110,35 +100,81 @@ const displayClasses = computed<DisplayClassRow[]>(() =>
   })
 );
 
-// Summary stats (computed, no manual recompute needed)
+/* ---------- stats ---------- */
 const totalClasses = computed(() => displayClasses.value.length);
 
 const totalStudents = computed(() =>
   displayClasses.value.reduce((sum, c) => sum + (c.studentCount ?? 0), 0)
 );
 
-/**
- * IMPORTANT:
- * totalMySubjects = total number of assigned subjects across all classes.
- * (If you want unique subjects across classes, tell me and I’ll adjust.)
- */
 const totalMySubjects = computed(() =>
   displayClasses.value.reduce((sum, c) => sum + (c.mySubjects?.length ?? 0), 0)
 );
+
+/**
+ * Fix for TS "readonly cannot be assigned to mutable array"
+ * Make stats a computed with an explicit mutable array type.
+ */
+type OverviewStatItem = {
+  key?: string | number;
+  value: number;
+  singular?: string;
+  plural?: string;
+  label?: string;
+  suffix?: string;
+  prefix?: string;
+  variant?: "primary" | "secondary";
+  dotClass?: string;
+};
+
+const headerStats = computed<OverviewStatItem[]>(() => [
+  {
+    key: "classes",
+    value: totalClasses.value,
+    singular: "class",
+    plural: "classes",
+    variant: "primary",
+  },
+  {
+    key: "students",
+    value: totalStudents.value,
+    singular: "student",
+    plural: "students",
+    suffix: "total",
+    variant: "secondary",
+    dotClass: "bg-emerald-500",
+  },
+  {
+    key: "mySubjects",
+    value: totalMySubjects.value,
+    singular: "subject",
+    plural: "subjects",
+    suffix: "I teach",
+    variant: "secondary",
+    dotClass: "bg-indigo-500",
+  },
+]);
+
+/* ---------- api ---------- */
+function unwrapItems(res: any): TeacherClassEnriched[] {
+  // supports:
+  // A) res.data.items (wrap_response)
+  // B) res.items
+  const items = (res?.data?.items ??
+    res?.items ??
+    []) as TeacherClassEnriched[];
+  return Array.isArray(items) ? items : [];
+}
 
 const loadClasses = async () => {
   loading.value = true;
   errorMessage.value = null;
 
   try {
-    const res = await teacher.teacher.listMyClasses({ showError: false });
-    if (!res) {
-      errorMessage.value = "Failed to load classes.";
-      classes.value = [];
-      return;
-    }
+    const res: any = await teacher.teacher.listMyClasses({ showError: false });
 
-    classes.value = (res.items ?? []) as TeacherClassEnriched[];
+    const items = unwrapItems(res);
+    classes.value = items;
 
     if (!classes.value.length) {
       ElMessage.info("You don't have any classes yet.");
@@ -147,6 +183,7 @@ const loadClasses = async () => {
     const msg = err?.message ?? "Failed to load classes.";
     errorMessage.value = msg;
     ElMessage.error(msg);
+    classes.value = [];
   } finally {
     loading.value = false;
   }
@@ -159,34 +196,12 @@ onMounted(loadClasses);
   <div class="p-4 space-y-6">
     <OverviewHeader
       title="My Classes"
-      description="Classes you are involved in as homeroom or as a subject-teacher. ‘Subjects I teach’ always comes from teaching assignments."
-      :stats="[
-        {
-          key: 'classes',
-          value: totalClasses,
-          singular: 'class',
-          plural: 'classes',
-          variant: 'primary',
-        },
-        {
-          key: 'students',
-          value: totalStudents,
-          singular: 'student',
-          plural: 'students',
-          suffix: 'total',
-          variant: 'secondary',
-          dotClass: 'bg-emerald-500',
-        },
-        {
-          key: 'mySubjects',
-          value: totalMySubjects,
-          singular: 'subject',
-          plural: 'subjects',
-          suffix: 'I teach',
-          variant: 'secondary',
-        },
-      ]"
+      description="Classes you are involved in as homeroom or as a subject-teacher. ‘My Subjects’ always comes from teaching assignments."
+      :stats="headerStats"
       :loading="loading"
+      :show-refresh="true"
+      :show-reset="false"
+      :show-search="false"
       @refresh="loadClasses"
     />
 
@@ -211,7 +226,7 @@ onMounted(loadClasses);
         :data="displayClasses"
         v-loading="loading"
         highlight-current-row
-        class="rounded-lg overflow-hidden w-full"
+        class="rounded-lg overflow-hidden w-full class-table"
         :header-cell-style="{
           background: 'var(--color-card)',
           color: 'var(--text-color)',
@@ -222,11 +237,14 @@ onMounted(loadClasses);
         :row-style="{ color: 'var(--text-color)' }"
       >
         <!-- Class + Role -->
-        <el-table-column label="Class" min-width="300">
+        <el-table-column label="Class" min-width="260">
           <template #default="{ row }">
-            <div class="flex flex-col gap-1">
-              <div class="flex items-center gap-2">
-                <div class="font-medium" style="color: var(--text-color)">
+            <div class="flex flex-col gap-1 min-w-0">
+              <div class="flex items-center gap-2 min-w-0">
+                <div
+                  class="font-medium truncate"
+                  style="color: var(--text-color)"
+                >
                   {{ row.name }}
                 </div>
 
@@ -234,54 +252,67 @@ onMounted(loadClasses);
                   {{ row.roleLabel }}
                 </el-tag>
               </div>
+            </div>
+          </template>
+        </el-table-column>
 
+        <!-- My teaching subjects -->
+        <el-table-column label="My Subjects" min-width="320">
+          <template #default="{ row }">
+            <div class="flex flex-col gap-1">
               <div class="text-[11px]" style="color: var(--muted-color)">
-                ID: {{ row.id }}
+                Subjects I teach
+              </div>
+
+              <div
+                v-if="row.mySubjects?.length"
+                class="flex flex-wrap gap-1 mt-1"
+              >
+                <el-tag
+                  v-for="label in row.mySubjects"
+                  :key="`${row.id}-my-${label}`"
+                  size="small"
+                  type="info"
+                  effect="plain"
+                >
+                  {{ label }}
+                </el-tag>
+              </div>
+
+              <div
+                v-else
+                class="text-[11px] mt-1"
+                style="color: var(--muted-color)"
+              >
+                Not assigned yet.
               </div>
             </div>
           </template>
         </el-table-column>
 
-        <!-- Subjects I teach + (optional) all class subjects -->
-        <el-table-column label="Subjects" min-width="460">
+        <!-- Class subjects (homeroom-only overview) -->
+        <el-table-column label="Class Subjects" min-width="340">
           <template #default="{ row }">
-            <div class="flex flex-col gap-2">
-              <!-- My teaching subjects (actionable) -->
-              <div>
-                <div class="text-[11px]" style="color: var(--muted-color)">
-                  Subjects I teach
-                </div>
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px]" style="color: var(--muted-color)">
+                  Overview
+                </span>
 
-                <div
-                  v-if="row.mySubjects?.length"
-                  class="flex flex-wrap gap-1 mt-1"
+                <el-tag
+                  v-if="row.is_homeroom"
+                  size="small"
+                  type="warning"
+                  effect="plain"
                 >
-                  <el-tag
-                    v-for="label in row.mySubjects"
-                    :key="`${row.id}-my-${label}`"
-                    size="small"
-                    type="info"
-                    effect="plain"
-                  >
-                    {{ label }}
-                  </el-tag>
-                </div>
-
-                <div
-                  v-else
-                  class="text-[11px] mt-1"
-                  style="color: var(--muted-color)"
-                >
-                  Not assigned to any subject yet.
-                </div>
+                  Homeroom
+                </el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">
+                  Hidden
+                </el-tag>
               </div>
 
-              <!-- Class subjects (overview only) -->
               <div v-if="row.is_homeroom">
-                <div class="text-[11px]" style="color: var(--muted-color)">
-                  All subjects in class (overview)
-                </div>
-
                 <div
                   v-if="row.classSubjects?.length"
                   class="flex flex-wrap gap-1 mt-1"
@@ -305,6 +336,49 @@ onMounted(loadClasses);
                   No class subjects configured.
                 </div>
               </div>
+
+              <div
+                v-else
+                class="text-[11px] mt-1"
+                style="color: var(--muted-color)"
+              >
+                Only visible for homeroom/admin.
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <!-- Summary -->
+        <el-table-column label="Summary" min-width="200" align="center">
+          <template #default="{ row }">
+            <div class="flex flex-col items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap justify-center">
+                <el-tag size="small" type="primary" effect="plain">
+                  Teach: {{ row.mySubjects?.length ?? 0 }}
+                </el-tag>
+
+                <el-tag size="small" type="info" effect="plain">
+                  Total: {{ row.subjectCount ?? 0 }}
+                </el-tag>
+
+                <el-tag
+                  v-if="row.is_homeroom"
+                  size="small"
+                  type="warning"
+                  effect="plain"
+                >
+                  Class: {{ row.classSubjects?.length ?? 0 }}
+                </el-tag>
+              </div>
+
+              <el-tag
+                v-if="!row.mySubjects?.length"
+                size="small"
+                type="danger"
+                effect="plain"
+              >
+                No teaching subjects
+              </el-tag>
             </div>
           </template>
         </el-table-column>
@@ -312,14 +386,14 @@ onMounted(loadClasses);
         <!-- Homeroom teacher -->
         <el-table-column label="Homeroom Teacher" min-width="180">
           <template #default="{ row }">
-            <span :style="{ color: 'var(--muted-color)' }">
+            <span class="truncate" style="color: var(--muted-color)">
               {{ row.homeroomDisplay }}
             </span>
           </template>
         </el-table-column>
 
-        <!-- Total subjects in class -->
-        <el-table-column label="Total Subjects" min-width="130">
+        <!-- Total subjects -->
+        <el-table-column label="Total Subjects" min-width="140" align="center">
           <template #default="{ row }">
             <span class="font-medium" style="color: var(--text-color)">
               {{ row.subjectCount }}
@@ -327,7 +401,7 @@ onMounted(loadClasses);
           </template>
         </el-table-column>
 
-        <!-- Students with capacity -->
+        <!-- Students -->
         <el-table-column label="Students" min-width="220">
           <template #default="{ row }">
             <div class="flex flex-col gap-1">
@@ -374,10 +448,18 @@ onMounted(loadClasses);
 </template>
 
 <style scoped>
+/* Hover row color */
 :deep(.el-table__body tr:hover > td.el-table__cell) {
   background: var(--hover-bg) !important;
 }
+
+/* Ensure headers keep theme background */
 :deep(.el-table thead th.el-table__cell) {
   background: var(--color-card) !important;
+}
+
+/* Critical: allow content to shrink + truncate properly */
+:deep(.class-table .cell) {
+  min-width: 0;
 }
 </style>

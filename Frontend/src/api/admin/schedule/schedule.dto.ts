@@ -1,35 +1,21 @@
+
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 import type { ScheduleDTO } from "~/api/types/school.dto";
+
 /* ================================
  * SCHEDULE MANAGEMENT (Admin)
  * ================================ */
 
-/**
- * Payload for creating a schedule slot
- * (Inferred from ScheduleSlot + AdminScheduleSlotDataDTO)
- *
- * Expected fields:
- * - class_id: str
- * - teacher_id: str
- * - day_of_week: int
- * - start_time: time / string
- * - end_time: time / string
- * - room: Optional[str]
- */
 export interface AdminCreateScheduleSlot {
   class_id: string;
   teacher_id: string;
-  day_of_week: number; // 0–6 or 1–7 depending on backend convention
-  start_time: string; // e.g. "09:00" or ISO time
-  end_time: string; // same format as start_time
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
   room?: string | null;
-  subject_id?: string;
+  subject_id?: string; // optional
 }
 
-/**
- * Payload for updating a schedule slot
- * (PATCH /api/admin/schedule/slots/:slot_id)
- */
 export interface AdminUpdateScheduleSlot {
   class_id?: string;
   teacher_id?: string;
@@ -39,24 +25,14 @@ export interface AdminUpdateScheduleSlot {
   room?: string | null;
   subject_id?: string;
 }
+
 export interface AdminAssignScheduleSlotSubject {
   /** set to string to assign, null to clear */
   subject_id?: string | null;
 }
+
 /**
  * Data for a single schedule slot
- * Python: AdminScheduleSlotDataDTO
- *
- * From SchoolAdminMapper.schedule_slot_to_dto / schedule_slot_doc_to_dto:
- * - id: str
- * - class_id: str
- * - teacher_id: str
- * - day_of_week: int
- * - start_time: time / string
- * - end_time: time / string
- * - room: Optional[str]
- * - created_at: datetime
- * - updated_at: datetime
  */
 export interface AdminScheduleSlotData extends ScheduleDTO {
   class_name: string;
@@ -64,10 +40,6 @@ export interface AdminScheduleSlotData extends ScheduleDTO {
   subject_label: string;
 }
 
-/**
- * List wrapper
- * Python: AdminScheduleListDTO
- */
 export interface AdminScheduleSlotList {
   items: AdminScheduleSlotData[];
   total: number;
@@ -75,8 +47,30 @@ export interface AdminScheduleSlotList {
   page_size: number;
 }
 
-/**
- * Wrapped responses
- */
 export type AdminGetScheduleSlotResponse = ApiResponse<AdminScheduleSlotData>;
 export type AdminGetScheduleListResponse = ApiResponse<AdminScheduleSlotList>;
+
+/* ================================
+ * Teacher select (filtered by assignment)
+ * ================================ */
+
+export interface SelectOptionDTO {
+  value: string;
+  label: string;
+}
+
+export interface AdminTeacherSelectListDTO {
+  items: SelectOptionDTO[];
+}
+
+/**
+ * Query params for:
+ * GET /api/admin/schedule/teacher-select
+ */
+export interface AdminTeacherSelectQuery {
+  class_id: string;
+  subject_id: string;
+}
+
+export type AdminTeacherSelectListResponse =
+  ApiResponse<AdminTeacherSelectListDTO>;

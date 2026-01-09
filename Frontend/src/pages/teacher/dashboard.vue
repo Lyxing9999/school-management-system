@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { ElMessage } from "element-plus";
 
 definePageMeta({ layout: "default" });
@@ -13,6 +13,7 @@ import type {
   AttendanceDTO,
 } from "~/api/types/school.dto";
 
+import TeacherClassSelect from "~/components/selects/class/TeacherClassSelect.vue";
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 
@@ -138,7 +139,6 @@ function getItems<T>(res: any): T[] {
 
 /**
  * Backend caps page_size at 100 -> dashboard must fetch all pages.
- * Supports optional class_id/day/time filters if backend provides them.
  */
 async function fetchAllMySchedule(opts?: {
   class_id?: string;
@@ -213,7 +213,6 @@ const loadOverview = async () => {
   errorMessage.value = null;
 
   try {
-    // fetch classes summary + schedule in parallel
     const [classesResSummery, scheduleAll] = await Promise.all([
       teacher.teacher.listMyClassesWithSummery({ showError: false } as any),
       fetchAllMySchedule(),
@@ -230,18 +229,15 @@ const loadOverview = async () => {
     classSummary.value =
       (classPayload.summary as ClassSummary | undefined) ?? null;
 
-    // set schedule (for charts + today lessons)
     schedule.value = scheduleAll;
 
-    // Default focus class
+    // Auto-pick first class if none selected
     if (!focusClassId.value && classes.value.length > 0) {
-      focusClassId.value = classes.value[0].id;
+      focusClassId.value = classes.value[0].id; // watcher will fetch details
     }
 
-    // focus class details
-    if (focusClassId.value) {
-      await loadClassDetails(focusClassId.value);
-    } else {
+    // If still no focus class, clear details
+    if (!focusClassId.value) {
       grades.value = [];
       attendance.value = [];
     }
@@ -256,18 +252,25 @@ const loadOverview = async () => {
   }
 };
 
-const onFocusClassChange = async (value: string) => {
-  if (!value) return;
-  attendanceLoading.value = true;
-  try {
-    await loadClassDetails(value);
+/**
+ * ✅ Auto fetch whenever class changes (works even if TeacherClassSelect doesn't emit @change)
+ */
+watch(
+  () => focusClassId.value,
+  async (value, prev) => {
+    if (!value || value === prev) return;
 
-    // Optional: if you want charts to reflect focus class schedule via backend filters:
-    // schedule.value = await fetchAllMySchedule({ class_id: value });
-  } finally {
-    attendanceLoading.value = false;
+    attendanceLoading.value = true;
+    try {
+      await loadClassDetails(value);
+
+      // Optional: if you want schedule to be focus-class only and backend supports it:
+      // schedule.value = await fetchAllMySchedule({ class_id: value });
+    } finally {
+      attendanceLoading.value = false;
+    }
   }
-};
+);
 
 /* ------------------------------------------------
  * Computed
@@ -327,11 +330,10 @@ const recentAttendance = computed(() =>
 );
 
 /* ------------------------------------------------
- * Charts
+ * Charts (ECharts options)
  * ------------------------------------------------ */
 
 const scheduleByDayOption = computed(() => {
-  // if schedule items contain class_id and focus selected -> filter
   const hasClassId = schedule.value.some((s) => !!(s as any).class_id);
 
   const filteredSchedule =
@@ -524,21 +526,13 @@ onMounted(async () => {
 
       <template #actions>
         <div class="flex items-center gap-2">
-          <el-select
+          <TeacherClassSelect
             v-model="focusClassId"
             placeholder="Select class"
             size="small"
             style="min-width: 180px"
-            @change="onFocusClassChange"
             :disabled="classes.length === 0"
-          >
-            <el-option
-              v-for="c in classes"
-              :key="c.id"
-              :label="c.name"
-              :value="c.id"
-            />
-          </el-select>
+          />
 
           <BaseButton
             plain
@@ -740,7 +734,7 @@ onMounted(async () => {
           >
             <el-table-column label="Date" min-width="130">
               <template #default="{ row }">
-                {{ formatDate(row.record_date || row.date) }}
+                {{ formatDate(row.record_date || (row as any).date) }}
               </template>
             </el-table-column>
 
@@ -782,7 +776,7 @@ onMounted(async () => {
               show-overflow-tooltip
             >
               <template #default="{ row }">
-                {{ formatDate(row.lifecycle?.created_at) }}
+                {{ formatDate((row as any).lifecycle?.created_at) }}
               </template>
             </el-table-column>
 

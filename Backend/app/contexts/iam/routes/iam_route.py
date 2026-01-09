@@ -14,7 +14,7 @@ from app.contexts.iam.data_transfer.request import (
 )
 from app.contexts.iam.data_transfer.response import IAMResponseDataDTO
 
-from app.contexts.iam.auth.cookies import set_refresh_cookie
+from app.contexts.iam.auth.cookies import set_refresh_cookie, clear_refresh_cookie
 from app.contexts.iam.auth.jwt_utils import login_required
 from app.contexts.core.security.auth_utils import get_current_user
 
@@ -48,6 +48,7 @@ def login_user():
 # -------------------------
 # AUTH: LOGOUT
 # -------------------------
+
 @iam_bp.route("/logout", methods=["POST"])
 def logout_user():
     db = get_db()
@@ -56,13 +57,9 @@ def logout_user():
     rt = request.cookies.get("refresh_token") or ""
     user_service.logout(rt)
 
-    # clear cookie
     resp = make_response(jsonify({"message": "Logged out"}))
-    # if your set_refresh_cookie supports clearing, use that.
-    # Otherwise clear manually:
-    resp.set_cookie("refresh_token", "", expires=0, httponly=True, samesite="Lax")
+    clear_refresh_cookie(resp)   
     return resp
-
 
 # -------------------------
 # AUTH: REFRESH (ROTATE)
@@ -144,15 +141,10 @@ def get_me():
 @login_required()
 def patch_me():
     user_service = IAMService(get_db())
-    current = get_current_user()  # dict or str is supported by your service
-
+    current = get_current_user()
     payload: IAMUpdateSchema = pydantic_converter.convert_to_model(request.json, IAMUpdateSchema)
-
-    # IMPORTANT: For profile page, only send email/username.
-    # If payload contains password, your IAMService.update_info will revoke refresh tokens.
-    iam_domain = user_service.update_info(current, payload, update_by_admin=False)
+    iam_domain = user_service.update_info(current["user_id"], payload, update_by_admin=False)
     return IAMMapper.to_dto(iam_domain)
-
 
 # -------------------------
 # PASSWORD: CHANGE (LOGGED IN)

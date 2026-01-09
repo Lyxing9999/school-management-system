@@ -15,7 +15,6 @@ import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import TableCard from "~/components/cards/TableCard.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
-
 /* Element Plus */
 import {
   ElEmpty,
@@ -368,12 +367,10 @@ onMounted(async () => {
       :stats="headerState"
     >
       <template #filters>
-        <!-- ✅ Element Plus layout: responsive row/cols -->
         <ElRow :gutter="10" align="middle" class="mb-2">
           <ElCol :xs="24" :sm="12" :md="6">
             <ElSelect
               v-model="selectedClassId"
-              size="small"
               class="w-full"
               :loading="classesLoading"
               placeholder="All classes"
@@ -392,7 +389,6 @@ onMounted(async () => {
           <ElCol :xs="24" :sm="12" :md="5">
             <ElSelect
               v-model="selectedDay"
-              size="small"
               class="w-full"
               placeholder="All days"
               clearable
@@ -411,7 +407,6 @@ onMounted(async () => {
           <ElCol :xs="24" :sm="12" :md="5">
             <ElTimeSelect
               v-model="startTimeFrom"
-              size="small"
               class="w-full"
               start="06:00"
               step="00:30"
@@ -424,7 +419,6 @@ onMounted(async () => {
           <ElCol :xs="24" :sm="12" :md="5">
             <ElTimeSelect
               v-model="startTimeTo"
-              size="small"
               class="w-full"
               start="06:00"
               step="00:30"

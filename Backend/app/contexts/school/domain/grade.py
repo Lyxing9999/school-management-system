@@ -43,11 +43,11 @@ class GradeRecord:
         subject_id: ObjectId | str,
         score: float,
         type: GradeType | str,
+        term: str,
         *,
         id: ObjectId | None = None,
         class_id: ObjectId | str | None = None,
         teacher_id: ObjectId | str | None = None,
-        term: str | None = None,  # e.g. "2025-S1"
         lifecycle: Lifecycle | None = None,
     ) -> None:
         self.id = id or ObjectId()
@@ -66,7 +66,6 @@ class GradeRecord:
 
         # will touch updated_at
         self.set_score(score)
-
     # ---------------- Properties ----------------
 
     @property
@@ -117,16 +116,16 @@ class GradeRecord:
         self._type = self._validate_type(new_type)
         self._touch()
 
-    def set_term(self, term: str | None) -> None:
+    def set_term(self, term: str) -> None:
         """
-        Optional: allow changing term (admin operation).
+        Allow changing term (admin operation).
+        Still required; cannot be unset.
         """
         if self.is_deleted():
             raise GradeRecordDeletedException(str(self.id))
 
         self.term = self._validate_term(term)
         self._touch()
-
     # ---------------- Internal ----------------
 
     def _touch(self) -> None:

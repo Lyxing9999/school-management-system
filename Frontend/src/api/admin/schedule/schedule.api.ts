@@ -1,11 +1,13 @@
-// schedule.api.ts
+
 import type { AxiosInstance } from "axios";
 import type {
   AdminCreateScheduleSlot,
-  AdminAssignScheduleSlotSubject, 
+  AdminAssignScheduleSlotSubject,
   AdminGetScheduleSlotResponse,
   AdminUpdateScheduleSlot,
   AdminGetScheduleListResponse,
+  AdminTeacherSelectListResponse,
+  AdminTeacherSelectQuery,
 } from "./schedule.dto";
 
 export class ScheduleSlotApi {
@@ -42,6 +44,23 @@ export class ScheduleSlotApi {
   ) {
     const res = await this.$api.get<AdminGetScheduleListResponse>(
       `${this.baseURL}/teachers/${teacherId}`,
+      { params }
+    );
+    return res.data;
+  }
+
+  /**
+   * Teacher select options filtered by assignment (teacher_subject_assignments)
+   *
+   * Expected backend:
+   * GET /api/admin/schedule/teacher-select?class_id=...&subject_id=...
+   *
+   * Returns:
+   * { success, message, data: { items: [{ value, label }] } }
+   */
+  async listTeacherSelectByAssignment(params: AdminTeacherSelectQuery) {
+    const res = await this.$api.get<AdminTeacherSelectListResponse>(
+      `${this.baseURL}/teacher-select`,
       { params }
     );
     return res.data;

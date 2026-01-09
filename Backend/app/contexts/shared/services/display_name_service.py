@@ -17,6 +17,13 @@ class StudentNamePack(TypedDict, total=False):
     kh: str
 
 
+
+class ScheduleSlotPack(TypedDict, total=False):
+    day_of_week: int
+    start_time: str
+    end_time: str
+    room: str
+
 class DisplayNameService:
     """
     Shared helper for turning IDs into display labels for UI.
@@ -56,6 +63,7 @@ class DisplayNameService:
 
         # fallback for unexpected types
         return str(pack).strip() or "[deleted student]"
+
     # internal
     # -----------------------------
 
@@ -363,45 +371,72 @@ class DisplayNameService:
         student_ids: list[ObjectId | str | dict | None] = []
         class_ids: list[ObjectId | str | dict | None] = []
         teacher_ids: list[ObjectId | str | dict | None] = []
+        subject_ids: list[ObjectId | str | dict | None] = []
+        slot_ids: list[ObjectId | str | dict | None] = []
 
         for d in docs:
-            sid = d.get("student_id")
-            cid = d.get("class_id")
-            tid = d.get("marked_by_teacher_id")
-
-            if sid is not None:
-                student_ids.append(sid)
-            if cid is not None:
-                class_ids.append(cid)
-            if tid is not None:
-                teacher_ids.append(tid)
+            student_ids.append(d.get("student_id"))
+            class_ids.append(d.get("class_id"))
+            teacher_ids.append(d.get("marked_by_teacher_id"))
+            subject_ids.append(d.get("subject_id"))
+            slot_ids.append(d.get("schedule_slot_id"))
 
         student_name_map = self.student_names_for_student_ids(student_ids)
         class_name_map = self.class_names_for_ids(class_ids)
         teacher_name_map = self.staff_names_for_ids(teacher_ids)
+        subject_label_map = self.subject_labels_for_ids(subject_ids)
 
+        slot_pack_map = self.schedule_slot_packs_for_ids(slot_ids)
+
+        # string-keyed copies (supports str ids in docs)
         student_name_map_str = {str(k): v for k, v in student_name_map.items()}
         class_name_map_str = {str(k): v for k, v in class_name_map.items()}
         teacher_name_map_str = {str(k): v for k, v in teacher_name_map.items()}
+        subject_label_map_str = {str(k): v for k, v in subject_label_map.items()}
+        slot_pack_map_str = {str(k): v for k, v in slot_pack_map.items()}
 
         for d in docs:
             sid = d.get("student_id")
             cid = d.get("class_id")
             tid = d.get("marked_by_teacher_id")
+            subid = d.get("subject_id")
+            slotid = d.get("schedule_slot_id")
 
+            # student
             if sid is not None:
-                sname_pack = student_name_map.get(sid) or student_name_map_str.get(str(sid))
-                d["student_name"] = self._pick_name(sname_pack, preferred="en")
+                pack = student_name_map.get(sid) or student_name_map_str.get(str(sid))
+                d["student_name"] = self._pick_name(pack, preferred="en")
 
+            # class
             if cid is not None:
                 cname = class_name_map.get(cid) or class_name_map_str.get(str(cid))
                 d["class_name"] = cname if cname is not None else "[deleted class]"
 
+            # teacher
             if tid is not None:
                 tname = teacher_name_map.get(tid) or teacher_name_map_str.get(str(tid))
                 d["teacher_name"] = tname if tname is not None else "[deleted teacher]"
 
+            # subject label
+            if subid is not None:
+                slabel = subject_label_map.get(subid) or subject_label_map_str.get(str(subid))
+                d["subject_label"] = slabel if slabel is not None else "[deleted subject]"
+
+            # schedule slot pack
+            if slotid is not None:
+                sp = slot_pack_map.get(slotid) or slot_pack_map_str.get(str(slotid))
+                if sp:
+                    d["day_of_week"] = sp.get("day_of_week")
+                    d["start_time"] = sp.get("start_time")
+                    d["end_time"] = sp.get("end_time")
+                    d["room"] = sp.get("room")
+
         return docs
+
+
+    # -----------------------------
+    # GRADE ENRICHMENT
+    # -----------------------------
     def enrich_grades(self, grade_docs: Iterable[dict]) -> List[dict]:
         docs: List[dict] = [dict(d) for d in grade_docs]
 
@@ -571,3 +606,81 @@ class DisplayNameService:
                 d["assigned_by_username"] = assigned_by_map.get(aid) or assigned_by_map_str.get(str(aid)) or ""
 
         return docs
+
+
+    def schedule_slot_packs_for_ids(
+        self,
+        slot_ids: Iterable[ObjectId | str | dict | None],
+    ) -> Dict[ObjectId, ScheduleSlotPack]:
+        """
+        Requires a schedule read model. If you don't have one yet, implement:
+        - schedule_read_model.list_slots_by_ids(oids) -> list[dict]
+        Each slot doc should contain:
+        - _id, day_of_week, start_time, end_time, room
+        """
+        if not hasattr(self, "schedule_read_model") or self.schedule_read_model is None:
+            return {}
+
+        oids = self._normalize_ids(slot_ids)
+        if not oids:
+            return {}
+
+        docs = self.schedule_read_model.list_slots_by_ids(oids)
+
+        mapping: Dict[ObjectId, ScheduleSlotPack] = {}
+        for d in docs:
+            _id = d.get("_id")
+            if _id is None:
+                continue
+
+            mapping[_id] = {
+                "day_of_week": d.get("day_of_week"),
+                "start_time": d.get("start_time"),
+                "end_time": d.get("end_time"),
+                "room": d.get("room"),
+            }
+
+        return mapping
+
+    def teacher_select_options_for_ids(
+        self,
+        teacher_user_ids: Iterable[ObjectId | str | dict | None],
+        *,
+        include_label: bool = True,
+        fallback_label: str = "[deleted teacher]",
+    ) -> List[Dict[str, Any]]:
+        """
+        Build UI-friendly select options for teachers:
+
+        [
+          { "value": "ObjectIdString", "label": "Teacher Name", "name": "Teacher Name" }
+        ]
+
+        Notes:
+        - Expects IDs to be the same "user_id" keys used by StaffReadModel.
+        - Handles ids coming as ObjectId, str, or {"$oid": "..."}.
+        """
+        oids = self._normalize_ids(teacher_user_ids)
+        if not oids:
+            return []
+
+        # staff_names_for_ids returns: {user_id(ObjectId) -> staff_name(str)}
+        name_map = self.staff_names_for_ids(oids)
+        name_map_str = {str(k): v for k, v in name_map.items()}
+
+        options: List[Dict[str, Any]] = []
+        for oid in oids:
+            name = name_map.get(oid) or name_map_str.get(str(oid)) or ""
+            label = (name or "").strip() or fallback_label
+
+            options.append(
+                {
+                    "value": str(oid),
+                    "label": label if include_label else label,  # keep shape stable
+                    "name": label,
+                }
+            )
+
+        # Stable UI ordering
+        options.sort(key=lambda x: (x.get("label") or "").lower())
+        return options

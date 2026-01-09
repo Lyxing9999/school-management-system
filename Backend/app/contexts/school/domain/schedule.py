@@ -43,7 +43,7 @@ class ScheduleSlot:
         *,
         id: ObjectId | None = None,
         room: str | None = None,
-        subject_id: ObjectId | str | None = None,  # optional but often useful
+        subject_id: ObjectId | str | None = None,  
         lifecycle: Lifecycle | None = None,
     ) -> None:
         self.id = id or ObjectId()

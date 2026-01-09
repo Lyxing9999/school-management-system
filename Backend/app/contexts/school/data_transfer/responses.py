@@ -1,9 +1,10 @@
-from __future__ import annotations
 
-from typing import Optional, Literal
+from typing import Optional, Literal, Any
 from pydantic import BaseModel, ConfigDict, field_validator, Field
 from bson import ObjectId
 import datetime as dt
+from datetime import date as date_type
+from datetime import datetime
 from app.contexts.shared.lifecycle.dto import LifecycleDTO
 
 from app.contexts.school.domain.class_section import ClassSection, ClassSectionStatus
@@ -20,14 +21,29 @@ def _oid_to_str(value: ObjectId | str | None) -> Optional[str]:
         return None
     return str(value)
 
-def _lifecycle_to_dto(lc) -> LifecycleDTO:
-    return LifecycleDTO(
-        created_at=lc.created_at,
-        updated_at=lc.updated_at,
-        deleted_at=lc.deleted_at,
-        deleted_by=_oid_to_str(lc.deleted_by),
-    )
 
+def _lifecycle_to_dto(lc: Any) -> LifecycleDTO:
+    """
+    Accepts: domain Lifecycle object OR dict-like
+    """
+    if lc is None:
+        return LifecycleDTO(created_at=None, updated_at=None, deleted_at=None, deleted_by=None)
+
+    if isinstance(lc, dict):
+        return LifecycleDTO(
+            created_at=lc.get("created_at"),
+            updated_at=lc.get("updated_at"),
+            deleted_at=lc.get("deleted_at"),
+            deleted_by=_oid_to_str(lc.get("deleted_by")),
+        )
+
+    # domain object with attributes
+    return LifecycleDTO(
+        created_at=getattr(lc, "created_at", None),
+        updated_at=getattr(lc, "updated_at", None),
+        deleted_at=getattr(lc, "deleted_at", None),
+        deleted_by=_oid_to_str(getattr(lc, "deleted_by", None)),
+    )
 
 # ------------ DTOs ------------
 
@@ -64,7 +80,14 @@ class AttendanceDTO(BaseModel):
     class_id: str
     status: AttendanceStatus
     record_date: dt.date
-    marked_by_teacher_id: Optional[str]
+
+    # who marked it
+    marked_by_teacher_id: Optional[str] = None
+
+    # attendance is session-based
+    subject_id: str
+    schedule_slot_id: str
+
     lifecycle: LifecycleDTO
 
 
@@ -130,17 +153,72 @@ def subject_to_dto(subject: Subject) -> SubjectDTO:
     )
 
 
-def attendance_to_dto(record: AttendanceRecord) -> AttendanceDTO:
-    return AttendanceDTO(
-        id=str(record.id),
-        student_id=str(record.student_id),
-        class_id=str(record.class_id),
-        status=record.status,
-        record_date=record.date,  
-        marked_by_teacher_id=_oid_to_str(record.marked_by_teacher_id),
-        lifecycle=_lifecycle_to_dto(record.lifecycle),
-    )
 
+def _to_date(v: Any) -> Optional[dt.date]:
+    """
+    Normalize various record_date formats to dt.date.
+    Accepts: date, datetime, 'YYYY-MM-DD', ISO datetime string, Mongo-style {"$date": ...}
+    Returns: dt.date or None
+    """
+    if v is None:
+        return None
+
+    if isinstance(v, date_type) and not isinstance(v, datetime):
+        return v
+
+    if isinstance(v, datetime):
+        return v.date()
+
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return None
+        # take first 10 chars for YYYY-MM-DD
+        try:
+            return date_type.fromisoformat(s[:10])
+        except Exception:
+            return None
+
+    if isinstance(v, dict) and "$date" in v:
+        return _to_date(v["$date"])
+
+    try:
+        return date_type.fromisoformat(str(v)[:10])
+    except Exception:
+        return None
+# -----------------------------
+
+def attendance_to_dto(record: Any) -> AttendanceDTO:
+    def get_field(obj: Any, key: str, default=None):
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return getattr(obj, key, default)
+
+    raw_record_date = get_field(record, "record_date", None) or get_field(record, "date", None)
+    parsed_date = _to_date(raw_record_date)
+
+    if parsed_date is None:
+        # record_date is required by AttendanceDTO, so fail fast with a clear message
+        raise ValueError(f"Attendance record_date is missing/invalid: {raw_record_date!r}")
+
+    raw_id = get_field(record, "id", None) or get_field(record, "_id", None)
+
+    return AttendanceDTO(
+        id=str(raw_id),
+        student_id=str(get_field(record, "student_id")),
+        class_id=str(get_field(record, "class_id")),
+        status=get_field(record, "status"),
+        record_date=parsed_date,  # dt.date
+
+        marked_by_teacher_id=_oid_to_str(
+            get_field(record, "marked_by_teacher_id", None) or get_field(record, "teacher_id", None)
+        ),
+
+        subject_id=_oid_to_str(get_field(record, "subject_id", None)),
+        schedule_slot_id=_oid_to_str(get_field(record, "schedule_slot_id", None)),
+
+        lifecycle=_lifecycle_to_dto(get_field(record, "lifecycle", None)),
+    )
 def grade_to_dto(grade: GradeRecord) -> GradeDTO:
     return GradeDTO(
         id=str(grade.id),

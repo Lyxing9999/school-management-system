@@ -1,27 +1,23 @@
 // ~/api/student/student.dto.ts
 import type { ApiResponse } from "~/api/types/common/api-response.type";
-import type { AttendanceStatus, GradeType } from "~/api/types/school.dto"; // keep enums here if you already have them
+import type { AttendanceStatus, GradeType } from "~/api/types/school.dto";
 
-interface LifecycleDTO {
+export interface LifecycleDTO {
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
-/**
- * Mirrors Python: StudentClassSectionDTO extends ClassSectionDTO
- * Student-specific additions:
- * - student_count
- * - subject_count
- * - teacher_name
- * - subject_labels
- */
+/* ---------------------------------------------
+ * Student Classes
+ * ------------------------------------------- */
 export interface StudentClassSectionDTO {
   id: string;
   name: string;
 
-  teacher_id?: string | null;
-  teacher_name: string;
+  homeroom_teacher_id?: string | null;
+  homeroom_teacher_name: string;
 
   subject_ids: string[];
   subject_labels: string[];
@@ -29,7 +25,6 @@ export interface StudentClassSectionDTO {
   enrolled_count: number;
   max_students: number;
 
-  // Python: ClassSectionStatus (string enum usually)
   status: string;
 
   student_count: number;
@@ -38,11 +33,13 @@ export interface StudentClassSectionDTO {
   lifecycle: LifecycleDTO;
 }
 
-/**
- * Mirrors Python: StudentScheduleDTO
- * NOTE: Python does NOT include subject_label, but your UI can safely treat it as optional
- * if the backend later returns it.
- */
+export interface StudentClassListDTO {
+  items: StudentClassSectionDTO[];
+}
+
+/* ---------------------------------------------
+ * Student Schedule
+ * ------------------------------------------- */
 export interface StudentScheduleDTO {
   id: string;
 
@@ -50,43 +47,59 @@ export interface StudentScheduleDTO {
   class_id?: string | null;
   subject_id?: string | null;
 
-  day_of_week: number; // 1..7
-  start_time: string; // "HH:mm"
-  end_time: string; // "HH:mm"
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
 
   class_name?: string | null;
   teacher_name?: string | null;
   room?: string | null;
 
-  // optional convenience (not required by backend)
   subject_label?: string | null;
 
   lifecycle: LifecycleDTO;
 }
 
-/**
- * Mirrors Python: StudentAttendanceDTO
- */
+export interface StudentScheduleListDTO {
+  items: StudentScheduleDTO[];
+}
+
+/* ---------------------------------------------
+ * Student Attendance
+ * ------------------------------------------- */
 export interface StudentAttendanceDTO {
   id: string;
+
   student_id: string;
   student_name?: string | null;
 
   class_id?: string | null;
   class_name?: string | null;
 
-  status: AttendanceStatus;
-  record_date: string; // "YYYY-MM-DD" or ISO date (backend sends date)
+  subject_id?: string | null;
+  subject_label?: string | null;
 
-  marked_by_teacher_id: string;
+  schedule_slot_id?: string | null;
+  day_of_week?: number | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  room?: string | null;
+
+  status: AttendanceStatus;
+  record_date: string;
+
+  marked_by_teacher_id?: string | null;
   teacher_name?: string | null;
 
   lifecycle: LifecycleDTO;
 }
+export interface StudentAttendanceListDTO {
+  items: StudentAttendanceDTO[];
+}
 
-/**
- * Mirrors Python: StudentGradeDTO
- */
+/* ---------------------------------------------
+ * Student Grades
+ * ------------------------------------------- */
 export interface StudentGradeDTO {
   id: string;
 
@@ -100,58 +113,56 @@ export interface StudentGradeDTO {
   subject_label?: string | null;
 
   score: number;
-  type: GradeType;
+  type: GradeType; // "exam" | "quiz" | "assignment" (from your enum)
   term?: string | null;
 
   lifecycle: LifecycleDTO;
 }
 
-/**
- * List DTOs (Python: Student*ListDTO)
- */
-export interface StudentClassListDTO {
-  items: StudentClassSectionDTO[];
-}
-
-export interface StudentScheduleListDTO {
-  items: StudentScheduleDTO[];
-}
-
-export interface StudentAttendanceListDTO {
-  items: StudentAttendanceDTO[];
-}
-
+/** Old (non-paged) list (keep if used elsewhere) */
 export interface StudentGradeListDTO {
   items: StudentGradeDTO[];
 }
 
-/**
- * Filter DTOs (query params)
- * Your existing TS uses from_date/to_date — keep that.
- */
+/** NEW: paged response (matches backend) */
+export interface StudentGradePagedDTO {
+  items: StudentGradeDTO[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+/* ---------------------------------------------
+ * Filters
+ * ------------------------------------------- */
 export interface StudentAttendanceFilterDTO {
   class_id?: string;
   status?: AttendanceStatus;
-  from_date?: string; // "YYYY-MM-DD"
-  to_date?: string; // "YYYY-MM-DD"
+  from_date?: string;
+  to_date?: string;
 }
 
 export interface StudentGradesFilterDTO {
   class_id?: string;
   subject_id?: string;
-  term?: string;
-}
 
+  term?: string;
+  page?: number;
+  page_size?: number;
+}
 export interface StudentScheduleFilterDTO {
-  day_of_week?: number; // 1–7
+  day_of_week?: number;
   class_id?: string;
 }
 
-/**
+/* ---------------------------------------------
  * Wrapped responses (wrap_response)
- */
+ * ------------------------------------------- */
 export type StudentGetClassesResponse = ApiResponse<StudentClassListDTO>;
 export type StudentGetAttendanceResponse =
   ApiResponse<StudentAttendanceListDTO>;
-export type StudentGetGradesResponse = ApiResponse<StudentGradeListDTO>;
 export type StudentGetScheduleResponse = ApiResponse<StudentScheduleListDTO>;
+
+/** IMPORTANT: update grades response to paged */
+export type StudentGetGradesResponse = ApiResponse<StudentGradePagedDTO>;

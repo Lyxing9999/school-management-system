@@ -1,7 +1,7 @@
 from typing import Any, Dict, Final, List, Tuple, Union, Optional
 from bson import ObjectId
 from pymongo.database import Database
-
+import datetime as dt 
 from app.contexts.core.errors.mongo_error_mixin import MongoErrorMixin
 from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.shared.lifecycle.filters import not_deleted
@@ -53,6 +53,25 @@ class TeacherReadModel(MongoErrorMixin):
     def _oid(self, v: Union[str, ObjectId]) -> ObjectId:
         return mongo_converter.convert_to_object_id(v)
 
+    @staticmethod
+    def _normalize_day_of_week(dow: Optional[int]) -> Optional[int]:
+        if dow is None:
+            return None
+        dow = int(dow)
+
+        if dow == 0:
+            return 7
+
+        if 1 <= dow <= 7:
+            return dow
+
+        return None
+
+    @staticmethod
+    def _weekday_from_date(date_str: str) -> int:
+        # ISO weekday: Monday=1 ... Sunday=7
+        d = dt.date.fromisoformat(date_str)
+        return d.isoweekday()
     # -------------------------
     # Permission checks
     # -------------------------
@@ -78,9 +97,16 @@ class TeacherReadModel(MongoErrorMixin):
         tid = self._oid(teacher_id)
         cid = self._oid(class_id)
         sid = self._oid(subject_id)
-        doc = self.assignment_read.get_active_by_class_subject(cid, sid)
-        return bool(doc and str(doc.get("teacher_id")) == str(tid))
 
+        # Build a robust query that matches both string/ObjectId storage.
+        q = {
+            "$and": [
+                self.assignment_read._match_oid_or_str("teacher_id", tid),
+                self.assignment_read._match_oid_or_str("class_id", cid),
+                self.assignment_read._match_oid_or_str("subject_id", sid),
+            ]
+        }
+        return self.assignment_read.exists(q, show_deleted="active")
     # -------------------------
     # Classes (roles-enriched)
     # -------------------------
@@ -246,8 +272,19 @@ class TeacherReadModel(MongoErrorMixin):
         return out
         
 
-    def has_any_assignment_in_class(self, teacher_id: Union[str, ObjectId], *, filters: Dict[str, Any]) -> bool:
-        q = {**filters, "teacher_id": self._oid(teacher_id)}
+    def has_any_assignment_in_class(
+        self,
+        teacher_id: Union[str, ObjectId],
+        *,
+        class_id: Union[str, ObjectId],
+    ) -> bool:
+        tid = self._oid(teacher_id)
+        cid = self._oid(class_id)
+
+        q: Dict[str, Any] = {
+            "teacher_id": tid,
+            "class_id": cid,
+        }
         return self.assignment_read.exists(q, show_deleted="active")
     # -------------------------
     # Assignments list (enriched)
@@ -273,16 +310,90 @@ class TeacherReadModel(MongoErrorMixin):
 
 
 
+
+
+    def list_schedule_slot_select_for_teacher(
+        self,
+        *,
+        teacher_id: Union[str, ObjectId],
+        class_id: Union[str, ObjectId],
+        day_of_week: Optional[int] = None,
+        date: Optional[str] = None,  # "YYYY-MM-DD"
+        limit: int = 200,
+    ) -> List[Dict[str, Any]]:
+        tid = self._oid(teacher_id)
+        cid = self._oid(class_id)
+
+        if date:
+            dow = self._weekday_from_date(date)
+        else:
+            dow = self._normalize_day_of_week(day_of_week)
+
+        # Fetch schedules (enriched)
+        items, total = self.list_schedule_for_teacher_enriched(
+            teacher_id=tid,
+            page=1,
+            page_size=min(max(1, int(limit)), 500),
+            sort=None,
+            class_id=str(cid),
+            day_of_week=dow,
+            start_time_from=None,
+            start_time_to=None,
+        )
+
+        # Convert to select options
+        out: List[Dict[str, Any]] = []
+        for s in items or []:
+            sid = s.get("_id") or s.get("id")
+            if not sid:
+                continue
+
+            start = (s.get("start_time") or "").strip()
+            end = (s.get("end_time") or "").strip()
+            subj_label = (s.get("subject_label") or "").strip() or "Subject"
+            room = (s.get("room") or "").strip()
+
+            time_part = f"{start}–{end}" if start and end else (start or end or "")
+            label = f"{time_part} • {subj_label}" if time_part else subj_label
+            if room:
+                label = f"{label} ({room})"
+
+            out.append(
+                {
+                    "value": str(sid),  # schedule_slot_id
+                    "label": label,
+                    "subject_id": str(s.get("subject_id")) if s.get("subject_id") else None,
+                    "subject_label": s.get("subject_label"),
+                    "class_id": str(s.get("class_id")) if s.get("class_id") else None,
+                    "day_of_week": s.get("day_of_week"),
+                    "start_time": s.get("start_time"),
+                    "end_time": s.get("end_time"),
+                    "room": s.get("room"),
+                }
+            )
+
+        # stable sort by start_time then label
+        out.sort(key=lambda x: (x.get("start_time") or "", x.get("label") or ""))
+        return out
+
+
+
     def list_attendance_for_class_enriched(
         self,
         *,
         class_id: Union[str, ObjectId],
         record_date: str | None = None,
+        subject_id: Union[str, ObjectId, None] = None,
+        subject_ids: Optional[List[Union[str, ObjectId]]] = None,  # NEW
+        schedule_slot_id: Union[str, ObjectId, None] = None,
         show_deleted: str = "active",
     ) -> list[dict]:
         docs = self.attendance.list_attendance_for_class_by_date(
             class_id=class_id,
             record_date=record_date,
+            subject_id=subject_id,
+            subject_ids=subject_ids,         
+            schedule_slot_id=schedule_slot_id,
             show_deleted=show_deleted,
         )
         if not docs:

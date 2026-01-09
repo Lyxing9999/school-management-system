@@ -120,14 +120,14 @@ class GradeService(OidMixin):
         return self.grade_repo.find_by_id(self._oid(grade_id))
 
 
-    def soft_delete_grade(self, grade_id: str | ObjectId, actor_id: str | ObjectId) -> int:
-        res = self.grade_lifecycle.soft_delete_grade(self._oid(grade_id), self._oid(actor_id))
+    def soft_delete_grade(self, grade_id: str | ObjectId, actor_teacher_id: str | ObjectId) -> int:
+        res = self.grade_lifecycle.soft_delete_grade(self._oid(grade_id), self._oid(actor_teacher_id))
         return int(res.modified_count)
 
-    def restore_grade(self, grade_id: str | ObjectId, actor_id: str | ObjectId | None = None) -> int:
-        res = self.grade_lifecycle.restore_grade(self._oid(grade_id), self._oid(actor_id) if actor_id else None)
+    def restore_grade(self, grade_id: str | ObjectId, actor_teacher_id: str | ObjectId | None = None) -> int:
+        res = self.grade_lifecycle.restore_grade(self._oid(grade_id), self._oid(actor_teacher_id) if actor_teacher_id else None)
         return int(res.modified_count)
 
-    def hard_delete_grade(self, grade_id: str | ObjectId, actor_id: str | ObjectId) -> int:
-        res = self.grade_lifecycle.hard_delete_grade(self._oid(grade_id), self._oid(actor_id))
+    def hard_delete_grade(self, grade_id: str | ObjectId, actor_teacher_id: str | ObjectId) -> int:
+        res = self.grade_lifecycle.hard_delete_grade(self._oid(grade_id), self._oid(actor_teacher_id))
         return int(res.deleted_count)

@@ -23,8 +23,8 @@ const props = defineProps<{
   getPreviousValue: (row: Row, field: EditableField) => string;
   editingStatusRowId: string | null;
   statusDraft: Status;
-  statusTagType: (s?: string | null) => any;
-  formatStatusLabel: (s?: Status | string | null) => string;
+  statusTagType: (s?: Status | string | null | undefined) => any;
+  formatStatusLabel: (s?: string | null | undefined) => string;
   statusSaving: Record<string, boolean>;
 }>();
 

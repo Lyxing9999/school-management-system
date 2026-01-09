@@ -2,27 +2,32 @@ import {
   useApiUtils,
   type ApiCallOptions,
 } from "~/composables/system/useApiUtils";
+
 import { TeacherApi } from "./api";
+import type { ListGradesQuery } from "./api";
+
 import type {
   TeacherClassListDTO,
+  TeacherClassSelectNameListDTO,
+  TeacherStudentSelectNameListDTO,
+  TeacherStudentNameListDTO,
+  TeacherSubjectSelectNameListDTO,
   TeacherAttendanceListDTO,
-  TeacherGradePagedDTO,
   TeacherMarkAttendanceDTO,
   TeacherChangeAttendanceStatusDTO,
+  TeacherGradePagedDTO,
   TeacherAddGradeDTO,
   TeacherUpdateGradeScoreDTO,
   TeacherChangeGradeTypeDTO,
-  TeacherStudentSelectNameListDTO,
-  TeacherSubjectSelectNameListDTO,
-  TeacherClassSelectNameListDTO,
-  TeacherStudentNameListDTO,
   TeacherScheduleListDTO,
   TeacherClassListWithSummeryDTO,
   TeacherSoftDeleteResultDTO,
   TeacherRestoreResultDTO,
+  TeacherScheduleSlotSelectListDTO,
 } from "./dto";
-import type { ListGradesQuery } from "./api";
+
 import type { AttendanceDTO, GradeDTO } from "~/api/types/school.dto";
+import type { ListAttendanceQuery, ScheduleSlotSelectQuery } from "./api";
 
 export class TeacherService {
   private callApi = useApiUtils().callApi;
@@ -97,7 +102,7 @@ export class TeacherService {
 
   listAttendanceForClass(
     classId: string,
-    params?: { date?: string },
+    params?: ListAttendanceQuery,
     options?: ApiCallOptions
   ) {
     return this.callApi<TeacherAttendanceListDTO>(
@@ -105,6 +110,7 @@ export class TeacherService {
       options
     );
   }
+
   softDeleteAttendance(attendanceId: string, options?: ApiCallOptions) {
     return this.callApi<TeacherSoftDeleteResultDTO>(
       () => this.teacherApi.softDeleteAttendance(attendanceId),
@@ -118,6 +124,7 @@ export class TeacherService {
       options
     );
   }
+
   // ----------
   // Grades
   // ----------
@@ -160,6 +167,7 @@ export class TeacherService {
       options
     );
   }
+
   softDeleteGrade(gradeId: string, options?: ApiCallOptions) {
     return this.callApi<TeacherSoftDeleteResultDTO>(
       () => this.teacherApi.softDeleteGrade(gradeId),
@@ -173,6 +181,7 @@ export class TeacherService {
       options
     );
   }
+
   // ----------
   // Schedule
   // ----------
@@ -190,6 +199,16 @@ export class TeacherService {
   ) {
     return this.callApi<TeacherScheduleListDTO>(
       () => this.teacherApi.listMySchedule(params),
+      options
+    );
+  }
+
+  listScheduleSlotSelect(
+    query: ScheduleSlotSelectQuery,
+    options?: ApiCallOptions
+  ) {
+    return this.callApi<TeacherScheduleSlotSelectListDTO>(
+      () => this.teacherApi.listScheduleSlotSelect(query),
       options
     );
   }

@@ -28,8 +28,8 @@ export const ROUTES = {
     MY_GRADES: "/student/grades",
     MY_SCHEDULE: "/student/schedule",
     ATTENDANCE: "/student/attendance",
-    EVENTS: "/student/events",
     NOTIFICATIONS: "/student/notifications",
+    CALENDAR: "/student/calendar",
     SETTINGS: "/student/settings",
   },
 } as const;

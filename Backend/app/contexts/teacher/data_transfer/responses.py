@@ -1,6 +1,6 @@
 from typing import List, Optional
-from datetime import date
-from pydantic import BaseModel
+import datetime as dt
+from pydantic import BaseModel, Field
 from pydantic.config import ConfigDict
 
 from app.contexts.school.domain.attendance import AttendanceStatus
@@ -10,26 +10,38 @@ from app.contexts.shared.lifecycle.dto import LifecycleDTO
 from app.contexts.student.data_transfer.responses import StudentBaseDataDTO
 
 
+
+
 class TeacherAttendanceDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     student_id: str
-    student_name: Optional[str] = None
+    class_id: str
 
-    class_id: Optional[str] = None
-    class_name: Optional[str] = None
+    subject_id: Optional[str] = None
+    schedule_slot_id: Optional[str] = None
 
     status: AttendanceStatus
-    record_date: date
+    record_date: dt.date
+    marked_by_teacher_id: Optional[str] = None
 
-    marked_by_teacher_id: str
+    lifecycle: Optional[LifecycleDTO] = None
+
+    # --- enriched ---
+    student_name: Optional[str] = None
+    class_name: Optional[str] = None
     teacher_name: Optional[str] = None
+    subject_label: Optional[str] = None
 
-    lifecycle: LifecycleDTO
+    day_of_week: Optional[int] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    room: Optional[str] = None
 
 
 class TeacherAttendanceListDTO(BaseModel):
-    items: List[TeacherAttendanceDTO]
-
+    items: List[TeacherAttendanceDTO] = Field(default_factory=list)
 
 class TeacherGradeDTO(BaseModel):
     id: str
@@ -42,15 +54,16 @@ class TeacherGradeDTO(BaseModel):
     term: Optional[str] = None
     lifecycle: LifecycleDTO
 
+    is_homeroom: Optional[bool] = None
+    can_edit: bool = False  
+
     # enriched fields
     student_name: Optional[str] = None
     student_name_en: Optional[str] = None
     student_name_kh: Optional[str] = None
-
     class_name: Optional[str] = None
     teacher_name: Optional[str] = None
     subject_label: Optional[str] = None
-
 
 class TeacherGradePagedListDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -178,3 +191,22 @@ class TeacherAssignmentDTO(BaseModel):
 
 class TeacherAssignmentListDTO(BaseModel):
     items: List[TeacherAssignmentDTO]
+
+
+
+class TeacherScheduleSlotSelectDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    value: str           
+    label: str                 
+    subject_id: Optional[str] = None
+    subject_label: Optional[str] = None
+
+    class_id: Optional[str] = None
+    day_of_week: Optional[int] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    room: Optional[str] = None
+    
+class TeacherScheduleSlotSelectListDTO(BaseModel):
+    items: List[TeacherScheduleSlotSelectDTO]

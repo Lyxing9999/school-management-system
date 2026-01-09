@@ -190,7 +190,6 @@ async function saveProfile() {
 
       const updated = await iam.auth.updateMe(payload);
       if (updated) {
-        msg.showSuccess("Profile updated");
         hydrateProfile();
       }
     } finally {
@@ -448,7 +447,6 @@ function goDashboard() {
 
                   <el-divider />
 
-                  <!-- ✅ Replaced Inline Edit with Access (teacher-friendly, product-ready) -->
                   <div class="space-y-2">
                     <div class="font-medium">Access</div>
                     <el-alert
@@ -529,6 +527,7 @@ function goDashboard() {
                         type="password"
                         show-password
                         autocomplete="current-password"
+                        placeholder="Enter your current password"
                       />
                     </el-form-item>
 
@@ -538,6 +537,7 @@ function goDashboard() {
                         type="password"
                         show-password
                         autocomplete="new-password"
+                        placeholder="Enter your new password"
                       />
                     </el-form-item>
                   </div>
@@ -618,8 +618,12 @@ function goDashboard() {
                         Keeps the header badge updated.
                       </div>
                     </div>
-
-                    <el-switch :model-value="notifAutoRefresh" />
+                    <el-switch
+                      :model-value="notifAutoRefresh"
+                      @update:model-value="
+                        (val) => setNotifAutoRefresh(Boolean(val))
+                      "
+                    />
                   </div>
 
                   <el-divider />
@@ -663,17 +667,22 @@ function goDashboard() {
                 </div>
               </el-card>
 
-              <el-card shadow="never">
-                <template #header
-                  ><span class="font-medium">Actions</span></template
-                >
+              <el-card shadow="never" class="self-start">
+                <template #header>
+                  <span class="font-medium">Actions</span>
+                </template>
+
                 <div class="space-y-2">
-                  <el-button class="w-full" plain @click="refreshUnread"
-                    >Refresh unread</el-button
-                  >
-                  <el-button class="w-full" plain @click="openDrawer"
-                    >Open drawer</el-button
-                  >
+                  <div>
+                    <el-button class="action-btn" plain @click="refreshUnread">
+                      Refresh unread
+                    </el-button>
+                  </div>
+                  <div>
+                    <el-button class="action-btn" plain @click="openDrawer">
+                      Open drawer
+                    </el-button>
+                  </div>
                 </div>
               </el-card>
             </div>

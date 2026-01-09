@@ -34,33 +34,33 @@ class AttendanceLifecycleService:
             recommended=can.recommended,
         )
 
-    def soft_delete_attendance(self, attendance_id: ObjectId, actor_id: ObjectId) -> UpdateResult:
-        can = self.policy.can_soft_delete(attendance_id)
+    def soft_delete_attendance(self, attendance_id: ObjectId, actor_teacher_id: ObjectId) -> UpdateResult:
+        can = self.policy.can_soft_delete(attendance_id=attendance_id, actor_teacher_id=actor_teacher_id)
         if not can.allowed:
             self._deny(attendance_id, can)
 
         res = self.collection.update_one(
             guard_not_deleted(attendance_id),
-            apply_soft_delete_update(actor_id),
+            apply_soft_delete_update(actor_teacher_id),
         )
         if res.matched_count == 0:
             raise AttendanceNotFoundException(str(attendance_id))
         return res
 
-    def restore_attendance(self, attendance_id: ObjectId, actor_id: ObjectId | None = None) -> UpdateResult:
+    def restore_attendance(self, attendance_id: ObjectId, actor_teacher_id: ObjectId | None = None) -> UpdateResult:
         can = self.policy.can_restore(attendance_id)
         if not can.allowed:
             self._deny(attendance_id, can)
 
         res = self.collection.update_one(
             guard_deleted(attendance_id),
-            apply_restore_update(actor_id),
+            apply_restore_update(actor_teacher_id),
         )
         if res.matched_count == 0:
             raise AttendanceNotFoundException(str(attendance_id))
         return res
 
-    def hard_delete_attendance(self, attendance_id: ObjectId, actor_id: ObjectId) -> DeleteResult:
+    def hard_delete_attendance(self, attendance_id: ObjectId, actor_teacher_id: ObjectId) -> DeleteResult:
         can = self.policy.can_hard_delete(attendance_id)
         if not can.allowed:
             self._deny(attendance_id, can)

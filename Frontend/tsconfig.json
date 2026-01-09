@@ -1,55 +1,12 @@
 {
   "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "strict": true,
-    "jsx": "preserve",
-    "allowJs": true,
     "baseUrl": ".",
-    "types": [
-      "vue",
-      "vite/client",  
-      "node",
-      "nuxt",
-      "element-plus/global",
-      "@element-plus/icons-vue"
-    ],
     "paths": {
       "~/*": ["./src/*"],
-      "@/*": ["./src/*"], 
-      "~views/*": ["src/views/*"],
-      
-      "#app": [".nuxt/app"],
-      "#build/*": [".nuxt/build/*"],
-      "#components": [".nuxt/components"],
-      "#components/*": [".nuxt/components/*"],
-      "#imports": [".nuxt/imports"],
-      "#imports/*": [".nuxt/imports/*"],
-      "#internal/*": [".nuxt/internal/*"],
-      "#layouts": [".nuxt/layouts"],
-      "#layouts/*": [".nuxt/layouts/*"],
-      "#pages": [".nuxt/pages"],
-      "#pages/*": [".nuxt/pages/*"],
-      "#plugins": [".nuxt/plugins"],
-      "#plugins/*": [".nuxt/plugins/*"],
-      "#types": [".nuxt/types"],
-      "#types/*": [".nuxt/types/*"]
-      
-
+      "@/*": ["./src/*"],
+      "~views/*": ["./src/views/*"]
     },
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
     "skipLibCheck": true
-  },
-  "include": [
-    "nuxt.config.ts",
-    "src/**/*.ts",
-    "src/**/*.vue",
-    "src/types/**/*.d.ts",
-    ".nuxt/**/*.d.ts",
-    "env.d.ts", "src/**/*.ts", "src/**/*.vue", "src/services/formServices", "src/composables/features/users/useUsersPaging.ts"  ],
-  "exclude": ["node_modules"]
+  }
 }

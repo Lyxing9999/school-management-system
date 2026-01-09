@@ -4,11 +4,20 @@ definePageMeta({ layout: "default" });
 import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 import {
   ElMessage,
+  ElAlert,
+  ElCard,
+  ElEmpty,
+  ElSkeleton,
+  ElTable,
+  ElTableColumn,
   ElInput,
   ElSelect,
   ElOption,
   ElSegmented,
   ElTag,
+  ElRow,
+  ElCol,
+  ElButton,
 } from "element-plus";
 
 import { studentService } from "~/api/student";
@@ -18,8 +27,11 @@ import type { StudentScheduleFilterDTO } from "~/api/student/student.dto";
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import { useHeaderState } from "~/composables/ui/useHeaderState";
 
+import { dayOptions as DAY_OPTIONS } from "~/utils/constants/dayOptions";
+
 const student = studentService();
 
+/* ---------------- state ---------------- */
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 const schedule = ref<ScheduleDTO[]>([]);
@@ -28,9 +40,6 @@ const schedule = ref<ScheduleDTO[]>([]);
 let requestSeq = 0;
 
 /* ---------------- helpers ---------------- */
-
-import { dayOptions as DAY_OPTIONS } from "~/utils/constants/dayOptions";
-
 const dayOfWeekLabel = (d: number | string) => {
   const map: Record<string, string> = {
     "1": "Monday",
@@ -77,16 +86,34 @@ const durationLabel = (start?: string, end?: string) => {
   return `${m}m`;
 };
 
-/* ---------------- UI state ---------------- */
+const extractErrorMessage = (err: any) => {
+  return (
+    err?.response?.data?.user_message ||
+    err?.response?.data?.message ||
+    err?.message ||
+    "Failed to load schedule. Please try again."
+  );
+};
 
+/* ---------------- UI state ---------------- */
 type ViewMode = "day" | "table";
 const viewMode = ref<ViewMode>("day");
 
 const selectedDay = ref<"all" | 1 | 2 | 3 | 4 | 5 | 6 | 7>("all");
 const search = ref("");
 
-/* ---------------- view model ---------------- */
+/** IMPORTANT: when clearable is clicked, Element Plus may set model to null/undefined.
+ * We force it back to "all" (your default).
+ */
+const onDayClear = () => {
+  selectedDay.value = "all";
+};
 
+const onSearchClear = () => {
+  search.value = "";
+};
+
+/* ---------------- view model ---------------- */
 type ScheduleRowVM = {
   id: string;
   day: number;
@@ -144,25 +171,22 @@ const rows = computed<ScheduleRowVM[]>(() => {
 
 const filteredRows = computed(() => {
   const q = search.value.trim().toLowerCase();
+
   return rows.value.filter((r) => {
     const dayOk =
       selectedDay.value === "all" ? true : r.day === selectedDay.value;
     if (!dayOk) return false;
+
     if (!q) return true;
 
-    const haystack = [
-      r.dayLabel,
-      r.className,
-      r.teacherName,
-      r.subjectLabel,
-      r.room,
-      r.start,
-      r.end,
-    ]
+    const subject = r.subjectLabel.toLowerCase();
+    if (subject.includes(q)) return true;
+
+    const secondary = [r.teacherName, r.room, r.dayLabel, r.start, r.end]
       .join(" ")
       .toLowerCase();
 
-    return haystack.includes(q);
+    return secondary.includes(q);
   });
 });
 
@@ -177,7 +201,6 @@ const groupedByDay = computed(() => {
 });
 
 /* ---------------- overview stats ---------------- */
-
 const totalLessons = computed(() => filteredRows.value.length);
 const distinctClasses = computed(
   () => new Set(filteredRows.value.map((s) => s.className)).size
@@ -224,7 +247,6 @@ const { headerState } = useHeaderState({
 });
 
 /* ---------------- load schedule ---------------- */
-
 const loadSchedule = async () => {
   const seq = ++requestSeq;
 
@@ -236,17 +258,10 @@ const loadSchedule = async () => {
     const res = await student.student.getMySchedule(params);
 
     if (seq !== requestSeq) return;
-    schedule.value = res.items ?? [];
+    schedule.value = (res as any)?.items ?? [];
   } catch (err: any) {
     if (seq !== requestSeq) return;
-
-    const msg =
-      err?.response?.data?.user_message ||
-      err?.response?.data?.message ||
-      err?.message ||
-      "Failed to load schedule. Please try again.";
-
-    errorMessage.value = msg;
+    errorMessage.value = extractErrorMessage(err);
     schedule.value = [];
   } finally {
     if (seq === requestSeq) loading.value = false;
@@ -271,7 +286,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="p-4 space-y-4" v-loading="loading">
+  <div class="p-4 space-y-4 max-w-6xl mx-auto pb-10" v-loading="loading">
     <OverviewHeader
       title="My Schedule"
       description="Your lessons, timings, and classroom details."
@@ -281,64 +296,70 @@ onBeforeUnmount(() => {
       @refresh="handleRefresh"
     >
       <template #filters>
-        <div
-          class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        <el-card
+          shadow="never"
+          class="rounded-2xl border"
+          style="
+            background: color-mix(in srgb, var(--color-card) 96%, transparent);
+            border-color: var(--border-color);
+          "
         >
-          <!-- Left: Day + Search -->
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <ElSelect
-              v-model="selectedDay"
-              class="w-full sm:w-[200px]"
-              placeholder="Filter by day"
-              :disabled="loading"
-            >
-              <ElOption
-                v-for="opt in DAY_OPTIONS"
-                :key="String(opt.value)"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </ElSelect>
+          <el-row :gutter="12" class="items-center">
+            <!-- Left: Day + Search -->
+            <el-col :xs="24" :md="16">
+              <el-row :gutter="12" class="items-center">
+                <el-col :xs="24" :sm="10" :md="8">
+                  <ElSelect
+                    v-model="selectedDay"
+                    class="w-full"
+                    placeholder="Filter by day"
+                    :disabled="loading"
+                    clearable
+                    @clear="onDayClear"
+                  >
+                    <ElOption
+                      v-for="opt in DAY_OPTIONS"
+                      :key="String(opt.value)"
+                      :label="opt.label"
+                      :value="opt.value"
+                    />
+                  </ElSelect>
+                </el-col>
 
-            <ElInput
-              v-model="search"
-              class="w-full sm:w-[320px]"
-              clearable
-              placeholder="Search class, subject, teacher, room..."
-              :disabled="loading"
-            />
-          </div>
+                <el-col :xs="24" :sm="14" :md="16">
+                  <ElInput
+                    v-model="search"
+                    class="w-full"
+                    clearable
+                    placeholder="Search subject (and teacher / room...)"
+                    :disabled="loading"
+                    @clear="onSearchClear"
+                  />
+                </el-col>
+              </el-row>
+            </el-col>
 
-          <!-- Right: View Mode + Reset -->
-          <div class="flex items-center gap-2">
-            <ElSegmented
-              v-model="viewMode"
-              :options="[
-                { label: 'By day', value: 'day' },
-                { label: 'Table', value: 'table' },
-              ]"
-              :disabled="loading"
-            />
+            <!-- Right: View Mode + Reset -->
+            <el-col :xs="24" :md="8">
+              <div
+                class="flex flex-wrap items-center justify-start md:justify-end gap-2"
+              >
+                <ElSegmented
+                  v-model="viewMode"
+                  :options="[
+                    { label: 'By day', value: 'day' },
+                    { label: 'Table', value: 'table' },
+                  ]"
+                  :disabled="loading"
+                />
 
-            <button
-              type="button"
-              class="px-3 py-2 rounded-lg text-sm border shadow-sm hover:opacity-90"
-              style="
-                background: color-mix(
-                  in srgb,
-                  var(--color-card) 92%,
-                  transparent
-                );
-                border-color: var(--border-color);
-                color: var(--text-color);
-              "
-              @click="clearFilters"
-              :disabled="loading"
-            >
-              Reset
-            </button>
-          </div>
-        </div>
+                <ElButton :disabled="loading" @click="clearFilters"
+                  >Reset</ElButton
+                >
+              </div>
+            </el-col>
+          </el-row>
+        </el-card>
       </template>
     </OverviewHeader>
 
@@ -355,7 +376,15 @@ onBeforeUnmount(() => {
     </transition>
 
     <!-- Skeleton for first load -->
-    <el-card v-if="loading && !rows.length" shadow="never" class="rounded-xl">
+    <el-card
+      v-if="loading && !rows.length"
+      shadow="never"
+      class="rounded-2xl border"
+      style="
+        background: color-mix(in srgb, var(--color-card) 96%, transparent);
+        border-color: var(--border-color);
+      "
+    >
       <el-skeleton animated :rows="8" />
     </el-card>
 
@@ -363,9 +392,9 @@ onBeforeUnmount(() => {
     <el-empty
       v-else-if="!loading && !filteredRows.length"
       description="No schedule found for these filters."
-      class="rounded-xl border"
+      class="rounded-2xl border"
       style="
-        background: color-mix(in srgb, var(--color-card) 92%, transparent);
+        background: color-mix(in srgb, var(--color-card) 96%, transparent);
         border-color: var(--border-color);
       "
     />
@@ -376,58 +405,79 @@ onBeforeUnmount(() => {
         v-for="[day, items] in groupedByDay"
         :key="day"
         shadow="hover"
-        class="rounded-xl"
+        class="rounded-2xl border"
         style="
           background: color-mix(in srgb, var(--color-card) 96%, transparent);
           border-color: var(--border-color);
         "
       >
         <template #header>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="font-semibold" style="color: var(--text-color)">
-                {{ items[0]?.dayLabel ?? "Schedule" }}
+          <el-row :gutter="12" class="items-center">
+            <el-col :xs="24" :sm="16">
+              <div class="flex items-center gap-2 min-w-0">
+                <div
+                  class="font-semibold truncate"
+                  style="color: var(--text-color)"
+                >
+                  {{ items[0]?.dayLabel ?? "Schedule" }}
+                </div>
+
+                <ElTag size="small" effect="plain" type="info">
+                  {{ items.length }} lesson{{ items.length === 1 ? "" : "s" }}
+                </ElTag>
               </div>
+              <div class="text-xs mt-1" style="color: var(--muted-color)">
+                Sorted by start time
+              </div>
+            </el-col>
 
-              <ElTag size="small" effect="plain" type="info">
-                {{ items.length }} lesson{{ items.length === 1 ? "" : "s" }}
-              </ElTag>
-            </div>
-
-            <div class="text-xs" style="color: var(--muted-color)">
-              Sorted by start time
-            </div>
-          </div>
+            <el-col :xs="24" :sm="8">
+              <div class="flex sm:justify-end">
+                <div class="text-xs" style="color: var(--muted-color)">
+                  Showing {{ items.length }}
+                </div>
+              </div>
+            </el-col>
+          </el-row>
         </template>
 
         <el-table
           :data="items"
-          border
           size="small"
           style="width: 100%"
-          :header-cell-style="{
-            background:
-              'color-mix(in srgb, var(--color-card) 85%, #ffffff 15%)',
-            color: 'var(--text-color)',
-            fontWeight: '600',
-            fontSize: '13px',
-          }"
+          highlight-current-row
+          class="app-table rounded-xl overflow-hidden"
         >
           <el-table-column prop="start" label="Start" min-width="90" />
           <el-table-column prop="end" label="End" min-width="90" />
           <el-table-column prop="duration" label="Duration" min-width="110" />
+
           <el-table-column
             prop="className"
             label="Class"
             min-width="220"
             show-overflow-tooltip
           />
+
           <el-table-column
             prop="subjectLabel"
             label="Subject"
             min-width="220"
             show-overflow-tooltip
-          />
+          >
+            <template #default="{ row }">
+              <div class="flex items-center gap-2 min-w-0">
+                <span
+                  class="inline-block h-2 w-2 rounded-full"
+                  style="background: var(--color-primary)"
+                />
+                <span class="truncate" style="color: var(--text-color)">{{
+                  row.subjectLabel
+                }}</span>
+              </div>
+            </template>
+          </el-table-column>
+
           <el-table-column
             prop="teacherName"
             label="Teacher"
@@ -448,37 +498,40 @@ onBeforeUnmount(() => {
     <el-card
       v-else
       shadow="hover"
-      class="rounded-xl"
+      class="rounded-2xl border"
       style="
         background: color-mix(in srgb, var(--color-card) 96%, transparent);
         border-color: var(--border-color);
       "
     >
       <template #header>
-        <div class="flex items-center justify-between">
-          <div class="font-semibold" style="color: var(--text-color)">
-            All lessons
-          </div>
-          <div class="text-xs" style="color: var(--muted-color)">
-            {{ filteredRows.length }} item{{
-              filteredRows.length === 1 ? "" : "s"
-            }}
-          </div>
-        </div>
+        <el-row :gutter="12" class="items-center">
+          <el-col :xs="24" :sm="16">
+            <div class="font-semibold" style="color: var(--text-color)">
+              All lessons
+            </div>
+            <div class="text-xs mt-1" style="color: var(--muted-color)">
+              Sorted by day then start time
+            </div>
+          </el-col>
+          <el-col :xs="24" :sm="8">
+            <div class="flex sm:justify-end">
+              <div class="text-xs" style="color: var(--muted-color)">
+                {{ filteredRows.length }} item{{
+                  filteredRows.length === 1 ? "" : "s"
+                }}
+              </div>
+            </div>
+          </el-col>
+        </el-row>
       </template>
 
       <el-table
         :data="filteredRows"
-        border
         size="small"
         style="width: 100%"
-        :default-sort="{ prop: 'day', order: 'ascending' }"
-        :header-cell-style="{
-          background: 'color-mix(in srgb, var(--color-card) 85%, #ffffff 15%)',
-          color: 'var(--text-color)',
-          fontWeight: '600',
-          fontSize: '13px',
-        }"
+        highlight-current-row
+        class="app-table rounded-xl overflow-hidden"
       >
         <el-table-column prop="dayLabel" label="Day" min-width="130" />
         <el-table-column prop="start" label="Start" min-width="90" />
@@ -514,11 +567,41 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* Keep UI consistent with your theme tokens */
+/* keep consistent with your token system */
 :deep(.el-card) {
   border-radius: 16px;
 }
-:deep(.el-table) {
+
+/* Table: consistent borders + header using your tokens */
+:deep(.app-table) {
+  --el-table-border-color: var(--border-color);
+  --el-table-header-bg-color: color-mix(
+    in srgb,
+    var(--color-card) 88%,
+    var(--color-bg) 12%
+  );
+  --el-table-header-text-color: var(--text-color);
+  --el-table-text-color: var(--text-color);
+
+  --el-table-row-hover-bg-color: var(--hover-bg);
+  --el-table-current-row-bg-color: var(--active-bg);
+}
+
+:deep(.app-table .el-table__header-wrapper th) {
+  font-weight: 650;
+  font-size: 13px;
+}
+
+:deep(.app-table.el-table--border .el-table__inner-wrapper::after),
+:deep(.app-table.el-table--border::after),
+:deep(.app-table.el-table--border::before) {
+  background-color: var(--border-color);
+}
+
+/* inputs/selects/segmented blend with theme */
+:deep(.el-input__wrapper),
+:deep(.el-select__wrapper),
+:deep(.el-segmented) {
   border-radius: 12px;
 }
 </style>

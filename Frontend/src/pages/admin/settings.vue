@@ -634,7 +634,10 @@ function goDashboard() {
                       </div>
                     </div>
 
-                    <el-switch :model-value="notifAutoRefresh" />
+                    <el-switch
+                      :model-value="notifAutoRefresh"
+                      @update:model-value="(v) => setNotifAutoRefresh(!!v)"
+                    />
                   </div>
 
                   <el-divider />
@@ -672,17 +675,22 @@ function goDashboard() {
                 </div>
               </el-card>
 
-              <el-card shadow="never">
-                <template #header
-                  ><span class="font-medium">Actions</span></template
-                >
+              <el-card shadow="never" class="self-start">
+                <template #header>
+                  <span class="font-medium">Actions</span>
+                </template>
+
                 <div class="space-y-2">
-                  <el-button class="w-full" plain @click="refreshUnread"
-                    >Refresh unread</el-button
-                  >
-                  <el-button class="w-full" plain @click="openDrawer"
-                    >Open drawer</el-button
-                  >
+                  <div>
+                    <el-button class="action-btn" plain @click="refreshUnread">
+                      Refresh unread
+                    </el-button>
+                  </div>
+                  <div>
+                    <el-button class="action-btn" plain @click="openDrawer">
+                      Open drawer
+                    </el-button>
+                  </div>
                 </div>
               </el-card>
             </div>

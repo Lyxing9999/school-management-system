@@ -4,7 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .common_validators import strip, strip_or_none, oid_to_str, oids_to_str_list
-
+from app.contexts.school.domain.class_section import ClassSectionStatus
 
 class AdminCreateClassSchema(BaseModel):
     model_config = ConfigDict(extra="ignore", use_enum_values=True)
@@ -99,3 +99,7 @@ class AdminEnrollStudentToClassSchema(BaseModel):
 class AdminUpdateClassRelationsSchema(BaseModel):
     student_ids: List[str] = Field(default_factory=list)
     homeroom_teacher_id: Optional[str] = None
+
+
+class AdminSetClassStatusSchema(BaseModel):
+    status: ClassSectionStatus
