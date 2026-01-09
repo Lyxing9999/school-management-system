@@ -18,6 +18,9 @@ export default defineNuxtRouteMiddleware(
   async (to: RouteLocationNormalized) => {
     if (import.meta.server) return;
 
+
+    if (to.path.startsWith("/auth")) return;
+
     const auth = useAuthStore();
 
     if (!auth.isReady) {
@@ -34,8 +37,6 @@ export default defineNuxtRouteMiddleware(
         );
       });
     }
-
-    if (to.path.startsWith("/auth")) return;
 
     if ((to.path === "/" || to.path === "/home") && !auth.isAuthenticated) {
       return navigateTo("/auth/login");
