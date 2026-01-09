@@ -44,7 +44,7 @@ const { unreadCount } = storeToRefs(notifStore);
 const prefs = usePreferencesStore();
 const { notifAutoRefresh } = storeToRefs(prefs);
 
-const { isDark, toggle: toggleTheme } = useTheme();
+const { initFromClient, setTheme } = useTheme();
 
 /* -------------------------
    Role helpers (Admin / Teacher / Student)
@@ -290,7 +290,7 @@ onMounted(async () => {
 
   try {
     if (!authStore.isReady) {
-      await iam.auth.me();
+      await iam.auth.getMe();
     }
     hydrateProfile();
     await refreshUnread();
@@ -441,10 +441,15 @@ const autoRefreshBadge = computed<boolean>({
                     <div>
                       <div class="font-medium">Theme</div>
                       <div class="text-[var(--muted-color)]">
-                        {{ isDark ? "Dark" : "Light" }}
+                        {{ initFromClient === "dark" ? "Dark" : "Light" }}
                       </div>
                     </div>
-                    <BaseButton plain size="small" @click="toggleTheme()"
+                    <BaseButton
+                      plain
+                      size="small"
+                      @click="
+                        setTheme(initFromClient === 'dark' ? 'light' : 'dark')
+                      "
                       >Toggle</BaseButton
                     >
                   </div>

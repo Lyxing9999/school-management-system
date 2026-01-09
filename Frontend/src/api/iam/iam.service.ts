@@ -223,10 +223,9 @@ export class AuthService {
     }
   }
 
-  async me() {
-    return this.authApi.me();
+  async getMe() {
+    return this.authApi.getMe();
   }
-
   async updateMe(payload: UpdateMePayload) {
     try {
       const data = await this.authApi.updateMe(payload);

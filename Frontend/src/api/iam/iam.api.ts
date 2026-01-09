@@ -4,7 +4,6 @@ import type {
   UserLoginForm,
   UserLoginResponse,
   UserRegisterResponse,
-  MeResponse,
   RefreshApiResponse,
   ResetPasswordConfirmPayload,
   ResetPasswordConfirmResponse,
@@ -12,7 +11,7 @@ import type {
   ChangePasswordResponse,
   UpdateMePayload,
 } from "~/api/iam/iam.dto";
-
+import type { UserBaseDataDTO as MeResponse } from "~/api/types/user.dto";
 export class AuthApi {
   constructor(private $api: AxiosInstance, private baseURL = "/api/iam") {}
 
@@ -34,7 +33,7 @@ export class AuthApi {
       .then((r) => r.data);
   }
 
-  async me() {
+  async getMe() {
     return this.$api.get<MeResponse>(`${this.baseURL}/me`).then((r) => r.data);
   }
 

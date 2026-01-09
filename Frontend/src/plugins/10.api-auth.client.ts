@@ -18,10 +18,13 @@ export default defineNuxtPlugin(() => {
   const auth = useAuthStore();
 
   $api.interceptors.request.use((cfg: InternalAxiosRequestConfig) => {
-    if (auth.token) {
+    const token = auth.token;
+
+    if (token) {
       cfg.headers = cfg.headers ?? {};
-      (cfg.headers as any).Authorization = `Bearer ${auth.token}`;
+      (cfg.headers as any).Authorization = `Bearer ${token}`;
     }
+
     return cfg;
   });
 
@@ -36,7 +39,6 @@ export default defineNuxtPlugin(() => {
   $api.interceptors.response.use(
     (res: AxiosResponse) => res,
     async (error: AxiosError) => {
-      // backend down / network error
       if (!error.response) return Promise.reject(error);
 
       const original = (error.config || {}) as RetryConfig;

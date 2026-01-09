@@ -11,8 +11,7 @@ export default defineNuxtConfig({
   srcDir: "src/",
   compatibilityDate: "2025-05-29",
 
- 
-  ssr: false,
+  ssr: true,
 
   modules: ["@element-plus/nuxt", "@pinia/nuxt"],
 
@@ -43,12 +42,7 @@ export default defineNuxtConfig({
       ],
       script: [
         {
-          innerHTML: `(function(){try{
-            var t=localStorage.getItem('theme')||'light';
-            var el=document.documentElement;
-            el.setAttribute('data-theme', t);
-            if(t==='dark') el.classList.add('dark'); else el.classList.remove('dark');
-          }catch(e){}})();`,
+          innerHTML: `(function(){try{ ... localStorage ... }catch(e){}})();`,
         },
       ],
     },

@@ -4,7 +4,7 @@ import { useRoute, useRouter } from "nuxt/app";
 import type { FormInstance, FormRules } from "element-plus";
 import schoolLogo from "~/assets/image/school-logo-light.png";
 import { useIamService } from "~/api/iam/index";
-
+definePageMeta({ layout: false, middleware: [] });
 const authService = useIamService().auth; // ensure authService exposes confirmResetPassword()
 const route = useRoute();
 const router = useRouter();

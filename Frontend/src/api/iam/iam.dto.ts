@@ -25,7 +25,7 @@ export type RefreshResponse = {
 
 export type UserLoginResponse = AuthData;
 export type UserRegisterResponse = AuthData;
-export type MeResponse = UserBaseDataDTO;
+
 export type RefreshApiResponse = RefreshResponse;
 
 /* Reset password (token-based) */

@@ -1,50 +1,36 @@
-import { computed } from "vue";
 
-export type ThemeKey = "light" | "dark";
-
-const STORAGE_KEY = "theme";
-
-function isTheme(v: unknown): v is ThemeKey {
-  return v === "light" || v === "dark";
-}
+type Theme = "light" | "dark";
 
 export function useTheme() {
-  // Keeps state across app; SSR default is stable.
-  const theme = useState<ThemeKey>("theme", () => "light");
-  const isDark = computed(() => theme.value === "dark");
+  const themeCookie = useCookie<Theme>("theme", {
+    sameSite: "lax",
+    path: "/",
+  });
 
-  function apply(next: ThemeKey) {
-    theme.value = next;
-
-    if (!import.meta.client) return;
-
+  function applyTheme(t: Theme) {
     const el = document.documentElement;
-    el.setAttribute("data-theme", next);
-    el.classList.toggle("dark", next === "dark");
-    localStorage.setItem(STORAGE_KEY, next);
+    el.setAttribute("data-theme", t);
+    if (t === "dark") el.classList.add("dark");
+    else el.classList.remove("dark");
   }
 
   function initFromClient() {
-    if (!import.meta.client) return;
+    if (import.meta.server) return;
+    const stored = (localStorage.getItem("theme") as Theme | null) || null;
+    const t: Theme = stored || themeCookie.value || "light";
 
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (isTheme(saved)) {
-      apply(saved);
-      return;
-    }
-
-    const attr = document.documentElement.getAttribute("data-theme");
-    if (isTheme(attr)) {
-      apply(attr);
-      return;
-    }
-
-    apply("light");
+    themeCookie.value = t;
+    localStorage.setItem("theme", t);
+    applyTheme(t);
   }
 
-  function toggle() {
-    apply(isDark.value ? "light" : "dark");
+  function setTheme(t: Theme) {
+    if (import.meta.client) {
+      localStorage.setItem("theme", t);
+      applyTheme(t);
+    }
+    themeCookie.value = t; // 
   }
 
-  return { theme, isDark, apply, toggle, initFromClient };
+  return { initFromClient, setTheme };
 }

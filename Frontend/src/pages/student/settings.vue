@@ -190,7 +190,7 @@ onMounted(async () => {
 
   try {
     if (!authStore.isReady) {
-      await iam.auth.me();
+      await iam.auth.getMe();
     }
     hydrateProfile();
     hydrateStudentHome();
