@@ -9,7 +9,8 @@ const isVercel = !!process.env.VERCEL;
 export default defineNuxtConfig({
   srcDir: "src/",
   compatibilityDate: "2025-05-29",
-
+  css: ["~/styles/main.css", "~/styles/sidebar.scss"],
+  modules: ["@element-plus/nuxt", "@pinia/nuxt"],
   ssr: true,
 
   routeRules: {
@@ -21,11 +22,7 @@ export default defineNuxtConfig({
     "/": { ssr: true },
   },
 
-  modules: ["@element-plus/nuxt", "@pinia/nuxt"],
-
   devtools: { enabled: !isProd },
-
-  css: ["~/styles/main.css", "~/styles/sidebar.scss"],
 
   runtimeConfig: {
     public: {
