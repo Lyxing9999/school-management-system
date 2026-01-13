@@ -6,7 +6,7 @@ import schoolLogo from "~/assets/image/school-logo-light.png";
 const { $authService } = useNuxtApp();
 const route = useRoute();
 const router = useRouter();
-definePageMeta({ layout: false });
+
 const loading = ref(false);
 const formRef = ref<FormInstance>();
 definePageMeta({ layout: false, middleware: [] });
