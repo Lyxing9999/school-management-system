@@ -27,7 +27,7 @@ class GradeService(OidMixin):
         term: str | None = None,
         *,
         require_student_in_class: bool = False,
-        prevent_duplicate: bool = True,
+        prevent_duplicate: bool = False,
     ) -> GradeRecord:
 
         can = self.grade_policy.can_create(

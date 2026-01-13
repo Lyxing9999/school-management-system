@@ -4,17 +4,19 @@ import type { FormInstance, FormRules } from "element-plus";
 
 import schoolLogo from "~/assets/image/school-logo-light.png";
 
+import { iamService } from "~/api/iam/index";
 import type { UserLoginForm } from "~/api/iam/iam.dto";
 
-const { $authService } = useNuxtApp();
+const authService = iamService().auth;
 
 const loading = ref(false);
 const formRef = ref<FormInstance>();
-definePageMeta({ layout: false, middleware: [] });
+definePageMeta({ layout: false });
 const form = reactive<UserLoginForm>({
   email: "",
   password: "",
 });
+
 const rules: FormRules = {
   email: [
     { required: true, message: "Please enter email", trigger: "blur" },
@@ -33,7 +35,7 @@ const submit = async () => {
 
   loading.value = true;
   try {
-    await $authService.login(form);
+    await authService.login(form);
   } finally {
     loading.value = false;
   }
@@ -105,11 +107,11 @@ const submit = async () => {
 
 <style scoped>
 .auth-shell {
-  min-height: 100vh;
+  min-height: calc(100vh - var(--header-height, 0px));
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--color-bg, #f5f7fb);
+  background: var(--color-bg);
 }
 
 .auth-card {
@@ -117,11 +119,12 @@ const submit = async () => {
   max-width: 420px;
   padding: 28px;
   border-radius: 14px;
-  background: var(--color-card, #ffffff);
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
-  box-shadow: 0 10px 30px var(--card-shadow, rgba(0, 0, 0, 0.1));
-  color: var(--text-color, #111827);
+  background: var(--color-card);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 30px var(--card-shadow);
+  color: var(--text-color);
 }
+
 .auth-logo {
   display: block;
   width: 72%;

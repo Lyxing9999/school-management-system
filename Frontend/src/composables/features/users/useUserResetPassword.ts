@@ -16,35 +16,49 @@ type RequestResetResult = {
 async function copyToClipboard(text: string) {
   if (!import.meta.client) return false;
 
+  // Modern clipboard
   try {
-    await navigator.clipboard.writeText(text);
-    return true;
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
   } catch {
+    // fallback below
+  }
+
+  // Fallback copy
+  try {
     const el = document.createElement("textarea");
     el.value = text;
+    el.setAttribute("readonly", "true");
     el.style.position = "fixed";
+    el.style.top = "0";
+    el.style.left = "0";
     el.style.opacity = "0";
     document.body.appendChild(el);
+
+    el.focus();
     el.select();
+    el.setSelectionRange(0, el.value.length);
+
     const ok = document.execCommand("copy");
     document.body.removeChild(el);
     return ok;
+  } catch {
+    return false;
   }
 }
+
 export function useUserResetPassword() {
   const message = useMessage();
   const adminApi = adminService();
 
-  // Record-based loading (matches your other patterns)
   const resetLoading = ref<Record<string, boolean>>({});
 
   async function handleResetPassword(row: UserResetRow) {
     const key = String(row.id);
-
-    // prevent duplicate click for same row
-    if (resetLoading.value[key]) {
+    if (resetLoading.value[key])
       return { ok: false as const, busy: true as const };
-    }
 
     try {
       await ElMessageBox.confirm(
@@ -62,27 +76,34 @@ export function useUserResetPassword() {
       const res = (await adminApi.user.requestPasswordReset(
         row.id
       )) as RequestResetResult;
+      const link = res?.reset_link;
 
-      if (!res?.reset_link) {
+      if (!link) {
         message.showError("Reset link not returned");
         return { ok: false as const };
       }
 
-      const copied = await copyToClipboard(res.reset_link);
-
-      await ElMessageBox.alert(
-        `
-  Reset link:
-  ${res.reset_link}
-
-  ${copied ? "Copied to clipboard." : "Copy manually."}
-          `.trim(),
+      // Show link + Copy button (copy runs on user click -> reliable)
+      await ElMessageBox.confirm(
+        `Reset link:\n\n${link}\n\nClick "Copy" to copy it to clipboard.`,
         "Reset link ready",
-        { confirmButtonText: "OK" }
+        {
+          confirmButtonText: "Copy",
+          cancelButtonText: "Close",
+          type: "info",
+          closeOnClickModal: false,
+          closeOnPressEscape: true,
+        }
       );
 
-      message.showSuccess(copied ? "Reset link copied" : "Reset link created");
-      return { ok: true as const, reset_link: res.reset_link };
+      const copied = await copyToClipboard(link);
+      if (copied) {
+        message.showSuccess("Reset link copied");
+        return { ok: true as const, reset_link: link, copied: true as const };
+      } else {
+        message.showError("Copy failed. Please copy manually.");
+        return { ok: true as const, reset_link: link, copied: false as const };
+      }
     } catch (err: any) {
       if (err === "cancel" || err === "close") {
         return { ok: false as const, cancelled: true as const };
@@ -94,8 +115,5 @@ export function useUserResetPassword() {
     }
   }
 
-  return {
-    handleResetPassword,
-    resetLoading,
-  };
+  return { handleResetPassword, resetLoading };
 }

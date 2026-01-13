@@ -1,30 +1,22 @@
 import tailwindcss from "@tailwindcss/vite";
+import { visualizer } from "rollup-plugin-visualizer";
 import { defineNuxtConfig } from "nuxt/config";
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
 
 const isProd = process.env.NODE_ENV === "production";
 const isAnalyze = process.env.ANALYZE === "true";
 const isVercel = !!process.env.VERCEL;
 
-let visualizerPlugin: any = null;
-if (isAnalyze) {
-  try {
-    visualizerPlugin = require("rollup-plugin-visualizer").visualizer;
-  } catch {
-    visualizerPlugin = null;
-  }
-}
-
 export default defineNuxtConfig({
   srcDir: "src/",
   compatibilityDate: "2025-05-29",
+
   ssr: true,
 
   modules: ["@element-plus/nuxt", "@pinia/nuxt"],
-  css: ["~/styles/main.css", "~/styles/sidebar.scss"],
+
   devtools: { enabled: !isProd },
+
+  css: ["~/styles/main.css", "~/styles/sidebar.scss"],
 
   runtimeConfig: {
     public: {
@@ -47,16 +39,48 @@ export default defineNuxtConfig({
             "School management dashboard for attendance, grades, and schedules.",
         },
       ],
+
+      script: [
+        {
+          children: `(function () {
+  try {
+    function getCookie(name) {
+      var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+
+    var t = getCookie('theme'); // 'light' | 'dark' | null
+
+    if (t !== 'light' && t !== 'dark') {
+      // fallback: system preference
+      var prefersDark = false;
+      try {
+        prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } catch (e) {}
+      t = prefersDark ? 'dark' : 'light';
+
+      // set cookie so next SSR request matches
+      document.cookie = 'theme=' + encodeURIComponent(t) + '; Path=/; SameSite=Lax';
+    }
+
+    var el = document.documentElement;
+    el.classList.toggle('dark', t === 'dark');
+    el.classList.toggle('light', t === 'light');
+    el.setAttribute('data-theme', t);
+    el.style.colorScheme = t;
+  } catch (e) {}
+})();`,
+        },
+      ],
     },
   },
-  devServer: !isProd ? { host: "0.0.0.0" } : undefined,
+
   vite: {
-    sourcemap: true,
     plugins: [
       tailwindcss(),
-      ...(visualizerPlugin
+      ...(isAnalyze
         ? [
-            visualizerPlugin({
+            visualizer({
               open: true,
               gzipSize: true,
               brotliSize: true,
@@ -66,7 +90,17 @@ export default defineNuxtConfig({
         : []),
     ],
 
-    server: !isProd ? { watch: { usePolling: true } } : undefined,
+    define: {
+      __DEV__: !isProd,
+    },
+
+    server: !isProd
+      ? {
+          watch: { usePolling: true },
+          host: "0.0.0.0",
+        }
+      : undefined,
+
     optimizeDeps: !isProd
       ? {
           include: [
@@ -77,6 +111,28 @@ export default defineNuxtConfig({
           ],
         }
       : undefined,
+
+    build: {
+      sourcemap: false,
+      minify: "esbuild",
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (!id.includes("node_modules")) return;
+
+            if (id.includes("element-plus")) return "vendor_element-plus";
+            if (id.includes("@fullcalendar")) return "vendor_fullcalendar";
+            if (id.includes("echarts")) return "vendor_echarts";
+            if (id.includes("chart.js")) return "vendor_chartjs";
+            if (id.includes("lodash-es")) return "vendor_lodash";
+
+            return "vendor";
+          },
+        },
+      },
+    },
+
+    esbuild: isProd ? { drop: ["console", "debugger"] } : undefined,
   },
 
   nitro: {

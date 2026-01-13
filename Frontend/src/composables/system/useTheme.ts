@@ -1,36 +1,65 @@
+import { computed } from "vue";
 
-type Theme = "light" | "dark";
+type ThemeMode = "light" | "dark";
+const THEME_COOKIE = "theme";
 
 export function useTheme() {
-  const themeCookie = useCookie<Theme>("theme", {
+  // cookie is readable on server + client in Nuxt
+  const themeCookie = useCookie<ThemeMode>(THEME_COOKIE, {
     sameSite: "lax",
     path: "/",
+    // optionally: maxAge: 60 * 60 * 24 * 365,
   });
 
-  function applyTheme(t: Theme) {
-    const el = document.documentElement;
-    el.setAttribute("data-theme", t);
-    if (t === "dark") el.classList.add("dark");
-    else el.classList.remove("dark");
+  // state so all components reactively update
+  const theme = useState<ThemeMode>(
+    "theme-mode",
+    () => themeCookie.value ?? "light"
+  );
+
+  const isDark = computed(() => theme.value === "dark");
+
+  function applyToDom(mode: ThemeMode) {
+    if (!process.client) return;
+    const root = document.documentElement;
+    root.classList.toggle("dark", mode === "dark");
+    root.classList.toggle("light", mode === "light");
+    root.dataset.theme = mode;
+
+    // helps built-in form controls match theme in some browsers
+    root.style.colorScheme = mode;
   }
 
+  function setTheme(mode: ThemeMode) {
+    theme.value = mode;
+    themeCookie.value = mode;
+    applyToDom(mode);
+  }
+
+  function toggle() {
+    setTheme(isDark.value ? "light" : "dark");
+  }
+
+  /**
+   * Client-only initializer:
+   * - if no cookie yet, use system preference once
+   * - always apply to DOM
+   */
   function initFromClient() {
-    if (import.meta.server) return;
-    const stored = (localStorage.getItem("theme") as Theme | null) || null;
-    const t: Theme = stored || themeCookie.value || "light";
+    if (!process.client) return;
 
-    themeCookie.value = t;
-    localStorage.setItem("theme", t);
-    applyTheme(t);
-  }
-
-  function setTheme(t: Theme) {
-    if (import.meta.client) {
-      localStorage.setItem("theme", t);
-      applyTheme(t);
+    // If cookie not set, take system preference initially
+    if (!themeCookie.value) {
+      const prefersDark =
+        window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
+      setTheme(prefersDark ? "dark" : "light");
+      return;
     }
-    themeCookie.value = t; // 
+
+    // Ensure DOM matches current state/cookie
+    theme.value = themeCookie.value;
+    applyToDom(theme.value);
   }
 
-  return { initFromClient, setTheme };
+  return { theme, isDark, setTheme, toggle, initFromClient };
 }

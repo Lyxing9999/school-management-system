@@ -55,20 +55,16 @@ class ScheduleReadModel(MongoErrorMixin):
         return {field: {"$in": [oid, str(oid)]}}
 
     def _weekday_candidates(self, dow: int) -> List[int]:
-        """
-        Supports both ISO 1..7 and 0-based 0..6 if your DB has mixed formats.
-        """
-        candidates: Set[int] = set()
+        # detect once per process; cache if you want
+        has_zero_based = self.collection.find_one({"day_of_week": {"$in": [0, 6]}}) is not None
+        has_iso = self.collection.find_one({"day_of_week": {"$in": [1, 7]}}) is not None
 
-        if 1 <= dow <= 7:
-            candidates.add(dow)       # ISO
-            candidates.add(dow - 1)   # 0-based
-        elif 0 <= dow <= 6:
-            candidates.add(dow)       # 0-based
-            candidates.add(dow + 1)   # ISO
-
-        return sorted(candidates)
-
+        dow = int(dow)
+        if has_iso and not has_zero_based:
+            return [dow]
+        if has_zero_based and not has_iso:
+            return [dow - 1]
+        return [dow, dow - 1]
     # --------------------------
     # Basic reads
     # --------------------------
