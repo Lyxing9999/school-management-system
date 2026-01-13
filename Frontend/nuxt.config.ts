@@ -14,7 +14,10 @@ export default defineNuxtConfig({
 
   modules: ["@element-plus/nuxt", "@pinia/nuxt"],
 
-  devtools: { enabled: !isProd },
+  devtools: {
+    enabled:
+      process.env.NODE_ENV === "development" || process.env.NUXT_DEV === "true",
+  },
 
   css: ["~/styles/main.css", "~/styles/sidebar.scss"],
 
@@ -40,38 +43,7 @@ export default defineNuxtConfig({
         },
       ],
 
-      script: [
-        {
-          children: `(function () {
-  try {
-    function getCookie(name) {
-      var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-      return m ? decodeURIComponent(m[1]) : null;
-    }
-
-    var t = getCookie('theme'); // 'light' | 'dark' | null
-
-    if (t !== 'light' && t !== 'dark') {
-      // fallback: system preference
-      var prefersDark = false;
-      try {
-        prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      } catch (e) {}
-      t = prefersDark ? 'dark' : 'light';
-
-      // set cookie so next SSR request matches
-      document.cookie = 'theme=' + encodeURIComponent(t) + '; Path=/; SameSite=Lax';
-    }
-
-    var el = document.documentElement;
-    el.classList.toggle('dark', t === 'dark');
-    el.classList.toggle('light', t === 'light');
-    el.setAttribute('data-theme', t);
-    el.style.colorScheme = t;
-  } catch (e) {}
-})();`,
-        },
-      ],
+      script: [],
     },
   },
 
@@ -113,21 +85,19 @@ export default defineNuxtConfig({
       : undefined,
 
     build: {
-      sourcemap: false,
+      sourcemap: true,
+
       minify: "esbuild",
+
       rollupOptions: {
         output: {
+          /*
           manualChunks(id: string) {
             if (!id.includes("node_modules")) return;
-
             if (id.includes("element-plus")) return "vendor_element-plus";
-            if (id.includes("@fullcalendar")) return "vendor_fullcalendar";
-            if (id.includes("echarts")) return "vendor_echarts";
-            if (id.includes("chart.js")) return "vendor_chartjs";
-            if (id.includes("lodash-es")) return "vendor_lodash";
-
             return "vendor";
           },
+          */
         },
       },
     },

@@ -7,8 +7,6 @@ import schoolLogo from "~/assets/image/school-logo-light.png";
 const { $authService } = useNuxtApp();
 import type { UserLoginForm } from "~/api/iam/iam.dto";
 
-
-
 const loading = ref(false);
 const formRef = ref<FormInstance>();
 definePageMeta({ layout: false });

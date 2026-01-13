@@ -1,43 +1,87 @@
+<template>
+  <div class="calendar-container">
+    <FullCalendar ref="calendarRef" :options="calendarOptions" />
+
+    <el-dialog
+      v-model="showDialog"
+      :title="selectedHoliday?.title"
+      width="420px"
+      center
+      align-center
+    >
+      <div class="flex flex-col gap-3">
+        <div
+          class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
+        >
+          <span class="font-bold">Date:</span>
+          <el-tag size="small" effect="plain">{{
+            selectedHoliday?.date
+          }}</el-tag>
+        </div>
+
+        <div class="text-sm">
+          <p class="font-bold mb-1">Description:</p>
+          <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
+            {{ selectedHoliday?.description || "No description available." }}
+          </p>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showDialog = false">Close</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
 <script setup lang="ts">
-import { reportError } from "~/utils/errors/errors";
 import { ref, onMounted, watch } from "vue";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import tippy from "tippy.js";
 import "tippy.js/dist/tippy.css";
+// Adjust this import path based on your actual file structure
+import { reportError } from "~/utils/errors/errors";
 
+// --- Types ---
 type FilterType = "all" | "public" | "school";
 
-const apiKey = useRuntimeConfig().public.calendarificApiKey;
+interface HolidayEvent {
+  title: string;
+  date: string; // ISO String YYYY-MM-DD
+  color?: string;
+  extendedProps?: {
+    description?: string;
+    kind?: FilterType;
+  };
+}
 
+// --- Configuration ---
+const config = useRuntimeConfig();
+const apiKey = config.public.calendarificApiKey;
+
+// --- State ---
 const year = ref<number>(new Date().getFullYear());
 const type = ref<FilterType>("all");
-
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null);
-
 const showDialog = ref(false);
 const selectedHoliday = ref<{
   title: string;
   date: string;
   description: string;
 } | null>(null);
-
-type HolidayEvent = {
-  title: string;
-  date: string;
-  color?: string;
-  extendedProps?: { description?: string; kind?: FilterType };
-};
-
 const events = ref<HolidayEvent[]>([]);
 
+// --- Calendar Options ---
 const calendarOptions = ref({
   plugins: [dayGridPlugin, interactionPlugin],
   initialView: "dayGridMonth",
   height: "auto",
   headerToolbar: { right: "prev,next", center: "title", left: "" },
-  events: [] as any[],
+  events: [] as HolidayEvent[],
+
+  // Handle Event Click
   eventClick(info: any) {
     const event = info.event;
     selectedHoliday.value = {
@@ -47,14 +91,22 @@ const calendarOptions = ref({
     };
     showDialog.value = true;
   },
+
+  // Tooltip on Hover
   eventDidMount(info: any) {
     tippy(info.el, {
       content: info.event.extendedProps.description || info.event.title,
       placement: "top",
+      theme: "light", // Optional: customize tippy theme
     });
   },
 });
 
+// --- Logic ---
+
+/**
+ * Filter events based on the selected type (all | public | school)
+ */
 function applyEvents() {
   const filtered =
     type.value === "all"
@@ -64,21 +116,34 @@ function applyEvents() {
   calendarOptions.value.events = filtered;
 }
 
+/**
+ * Fetch holidays from API or Cache
+ * Uses $fetch for better Nuxt integration
+ */
 async function fetchCambodiaHolidays(y: number) {
-  try {
-    const cacheKey = `cambodia_holidays_${y}`;
-    const cached = import.meta.client ? localStorage.getItem(cacheKey) : null;
+  const cacheKey = `cambodia_holidays_${y}`;
 
-    if (cached) {
-      events.value = JSON.parse(cached);
-      applyEvents();
-      return;
+  if (import.meta.client) {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        events.value = JSON.parse(cached);
+        applyEvents();
+        return; // Exit if cache hit
+      }
+    } catch (e) {
+      console.warn("Error reading from localStorage", e);
     }
+  }
 
-    const res = await fetch(
-      `https://calendarific.com/api/v2/holidays?api_key=${apiKey}&country=KH&year=${y}`
-    );
-    const data = await res.json();
+  try {
+    const data = await $fetch<any>("https://calendarific.com/api/v2/holidays", {
+      params: {
+        api_key: apiKey,
+        country: "KH",
+        year: y,
+      },
+    });
 
     if (data?.meta?.code === 200 && data?.response?.holidays) {
       const mapped: HolidayEvent[] = data.response.holidays.map(
@@ -88,26 +153,33 @@ async function fetchCambodiaHolidays(y: number) {
           color: "var(--color-primary)",
           extendedProps: {
             description: holiday.description,
-            // You can map to "public/school" if your API provides categories
-            kind: "public",
+            kind: "public", // Defaulting to public since API doesn't specify school
           },
         })
       );
 
-      if (import.meta.client)
-        localStorage.setItem(cacheKey, JSON.stringify(mapped));
+      if (import.meta.client) {
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(mapped));
+        } catch (e) {
+          console.warn("Quota exceeded or error saving to localStorage");
+        }
+      }
+
       events.value = mapped;
       applyEvents();
-      return;
+    } else {
+      // Handle API Logic Error (e.g., Invalid Key)
+      const detail = data?.meta?.error_detail ?? "Unknown API error";
+      reportError(new Error(detail), "holidays.fetch.api", "log");
     }
-
-    const detail = data?.meta?.error_detail ?? "Unknown API error";
-    reportError(new Error(detail), "holidays.fetch.api", "log");
   } catch (error) {
+    // Handle Network/Fetch Error
     reportError(error as any, "holidays.fetch.exception", "log");
   }
 }
 
+// --- Exposed Methods (via Template Refs) ---
 function goToday() {
   const api = calendarRef.value?.getApi?.();
   api?.today();
@@ -115,7 +187,7 @@ function goToday() {
 
 function setYear(y: number) {
   year.value = y;
-  // Optional: also navigate calendar to that year
+  // Sync internal calendar view
   const api = calendarRef.value?.getApi?.();
   if (api) {
     const d = new Date(api.getDate());
@@ -131,6 +203,7 @@ function setType(t: FilterType) {
 
 defineExpose({ goToday, setYear, setType });
 
+// --- Lifecycle ---
 watch(year, async (y) => {
   await fetchCambodiaHolidays(y);
 });
@@ -140,38 +213,34 @@ onMounted(async () => {
 });
 </script>
 
-<template>
-  <FullCalendar ref="calendarRef" :options="calendarOptions" />
-
-  <el-dialog
-    v-model="showDialog"
-    :title="selectedHoliday?.title"
-    width="420px"
-    center
-  >
-    <p class="text-sm"><strong>Date:</strong> {{ selectedHoliday?.date }}</p>
-    <p class="text-sm mt-2">
-      <strong>Description:</strong> {{ selectedHoliday?.description }}
-    </p>
-
-    <template #footer>
-      <el-button @click="showDialog = false">Close</el-button>
-    </template>
-  </el-dialog>
-</template>
-
 <style scoped>
-/* Column header row background (the white bar) */
+/* Customizing FullCalendar Header */
 :deep(.fc .fc-col-header-cell) {
-  background: color-mix(in srgb, var(--hover-bg) 55%, transparent) !important;
-  border-color: var(--border-color) !important;
+  background: color-mix(
+    in srgb,
+    var(--el-color-primary-light-9) 55%,
+    transparent
+  ) !important;
+  border-color: var(--el-border-color-light) !important;
 }
 
-/* Column header text */
 :deep(.fc .fc-col-header-cell-cushion) {
-  color: var(--muted-color) !important;
-  font-weight: 700;
+  color: var(--el-text-color-regular) !important;
+  font-weight: 600;
   text-decoration: none !important;
-  padding: 10px 0 !important;
+  padding: 12px 0 !important;
+}
+
+/* Event Styling */
+:deep(.fc-event) {
+  cursor: pointer;
+  border: none;
+  font-size: 0.85rem;
+  padding: 2px;
+}
+
+:deep(.fc-daygrid-day-number) {
+  color: var(--el-text-color-primary);
+  text-decoration: none;
 }
 </style>

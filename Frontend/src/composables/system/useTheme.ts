@@ -1,39 +1,28 @@
-import { computed } from "vue";
-
-type ThemeMode = "light" | "dark";
-const THEME_COOKIE = "theme";
+// composables/useTheme.ts
+export type ThemeMode = "light" | "dark";
+export const THEME_COOKIE = "theme";
 
 export function useTheme() {
-  // cookie is readable on server + client in Nuxt
+  // 1. Read Cookie (SSR & Client friendly)
   const themeCookie = useCookie<ThemeMode>(THEME_COOKIE, {
     sameSite: "lax",
     path: "/",
-    // optionally: maxAge: 60 * 60 * 24 * 365,
+    maxAge: 60 * 60 * 24 * 365, // Persist for 1 year
   });
 
-  // state so all components reactively update
+  // 2. Global State Management
   const theme = useState<ThemeMode>(
     "theme-mode",
     () => themeCookie.value ?? "light"
   );
 
+  // 3. Computed Helper
   const isDark = computed(() => theme.value === "dark");
 
-  function applyToDom(mode: ThemeMode) {
-    if (!process.client) return;
-    const root = document.documentElement;
-    root.classList.toggle("dark", mode === "dark");
-    root.classList.toggle("light", mode === "light");
-    root.dataset.theme = mode;
-
-    // helps built-in form controls match theme in some browsers
-    root.style.colorScheme = mode;
-  }
-
+  // 4. Synchronization Function
   function setTheme(mode: ThemeMode) {
     theme.value = mode;
-    themeCookie.value = mode;
-    applyToDom(mode);
+    themeCookie.value = mode; // Updates cookie automatically
   }
 
   function toggle() {
@@ -41,25 +30,39 @@ export function useTheme() {
   }
 
   /**
-   * Client-only initializer:
-   * - if no cookie yet, use system preference once
-   * - always apply to DOM
+   * 5. Declarative Head Management (The Architect's Choice)
+   * This automatically injects class="dark" or class="light" into the <html> tag.
+   * works on Server AND Client.
    */
-  function initFromClient() {
+  useHead({
+    htmlAttrs: {
+      class: () => theme.value,
+      "data-theme": () => theme.value,
+    },
+    meta: [{ name: "color-scheme", content: () => theme.value }],
+  });
+
+  /**
+   * 6. System Preference Detection (Client Only)
+   * Only runs if no cookie exists.
+   */
+  function initSystemPreference() {
     if (!process.client) return;
 
-    // If cookie not set, take system preference initially
-    if (!themeCookie.value) {
-      const prefersDark =
-        window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
-      setTheme(prefersDark ? "dark" : "light");
-      return;
-    }
+    // If cookie exists, Nuxt already handled the state via useState/useCookie
+    if (themeCookie.value) return;
 
-    // Ensure DOM matches current state/cookie
-    theme.value = themeCookie.value;
-    applyToDom(theme.value);
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
+    setTheme(prefersDark ? "dark" : "light");
   }
 
-  return { theme, isDark, setTheme, toggle, initFromClient };
+  return {
+    theme,
+    isDark,
+    setTheme,
+    toggle,
+    initSystemPreference,
+  };
 }

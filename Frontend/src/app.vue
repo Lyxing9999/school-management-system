@@ -8,6 +8,13 @@
 import { onMounted, onBeforeUnmount } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { eventBus } from "~/composables/system/useGlobalEventBus";
+import { useTheme } from "~/composables/system/useTheme";
+
+const { initSystemPreference } = useTheme();
+onMounted(() => {
+  // Check system preference only once on mount
+  initSystemPreference();
+});
 useHead({
   meta: [
     {
@@ -16,6 +23,7 @@ useHead({
     },
   ],
 });
+
 const handleErrorMessage = (msg: string) => {
   ElMessage.error(msg);
 };
@@ -34,13 +42,6 @@ const handleSessionExpired = () => {
 };
 
 onMounted(() => {
-  // Theme Mode
-  const savedTheme = localStorage.getItem("dark");
-  if (savedTheme === "true") {
-    document.documentElement.classList.add("dark");
-  }
-
-  // Register EventBus Handlers
   eventBus.on("error-message", handleErrorMessage);
   eventBus.on("session-expired", handleSessionExpired);
 });

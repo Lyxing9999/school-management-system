@@ -14,7 +14,6 @@ import { storeToRefs } from "pinia";
 import BaseButton from "~/components/base/BaseButton.vue";
 import NotificationDrawer from "~/components/notifications/NotificationDrawer.vue";
 
-
 import { useAuthStore } from "~/stores/authStore";
 import { Role } from "~/api/types/enums/role.enum";
 
@@ -43,8 +42,10 @@ const { unreadCount } = storeToRefs(notifStore);
 
 const prefs = usePreferencesStore();
 const { notifAutoRefresh } = storeToRefs(prefs);
-
-const { initFromClient, setTheme } = useTheme();
+const { isDark, toggle, setTheme } = useTheme();
+function toggleTheme() {
+  toggle();
+}
 
 /* -------------------------
    Role helpers (Admin / Teacher / Student)
@@ -441,15 +442,17 @@ const autoRefreshBadge = computed<boolean>({
                     <div>
                       <div class="font-medium">Theme</div>
                       <div class="text-[var(--muted-color)]">
-                        {{ initFromClient === "dark" ? "Dark" : "Light" }}
+                        {{ isDark ? "Dark" : "Light" }}
                       </div>
+
+                      <BaseButton plain size="small" @click="toggleTheme">
+                        Toggle
+                      </BaseButton>
                     </div>
                     <BaseButton
                       plain
                       size="small"
-                      @click="
-                        setTheme(initFromClient === 'dark' ? 'light' : 'dark')
-                      "
+                      @click="setTheme(isDark ? 'light' : 'dark')"
                       >Toggle</BaseButton
                     >
                   </div>
