@@ -22,9 +22,10 @@ export default defineNuxtConfig({
   css: ["~/styles/main.css", "~/styles/sidebar.scss"],
 
   runtimeConfig: {
+    calendarificApiKey: process.env.CALENDARIFIC_API_KEY || "",
+
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "",
-      calendarificApiKey: process.env.NUXT_PUBLIC_CALENDARIFIC_API_KEY || "",
     },
   },
 

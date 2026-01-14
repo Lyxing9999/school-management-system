@@ -252,7 +252,7 @@ function clearError() {
 const attendanceForm = ref<AttendanceFormModel>({
   student_id: "",
   status: "" as AttendanceStatus | "",
-  record_date: todayISO,
+  record_date: selectedDate.value || todayISO,
   subject_id: "",
   schedule_slot_id: "",
 });
@@ -434,8 +434,7 @@ const addAttendanceFields = computed(() => {
         valueFormat: "YYYY-MM-DD",
         placeholder: "Pick a day",
         style: "width: 100%",
-        disabledDate: (d: Date) =>
-          dayjs(d).startOf("day").isAfter(dayjs().tz(KH_TZ).startOf("day")),
+        disabled: true,
       },
     },
   ];

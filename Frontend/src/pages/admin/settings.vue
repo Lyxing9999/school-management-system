@@ -183,7 +183,7 @@ async function saveProfile() {
         username: profileForm.username.trim(),
       } as any;
 
-      const updated = await iam.auth.updateMe(payload);
+      const updated = await $authService.updateMe(payload);
       if (updated) {
         msg.showSuccess("Profile updated");
         hydrateProfile();
@@ -234,7 +234,7 @@ async function changePassword() {
 
     changingPw.value = true;
     try {
-      const ok = await iam.auth.changePassword({
+      const ok = await $authService.changePassword({
         current_password: pwForm.current_password.trim(),
         new_password: pwForm.new_password.trim(),
       });
@@ -293,7 +293,7 @@ onMounted(async () => {
 
   try {
     if (!authStore.isReady) {
-      await $authService.auth.getMe();
+      await $authService.getMe();
     }
     hydrateProfile();
     await refreshUnread();
@@ -306,7 +306,7 @@ onMounted(async () => {
    Header actions
 ------------------------- */
 async function logout() {
-  await $authService.auth.logout();
+  await $authService.logout();
 }
 
 function goDashboard() {

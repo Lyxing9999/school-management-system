@@ -1,7 +1,4 @@
-<!-- ~/pages/student/classes.vue (or your actual path) -->
 <script setup lang="ts">
-definePageMeta({ layout: "default" });
-
 import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 
 import { studentService } from "~/api/student";
@@ -17,9 +14,8 @@ const student = studentService();
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 const classes = ref<StudentClassSectionDTO[]>([]);
-
 let requestSeq = 0;
-
+definePageMeta({ layout: "default" });
 /* ---------------- helpers ---------------- */
 
 const safeText = (v: any, fallback = "—") => {

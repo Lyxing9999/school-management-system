@@ -4,7 +4,7 @@ class SystemRole(str, Enum):
     ADMIN = "admin"
     TEACHER = "teacher"
     STUDENT = "student"
-    ACADEMIC = "academic"
+    # ACADEMIC = "academic"
     # Optional future roles:
     # HR = "hr"
     # FRONT_OFFICE = "front_office"

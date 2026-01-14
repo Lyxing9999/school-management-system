@@ -93,6 +93,7 @@ class AttendancePolicy:
         )
         return self.assignments.count_documents(q, limit=1) > 0
 
+
     def _slot_allowed(
         self,
         *,
@@ -100,43 +101,56 @@ class AttendancePolicy:
         class_id: ObjectId,
         subject_id: ObjectId,
         actor_teacher_id: ObjectId,
+        record_date: date_type,
         enforce_owner: bool = False,
     ) -> bool:
         """
-        MVP (enforce_owner=False):
-          - slot exists
-          - slot.class_id matches class_id
-          - if slot.subject_id exists => must match subject_id
-          - does NOT require slot.teacher_id == actor_teacher_id
-
-        Strict (enforce_owner=True):
-          - all above
-          - AND slot.teacher_id must equal actor_teacher_id
+        Enforces:
+        - slot exists + not deleted
+        - slot.class_id matches
+        - if slot.subject_id exists => must match subject_id
+        - record_date day must match slot.day_of_week (if provided)
+        - optionally enforce slot.teacher_id == actor_teacher_id
         """
-        slot = self.schedule.find_one(
-            not_deleted({"_id": schedule_slot_id}),
-            {"_id": 1, "teacher_id": 1, "class_id": 1, "subject_id": 1},
-        )
-        slot = self.schedule.find_one(
-            not_deleted({"_id": schedule_slot_id}),
-            {"_id": 1, "teacher_id": 1, "class_id": 1, "subject_id": 1, "lifecycle": 1},
-        )
 
+        slot = self.schedule.find_one(
+            not_deleted({"_id": schedule_slot_id}),
+            {"_id": 1, "teacher_id": 1, "class_id": 1, "subject_id": 1, "day_of_week": 1},
+        )
         if not slot:
             return False
 
-        slot_class = slot.get("class_id")
-        if str(slot_class or "") != str(class_id):
+        # class match
+        if str(slot.get("class_id") or "") != str(class_id):
             return False
 
-        # Strongly recommended to store subject_id on schedule slot.
+        # subject match (if slot defines it)
         slot_subject = slot.get("subject_id")
         if slot_subject is not None and str(slot_subject) != str(subject_id):
             return False
 
+        # record_date must match slot.day_of_week
+        slot_dow = slot.get("day_of_week")
+        if slot_dow is not None:
+            # Support either convention:
+            # - ISO: Mon=1..Sun=7  (Python: record_date.isoweekday())
+            # - Python: Mon=0..Sun=6 (Python: record_date.weekday())
+            iso_dow = record_date.isoweekday()   # 1..7
+            py_dow = record_date.weekday()       # 0..6
+
+            if slot_dow in (1, 2, 3, 4, 5, 6, 7):
+                if slot_dow != iso_dow:
+                    return False
+            elif slot_dow in (0, 1, 2, 3, 4, 5, 6):
+                if slot_dow != py_dow:
+                    return False
+            else:
+                # unexpected stored value
+                return False
+
+        # strict owner check
         if enforce_owner:
-            slot_teacher = slot.get("teacher_id")
-            if str(slot_teacher or "") != str(actor_teacher_id):
+            if str(slot.get("teacher_id") or "") != str(actor_teacher_id):
                 return False
 
         return True

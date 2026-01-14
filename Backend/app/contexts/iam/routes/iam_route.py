@@ -128,7 +128,7 @@ def refresh_access_token():
 @login_required()
 def get_me():
     user_service = IAMService(get_db())
-    current = get_current_user()  # you already use this (dict)
+    current = get_current_user()  
     me_dto = user_service.me(current["user_id"])
     return me_dto
 
@@ -159,9 +159,7 @@ def change_password():
     body = request.json or {}
     current_pw = str(body.get("current_password") or "")
     new_pw = str(body.get("new_password") or "")
-
-    return user_service.change_password(current, current_pw, new_pw)
-
+    return user_service.change_password(current["user_id"], current_pw, new_pw)
 
 # -------------------------
 # RESET PASSWORD: CONFIRM (TOKEN-BASED)

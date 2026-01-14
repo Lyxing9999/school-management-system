@@ -7,13 +7,12 @@ import {
   onBeforeUnmount,
   watch,
 } from "vue";
-import { useRoute, useRouter, navigateTo, useCookie } from "nuxt/app";
+import { useRoute, useRouter, navigateTo } from "nuxt/app";
 import type { FormInstance, FormRules } from "element-plus";
 import { storeToRefs } from "pinia";
 
 import BaseButton from "~/components/base/BaseButton.vue";
 import NotificationDrawer from "~/components/notifications/NotificationDrawer.vue";
-
 
 import { useAuthStore } from "~/stores/authStore";
 import { Role } from "~/api/types/enums/role.enum";
@@ -23,6 +22,8 @@ import { usePreferencesStore } from "~/stores/preferencesStore";
 
 import { useTheme } from "~/composables/system/useTheme";
 import { useMessage } from "~/composables/common/useMessage";
+
+import type { UpdateMePayload, ChangePasswordForm } from "~/api/iam/iam.dto";
 
 definePageMeta({ layout: "default" });
 
@@ -42,31 +43,72 @@ const { unreadCount } = storeToRefs(notifStore);
 const prefs = usePreferencesStore();
 const { notifAutoRefresh } = storeToRefs(prefs);
 
-const { isDark, toggle: toggleTheme } = useTheme();
+const { isDark, toggle, setTheme } = useTheme();
+function toggleTheme() {
+  toggle();
+}
 
 /* -------------------------
-   Role (Student only)
+   Role helpers
 ------------------------- */
 const user = computed(() => authStore.user);
+
+/**
+ * ✅ Senior fix:
+ * Some APIs return `_id` instead of `id`, or omit email/status for students.
+ * These computed "safe" fields prevent blank UI while you fix backend.
+ */
+const userIdSafe = computed(() => {
+  const u: any = user.value as any;
+  return String(u?.id || u?._id || "");
+});
+const emailSafe = computed(() => {
+  const u: any = user.value as any;
+  return String(u?.email || "");
+});
+const statusSafe = computed(() => {
+  const u: any = user.value as any;
+  return String(u?.status || "");
+});
+
+const isAdmin = computed(() => user.value?.role === Role.ADMIN);
+const isTeacher = computed(() => user.value?.role === Role.TEACHER);
 const isStudent = computed(() => user.value?.role === Role.STUDENT);
 
+const canEditProfile = computed(() => isAdmin.value || isTeacher.value);
+const canChangePw = computed(() => isAdmin.value || isTeacher.value);
+
+const dashboardPath = computed(() => {
+  if (isAdmin.value) return "/admin/dashboard";
+  if (isTeacher.value) return "/teacher/dashboard";
+  return "/student/dashboard";
+});
+
 /* -------------------------
-   Tabs (Student)
+   Tabs
 ------------------------- */
-type TabKey = "account" | "notifications" | "appearance" | "preferences";
-const allowedTabs: TabKey[] = [
-  "account",
-  "notifications",
-  "appearance",
-  "preferences",
-];
+type TabKey =
+  | "account"
+  | "security"
+  | "notifications"
+  | "appearance"
+  | "preferences";
+
 const activeTab = ref<TabKey>("account");
 
 watch(
   () => route.query.tab,
   (t) => {
     const tab = String(t ?? "") as TabKey;
-    if (allowedTabs.includes(tab)) activeTab.value = tab;
+    if (
+      tab === "account" ||
+      tab === "security" ||
+      tab === "notifications" ||
+      tab === "appearance" ||
+      tab === "preferences"
+    ) {
+      activeTab.value = tab;
+    }
   },
   { immediate: true }
 );
@@ -76,7 +118,7 @@ watch(activeTab, (t) => {
 });
 
 /* -------------------------
-   Responsive
+   Responsive: descriptions columns
 ------------------------- */
 const isMobile = ref(false);
 let mq: MediaQueryList | null = null;
@@ -97,12 +139,14 @@ onBeforeUnmount(() => {
 const descCols = computed(() => (isMobile.value ? 1 : 2));
 
 /* -------------------------
-   Loading
+   Loading states
 ------------------------- */
 const pageLoading = ref(false);
+const savingProfile = ref(false);
+const changingPw = ref(false);
 
 /* -------------------------
-   Student profile (read-only)
+   Account form
 ------------------------- */
 const profileRef = ref<FormInstance>();
 const profileForm = reactive({ email: "", username: "" });
@@ -120,34 +164,118 @@ const profileRules: FormRules = {
 };
 
 function hydrateProfile() {
-  profileForm.email = String(authStore.user?.email ?? "");
-  profileForm.username = String(authStore.user?.username ?? "");
+  // ✅ hydrate from safe values
+  profileForm.email = String(emailSafe.value ?? "");
+  profileForm.username = String(user.value?.username ?? "");
+}
+
+const profileChanged = computed(() => {
+  const u: any = user.value as any;
+  if (!u) return false;
+
+  const emailNow = profileForm.email.trim().toLowerCase();
+  const emailOld = String(u.email ?? "")
+    .trim()
+    .toLowerCase();
+
+  const userNow = profileForm.username.trim();
+  const userOld = String(u.username ?? "").trim();
+
+  return emailNow !== emailOld || userNow !== userOld;
+});
+
+const canSaveProfile = computed(() => {
+  if (!canEditProfile.value) return false;
+  if (!profileChanged.value) return false;
+  return (
+    profileForm.email.trim().length > 0 &&
+    profileForm.username.trim().length > 0
+  );
+});
+
+async function saveProfile() {
+  if (!canSaveProfile.value || savingProfile.value) return;
+
+  const formEl = profileRef.value;
+  if (!formEl) return;
+
+  await formEl.validate(async (valid) => {
+    if (!valid) return;
+
+    savingProfile.value = true;
+    try {
+      const payload: UpdateMePayload = {
+        email: profileForm.email.trim().toLowerCase(),
+        username: profileForm.username.trim(),
+      } as any;
+
+      const updated = await $authService.updateMe(payload);
+      if (updated) {
+        // ✅ refetch to ensure store has latest email/status
+        await $authService.getMe();
+        hydrateProfile();
+      }
+    } finally {
+      savingProfile.value = false;
+    }
+  });
+}
+
+function resetProfile() {
+  hydrateProfile();
+  profileRef.value?.clearValidate();
 }
 
 /* -------------------------
-   Student Start Page (COOKIE)
+   Password form
 ------------------------- */
-type StudentHome = "dashboard" | "attendance";
-
-const studentHomeCookie = useCookie<StudentHome | null>("student_home", {
-  sameSite: "lax",
-  path: "/",
+const pwRef = ref<FormInstance>();
+const pwForm = reactive<ChangePasswordForm>({
+  current_password: "",
+  new_password: "",
 });
 
-const studentHome = ref<StudentHome>("dashboard");
+const pwRules: FormRules = {
+  current_password: [{ required: true, message: "Required", trigger: "blur" }],
+  new_password: [
+    { required: true, message: "Required", trigger: "blur" },
+    { min: 6, message: "Min 6 characters", trigger: "blur" },
+  ],
+};
 
-function hydrateStudentHome() {
-  studentHome.value =
-    studentHomeCookie.value === "attendance" ? "attendance" : "dashboard";
-}
+const canChangePassword = computed(() => {
+  if (!canChangePw.value) return false;
+  const cur = pwForm.current_password.trim();
+  const nw = pwForm.new_password.trim();
+  return cur.length > 0 && nw.length >= 6 && cur !== nw;
+});
 
-function setStudentHome(v: StudentHome) {
-  studentHome.value = v;
-  studentHomeCookie.value = v;
+async function changePassword() {
+  if (!canChangePassword.value || changingPw.value) return;
 
-  msg.showSuccess(
-    v === "attendance" ? "Start page: Attendance" : "Start page: Dashboard"
-  );
+  const formEl = pwRef.value;
+  if (!formEl) return;
+
+  await formEl.validate(async (valid) => {
+    if (!valid) return;
+
+    changingPw.value = true;
+    try {
+      const ok = await $authService.changePassword({
+        current_password: pwForm.current_password.trim(),
+        new_password: pwForm.new_password.trim(),
+      });
+
+      if (!ok) return;
+
+      msg.showSuccess("Password changed. You will be signed out.");
+      pwForm.current_password = "";
+      pwForm.new_password = "";
+      pwRef.value?.clearValidate();
+    } finally {
+      changingPw.value = false;
+    }
+  });
 }
 
 /* -------------------------
@@ -159,16 +287,9 @@ const recommendedPageSize = computed(() => prefs.DEFAULT_TABLE_PAGE_SIZE);
 
 function setDefaultPageSize(size: number) {
   prefs.setTablePageSize(size);
-  msg.showSuccess(`Default page size: ${prefs.getTablePageSize()}`);
 }
-
 function resetDefaultPageSize() {
   prefs.resetTablePageSize();
-  msg.showSuccess(`Default page size reset: ${prefs.getTablePageSize()}`);
-}
-
-function setNotifAutoRefresh(v: boolean) {
-  prefs.setNotifAutoRefresh(v);
 }
 
 /* -------------------------
@@ -177,7 +298,6 @@ function setNotifAutoRefresh(v: boolean) {
 async function refreshUnread() {
   await notifStore.refreshUnread();
 }
-
 function openDrawer() {
   notifStore.toggleDrawer(true);
 }
@@ -190,10 +310,9 @@ onMounted(async () => {
 
   try {
     if (!authStore.isReady) {
-      await $authService.auth.getMe();
+      await $authService.getMe();
     }
     hydrateProfile();
-    hydrateStudentHome();
     await refreshUnread();
   } finally {
     pageLoading.value = false;
@@ -204,14 +323,10 @@ onMounted(async () => {
    Header actions
 ------------------------- */
 async function logout() {
-  await $authService.auth.logout();
+  await $authService.logout();
 }
-
 function goDashboard() {
-  const home = studentHome.value || "dashboard";
-  navigateTo(
-    home === "attendance" ? "/student/attendance" : "/student/dashboard"
-  );
+  navigateTo(dashboardPath.value);
 }
 const autoRefreshBadge = computed<boolean>({
   get: () => notifAutoRefresh.value,
@@ -230,19 +345,19 @@ const autoRefreshBadge = computed<boolean>({
             <div class="min-w-0">
               <div class="text-lg font-semibold">Settings</div>
               <div class="text-sm text-[var(--muted-color)]">
-                Student account and basic preferences.
+                Manage account, security, and preferences.
               </div>
             </div>
           </div>
         </div>
 
         <div class="settings-header__right">
-          <BaseButton plain size="small" @click="goDashboard">
-            Dashboard
-          </BaseButton>
-          <BaseButton type="danger" plain size="small" @click="logout">
-            Logout
-          </BaseButton>
+          <BaseButton plain size="small" @click="goDashboard"
+            >Dashboard</BaseButton
+          >
+          <BaseButton type="danger" plain size="small" @click="logout"
+            >Logout</BaseButton
+          >
         </div>
       </div>
 
@@ -264,7 +379,9 @@ const autoRefreshBadge = computed<boolean>({
                     <span class="font-medium">Profile</span>
                     <div class="flex items-center gap-2">
                       <el-tag type="info">{{ user?.role }}</el-tag>
-                      <el-tag type="warning">Read-only</el-tag>
+                      <el-tag v-if="!canEditProfile" type="warning"
+                        >Read-only</el-tag
+                      >
                     </div>
                   </div>
                 </template>
@@ -276,102 +393,120 @@ const autoRefreshBadge = computed<boolean>({
                   label-position="top"
                 >
                   <div class="form-grid">
+                    <!-- ✅ show value even if backend missing, and keep disabled for students -->
                     <el-form-item label="Email" prop="email">
-                      <el-input v-model="profileForm.email" disabled />
+                      <el-input
+                        v-model="profileForm.email"
+                        :disabled="!canEditProfile"
+                        autocomplete="email"
+                        placeholder="No email returned from /api/iam/me"
+                      />
                     </el-form-item>
 
                     <el-form-item label="Username" prop="username">
-                      <el-input v-model="profileForm.username" disabled />
+                      <el-input
+                        v-model="profileForm.username"
+                        :disabled="!canEditProfile"
+                        autocomplete="username"
+                      />
                     </el-form-item>
 
                     <el-form-item label="Status">
-                      <el-input :model-value="user?.status ?? ''" disabled />
+                      <el-input
+                        :model-value="statusSafe"
+                        disabled
+                        placeholder="No status returned from /api/iam/me"
+                      />
                     </el-form-item>
 
                     <el-form-item label="User ID">
-                      <el-input :model-value="user?.id ?? ''" disabled />
+                      <el-input :model-value="userIdSafe" disabled />
                     </el-form-item>
                   </div>
 
+                  <div class="card-actions" v-if="canEditProfile">
+                    <BaseButton
+                      type="primary"
+                      size="small"
+                      :loading="savingProfile"
+                      :disabled="!canSaveProfile || savingProfile"
+                      @click="saveProfile"
+                    >
+                      Save
+                    </BaseButton>
+
+                    <BaseButton
+                      plain
+                      size="small"
+                      :disabled="savingProfile"
+                      @click="resetProfile"
+                    >
+                      Reset
+                    </BaseButton>
+                  </div>
+
                   <el-alert
+                    v-if="canEditProfile && profileChanged"
                     class="mt-4"
                     type="info"
                     show-icon
                     :closable="false"
-                    title="Students cannot edit account fields here. Contact your administrator if details are incorrect."
+                    title="You have unsaved changes."
+                  />
+
+                  <!-- ✅ Student helper hint when email/status are missing -->
+                  <el-alert
+                    v-if="isStudent && (!emailSafe || !statusSafe)"
+                    class="mt-4"
+                    type="warning"
+                    show-icon
+                    :closable="false"
+                    title="Email/Status not returned by API"
+                    description="Your /api/iam/me response for students is missing email or status. Fix backend serializer to always include them."
                   />
                 </el-form>
               </el-card>
 
               <!-- Quick -->
               <el-card shadow="never">
-                <template #header>
-                  <span class="font-medium">Quick</span>
-                </template>
+                <template #header
+                  ><span class="font-medium">Quick</span></template
+                >
 
                 <div class="space-y-4 text-sm">
-                  <!-- Theme -->
                   <div class="flex items-center justify-between">
                     <div>
                       <div class="font-medium">Theme</div>
                       <div class="text-[var(--muted-color)]">
                         {{ isDark ? "Dark" : "Light" }}
                       </div>
+
+                      <BaseButton plain size="small" @click="toggleTheme">
+                        Toggle
+                      </BaseButton>
                     </div>
-                    <BaseButton plain size="small" @click="toggleTheme()">
-                      Toggle
-                    </BaseButton>
+
+                    <BaseButton
+                      plain
+                      size="small"
+                      @click="setTheme(isDark ? 'light' : 'dark')"
+                      >Toggle</BaseButton
+                    >
                   </div>
 
                   <el-divider />
 
-                  <!-- Start Page -->
-                  <div>
-                    <div class="font-medium">Start page</div>
-                    <div class="text-[var(--muted-color)] mt-1">
-                      {{
-                        studentHome === "attendance"
-                          ? "Open Attendance first"
-                          : "Open Dashboard first"
-                      }}
-                    </div>
-
-                    <div class="mt-2 flex gap-2">
-                      <el-button
-                        size="small"
-                        :type="
-                          studentHome === 'dashboard' ? 'primary' : 'default'
-                        "
-                        @click="setStudentHome('dashboard')"
-                      >
-                        Dashboard
-                      </el-button>
-
-                      <el-button
-                        size="small"
-                        :type="
-                          studentHome === 'attendance' ? 'primary' : 'default'
-                        "
-                        @click="setStudentHome('attendance')"
-                      >
-                        Attendance
-                      </el-button>
-                    </div>
-                  </div>
-
-                  <el-divider />
-
-                  <!-- Access note -->
                   <div class="space-y-2">
                     <div class="font-medium">Access</div>
                     <el-alert
                       type="info"
                       show-icon
                       :closable="false"
-                      title="Your account is managed by the school."
+                      title="Your permissions are managed by the school administrator."
                     />
-                    <div class="text-[var(--muted-color)] m-2">
-                      If you need changes, contact your admin.
+                    <div class="text-[var(--muted-color)]">
+                      If you need access to additional features, contact your
+                      admin.
                     </div>
                   </div>
                 </div>
@@ -379,30 +514,132 @@ const autoRefreshBadge = computed<boolean>({
             </div>
 
             <el-card shadow="never" class="mt-4">
-              <template #header>
-                <span class="font-medium">Details</span>
-              </template>
+              <template #header
+                ><span class="font-medium">Details</span></template
+              >
 
               <el-descriptions :column="descCols" border class="mt-2">
-                <el-descriptions-item label="Role">
-                  {{ user?.role }}
-                </el-descriptions-item>
-                <el-descriptions-item label="Status">
-                  {{ user?.status }}
-                </el-descriptions-item>
-                <el-descriptions-item label="Email">
-                  {{ user?.email }}
-                </el-descriptions-item>
-                <el-descriptions-item label="Username">
-                  {{ user?.username }}
-                </el-descriptions-item>
+                <el-descriptions-item label="Role">{{
+                  user?.role
+                }}</el-descriptions-item>
+
+                <el-descriptions-item label="Status">{{
+                  statusSafe
+                }}</el-descriptions-item>
+
+                <el-descriptions-item label="Email">{{
+                  emailSafe
+                }}</el-descriptions-item>
+
+                <el-descriptions-item label="Username">{{
+                  user?.username
+                }}</el-descriptions-item>
               </el-descriptions>
 
               <div v-if="isStudent" class="mt-3 text-sm hint-text">
-                Students can change theme and basic preferences. Account fields
-                are managed by the school.
+                Students can view details but cannot edit account fields.
+              </div>
+
+              <div v-else-if="isTeacher" class="mt-3 text-sm hint-text">
+                Teachers can update profile and password, and manage
+                preferences.
               </div>
             </el-card>
+          </el-tab-pane>
+
+          <!-- SECURITY -->
+          <el-tab-pane name="security">
+            <template #label>
+              <span class="tab-label">
+                <el-icon><Lock /></el-icon>
+                Security
+              </span>
+            </template>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <el-card shadow="never" class="lg:col-span-2">
+                <template #header
+                  ><span class="font-medium">Change password</span></template
+                >
+
+                <el-form
+                  v-if="canChangePw"
+                  ref="pwRef"
+                  :model="pwForm"
+                  :rules="pwRules"
+                  label-position="top"
+                >
+                  <div class="form-grid">
+                    <el-form-item
+                      label="Current password"
+                      prop="current_password"
+                    >
+                      <el-input
+                        v-model="pwForm.current_password"
+                        type="password"
+                        show-password
+                        autocomplete="current-password"
+                        placeholder="Enter your current password"
+                      />
+                    </el-form-item>
+
+                    <el-form-item label="New password" prop="new_password">
+                      <el-input
+                        v-model="pwForm.new_password"
+                        type="password"
+                        show-password
+                        autocomplete="new-password"
+                        placeholder="Enter your new password"
+                      />
+                    </el-form-item>
+                  </div>
+
+                  <div class="card-actions">
+                    <BaseButton
+                      type="warning"
+                      size="small"
+                      :loading="changingPw"
+                      :disabled="!canChangePassword || changingPw"
+                      @click="changePassword"
+                    >
+                      Change password
+                    </BaseButton>
+                  </div>
+
+                  <el-alert
+                    class="mt-4"
+                    type="warning"
+                    show-icon
+                    :closable="false"
+                    title="After changing password, you may be logged out and must sign in again."
+                  />
+                </el-form>
+
+                <el-alert
+                  v-else
+                  type="info"
+                  show-icon
+                  :closable="false"
+                  title="Students cannot change password from this panel. Please contact your administrator if you need help."
+                />
+              </el-card>
+
+              <el-card shadow="never">
+                <template #header
+                  ><span class="font-medium">Notes</span></template
+                >
+                <ul class="text-sm space-y-2">
+                  <li class="flex gap-2">
+                    <el-icon class="mt-[2px]"><WarningFilled /></el-icon>
+                    Use at least 6+ characters.
+                  </li>
+                  <li class="flex gap-2">
+                    <el-icon class="mt-[2px]"><WarningFilled /></el-icon>
+                    Avoid reusing passwords.
+                  </li>
+                </ul>
+              </el-card>
+            </div>
           </el-tab-pane>
 
           <!-- NOTIFICATIONS -->
@@ -414,8 +651,7 @@ const autoRefreshBadge = computed<boolean>({
               </span>
             </template>
 
-            <!-- IMPORTANT: items-start prevents equal-height stretching -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <el-card shadow="never" class="lg:col-span-2">
                 <template #header>
                   <div class="flex items-center justify-between">
@@ -446,9 +682,9 @@ const autoRefreshBadge = computed<boolean>({
                         Use the bell icon in the header.
                       </div>
                     </div>
-                    <el-button size="small" plain @click="openDrawer">
-                      Open
-                    </el-button>
+                    <el-button size="small" plain @click="openDrawer"
+                      >Open</el-button
+                    >
                   </div>
 
                   <el-divider />
@@ -457,14 +693,20 @@ const autoRefreshBadge = computed<boolean>({
                     <div>
                       <div class="font-medium">Full page</div>
                       <div class="text-sm text-[var(--muted-color)]">
-                        View your notifications list.
+                        Search, filter, bulk actions.
                       </div>
                     </div>
                     <el-button
                       size="small"
                       type="primary"
                       plain
-                      @click="navigateTo('/student/notifications')"
+                      @click="
+                        navigateTo(
+                          isTeacher
+                            ? '/teacher/notifications'
+                            : '/admin/notifications'
+                        )
+                      "
                     >
                       Open
                     </el-button>
@@ -473,10 +715,9 @@ const autoRefreshBadge = computed<boolean>({
               </el-card>
 
               <el-card shadow="never" class="self-start">
-                <template #header>
-                  <span class="font-medium">Actions</span>
-                </template>
-
+                <template #header
+                  ><span class="font-medium">Actions</span></template
+                >
                 <div class="space-y-2">
                   <div>
                     <el-button class="action-btn" plain @click="refreshUnread">
@@ -505,9 +746,9 @@ const autoRefreshBadge = computed<boolean>({
             </template>
 
             <el-card shadow="never">
-              <template #header>
-                <span class="font-medium">Theme</span>
-              </template>
+              <template #header
+                ><span class="font-medium">Theme</span></template
+              >
 
               <div class="flex items-center justify-between">
                 <div>
@@ -540,28 +781,28 @@ const autoRefreshBadge = computed<boolean>({
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <el-card shadow="never" class="lg:col-span-2">
-                <template #header>
-                  <span class="font-medium">Table defaults</span>
-                </template>
+                <template #header
+                  ><span class="font-medium">Table defaults</span></template
+                >
 
                 <div class="space-y-4">
                   <div class="flex items-start justify-between gap-4">
                     <div class="min-w-0">
                       <div class="font-medium">Default page size</div>
                       <div class="text-sm text-[var(--muted-color)]">
-                        Recommended:
-                        <span class="font-medium">
-                          {{ recommendedPageSize }}
-                        </span>
+                        Applies to paginated tables. Recommended:
+                        <span class="font-medium">{{
+                          recommendedPageSize
+                        }}</span>
                       </div>
 
                       <div class="mt-2 flex items-center gap-2">
-                        <el-tag type="info">
-                          Current: {{ effectivePageSize }}
-                        </el-tag>
-                        <el-tag type="success">
-                          Recommended: {{ recommendedPageSize }}
-                        </el-tag>
+                        <el-tag type="info"
+                          >Current: {{ effectivePageSize }}</el-tag
+                        >
+                        <el-tag type="success"
+                          >Recommended: {{ recommendedPageSize }}</el-tag
+                        >
                       </div>
                     </div>
 
@@ -579,22 +820,23 @@ const autoRefreshBadge = computed<boolean>({
                         />
                       </el-select>
 
-                      <el-button plain @click="resetDefaultPageSize">
-                        Reset
-                      </el-button>
+                      <el-button plain @click="resetDefaultPageSize"
+                        >Reset</el-button
+                      >
                     </div>
                   </div>
                 </div>
               </el-card>
 
               <el-card shadow="never">
-                <template #header>
-                  <span class="font-medium">Help</span>
-                </template>
+                <template #header
+                  ><span class="font-medium">Help</span></template
+                >
 
                 <div class="space-y-3 text-sm">
                   <div class="text-[var(--muted-color)]">
-                    If data looks wrong, try refreshing and reloading the page.
+                    If data looks wrong or a save fails, try refreshing and
+                    reloading the page.
                   </div>
 
                   <el-alert
@@ -643,17 +885,20 @@ const autoRefreshBadge = computed<boolean>({
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px 16px;
 }
+.card-actions {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
 .hint-text {
   color: var(--muted-color);
 }
 
-/* Actions buttons: equal width + equal height + no wrap */
-.action-btn {
-  width: 100% !important;
-  height: 40px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* ✅ tiny visual: if value empty, keep input readable */
+:deep(.el-input.is-disabled .el-input__inner) {
+  opacity: 1;
+  -webkit-text-fill-color: var(--text-color);
 }
 
 @media (max-width: 768px) {
@@ -666,6 +911,12 @@ const autoRefreshBadge = computed<boolean>({
   }
   .settings-header__right {
     justify-content: flex-end;
+  }
+  .card-actions {
+    justify-content: stretch;
+  }
+  .card-actions :deep(button) {
+    width: 100%;
   }
 }
 </style>

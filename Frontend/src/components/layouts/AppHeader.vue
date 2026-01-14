@@ -59,7 +59,7 @@ const handleSettingsClick = async () =>
   navigateTo({ path: settingsRoute.value, query: { tab: "account" } });
 
 const handleLogoutClick = async () => {
-  await $authService.auth.logout();
+  await $authService.logout();
 };
 
 let timer: number | null = null;
