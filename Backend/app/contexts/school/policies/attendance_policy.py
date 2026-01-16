@@ -213,6 +213,7 @@ class AttendancePolicy:
             class_id=class_id,
             subject_id=subject_id,
             actor_teacher_id=teacher_id,
+            record_date=record_date,
             enforce_owner=enforce_slot_owner,
         ):
             return PolicyResult.deny("create", {"schedule": "slot_not_allowed"})
