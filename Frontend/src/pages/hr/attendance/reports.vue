@@ -194,7 +194,6 @@ function handleMapRowChange(row?: AttendanceDTO | null) {
 
 async function fetchReportData() {
   loading.value = true;
-
   try {
     const params = {
       ...(startDate.value ? { start_date: startDate.value } : {}),
@@ -202,12 +201,10 @@ async function fetchReportData() {
       page: 1,
       limit: 500,
     };
-
     const [attendanceResponse, wrongLocationResponse] = await Promise.all([
       attendanceService.getAttendances(params, { showError: false }),
       attendanceService.getWrongLocationReports(params, { showError: false }),
     ]);
-
     attendanceRows.value = attendanceResponse.items || [];
     attendanceTotal.value =
       attendanceResponse.pagination?.total ?? attendanceRows.value.length;
@@ -219,7 +216,6 @@ async function fetchReportData() {
         typeof row.check_in_latitude === "number" &&
         typeof row.check_in_longitude === "number",
     );
-
     if (firstLocation?.id) {
       selectedMapRowId.value = firstLocation.id;
     }
@@ -235,7 +231,10 @@ async function fetchReportData() {
   }
 }
 
-await fetchReportData();
+import { onMounted } from "vue";
+onMounted(() => {
+  fetchReportData();
+});
 </script>
 
 <template>

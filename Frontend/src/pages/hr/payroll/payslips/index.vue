@@ -212,7 +212,10 @@ async function handlePageSizeChange(size: number) {
   await fetchPayslips(1, size);
 }
 
-await fetchPayslips(1, pagination.limit);
+import { onMounted } from "vue";
+onMounted(() => {
+  fetchPayslips(1, pagination.limit);
+});
 </script>
 
 <template>

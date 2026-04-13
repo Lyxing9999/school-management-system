@@ -274,7 +274,10 @@ async function refreshHistory() {
   await fetchOvertimeRequests(pagination.page, pagination.limit);
 }
 
-await fetchOvertimeRequests(1, pagination.limit);
+import { onMounted } from "vue";
+onMounted(() => {
+  fetchOvertimeRequests(1, pagination.limit);
+});
 </script>
 
 <template>

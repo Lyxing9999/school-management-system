@@ -17,6 +17,7 @@ import {
 
 import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
+import PageToolbar from "~/components/page-toolbar/PageToolbar.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 import type { ColumnConfig } from "~/components/types/tableEdit";
 
@@ -26,6 +27,7 @@ import type {
   HrEmployeeDTO,
   HrEmployeeWithAccountSummaryDTO,
 } from "~/api/hr_admin/employees/dto";
+import { ROUTES } from "~/constants/routes";
 import { Status } from "~/api/types/enums/status.enum";
 import { Role } from "~/api/types/enums/role.enum";
 import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
@@ -47,6 +49,7 @@ interface AccountTableRow {
   account_deleted: boolean;
 }
 
+const router = useRouter();
 const employeeStore = useHrEmployeeStore();
 
 const rows = ref<AccountTableRow[]>([]);
@@ -60,8 +63,6 @@ const roleFilter = ref<AccountRoleFilter>("all");
 const deleteAccountSaving = ref<Record<string, boolean>>({});
 const restoreAccountSaving = ref<Record<string, boolean>>({});
 const updateStatusSaving = ref<Record<string, boolean>>({});
-const employeesWithoutAccounts = ref<HrEmployeeDTO[]>([]);
-const unlinkedAccounts = ref<HrEmployeeAccountListItemDTO[]>([]);
 
 const createDialogVisible = ref(false);
 const createSaving = ref(false);
@@ -109,31 +110,6 @@ const tableColumns: ColumnConfig<AccountTableRow>[] = [
     fixed: "right",
   },
 ];
-
-const managerStats = computed(() => {
-  const employee = rows.value.filter((r) => r.role === "employee").length;
-  const manager = rows.value.filter((r) => r.role === "manager").length;
-  const payroll = rows.value.filter((r) => r.role === "payroll_manager").length;
-  const suspended = rows.value.filter(
-    (r) => String(r.status).toLowerCase() === Status.SUSPENDED,
-  ).length;
-
-  return {
-    total: rows.value.length,
-    employee,
-    manager,
-    payroll,
-    suspended,
-    noAccount: employeesWithoutAccounts.value.length,
-    unlinked: unlinkedAccounts.value.length,
-  };
-});
-
-const topEmployeesWithoutAccount = computed(() =>
-  employeesWithoutAccounts.value.slice(0, 6),
-);
-
-const topUnlinkedAccounts = computed(() => unlinkedAccounts.value.slice(0, 6));
 
 function normalizeRole(raw?: string | null): string {
   return String(raw ?? "")
@@ -215,29 +191,6 @@ async function fetchManagerAccounts(page = currentPage.value) {
       .map(toManagerAccountRow)
       .filter((row): row is AccountTableRow => !!row);
 
-    const accountItems = res.items ?? [];
-    employeesWithoutAccounts.value = accountItems
-      .filter((item) => !(item.account ?? item.user))
-      .map((item) => item.employee);
-
-    const linkedAccountIds = new Set(
-      accountItems
-        .map((item) => (item.account ?? item.user)?.id)
-        .filter((id): id is string => typeof id === "string" && !!id.trim()),
-    );
-
-    const accountRes = await employeeStore.getEmployeeAccounts({
-      page: 1,
-      limit: 300,
-      q: search.value.trim() || undefined,
-      include_deleted: true,
-    });
-
-    unlinkedAccounts.value = (accountRes.items ?? []).filter((account) => {
-      const role = normalizeRole(account.role);
-      return roleAllowed(role) && !linkedAccountIds.has(account.id);
-    });
-
     totalRows.value = rows.value.length;
     currentPage.value = page;
   } catch (error) {
@@ -273,11 +226,6 @@ async function fetchCreateCandidates(keyword = "") {
   } finally {
     createCandidatesLoading.value = false;
   }
-}
-
-function createForEmployee(employeeId: string) {
-  createForm.employee_id = employeeId;
-  createDialogVisible.value = true;
 }
 
 async function openCreateDialog() {
@@ -419,130 +367,53 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="manager-account-page">
+  <div class="hr-employee-page">
     <OverviewHeader
       title="Employee Accounts"
-      description="Control center for employee, manager, and payroll-manager access"
-      @refresh="fetchManagerAccounts(currentPage)"
+      description="Manage employee accounts, status, and onboarding with a clean workflow."
+      :backPath="ROUTES.HR_ADMIN.EMPLOYEES"
     >
       <template #actions>
-        <div class="header-actions">
-          <BaseButton type="primary" @click="openCreateDialog">
-            Create Employee Account
-          </BaseButton>
-
-          <ElInput
-            v-model="search"
-            placeholder="Search by name, username, email"
-            clearable
-            style="width: 280px"
-            @keyup.enter="handleSearch"
-            @clear="handleSearch"
-          />
-
-          <ElSelect
-            v-model="roleFilter"
-            style="width: 170px"
-            @change="handleSearch"
-          >
-            <ElOption label="All Roles" value="all" />
-            <ElOption label="Employee" value="employee" />
-            <ElOption label="Manager" value="manager" />
-            <ElOption label="Payroll Manager" value="payroll_manager" />
-          </ElSelect>
-
-          <BaseButton @click="handleSearch">Search</BaseButton>
-        </div>
+        <BaseButton type="primary" :loading="loading" @click="openCreateDialog">
+          Create Employee Account
+        </BaseButton>
       </template>
     </OverviewHeader>
 
-    <div class="summary-grid">
-      <ElCard
-        ><div class="summary-title">Visible Accounts</div>
-        <div class="summary-value">{{ managerStats.total }}</div></ElCard
-      >
-      <ElCard
-        ><div class="summary-title">Employee</div>
-        <div class="summary-value">{{ managerStats.employee }}</div></ElCard
-      >
-      <ElCard
-        ><div class="summary-title">Manager</div>
-        <div class="summary-value">{{ managerStats.manager }}</div></ElCard
-      >
-      <ElCard
-        ><div class="summary-title">Payroll Manager</div>
-        <div class="summary-value">{{ managerStats.payroll }}</div></ElCard
-      >
-      <ElCard
-        ><div class="summary-title">Suspended</div>
-        <div class="summary-value">{{ managerStats.suspended }}</div></ElCard
-      >
-      <ElCard
-        ><div class="summary-title">Employees Without Account</div>
-        <div class="summary-value">{{ managerStats.noAccount }}</div></ElCard
-      >
-      <ElCard
-        ><div class="summary-title">Unlinked Accounts</div>
-        <div class="summary-value">{{ managerStats.unlinked }}</div></ElCard
-      >
-    </div>
+    <PageToolbar class="page-tool-bar">
+      <template #left>
+        <ElInput
+          v-model="search"
+          clearable
+          placeholder="Search by name, username, email"
+          class="toolbar-search"
+          @keyup.enter="handleSearch"
+          @clear="handleSearch"
+        />
+      </template>
 
-    <div class="insight-grid">
-      <ElCard>
-        <template #header
-          ><div class="insight-title">Employees Without Account</div></template
+      <template #right>
+        <ElSelect
+          v-model="roleFilter"
+          class="toolbar-select"
+          @change="handleSearch"
         >
-        <div v-if="topEmployeesWithoutAccount.length === 0" class="empty-note">
-          No employees without account.
-        </div>
-        <div v-else class="insight-list">
-          <div
-            v-for="employee in topEmployeesWithoutAccount"
-            :key="employee.id"
-            class="insight-row"
-          >
-            <div>
-              <div class="row-main">{{ employee.full_name }}</div>
-              <div class="row-sub">{{ employee.employee_code }}</div>
-            </div>
-            <BaseButton
-              size="small"
-              type="primary"
-              plain
-              @click="createForEmployee(employee.id)"
-            >
-              Create Account
-            </BaseButton>
-          </div>
-        </div>
-      </ElCard>
+          <ElOption label="All Roles" value="all" />
+          <ElOption label="Employee" value="employee" />
+          <ElOption label="Manager" value="manager" />
+          <ElOption label="Payroll Manager" value="payroll_manager" />
+        </ElSelect>
 
-      <ElCard>
-        <template #header
-          ><div class="insight-title">Accounts Not Linked</div></template
+        <BaseButton plain @click="handleSearch">Refresh</BaseButton>
+        <BaseButton
+          plain
+          @click="resetFilters"
+          :disabled="!search && roleFilter === 'all'"
         >
-        <div v-if="topUnlinkedAccounts.length === 0" class="empty-note">
-          No unlinked accounts for selected roles.
-        </div>
-        <div v-else class="insight-list">
-          <div
-            v-for="account in topUnlinkedAccounts"
-            :key="account.id"
-            class="insight-row"
-          >
-            <div>
-              <div class="row-main">
-                {{ account.username || account.email || account.id }}
-              </div>
-              <div class="row-sub">
-                {{ account.role || "-" }} | {{ account.status || "-" }}
-              </div>
-            </div>
-            <ElTag type="warning" effect="plain">Not linked</ElTag>
-          </div>
-        </div>
-      </ElCard>
-    </div>
+          Reset
+        </BaseButton>
+      </template>
+    </PageToolbar>
 
     <ElCard>
       <SmartTable
@@ -705,19 +576,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.manager-account-page {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .operation-actions {
   display: flex;
   gap: 8px;
@@ -731,60 +589,27 @@ onMounted(async () => {
   gap: 8px;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+.toolbar-search {
+  min-width: 280px;
+  max-width: 100%;
 }
 
-.insight-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+.toolbar-select {
+  min-width: 170px;
 }
 
-.insight-title {
-  font-weight: 600;
-}
-
-.insight-list {
-  display: flex;
-  flex-direction: column;
+.page-tool-bar {
   gap: 10px;
 }
 
-.insight-row {
+.hr-employee-page {
+  padding: 16px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.row-main {
-  font-weight: 600;
-}
-
-.row-sub,
-.empty-note {
-  font-size: 12px;
-  color: #909399;
-}
-
-.summary-title {
-  font-size: 12px;
-  color: #909399;
-}
-
-.summary-value {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-@media (max-width: 960px) {
-  .summary-grid,
-  .insight-grid {
-    grid-template-columns: 1fr;
-  }
+.table-shell {
+  padding: 16px;
 }
 </style>

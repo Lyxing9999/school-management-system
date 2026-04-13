@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed, reactive } from "vue";
+import { computed, ref, watch } from "vue";
 import { ElDialog, ElMessage } from "element-plus";
 import { Role } from "~/api/types/enums/role.enum";
-import type { HrCreateEmployeeDTO } from "~/api/hr_admin/employees/dto";
+import type {
+  HrCreateEmployeeDTO,
+  HrEmployeeContractDTO,
+} from "~/api/hr_admin/employees/dto";
 import EmployeeFormFields from "~/components/hrms/employees/EmployeeFormFields.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 
@@ -16,9 +19,10 @@ type EmployeeFormModel = {
   employment_type: "permanent" | "contract";
   basic_salary: number | null;
   status: "active" | "inactive";
-  email?: string;
-  username?: string;
-  password?: string;
+  contract: HrEmployeeContractDTO | null;
+  email: string;
+  username: string;
+  password: string;
   role?: HrOnboardRole;
 };
 
@@ -43,42 +47,83 @@ const emit = defineEmits<{
   ): void;
 }>();
 
-const form = reactive<EmployeeFormModel>({
-  employee_code: "",
-  full_name: "",
-  department: "",
-  position: "",
-  employment_type: "permanent",
-  basic_salary: null,
-  status: "active",
-  email: "",
-  username: "",
-  password: "",
-  role: undefined,
-});
+function createDefaultContract(): HrEmployeeContractDTO {
+  return {
+    start_date: "",
+    end_date: "",
+    salary_type: "monthly",
+    rate: 0,
+    pay_on_holiday: false,
+    pay_on_weekend: false,
+    leave_policy_id: null,
+  };
+}
+
+function createDefaultForm(): EmployeeFormModel {
+  return {
+    employee_code: "",
+    full_name: "",
+    department: "",
+    position: "",
+    employment_type: "permanent",
+    basic_salary: null,
+    status: "active",
+    contract: null,
+    email: "",
+    username: "",
+    password: "",
+    role: undefined,
+  };
+}
+
+const form = ref<EmployeeFormModel>(createDefaultForm());
+
+watch(
+  () => form.value.employment_type,
+  (type) => {
+    if (type === "contract" && !form.value.contract) {
+      form.value = {
+        ...form.value,
+        contract: createDefaultContract(),
+      };
+    }
+
+    if (type === "permanent" && form.value.contract) {
+      form.value = {
+        ...form.value,
+        contract: null,
+      };
+    }
+  },
+);
 
 const canSubmit = computed(() => {
-  return (
-    form.employee_code.trim().length > 0 &&
-    form.full_name.trim().length > 0 &&
-    Number(form.basic_salary || 0) >= 0 &&
-    (form.email || "").trim().length > 0 &&
-    (form.password || "").length >= 6
-  );
+  const current = form.value;
+
+  const baseValid =
+    current.employee_code.trim().length > 0 &&
+    current.full_name.trim().length > 0 &&
+    Number(current.basic_salary ?? -1) >= 0 &&
+    current.email.trim().length > 0 &&
+    current.password.length >= 6;
+
+  if (!baseValid) return false;
+
+  if (current.employment_type === "contract") {
+    return Boolean(
+      current.contract &&
+        current.contract.start_date &&
+        current.contract.end_date &&
+        current.contract.salary_type &&
+        Number(current.contract.rate ?? -1) >= 0,
+    );
+  }
+
+  return true;
 });
 
 function resetForm() {
-  form.employee_code = "";
-  form.full_name = "";
-  form.department = "";
-  form.position = "";
-  form.employment_type = "permanent";
-  form.basic_salary = null;
-  form.status = "active";
-  form.email = "";
-  form.username = "";
-  form.password = "";
-  form.role = undefined;
+  form.value = createDefaultForm();
 }
 
 function closeDialog() {
@@ -90,26 +135,79 @@ function handleClosed() {
 }
 
 function submit() {
-  if (!canSubmit.value) {
-    ElMessage.error("Please complete required onboarding fields");
+  const current = form.value;
+
+  if (!current.employee_code.trim()) {
+    ElMessage.error("Employee code is required");
     return;
   }
 
+  if (!current.full_name.trim()) {
+    ElMessage.error("Full name is required");
+    return;
+  }
+
+  if (current.basic_salary == null || Number(current.basic_salary) < 0) {
+    ElMessage.error("Basic salary must be 0 or greater");
+    return;
+  }
+
+  if (!current.email.trim()) {
+    ElMessage.error("Email is required");
+    return;
+  }
+
+  if (current.password.length < 6) {
+    ElMessage.error("Password must be at least 6 characters");
+    return;
+  }
+
+  if (current.employment_type === "contract") {
+    if (!current.contract?.start_date) {
+      ElMessage.error("Contract start date is required");
+      return;
+    }
+    if (!current.contract?.end_date) {
+      ElMessage.error("Contract end date is required");
+      return;
+    }
+    if (!current.contract?.salary_type) {
+      ElMessage.error("Contract salary type is required");
+      return;
+    }
+    if (current.contract.rate == null || Number(current.contract.rate) < 0) {
+      ElMessage.error("Contract rate must be 0 or greater");
+      return;
+    }
+  }
+
   const employee: HrCreateEmployeeDTO = {
-    employee_code: form.employee_code.trim(),
-    full_name: form.full_name.trim(),
-    department: form.department?.trim() || undefined,
-    position: form.position?.trim() || undefined,
-    employment_type: form.employment_type,
-    basic_salary: Number(form.basic_salary || 0),
-    status: form.status,
+    employee_code: current.employee_code.trim(),
+    full_name: current.full_name.trim(),
+    department: current.department.trim() || null,
+    position: current.position.trim() || null,
+    employment_type: current.employment_type,
+    basic_salary: Number(current.basic_salary),
+    status: current.status,
+    contract:
+      current.employment_type === "contract" && current.contract
+        ? {
+            start_date: current.contract.start_date,
+            end_date: current.contract.end_date,
+            salary_type: current.contract.salary_type,
+            rate: Number(current.contract.rate),
+            pay_on_holiday: Boolean(current.contract.pay_on_holiday),
+            pay_on_weekend: Boolean(current.contract.pay_on_weekend),
+            leave_policy_id: current.contract.leave_policy_id ?? null,
+          }
+        : null,
   };
 
   const account = {
-    email: (form.email || "").trim(),
-    password: form.password || "",
-    username: form.username?.trim() || undefined,
-    role: form.role,
+    email: current.email.trim(),
+    password: current.password,
+    username: current.username.trim() || undefined,
+    role: current.role,
   };
 
   emit("submitted", { employee, account });
@@ -132,7 +230,12 @@ function submit() {
         <BaseButton plain :disabled="loading" @click="closeDialog">
           Cancel
         </BaseButton>
-        <BaseButton type="primary" :loading="loading" @click="submit">
+        <BaseButton
+          type="primary"
+          :loading="loading"
+          :disabled="!canSubmit"
+          @click="submit"
+        >
           Create Employee + Account
         </BaseButton>
       </div>

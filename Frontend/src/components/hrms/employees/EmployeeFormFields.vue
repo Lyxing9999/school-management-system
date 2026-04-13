@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Role } from "~/api/types/enums/role.enum";
-import type { HrEmploymentType } from "~/api/hr_admin/employees/dto";
+import type {
+  HrEmploymentType,
+  HrEmployeeContractDTO,
+  HrSalaryType,
+} from "~/api/hr_admin/employees/dto";
 
 type Mode = "employee" | "onboard";
 
@@ -13,6 +17,7 @@ interface EmployeeFormModel {
   employment_type: HrEmploymentType;
   basic_salary: number | null;
   status: "active" | "inactive";
+  contract: HrEmployeeContractDTO | null;
   email?: string;
   username?: string;
   password?: string;
@@ -30,8 +35,20 @@ const emit = defineEmits<{
 
 const form = computed({
   get: () => props.modelValue,
-  set: (value) => emit("update:modelValue", value),
+  set: (value: EmployeeFormModel) => emit("update:modelValue", value),
 });
+
+function defaultContract(): HrEmployeeContractDTO {
+  return {
+    start_date: "",
+    end_date: "",
+    salary_type: "monthly",
+    rate: 0,
+    pay_on_holiday: false,
+    pay_on_weekend: false,
+    leave_policy_id: null,
+  };
+}
 
 function update<K extends keyof EmployeeFormModel>(
   key: K,
@@ -40,6 +57,37 @@ function update<K extends keyof EmployeeFormModel>(
   form.value = {
     ...form.value,
     [key]: value,
+  };
+}
+
+function updateContract<K extends keyof HrEmployeeContractDTO>(
+  key: K,
+  value: HrEmployeeContractDTO[K],
+) {
+  form.value = {
+    ...form.value,
+    contract: {
+      ...defaultContract(),
+      ...(form.value.contract ?? {}),
+      [key]: value,
+    },
+  };
+}
+
+function updateEmploymentType(value: HrEmploymentType) {
+  if (value === "contract") {
+    form.value = {
+      ...form.value,
+      employment_type: value,
+      contract: form.value.contract ?? defaultContract(),
+    };
+    return;
+  }
+
+  form.value = {
+    ...form.value,
+    employment_type: value,
+    contract: null,
   };
 }
 </script>
@@ -82,7 +130,7 @@ function update<K extends keyof EmployeeFormModel>(
       <el-form-item label="Employment Type">
         <el-select
           :model-value="form.employment_type"
-          @update:model-value="update('employment_type', $event)"
+          @update:model-value="updateEmploymentType"
         >
           <el-option label="Permanent" value="permanent" />
           <el-option label="Contract" value="contract" />
@@ -149,6 +197,87 @@ function update<K extends keyof EmployeeFormModel>(
         </el-form-item>
       </template>
     </div>
+
+    <template v-if="form.employment_type === 'contract'">
+      <el-divider />
+
+      <div class="contract-title">Contract Details</div>
+
+      <div class="form-grid">
+        <el-form-item label="Start Date" required>
+          <el-date-picker
+            :model-value="form.contract?.start_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="Select start date"
+            style="width: 100%"
+            @update:model-value="updateContract('start_date', $event)"
+          />
+        </el-form-item>
+
+        <el-form-item label="End Date" required>
+          <el-date-picker
+            :model-value="form.contract?.end_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="Select end date"
+            style="width: 100%"
+            @update:model-value="updateContract('end_date', $event)"
+          />
+        </el-form-item>
+
+        <el-form-item label="Salary Type" required>
+          <el-select
+            :model-value="form.contract?.salary_type"
+            @update:model-value="updateContract('salary_type', $event)"
+          >
+            <el-option label="Monthly" value="monthly" />
+            <el-option label="Daily" value="daily" />
+            <el-option label="Hourly" value="hourly" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="Rate" required>
+          <el-input-number
+            :model-value="form.contract?.rate"
+            :min="0"
+            :step="1"
+            :precision="2"
+            controls-position="right"
+            style="width: 100%"
+            @update:model-value="updateContract('rate', $event)"
+          />
+        </el-form-item>
+
+        <el-form-item>
+          <el-checkbox
+            :model-value="form.contract?.pay_on_holiday"
+            @update:model-value="updateContract('pay_on_holiday', $event)"
+          >
+            Pay on Holiday
+          </el-checkbox>
+        </el-form-item>
+
+        <el-form-item>
+          <el-checkbox
+            :model-value="form.contract?.pay_on_weekend"
+            @update:model-value="updateContract('pay_on_weekend', $event)"
+          >
+            Pay on Weekend
+          </el-checkbox>
+        </el-form-item>
+
+        <el-form-item label="Leave Policy ID">
+          <el-input
+            :model-value="form.contract?.leave_policy_id ?? ''"
+            placeholder="Optional leave policy ID"
+            @update:model-value="
+              updateContract('leave_policy_id', $event || null)
+            "
+          />
+        </el-form-item>
+      </div>
+    </template>
   </el-form>
 </template>
 
@@ -161,6 +290,13 @@ function update<K extends keyof EmployeeFormModel>(
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 14px;
+}
+
+.contract-title {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 @media (max-width: 768px) {

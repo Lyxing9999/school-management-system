@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useNuxtApp } from "#app";
 
 import AppSidebar from "~/components/layouts/AppSidebar.vue";
 import AppHeader from "~/components/layouts/AppHeader.vue";
@@ -8,20 +9,67 @@ import AppFooter from "~/components/layouts/AppFooter.vue";
 import schoolLogoLight from "~/assets/image/school-logo-light.jpg";
 
 const route = useRoute();
+const router = useRouter();
+const nuxtApp = useNuxtApp();
+
+// ─── Loading skeleton state ────────────────────────────────────────────────
+// Starts true so skeleton shows immediately on first load.
+const pageLoading = ref(true);
+let loadingTimeout: ReturnType<typeof setTimeout> | null = null;
+// Track router guard cleanup
+let removeAfterEach: (() => void) | null = null;
+
+/** Arm the 5-second fallback — skeleton NEVER hangs forever. */
+function armFallbackTimeout() {
+  if (loadingTimeout) clearTimeout(loadingTimeout);
+  loadingTimeout = setTimeout(() => {
+    pageLoading.value = false;
+    loadingTimeout = null;
+  }, 5000);
+}
+
+/** Unconditionally finish loading and cancel any pending fallback. */
+function finishLoading() {
+  pageLoading.value = false;
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout);
+    loadingTimeout = null;
+  }
+}
+
+// ─── Nuxt page hooks (registered at top-level, not inside onMounted) ──────
+// This ensures they capture the very first page:finish / page:error that Nuxt
+// emits during SSR hydration, which fires BEFORE onMounted runs.
+//
+// ROOT CAUSE OF INFINITE LOADING: Nuxt fires page:error instead of
+// page:finish when a page component throws during its setup() (e.g. an API
+// call that crashes during SSR). Without listening to page:error, the skeleton
+// stays forever until the fallback timeout fires.
+const unHookPageStart = nuxtApp.hook("page:start", () => {
+  pageLoading.value = true;
+  armFallbackTimeout();
+});
+
+// page:finish fires on successful navigation completion.
+const unHookPageFinish = nuxtApp.hook("page:finish", finishLoading);
+
+// page:error fires when the page component throws during setup/render.
+// This is the missing hook that was causing infinite loading on SSR errors.
+const unHookPageError = nuxtApp.hook("page:loading:end", finishLoading);
+
+// Arm fallback immediately for the very first page load.
+armFallbackTimeout();
+
+// ─── Sidebar / mobile state ────────────────────────────────────────────────
 const MOBILE_BREAKPOINT = 768;
-
-/** Mobile drawer state */
 const sidebarOpen = ref(false);
-
-/** Desktop sidebar collapse state */
 const sidebarCollapsed = ref(false);
 
 function toggleSidebar() {
-  // Toggle mobile drawer
+  if (!process.client) return;
   if (window.innerWidth < MOBILE_BREAKPOINT) {
     sidebarOpen.value = !sidebarOpen.value;
   } else {
-    // Toggle desktop collapse
     sidebarCollapsed.value = !sidebarCollapsed.value;
   }
 }
@@ -31,29 +79,67 @@ function closeSidebar() {
 }
 
 function syncSidebarStateByViewport() {
-  const isMobile = window.innerWidth < MOBILE_BREAKPOINT;
-
-  if (isMobile) {
-    // Keep desktop sidebar expanded when returning from mobile.
+  if (!process.client) return;
+  if (window.innerWidth < MOBILE_BREAKPOINT) {
     sidebarCollapsed.value = false;
   } else {
-    // Ensure mobile drawer is closed on desktop.
     sidebarOpen.value = false;
   }
 }
 
 onMounted(() => {
+  if (!process.client) return;
+
   syncSidebarStateByViewport();
   window.addEventListener("resize", syncSidebarStateByViewport, {
     passive: true,
   });
+
+  // ── Safety net #1: hide skeleton after first DOM paint ──────────────────
+  // On the client-side hydration path, page:finish may have already fired
+  // before this layout mounted. Use nextTick to hide skeleton if it wasn't
+  // already hidden by the hooks above.
+  nextTick(() => {
+    // Only auto-finish on the very first mount, NOT during navigations
+    // (navigations will be handled by page:finish / afterEach below).
+    if (pageLoading.value) {
+      // Give Nuxt one more tick to fire page:finish first.
+      setTimeout(finishLoading, 300);
+    }
+  });
+
+  // ── Safety net #2: vue-router afterEach ─────────────────────────────────
+  // afterEach fires after EVERY navigation (success OR error), independently
+  // of Nuxt's page hooks. This catches cases where page:finish is swallowed.
+  removeAfterEach = router.afterEach(() => {
+    // Small delay so Nuxt's own page:finish can run first if it's going to.
+    setTimeout(finishLoading, 100);
+  });
 });
 
 onBeforeUnmount(() => {
+  if (!process.client) return;
+
+  // 1. Remove window listeners
   window.removeEventListener("resize", syncSidebarStateByViewport);
+
+  // 2. Cancel any pending fallback timeout
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout);
+    loadingTimeout = null;
+  }
+
+  // 3. Remove router guard
+  removeAfterEach?.();
+  removeAfterEach = null;
+
+  // 4. Unregister all Nuxt hooks (prevents ghost-firing after unmount)
+  unHookPageStart();
+  unHookPageFinish();
+  unHookPageError();
 });
 
-/** Close drawer after navigation (mobile) */
+/** Close mobile drawer on route change */
 watch(
   () => route.fullPath,
   () => closeSidebar(),
@@ -106,7 +192,31 @@ watch(
       </el-header>
 
       <el-main :key="route.fullPath" class="layout-main">
-        <NuxtPage />
+        <el-skeleton :loading="pageLoading" animated>
+          <template #template>
+            <el-skeleton-item
+              variant="text"
+              style="width: 100%; height: 40px; margin-bottom: 16px"
+            />
+            <el-skeleton-item
+              variant="rect"
+              style="width: 100%; height: 200px; margin-bottom: 16px"
+            />
+            <el-skeleton-item
+              variant="text"
+              style="width: 80%; height: 20px; margin-bottom: 8px"
+            />
+            <el-skeleton-item
+              variant="text"
+              style="width: 60%; height: 20px; margin-bottom: 8px"
+            />
+            <el-skeleton-item
+              variant="rect"
+              style="width: 100%; height: 150px"
+            />
+          </template>
+          <NuxtPage />
+        </el-skeleton>
       </el-main>
 
       <el-footer v-if="!route.meta.noHeader" class="layout-footer">
@@ -140,13 +250,23 @@ watch(
 }
 
 /* Desktop-only / mobile-only utilities */
-.desktop-only { display: block; }
-.mobile-only  { display: none; }
+.desktop-only {
+  display: block;
+}
+.mobile-only {
+  display: none;
+}
 
 @media (max-width: 768px) {
-  .layout-aside  { display: none !important; }
-  .desktop-only  { display: none !important; }
-  .mobile-only   { display: block !important; }
+  .layout-aside {
+    display: none !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+  .mobile-only {
+    display: block !important;
+  }
 }
 
 /* Mobile drawer: theme via real tokens */
@@ -180,4 +300,3 @@ watch(
   }
 }
 </style>
-

@@ -43,7 +43,7 @@ const columns: ColumnConfig<ArchivedEmployeeRow>[] = [
   { field: "department", label: "Department", minWidth: "180px" },
   { field: "position", label: "Position", minWidth: "160px" },
   { field: "employment_type", label: "Employment", width: "130px" },
-  { field: "deleted_at", label: "Deleted At", minWidth: "190px" },
+  { field: "lifecycle.deleted_at", label: "Deleted At", minWidth: "190px" },
   {
     field: "id",
     label: "Actions",

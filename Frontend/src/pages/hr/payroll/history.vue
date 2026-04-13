@@ -258,7 +258,10 @@ async function handlePayslipPageSizeChange(size: number) {
   await fetchPayslips(1, size);
 }
 
-await refreshAll();
+import { onMounted } from "vue";
+onMounted(() => {
+  refreshAll();
+});
 </script>
 
 <template>

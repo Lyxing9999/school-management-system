@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import {
   ElButton,
-  ElCol,
   ElDatePicker,
   ElInput,
   ElMessage,
@@ -16,6 +15,7 @@ import {
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
+import PageToolbar from "~/components/page-toolbar/PageToolbar.vue";
 import { hrmsAdminService } from "~/api/hr_admin";
 import type {
   AttendanceDTO,
@@ -29,6 +29,7 @@ const attendanceService = hrmsAdminService().attendance;
 
 const loading = ref(false);
 const rows = ref<AttendanceDTO[]>([]);
+const hasFetchedOnce = ref(false);
 
 const pagination = reactive({
   page: 1,
@@ -261,6 +262,7 @@ async function fetchAttendances(
     ElMessage.error("Failed to load attendance records");
   } finally {
     loading.value = false;
+    hasFetchedOnce.value = true;
   }
 }
 
@@ -307,7 +309,9 @@ watch(
   },
 );
 
-await fetchAttendances(1, pagination.limit);
+onMounted(() => {
+  fetchAttendances(1, pagination.limit);
+});
 </script>
 
 <template>
@@ -328,21 +332,20 @@ await fetchAttendances(1, pagination.limit);
     </template>
   </OverviewHeader>
 
-  <el-row :gutter="12" class="mb-4">
-    <el-col :xs="24" :sm="12" :md="8" :lg="6">
+  <PageToolbar class="page-toolbar">
+    <template #left>
       <ElInput
         v-model="filters.employee_id"
         clearable
         placeholder="Filter by employee_id"
+        class="toolbar-input"
       />
-    </el-col>
 
-    <el-col :xs="24" :sm="12" :md="8" :lg="6">
       <ElSelect
         v-model="filters.status"
         clearable
-        class="w-full"
         placeholder="Status"
+        class="toolbar-select"
       >
         <ElOption label="Checked In" value="checked_in" />
         <ElOption label="Checked Out" value="checked_out" />
@@ -362,61 +365,55 @@ await fetchAttendances(1, pagination.limit);
           value="wrong_location_rejected"
         />
       </ElSelect>
-    </el-col>
 
-    <el-col :xs="24" :sm="12" :md="8" :lg="6">
       <ElDatePicker
         v-model="filters.start_date"
         type="date"
         value-format="YYYY-MM-DD"
         format="YYYY-MM-DD"
         placeholder="Start date"
-        class="w-full"
+        class="toolbar-date"
       />
-    </el-col>
 
-    <el-col :xs="24" :sm="12" :md="8" :lg="6">
       <ElDatePicker
         v-model="filters.end_date"
         type="date"
         value-format="YYYY-MM-DD"
         format="YYYY-MM-DD"
         placeholder="End date"
-        class="w-full"
+        class="toolbar-date"
       />
-    </el-col>
+    </template>
 
-    <el-col :xs="24" :sm="12" :md="8" :lg="6">
-      <div class="filter-switch">
-        <span class="filter-switch__label">Include deleted</span>
-        <ElSwitch
-          v-model="filters.include_deleted"
-          :disabled="filters.deleted_only"
-        />
-      </div>
-    </el-col>
+    <template #right>
+      <div class="filter-switches">
+        <div class="filter-switch">
+          <span class="filter-switch__label">Include deleted</span>
+          <ElSwitch
+            v-model="filters.include_deleted"
+            :disabled="filters.deleted_only"
+            size="small"
+          />
+        </div>
 
-    <el-col :xs="24" :sm="12" :md="8" :lg="6">
-      <div class="filter-switch">
-        <span class="filter-switch__label">Deleted only</span>
-        <ElSwitch v-model="filters.deleted_only" />
+        <div class="filter-switch">
+          <span class="filter-switch__label">Deleted only</span>
+          <ElSwitch v-model="filters.deleted_only" size="small" />
+        </div>
       </div>
-    </el-col>
 
-    <el-col :xs="24" :sm="24" :md="8" :lg="12">
-      <div class="filter-actions">
-        <BaseButton type="primary" :loading="loading" @click="applyFilters">
-          Apply Filters
-          <span v-if="activeFilterBadge" class="filter-badge">{{
-            activeFilterBadge
-          }}</span>
-        </BaseButton>
-        <BaseButton plain :disabled="loading" @click="resetFilters">
-          Reset
-        </BaseButton>
-      </div>
-    </el-col>
-  </el-row>
+      <BaseButton type="primary" :loading="loading" @click="applyFilters">
+        Apply Filters
+        <span v-if="activeFilterBadge" class="filter-badge">{{
+          activeFilterBadge
+        }}</span>
+      </BaseButton>
+
+      <BaseButton plain :disabled="loading" @click="resetFilters">
+        Reset
+      </BaseButton>
+    </template>
+  </PageToolbar>
 
   <SmartTable
     :columns="tableColumns"
@@ -467,28 +464,39 @@ await fetchAttendances(1, pagination.limit);
 </template>
 
 <style scoped>
+.page-toolbar {
+  margin-bottom: 16px;
+}
+
+.toolbar-input {
+  min-width: 200px;
+  max-width: 100%;
+}
+
+.toolbar-select {
+  min-width: 160px;
+}
+
+.toolbar-date {
+  min-width: 140px;
+}
+
+.filter-switches {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .filter-switch {
-  min-height: 40px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  border: 1px solid var(--el-border-color);
-  border-radius: 8px;
-  padding: 0 12px;
-  background: var(--el-bg-color);
+  gap: 8px;
 }
 
 .filter-switch__label {
   font-size: 13px;
   color: var(--el-text-color-regular);
-}
-
-.filter-actions {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  white-space: nowrap;
 }
 
 .filter-badge {
@@ -498,6 +506,7 @@ await fetchAttendances(1, pagination.limit);
   font-size: 11px;
   line-height: 18px;
   background: color-mix(in srgb, var(--color-primary) 20%, white 80%);
+  color: var(--color-primary);
 }
 
 .status-pill {

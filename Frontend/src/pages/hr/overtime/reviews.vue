@@ -444,7 +444,10 @@ function refreshQueue() {
   void fetchQueue(paginationProps.value.currentPage || 1);
 }
 
-await fetchQueue(1);
+import { onMounted } from "vue";
+onMounted(() => {
+  fetchQueue(1);
+});
 </script>
 
 <template>

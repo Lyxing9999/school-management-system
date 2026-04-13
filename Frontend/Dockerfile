@@ -9,6 +9,8 @@ RUN pnpm install --no-frozen-lockfile
 
 COPY . .
 
+RUN pnpm build
+
 EXPOSE 3000
 
-CMD ["sh", "-lc", "pnpm install --no-frozen-lockfile && pnpm dev --host 0.0.0.0 --port 3000"]
+CMD ["node", ".output/server/index.mjs"]

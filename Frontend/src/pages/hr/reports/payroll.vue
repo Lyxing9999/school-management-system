@@ -177,7 +177,10 @@ async function refreshAll() {
   ]);
 }
 
-await refreshAll();
+import { onMounted } from "vue";
+onMounted(() => {
+  refreshAll();
+});
 </script>
 
 <template>

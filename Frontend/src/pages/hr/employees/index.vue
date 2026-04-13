@@ -18,12 +18,13 @@ import EmployeeOnboardDialog from "~/components/hrms/employees/EmployeeOnboardDi
 import { ROUTES } from "~/constants/routes";
 import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
 import { Role } from "~/api/types/enums/role.enum";
+import PageToolbar from "~/components/page-toolbar/PageToolbar.vue";
 import type {
   HrCreateEmployeeDTO,
   HrEmployeeWithAccountSummaryDTO,
 } from "~/api/hr_admin/employees/dto";
 import type { ColumnConfig } from "~/components/types/tableEdit";
-
+import SummaryCardGrid from "~/components/summary/SummaryCardGrid.vue";
 definePageMeta({ layout: "default" });
 
 const router = useRouter();
@@ -138,13 +139,32 @@ const stats = computed(() => {
   const noAccount = total - linked;
 
   return [
-    { label: "Employees", value: total, helper: "Directory" },
-    { label: "Active", value: active, helper: "Current workforce" },
-    { label: "Linked Account", value: linked, helper: "Can login" },
-    { label: "No Account", value: noAccount, helper: "Needs action" },
+    {
+      label: "Employees",
+      value: total,
+      helper: "Directory",
+      tone: "primary" as const,
+    },
+    {
+      label: "Active",
+      value: active,
+      helper: "Current workforce",
+      tone: "success" as const,
+    },
+    {
+      label: "Linked Account",
+      value: linked,
+      helper: "Can login",
+      tone: "default" as const,
+    },
+    {
+      label: "No Account",
+      value: noAccount,
+      helper: "Needs action",
+      tone: "warning" as const,
+    },
   ];
 });
-
 const columns: ColumnConfig<EmployeeTableRow>[] = [
   {
     field: "employee_code",
@@ -267,44 +287,33 @@ function assignSchedule(row: EmployeeTableRow) {
   router.push(ROUTES.HR_ADMIN.EMPLOYEE_DETAIL(row.id));
 }
 
+async function confirmDeleteEmployee(fullName: string) {
+  await ElMessageBox.confirm(`Delete employee ${fullName}?`, "Confirm Delete", {
+    type: "warning",
+    confirmButtonText: "Delete",
+    cancelButtonText: "Cancel",
+  });
+}
+
 async function deleteEmployee(row: EmployeeTableRow) {
   const id = row.id;
-  try {
-    await ElMessageBox.confirm(
-      `Delete employee ${row.full_name}?`,
-      "Confirm Delete",
-      {
-        type: "warning",
-        confirmButtonText: "Delete",
-        cancelButtonText: "Cancel",
-      },
-    );
 
-    actionLoadingById.value[id] = true;
-    await employeeStore.softDeleteEmployee(id);
-    ElMessage.success("Employee deleted");
-    await fetchEmployees();
-  } catch (error: unknown) {
+  try {
+    await confirmDeleteEmployee(row.full_name);
+  } catch (error) {
     if (error === "cancel" || error === "close") return;
-    ElMessage.error(
-      (
-        error as {
-          response?: { data?: { user_message?: string; message?: string } };
-        }
-      )?.response?.data?.user_message ||
-        (
-          error as {
-            response?: { data?: { user_message?: string; message?: string } };
-          }
-        )?.response?.data?.message ||
-        (error as Error)?.message ||
-        "Failed to delete employee",
-    );
+    throw error;
+  }
+
+  actionLoadingById.value[id] = true;
+
+  try {
+    await employeeStore.softDeleteEmployee(id);
+    await fetchEmployees();
   } finally {
     actionLoadingById.value[id] = false;
   }
 }
-
 async function restoreEmployee(row: EmployeeTableRow) {
   const id = row.id;
   try {
@@ -342,32 +351,18 @@ async function submitOnboard(payload: {
   };
 }) {
   loading.value = true;
+
   try {
-    await employeeStore.createEmployeeWithAccount(payload.employee, {
+    await employeeStore.onboardEmployee({
+      employee: payload.employee,
       email: payload.account.email,
       password: payload.account.password,
       username: payload.account.username,
-      role: payload.account.role || Role.EMPLOYEE,
+      role: String(payload.account.role || Role.EMPLOYEE),
     });
 
     onboardVisible.value = false;
-    ElMessage.success("Employee onboarded successfully");
     await fetchEmployees();
-  } catch (error) {
-    ElMessage.error(
-      (
-        error as {
-          response?: { data?: { user_message?: string; message?: string } };
-        }
-      )?.response?.data?.user_message ||
-        (
-          error as {
-            response?: { data?: { user_message?: string; message?: string } };
-          }
-        )?.response?.data?.message ||
-        (error as Error)?.message ||
-        "Failed to onboard employee",
-    );
   } finally {
     loading.value = false;
   }
@@ -402,55 +397,49 @@ onMounted(() => {
         </BaseButton>
       </template>
     </OverviewHeader>
-
-    <section class="toolbar-shell">
-      <div class="toolbar-left">
-        <BaseButton plain :loading="loading" @click="fetchEmployees"
-          >Refresh</BaseButton
-        >
-        <BaseButton
-          plain
-          @click="router.push(ROUTES.HR_ADMIN.EMPLOYEE_ARCHIVED)"
-          >Archived</BaseButton
-        >
-        <BaseButton
-          plain
-          @click="router.push(ROUTES.HR_ADMIN.EMPLOYEE_ACCOUNTS)"
-          >Accounts</BaseButton
-        >
-      </div>
-
-      <div class="toolbar-right">
+    <PageToolbar class="page-tool-bar">
+      <template #left>
         <ElInput
           v-model="filters.q"
           clearable
           placeholder="Search by code, name, department, account..."
           class="toolbar-search"
         />
+      </template>
+
+      <template #right>
+        <BaseButton
+          plain
+          @click="router.push(ROUTES.HR_ADMIN.EMPLOYEE_ARCHIVED)"
+        >
+          Archived
+        </BaseButton>
+
+        <BaseButton
+          plain
+          @click="router.push(ROUTES.HR_ADMIN.EMPLOYEE_ACCOUNTS)"
+        >
+          Accounts
+        </BaseButton>
+
         <ElSelect v-model="filters.hasAccount" class="toolbar-select">
           <ElOption label="All Accounts" value="" />
           <ElOption label="Has Account" value="yes" />
           <ElOption label="No Account" value="no" />
         </ElSelect>
+
         <ElSelect v-model="filters.status" class="toolbar-select">
           <ElOption label="All Status" value="" />
           <ElOption label="Active" value="active" />
           <ElOption label="Inactive" value="inactive" />
         </ElSelect>
-        <BaseButton plain :disabled="!isDirty" @click="resetFilters"
-          >Reset</BaseButton
-        >
-      </div>
-    </section>
 
-    <section class="summary-grid">
-      <article v-for="item in stats" :key="item.label" class="summary-card">
-        <span class="summary-label">{{ item.label }}</span>
-        <strong class="summary-value">{{ item.value }}</strong>
-        <small class="summary-note">{{ item.helper }}</small>
-      </article>
-    </section>
-
+        <BaseButton plain :disabled="!isDirty" @click="resetFilters">
+          Reset
+        </BaseButton>
+      </template>
+    </PageToolbar>
+    <SummaryCardGrid :items="stats" :columns="4" elevated />
     <ElCard class="table-shell">
       <SmartTable
         :data="pagedRows"
@@ -550,88 +539,24 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-.toolbar-shell {
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
-  background: var(--color-card);
-  padding: 12px;
-}
-
-.toolbar-left,
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.toolbar-search {
-  width: 320px;
-}
-
-.toolbar-select {
-  width: 170px;
-}
-
-.summary-grid {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.summary-card {
-  border-radius: 14px;
-  border: 1px solid var(--border-color);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--color-primary-light-8) 100%, var(--color-card)) 0%,
-    var(--color-card) 100%
-  );
-  padding: 12px;
-}
-
-.summary-label {
-  display: block;
-  color: var(--muted-color);
-  font-size: 12px;
-}
-
-.summary-value {
-  display: block;
-  margin-top: 4px;
-  color: var(--text-color);
-  font-size: 26px;
-  font-weight: 800;
-}
-
-.summary-note {
-  display: block;
-  margin-top: 2px;
-  color: var(--muted-color);
-  font-size: 11px;
-}
-
 .table-shell {
   margin-top: 12px;
   border: 1px solid var(--border-color);
+  background: var(--color-card);
 }
 
 .account-cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .account-meta {
   color: var(--muted-color);
   font-size: 12px;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .pagination-wrap {
@@ -639,25 +564,12 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
 }
-
-@media (max-width: 1200px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.page-tool-bar {
+  margin-block: 12px;
 }
-
 @media (max-width: 780px) {
-  .toolbar-search,
-  .toolbar-select {
-    width: 100%;
-  }
-
-  .toolbar-right {
-    width: 100%;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
+  .pagination-wrap {
+    justify-content: flex-start;
   }
 }
 </style>

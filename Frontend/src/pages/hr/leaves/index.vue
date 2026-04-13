@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import {
   ElButton,
   ElCard,
@@ -222,7 +222,9 @@ async function refreshList() {
   await fetchLeaveRequests(pagination.page, pagination.limit);
 }
 
-await fetchLeaveRequests(1, pagination.limit);
+onMounted(() => {
+  fetchLeaveRequests(1, pagination.limit);
+});
 </script>
 
 <template>

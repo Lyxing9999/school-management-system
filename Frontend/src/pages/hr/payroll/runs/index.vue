@@ -238,7 +238,10 @@ async function handlePageSizeChange(size: number) {
   await fetchRuns(1, size);
 }
 
-await fetchRuns(1, pagination.limit);
+import { onMounted } from "vue";
+onMounted(() => {
+  fetchRuns(1, pagination.limit);
+});
 </script>
 
 <template>

@@ -10,40 +10,54 @@ import type {
   HrEmployeeDTO,
   HrUpdateEmployeeAccountDTO,
   HrUpdateEmployeeDTO,
-  HrEmployeeContractDTO,
   HrSalaryType,
 } from "~/api/hr_admin/employees/dto";
 import type { SelectOptionDTO } from "~/api/types/common/select-option.type";
 import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
 
+
 definePageMeta({ layout: "default" });
 
-interface EmployeeForm {
+type EmploymentType = "permanent" | "contract";
+type EmployeeStatus = "active" | "inactive";
+
+type AccountSummary = {
+  id: string;
+  email?: string | null;
+  username?: string | null;
+  role?: string | null;
+  status?: string | null;
+} | null;
+
+type EmployeeContractForm = {
+  start_date: string;
+  end_date: string;
+  salary_type: HrSalaryType;
+  rate: number | null;
+  pay_on_holiday: boolean;
+  pay_on_weekend: boolean;
+  leave_policy_id: string | null;
+};
+
+type EmployeeForm = {
   full_name: string;
   department: string;
   position: string;
-  employment_type: "permanent" | "contract";
+  employment_type: EmploymentType;
   basic_salary: number | null;
-  status: "active" | "inactive";
-  contract: {
-    start_date: string;
-    end_date: string;
-    salary_type: HrSalaryType;
-    rate: number | null;
-    pay_on_holiday: boolean;
-    pay_on_weekend: boolean;
-    leave_policy_id: string | null;
-  } | null;
-}
+  status: EmployeeStatus;
+  contract: EmployeeContractForm | null;
+};
 
-interface AccountForm {
+type AccountForm = {
   email: string;
   username: string;
   password: string;
-}
+};
 
 const route = useRoute();
 const router = useRouter();
+
 const employeeStore = useHrEmployeeStore();
 const scheduleService = hrmsAdminService().workingSchedule;
 const { $api } = useNuxtApp();
@@ -51,15 +65,6 @@ const { $api } = useNuxtApp();
 const employeeId = computed(() => String(route.params.id ?? ""));
 
 const pageLoading = ref(false);
-const employee = ref<HrEmployeeDTO | null>(null);
-const account = ref<{
-  id: string;
-  email?: string | null;
-  username?: string | null;
-  role?: string | null;
-  status?: string | null;
-} | null>(null);
-
 const employeeSaving = ref(false);
 const accountSaving = ref(false);
 const assignSaving = ref(false);
@@ -68,26 +73,17 @@ const resetSaving = ref(false);
 const defaultResetSaving = ref(false);
 
 const scheduleOptionsLoading = ref(false);
-const scheduleOptions = ref<SelectOptionDTO[]>([]);
-
 const accountOptionsLoading = ref(false);
+
+const employee = ref<HrEmployeeDTO | null>(null);
+const account = ref<AccountSummary>(null);
+const resetInfo = ref<{ message?: string; reset_link?: string } | null>(null);
+
+const scheduleOptions = ref<SelectOptionDTO[]>([]);
 const accountOptions = ref<Array<{ value: string; label: string }>>([]);
 
-const employeeForm = reactive<EmployeeForm>({
-  full_name: "",
-  department: "",
-  position: "",
-  employment_type: "permanent",
-  basic_salary: null,
-  status: "active",
-  contract: null,
-});
-
-const accountForm = reactive<AccountForm>({
-  email: "",
-  username: "",
-  password: "",
-});
+const employeeForm = reactive<EmployeeForm>(createEmptyEmployeeForm());
+const accountForm = reactive<AccountForm>(createEmptyAccountForm());
 
 const assignForm = reactive({
   schedule_id: "",
@@ -97,27 +93,55 @@ const linkForm = reactive({
   user_id: "",
 });
 
-const resetInfo = ref<{ message?: string; reset_link?: string } | null>(null);
+function createEmptyContract(): EmployeeContractForm {
+  return {
+    start_date: "",
+    end_date: "",
+    salary_type: "monthly",
+    rate: null,
+    pay_on_holiday: false,
+    pay_on_weekend: false,
+    leave_policy_id: null,
+  };
+}
 
-// Watch employment_type and initialize contract when switching to/from contract
+function createEmptyEmployeeForm(): EmployeeForm {
+  return {
+    full_name: "",
+    department: "",
+    position: "",
+    employment_type: "permanent",
+    basic_salary: null,
+    status: "active",
+    contract: null,
+  };
+}
+
+function createEmptyAccountForm(): AccountForm {
+  return {
+    email: "",
+    username: "",
+    password: "",
+  };
+}
+
 watch(
   () => employeeForm.employment_type,
-  (newType) => {
-    if (newType === "contract" && !employeeForm.contract) {
-      employeeForm.contract = {
-        start_date: "",
-        end_date: "",
-        salary_type: "monthly",
-        rate: null,
-        pay_on_holiday: false,
-        pay_on_weekend: false,
-        leave_policy_id: null,
-      };
-    } else if (newType === "permanent") {
+  (type) => {
+    if (type === "contract" && !employeeForm.contract) {
+      employeeForm.contract = createEmptyContract();
+      return;
+    }
+
+    if (type === "permanent") {
       employeeForm.contract = null;
     }
   },
 );
+
+function notifyError(error: unknown, fallback: string) {
+  ElMessage.error(mapError(error, fallback));
+}
 
 function mapError(error: unknown, fallback: string) {
   if (error && typeof error === "object" && "response" in error) {
@@ -135,6 +159,7 @@ function mapError(error: unknown, fallback: string) {
 
 function formatCurrency(value: number | null | undefined) {
   if (value == null) return "-";
+
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -170,6 +195,80 @@ function fillAccountForm() {
   accountForm.email = account.value?.email ?? "";
   accountForm.username = account.value?.username ?? "";
   accountForm.password = "";
+}
+
+function buildEmployeePayload(): HrUpdateEmployeeDTO | null {
+  if (!employeeForm.full_name.trim()) {
+    ElMessage.warning("Full name is required");
+    return null;
+  }
+
+  if (
+    employeeForm.basic_salary == null ||
+    Number(employeeForm.basic_salary) < 0
+  ) {
+    ElMessage.warning("Basic salary must be 0 or greater");
+    return null;
+  }
+
+  if (employeeForm.employment_type === "contract") {
+    if (!employeeForm.contract?.start_date) {
+      ElMessage.warning("Contract start date is required");
+      return null;
+    }
+
+    if (!employeeForm.contract?.end_date) {
+      ElMessage.warning("Contract end date is required");
+      return null;
+    }
+
+    if (
+      employeeForm.contract.rate == null ||
+      Number(employeeForm.contract.rate) < 0
+    ) {
+      ElMessage.warning("Contract rate must be 0 or greater");
+      return null;
+    }
+  }
+
+  return {
+    full_name: employeeForm.full_name.trim(),
+    department: employeeForm.department.trim() || null,
+    position: employeeForm.position.trim() || null,
+    employment_type: employeeForm.employment_type,
+    basic_salary: Number(employeeForm.basic_salary),
+    status: employeeForm.status,
+    contract:
+      employeeForm.employment_type === "contract" && employeeForm.contract
+        ? {
+            start_date: employeeForm.contract.start_date,
+            end_date: employeeForm.contract.end_date,
+            salary_type: employeeForm.contract.salary_type,
+            rate: Number(employeeForm.contract.rate),
+            pay_on_holiday: employeeForm.contract.pay_on_holiday,
+            pay_on_weekend: employeeForm.contract.pay_on_weekend,
+            leave_policy_id: employeeForm.contract.leave_policy_id,
+          }
+        : null,
+  };
+}
+
+function buildAccountPayload(): HrUpdateEmployeeAccountDTO | null {
+  if (!account.value) return null;
+
+  const payload: HrUpdateEmployeeAccountDTO = {};
+
+  if (accountForm.email.trim()) payload.email = accountForm.email.trim();
+  if (accountForm.username.trim())
+    payload.username = accountForm.username.trim();
+  if (accountForm.password.trim()) payload.password = accountForm.password;
+
+  if (!payload.email && !payload.username && !payload.password) {
+    ElMessage.warning("Add at least one account field to update");
+    return null;
+  }
+
+  return payload;
 }
 
 async function loadScheduleOptions() {
@@ -226,7 +325,7 @@ async function loadDetail() {
 
     await Promise.all([loadScheduleOptions(), loadAccountOptions()]);
   } catch (error) {
-    ElMessage.error(mapError(error, "Failed to load employee detail"));
+    notifyError(error, "Failed to load employee detail");
   } finally {
     pageLoading.value = false;
   }
@@ -234,57 +333,9 @@ async function loadDetail() {
 
 async function submitEmployeeUpdate() {
   if (!employeeId.value) return;
-  if (!employeeForm.full_name.trim()) {
-    ElMessage.warning("Full name is required");
-    return;
-  }
-  if (
-    employeeForm.basic_salary == null ||
-    Number(employeeForm.basic_salary) < 0
-  ) {
-    ElMessage.warning("Basic salary must be 0 or greater");
-    return;
-  }
 
-  // Validate contract fields if employment type is contract
-  if (employeeForm.employment_type === "contract") {
-    if (!employeeForm.contract?.start_date) {
-      ElMessage.warning("Contract start date is required");
-      return;
-    }
-    if (!employeeForm.contract?.end_date) {
-      ElMessage.warning("Contract end date is required");
-      return;
-    }
-    if (
-      employeeForm.contract.rate == null ||
-      Number(employeeForm.contract.rate) < 0
-    ) {
-      ElMessage.warning("Contract rate must be 0 or greater");
-      return;
-    }
-  }
-
-  const payload: HrUpdateEmployeeDTO = {
-    full_name: employeeForm.full_name.trim(),
-    department: employeeForm.department.trim() || null,
-    position: employeeForm.position.trim() || null,
-    employment_type: employeeForm.employment_type,
-    basic_salary: Number(employeeForm.basic_salary),
-    status: employeeForm.status,
-    contract:
-      employeeForm.employment_type === "contract" && employeeForm.contract
-        ? {
-            start_date: employeeForm.contract.start_date,
-            end_date: employeeForm.contract.end_date,
-            salary_type: employeeForm.contract.salary_type,
-            rate: Number(employeeForm.contract.rate),
-            pay_on_holiday: employeeForm.contract.pay_on_holiday,
-            pay_on_weekend: employeeForm.contract.pay_on_weekend,
-            leave_policy_id: employeeForm.contract.leave_policy_id,
-          }
-        : null,
-  };
+  const payload = buildEmployeePayload();
+  if (!payload) return;
 
   employeeSaving.value = true;
   try {
@@ -296,7 +347,7 @@ async function submitEmployeeUpdate() {
     fillEmployeeForm(updated);
     ElMessage.success("Employee updated successfully");
   } catch (error) {
-    ElMessage.error(mapError(error, "Failed to update employee"));
+    notifyError(error, "Failed to update employee");
   } finally {
     employeeSaving.value = false;
   }
@@ -305,16 +356,8 @@ async function submitEmployeeUpdate() {
 async function submitAccountUpdate() {
   if (!employeeId.value || !account.value) return;
 
-  const payload: HrUpdateEmployeeAccountDTO = {};
-  if (accountForm.email.trim()) payload.email = accountForm.email.trim();
-  if (accountForm.username.trim())
-    payload.username = accountForm.username.trim();
-  if (accountForm.password.trim()) payload.password = accountForm.password;
-
-  if (!payload.email && !payload.username && !payload.password) {
-    ElMessage.warning("Add at least one account field to update");
-    return;
-  }
+  const payload = buildAccountPayload();
+  if (!payload) return;
 
   accountSaving.value = true;
   try {
@@ -326,7 +369,7 @@ async function submitAccountUpdate() {
     fillAccountForm();
     ElMessage.success("Employee account updated successfully");
   } catch (error) {
-    ElMessage.error(mapError(error, "Failed to update employee account"));
+    notifyError(error, "Failed to update employee account");
   } finally {
     accountSaving.value = false;
   }
@@ -334,6 +377,7 @@ async function submitAccountUpdate() {
 
 async function submitAssignSchedule() {
   if (!employeeId.value) return;
+
   if (!assignForm.schedule_id) {
     ElMessage.warning("Please select a schedule");
     return;
@@ -342,13 +386,17 @@ async function submitAssignSchedule() {
   assignSaving.value = true;
   try {
     if (!$api) throw new Error("API client unavailable");
+
     await ($api as any).post(
       `/api/hrms/employees/${employeeId.value}/assign-schedule`,
-      { schedule_id: assignForm.schedule_id },
+      {
+        schedule_id: assignForm.schedule_id,
+      },
     );
+
     ElMessage.success("Schedule assigned successfully");
   } catch (error) {
-    ElMessage.error(mapError(error, "Failed to assign schedule"));
+    notifyError(error, "Failed to assign schedule");
   } finally {
     assignSaving.value = false;
   }
@@ -356,6 +404,7 @@ async function submitAssignSchedule() {
 
 async function submitLinkAccount() {
   if (!employeeId.value) return;
+
   if (!linkForm.user_id) {
     ElMessage.warning("Please select an account");
     return;
@@ -366,13 +415,15 @@ async function submitLinkAccount() {
     const updated = await employeeStore.linkAccount(employeeId.value, {
       user_id: linkForm.user_id,
     });
+
     employee.value = updated;
     account.value = await employeeStore.getEmployeeAccount(employeeId.value);
     fillAccountForm();
     linkForm.user_id = "";
+
     ElMessage.success("Account linked successfully");
   } catch (error) {
-    ElMessage.error(mapError(error, "Failed to link account"));
+    notifyError(error, "Failed to link account");
   } finally {
     linkSaving.value = false;
   }
@@ -386,10 +437,11 @@ async function requestPasswordReset() {
     const response = await employeeStore.requestEmployeeAccountPasswordReset(
       employeeId.value,
     );
+
     resetInfo.value = response;
     ElMessage.success(response.message || "Password reset requested");
   } catch (error) {
-    ElMessage.error(mapError(error, "Failed to request password reset"));
+    notifyError(error, "Failed to request password reset");
   } finally {
     resetSaving.value = false;
   }
@@ -401,13 +453,15 @@ async function resetPasswordDefault() {
   defaultResetSaving.value = true;
   try {
     if (!$api) throw new Error("API client unavailable");
+
     await ($api as any).post(
       `/api/hrms/employees/${employeeId.value}/account/reset-password`,
       {},
     );
+
     ElMessage.success("Password reset successfully");
   } catch (error) {
-    ElMessage.error(mapError(error, "Failed to reset password"));
+    notifyError(error, "Failed to reset password");
   } finally {
     defaultResetSaving.value = false;
   }
@@ -425,15 +479,13 @@ async function copyResetLink() {
   }
 }
 
-onMounted(() => {
-  loadDetail();
-});
+onMounted(loadDetail);
 </script>
 
 <template>
   <div class="employee-detail-page">
     <OverviewHeader
-      :title="employee ? `${employee.full_name}` : 'Employee Detail'"
+      :title="employee ? employee.full_name : 'Employee Detail'"
       :description="
         employee
           ? `Code: ${employee.employee_code}`
@@ -462,7 +514,8 @@ onMounted(() => {
             <el-avatar :size="48" class="profile-avatar">
               <el-icon><UserFilled /></el-icon>
             </el-avatar>
-            <div>
+
+            <div class="profile-info">
               <div class="profile-name">{{ employee?.full_name || "-" }}</div>
               <div class="profile-meta">
                 {{ employee?.employee_code || "-" }}
@@ -492,6 +545,7 @@ onMounted(() => {
 
         <el-card shadow="never" class="profile-card">
           <div class="card-title">Reset Password</div>
+
           <div class="action-stack">
             <BaseButton
               type="warning"
@@ -515,6 +569,7 @@ onMounted(() => {
             <div v-if="resetInfo?.reset_link" class="reset-link-box">
               <div class="reset-link-title">Reset Link</div>
               <div class="reset-link-value">{{ resetInfo.reset_link }}</div>
+
               <BaseButton plain @click="copyResetLink">
                 <template #iconPre>
                   <el-icon><CopyDocument /></el-icon>
@@ -529,22 +584,27 @@ onMounted(() => {
       <div class="content-grid">
         <el-card shadow="never" class="section-card">
           <div class="card-title">Update Employee</div>
+
           <el-form label-position="top" class="form-grid">
             <el-form-item label="Full Name" required>
               <el-input v-model="employeeForm.full_name" />
             </el-form-item>
+
             <el-form-item label="Department">
               <el-input v-model="employeeForm.department" />
             </el-form-item>
+
             <el-form-item label="Position">
               <el-input v-model="employeeForm.position" />
             </el-form-item>
+
             <el-form-item label="Employment Type">
               <el-select v-model="employeeForm.employment_type">
                 <el-option label="Permanent" value="permanent" />
                 <el-option label="Contract" value="contract" />
               </el-select>
             </el-form-item>
+
             <el-form-item label="Basic Salary" required>
               <el-input-number
                 v-model="employeeForm.basic_salary"
@@ -555,6 +615,7 @@ onMounted(() => {
                 style="width: 100%"
               />
             </el-form-item>
+
             <el-form-item label="Status">
               <el-select v-model="employeeForm.status">
                 <el-option label="Active" value="active" />
@@ -562,8 +623,12 @@ onMounted(() => {
               </el-select>
             </el-form-item>
 
-            <!-- Contract fields only for contract employees -->
-            <template v-if="employeeForm.employment_type === 'contract'">
+            <template
+              v-if="
+                employeeForm.employment_type === 'contract' &&
+                employeeForm.contract
+              "
+            >
               <el-divider />
               <div class="contract-section-title">Contract Details</div>
 
@@ -571,13 +636,8 @@ onMounted(() => {
                 <el-date-picker
                   v-model="employeeForm.contract.start_date"
                   type="date"
-                  placeholder="Select date"
+                  placeholder="Select start date"
                   style="width: 100%"
-                  :disabled-date="
-                    (date) =>
-                      employeeForm.contract?.end_date &&
-                      new Date(date) > new Date(employeeForm.contract.end_date)
-                  "
                 />
               </el-form-item>
 
@@ -585,14 +645,8 @@ onMounted(() => {
                 <el-date-picker
                   v-model="employeeForm.contract.end_date"
                   type="date"
-                  placeholder="Select date"
+                  placeholder="Select end date"
                   style="width: 100%"
-                  :disabled-date="
-                    (date) =>
-                      employeeForm.contract?.start_date &&
-                      new Date(date) <
-                        new Date(employeeForm.contract.start_date)
-                  "
                 />
               </el-form-item>
 
@@ -649,6 +703,7 @@ onMounted(() => {
 
         <el-card shadow="never" class="section-card">
           <div class="card-title">Account</div>
+
           <div
             class="account-badge"
             :class="{ 'account-badge--none': !account }"
@@ -664,6 +719,7 @@ onMounted(() => {
                 placeholder="Email"
               />
             </el-form-item>
+
             <el-form-item label="Username">
               <el-input
                 v-model="accountForm.username"
@@ -671,6 +727,7 @@ onMounted(() => {
                 placeholder="Username"
               />
             </el-form-item>
+
             <el-form-item label="New Password">
               <el-input
                 v-model="accountForm.password"
@@ -696,6 +753,7 @@ onMounted(() => {
           <el-divider />
 
           <div class="sub-title">Link Existing Account</div>
+
           <div class="link-grid">
             <el-select
               v-model="linkForm.user_id"
@@ -762,7 +820,7 @@ onMounted(() => {
 .employee-detail-page {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .header-actions {
@@ -775,13 +833,13 @@ onMounted(() => {
 .top-grid {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .content-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .profile-card,
@@ -792,24 +850,31 @@ onMounted(() => {
 .profile-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.profile-info {
+  min-width: 0;
 }
 
 .profile-avatar {
   background: color-mix(in srgb, var(--el-color-primary) 22%, #ffffff 78%);
   color: var(--el-color-primary);
+  flex-shrink: 0;
 }
 
 .profile-name {
   font-size: 16px;
   font-weight: 700;
+  word-break: break-word;
 }
 
 .profile-meta {
   margin-top: 2px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+  word-break: break-word;
 }
 
 .mini-grid {
@@ -821,10 +886,10 @@ onMounted(() => {
 .mini-item {
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 10px;
-  padding: 8px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .mini-item span {
@@ -835,6 +900,7 @@ onMounted(() => {
 .mini-item strong {
   font-size: 13px;
   color: var(--el-text-color-primary);
+  word-break: break-word;
 }
 
 .card-title {
@@ -857,7 +923,7 @@ onMounted(() => {
 .card-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .link-grid {
@@ -923,14 +989,27 @@ onMounted(() => {
 }
 
 @media (max-width: 680px) {
-  .header-actions,
+  .header-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .link-grid {
     grid-template-columns: 1fr;
-    display: grid;
   }
 
   .mini-grid {
     grid-template-columns: 1fr;
+  }
+
+  .card-actions {
+    justify-content: stretch;
+  }
+
+  .card-actions :deep(button),
+  .card-actions :deep(.el-button),
+  .card-actions :deep(.base-button) {
+    width: 100%;
   }
 }
 </style>

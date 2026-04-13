@@ -138,7 +138,10 @@ async function showDetails(row: OvertimeRequestDTO) {
   );
 }
 
-await fetchOvertimeRequests(1, pagination.limit);
+import { onMounted } from "vue";
+onMounted(() => {
+  fetchOvertimeRequests(1, pagination.limit);
+});
 </script>
 
 <template>

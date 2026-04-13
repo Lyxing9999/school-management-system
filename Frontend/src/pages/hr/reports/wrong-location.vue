@@ -140,7 +140,10 @@ function resetFilters() {
   void applyFilters();
 }
 
-await fetchReport(1, pagination.limit);
+import { onMounted } from "vue";
+onMounted(() => {
+  fetchReport(1, pagination.limit);
+});
 </script>
 
 <template>

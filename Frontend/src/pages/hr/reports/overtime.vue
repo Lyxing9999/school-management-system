@@ -179,7 +179,10 @@ function resetFilters() {
   void applyFilters();
 }
 
-await Promise.all([fetchRequests(1, pagination.limit), fetchSummary()]);
+import { onMounted } from "vue";
+onMounted(() => {
+  void Promise.all([fetchRequests(1, pagination.limit), fetchSummary()]);
+});
 </script>
 
 <template>

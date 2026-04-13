@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
 import {
   ElButton,
@@ -375,8 +375,9 @@ watch(statusFilter, async () => {
   await fetchWrongLocationReports(1);
 });
 
-await fetchWorkLocations();
-await fetchWrongLocationReports(1);
+onMounted(() => {
+  Promise.all([fetchWorkLocations(), fetchWrongLocationReports(1)]);
+});
 </script>
 
 <template>
