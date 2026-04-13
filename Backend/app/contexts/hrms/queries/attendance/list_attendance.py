@@ -2,8 +2,8 @@ from __future__ import annotations
 
 
 class ListAttendanceQuery:
-    def __init__(self, *, attendance_repository) -> None:
-        self.attendance_repository = attendance_repository
+    def __init__(self, *, attendance_read_model) -> None:
+        self.attendance_read_model = attendance_read_model
 
     def execute(
         self,
@@ -17,7 +17,7 @@ class ListAttendanceQuery:
         include_deleted: bool = False,
         deleted_only: bool = False,
     ):
-        return self.attendance_repository.list_attendances(
+        return self.attendance_read_model.list_attendances(
             employee_id=employee_id,
             start_date=start_date,
             end_date=end_date,

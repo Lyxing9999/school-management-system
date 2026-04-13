@@ -30,7 +30,7 @@ def list_employees():
 
     include_deleted = (request.args.get("include_deleted") or "false").lower() == "true"
     deleted_only = (request.args.get("deleted_only") or "false").lower() == "true"
-    show_deleted = "all" if include_deleted else ("deleted_only" if deleted_only else "active")
+    show_deleted = "all" if include_deleted else ("deleted" if deleted_only else "active")
 
     if with_accounts:
         items, total = g.hrms.employee.list_with_accounts(

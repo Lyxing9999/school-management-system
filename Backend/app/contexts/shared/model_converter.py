@@ -1,16 +1,30 @@
 from pydantic import ValidationError as PydanticValidationError
-from typing import TypeVar, Dict, Any , Union, Type, List
+from typing import TypeVar, Dict, Any, Union, Type, List
 from pydantic import BaseModel
 import logging
 from enum import Enum
-from app.contexts.core.errors.pydantic_error_exception import PydanticBaseValidationError, AppTypeError
 from bson import ObjectId
+from datetime import datetime, date
+
+from app.contexts.core.errors.pydantic_error_exception import (
+    PydanticBaseValidationError,
+    AppTypeError,
+)
 from app.contexts.core.errors import handle_exception
+from app.contexts.shared.time_utils import (
+    utc_now,
+    ensure_utc,
+    ensure_utc_from_db,
+    to_cambodia,
+    coerce_date,
+)
+
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=BaseModel) #for schema 
-R = TypeVar("R", bound=BaseModel) #for dto
-M = TypeVar("M", bound=BaseModel) #for model
+T = TypeVar("T", bound=BaseModel)
+R = TypeVar("R", bound=BaseModel)
+M = TypeVar("M", bound=BaseModel)
+
 
 class Context(str, Enum):
     LIST = "list"
@@ -23,17 +37,16 @@ class Context(str, Enum):
     SINGLE = "single"
 
 
-class ModelConverterUtils():
+class ModelConverterUtils:
     def _field_errors(self, e: PydanticValidationError) -> Dict[str, str]:
         return {
-            ".".join(str(x) for x in err['loc']) if err['loc'] else "unknown_field": err['msg']
+            ".".join(str(x) for x in err["loc"]) if err["loc"] else "unknown_field": err["msg"]
             for err in e.errors()
         }
 
     def convert_to_model(self, data: dict | BaseModel, model_class: Type[M]) -> M:
-        """Convert raw dict or Pydantic model to a Pydantic model, raising structured errors on failure."""
         try:
-            logger.debug(f"Converting data to model {model_class.__name__}: {data}")
+            logger.debug("Converting data to model %s: %s", model_class.__name__, data)
             if isinstance(data, BaseModel):
                 data = data.model_dump()
             return model_class.model_validate(data)
@@ -44,40 +57,45 @@ class ModelConverterUtils():
                 cause=e,
                 details=field_errors,
                 hint=f"Ensure that the input data matches the expected schema for {model_class.__name__}.",
-                user_message="One or more fields are invalid. Please review the provided data."
+                user_message="One or more fields are invalid. Please review the provided data.",
             )
         except Exception as e:
             app_exc = handle_exception(e)
-            logger.error(f"Unexpected error while converting to {model_class.__name__}: {app_exc}")
+            logger.error("Unexpected error while converting to %s: %s", model_class.__name__, app_exc)
             raise app_exc
 
-    def convert_to_model_list(self, data_list: list[Union[Dict[str, Any], BaseModel]], model_class: Type[M]) -> list[M]:
+    def convert_to_model_list(
+        self,
+        data_list: list[Union[Dict[str, Any], BaseModel]],
+        model_class: Type[M],
+    ) -> list[M]:
         if not isinstance(data_list, list):
             raise AppTypeError(
                 message="Invalid input type",
                 cause=None,
                 details={"expected_type": "list", "received_value": data_list},
-                hint=f"Expected a list of items to convert to {model_class.__name__}"
+                hint=f"Expected a list of items to convert to {model_class.__name__}",
             )
+
         results = []
         for data in data_list:
             try:
                 model = self.convert_to_model(data, model_class)
-                results.append(model)  
+                results.append(model)
             except Exception as e:
                 app_exc = handle_exception(e)
-                logger.error(f"Unexpected error converting list item: {app_exc}", extra={"data": data})
+                logger.error("Unexpected error converting list item: %s", app_exc, extra={"data": data})
                 raise app_exc
+
         return results
 
 
 class AdvancedMongoConverter:
-
     @staticmethod
     def convert_ids(doc: dict) -> dict:
-        """Recursively convert _id and ObjectId fields to string 'id'."""
         if not isinstance(doc, dict):
             return doc
+
         converted = {}
         for k, v in doc.items():
             if isinstance(v, ObjectId) or k == "_id":
@@ -88,14 +106,15 @@ class AdvancedMongoConverter:
                 new_list = []
                 for item in v:
                     if isinstance(item, ObjectId):
-                        new_list.append(str(item))  
+                        new_list.append(str(item))
                     elif isinstance(item, dict):
-                        new_list.append(AdvancedMongoConverter.convert_ids(item))  # recursive dict
+                        new_list.append(AdvancedMongoConverter.convert_ids(item))
                     else:
                         new_list.append(item)
                 converted[k] = new_list
             else:
                 converted[k] = v
+
         return converted
 
     @classmethod
@@ -104,11 +123,14 @@ class AdvancedMongoConverter:
             converted = cls.convert_ids(doc)
             return dto_class.model_validate(converted)
         except PydanticValidationError as e:
-            field_errors = { ".".join(str(x) for x in err['loc']) if err['loc'] else "unknown_field": err['msg'] for err in e.errors() }
+            field_errors = {
+                ".".join(str(x) for x in err["loc"]) if err["loc"] else "unknown_field": err["msg"]
+                for err in e.errors()
+            }
             raise PydanticBaseValidationError(
                 message=f"Validation failed for {dto_class.__name__}",
                 cause=e,
-                details=field_errors
+                details=field_errors,
             )
         except Exception as e:
             raise handle_exception(e)
@@ -120,12 +142,10 @@ class AdvancedMongoConverter:
                 message="Expected a list of documents",
                 cause=None,
                 details={"received_value": docs},
-                hint=f"Expected list of dicts to convert to {dto_class.__name__}"
+                hint=f"Expected list of dicts to convert to {dto_class.__name__}",
             )
-        results = []
-        for doc in docs:
-            results.append(cls.doc_to_dto(doc, dto_class))
-        return results
+
+        return [cls.doc_to_dto(doc, dto_class) for doc in docs]
 
     @classmethod
     def cursor_to_dto(cls, cursor, dto_class: Type[BaseModel]) -> List[BaseModel]:
@@ -148,13 +168,16 @@ class AdvancedMongoConverter:
                 raise AppTypeError(
                     message="Expected string for ObjectId conversion",
                     cause=None,
-                    details={"received_type": type(value).__name__, "received_value": value},
+                    details={
+                        "received_type": type(value).__name__,
+                        "received_value": value,
+                    },
                     hint="Provide a valid Mongo ObjectId string (24 hex chars) or an ObjectId instance.",
                 )
 
             v = value.strip()
             if not v:
-                return None  # or raise if you prefer strict
+                return None
 
             if not ObjectId.is_valid(v):
                 raise AppTypeError(
@@ -169,11 +192,52 @@ class AdvancedMongoConverter:
         except Exception as e:
             raise handle_exception(e)
 
+    # -------- datetime helpers delegated to time_utils --------
+
+    @classmethod
+    def now(cls) -> datetime:
+        return utc_now()
+
+    @classmethod
+    def to_mongo_datetime(cls, value: datetime | date | str | None) -> datetime | None:
+        """
+        Normalize app input to UTC datetime before writing to MongoDB.
+        """
+        try:
+            return ensure_utc(value)
+        except Exception as e:
+            raise handle_exception(e)
+
+    @classmethod
+    def from_mongo_datetime(cls, value: datetime | None) -> datetime | None:
+        """
+        Normalize datetime read from MongoDB.
+        Mongo naive datetime should be treated as UTC.
+        """
+        try:
+            return ensure_utc_from_db(value)
+        except Exception as e:
+            raise handle_exception(e)
+
+    @classmethod
+    def to_cambodia_datetime(cls, value: datetime | date | str | None) -> datetime | None:
+        try:
+            return to_cambodia(value)
+        except Exception as e:
+            raise handle_exception(e)
+
+    @classmethod
+    def to_date(cls, value: datetime | date | str | None) -> date | None:
+        try:
+            return coerce_date(value)
+        except Exception as e:
+            raise handle_exception(e)
+
 
 pydantic_converter = ModelConverterUtils()
-mongo_converter = AdvancedMongoConverter  
+mongo_converter = AdvancedMongoConverter
 
 __all__ = [
     "pydantic_converter",
-    "mongo_converter"
+    "mongo_converter",
 ]

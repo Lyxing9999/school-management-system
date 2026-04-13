@@ -74,6 +74,18 @@ class MongoEmployeeRepository:
         result = self.collection.insert_one(doc, session=session)
         return self.collection.find_one({"_id": result.inserted_id}, session=session)
 
+
+    def soft_delete(self, employee_id, deleted_by) -> dict:
+        now = mongo_converter.now()
+        return self.update_fields(
+            self._oid(employee_id),
+            {
+                "lifecycle.deleted_at": now,
+                "lifecycle.deleted_by": self._oid(deleted_by),
+                "lifecycle.updated_at": now,
+            },
+        )
+
     def link_user_if_empty_with_session(
         self,
         *,

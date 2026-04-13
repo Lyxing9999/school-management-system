@@ -2,8 +2,8 @@ from __future__ import annotations
 
 
 class GetTeamAttendanceQuery:
-    def __init__(self, *, employee_repository, attendance_read_model) -> None:
-        self.employee_repository = employee_repository
+    def __init__(self, *, employee_read_model, attendance_read_model) -> None:
+        self.employee_read_model = employee_read_model
         self.attendance_read_model = attendance_read_model
 
     def execute(
@@ -16,7 +16,7 @@ class GetTeamAttendanceQuery:
         page: int = 1,
         page_size: int = 10,
     ):
-        employees, _ = self.employee_repository.list_employees(
+        employees, _ = self.employee_read_model.list_employees(
             manager_user_id=manager_user_id,
             page=1,
             limit=1000,

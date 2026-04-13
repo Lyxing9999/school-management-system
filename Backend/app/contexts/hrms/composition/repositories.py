@@ -1,7 +1,7 @@
 from __future__ import annotations
 from app.contexts.core.config.setting import settings
 
-from app.contexts.hrms.read_models.attendance_read_model import AttendanceReadModel
+
 from pymongo.database import Database
 
 from app.contexts.hrms.repositories.employee_repository import MongoEmployeeRepository
@@ -19,6 +19,8 @@ from app.contexts.hrms.integrations.iam_gateway import HRMSIamGateway
 from app.contexts.hrms.services.cambodia_public_holiday_provider import CambodiaPublicHolidayProvider
 from app.contexts.hrms.read_models.overtime_read_model import OvertimeReadModel
 from app.contexts.hrms.read_models.attendance_read_model import AttendanceReadModel
+from app.contexts.hrms.read_models.employee_read_model import EmployeeReadModel
+
 
 class HrmsRepositories:
     def __init__(self, *, db: Database) -> None:
@@ -37,6 +39,7 @@ class HrmsRepositories:
         self.iam_gateway = HRMSIamGateway(db)
         self.overtime_read_model = OvertimeReadModel(db)
         self.attendance_read_model = AttendanceReadModel(db)
+        self.employee_read_model = EmployeeReadModel(db)
         self.cambodia_public_holiday_provider = CambodiaPublicHolidayProvider(
         api_key=settings.CALENDARIFIC_API_KEY or "",
         )
