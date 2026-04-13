@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from app.contexts.hrms.errors.employee_exceptions import EmployeeNotFoundException
+
 
 class GetEmployeeQuery:
-    def __init__(self, *, employee_repository) -> None:
-        self.employee_repository = employee_repository
+    def __init__(self, *, employee_read_model) -> None:
+        self.employee_read_model = employee_read_model
 
     def execute(self, *, employee_id: str):
-        return self.employee_repository.find_by_id(employee_id)
+        employee = self.employee_read_model.get_by_id(employee_id)
+        if not employee:
+            raise EmployeeNotFoundException(employee_id)
+        return employee

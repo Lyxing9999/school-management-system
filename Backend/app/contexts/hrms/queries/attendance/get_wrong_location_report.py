@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+
 class GetWrongLocationReportQuery:
     def __init__(self, *, attendance_read_model) -> None:
         self.attendance_read_model = attendance_read_model

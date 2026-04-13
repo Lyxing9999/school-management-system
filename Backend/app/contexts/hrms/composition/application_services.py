@@ -128,11 +128,11 @@ class HrmsApplicationServices:
 
         # employee account / employee
         self.get_account = GetEmployeeAccountQuery(
-            employee_repository=repositories.employee_repository,
+            employee_read_model=repositories.employee_read_model,
             iam_gateway=repositories.iam_gateway,
         )
         self.find_employee_by_user_id = FindEmployeeByUserIdQuery(
-            employee_repository=repositories.employee_repository,
+            employee_read_model=repositories.employee_read_model,
         )
         self.set_account_status = SetAccountStatusUseCase(
             iam_gateway=repositories.iam_gateway,
@@ -174,17 +174,17 @@ class HrmsApplicationServices:
             employee_repository=repositories.employee_repository,
         )
         self.list_employees = ListEmployeesQuery(
-            employee_repository=repositories.employee_repository,
+            employee_read_model=repositories.employee_read_model,
         )
         self.list_employees_with_accounts = ListEmployeesWithAccountsQuery(
-            employee_repository=repositories.employee_repository,
+            employee_read_model=repositories.employee_read_model,
             iam_gateway=repositories.iam_gateway,
         )
         self.get_employee = GetEmployeeQuery(
-            employee_repository=repositories.employee_repository,
+            employee_read_model=repositories.employee_read_model,
         )
         self.get_my_employee_profile = GetMyEmployeeProfileQuery(
-            employee_repository=repositories.employee_repository,
+            employee_read_model=repositories.employee_read_model,
         )
         self.assign_employee_schedule = AssignEmployeeScheduleUseCase(
             employee_repository=repositories.employee_repository,
@@ -211,17 +211,17 @@ class HrmsApplicationServices:
             audit_log_repository=repositories.audit_log_repository,
         )
         self.get_my_attendance = GetMyAttendanceQuery(
-            attendance_repository=repositories.attendance_repository,
+            attendance_read_model=repositories.attendance_read_model,
         )
         self.get_my_attendance_today = GetMyAttendanceTodayQuery(
             attendance_read_model=repositories.attendance_read_model,
         )
         self.list_attendance = ListAttendanceQuery(
-            attendance_repository=repositories.attendance_repository,
+            attendance_read_model=repositories.attendance_read_model,
         )
         self.get_team_attendance = GetTeamAttendanceQuery(
-            employee_repository=repositories.employee_repository,
-            attendance_repository=repositories.attendance_repository,
+            employee_read_model=repositories.employee_read_model,
+            attendance_read_model=repositories.attendance_read_model,
         )
         self.get_wrong_location_report = GetWrongLocationReportQuery(
             attendance_read_model=repositories.attendance_read_model,

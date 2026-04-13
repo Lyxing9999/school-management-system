@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from app.contexts.hrms.domain.attendance import (
-    Attendance,
-    AttendanceDayType,
-)
+from app.contexts.hrms.domain.attendance import Attendance, AttendanceDayType
 from app.contexts.hrms.domain.audit_log import AuditLog
 from app.contexts.hrms.domain.work_location import WorkLocation
 from app.contexts.hrms.domain.working_schedule import WorkingSchedule
@@ -89,8 +86,8 @@ class CheckInEmployeeUseCase:
             latitude=latitude,
             longitude=longitude,
         )
-        
-        if not is_valid_location and not wrong_location_reason:
+
+        if not is_valid_location and not (wrong_location_reason or "").strip():
             raise LocationValidationException(
                 message="wrong_location_reason is required when check-in location is invalid",
                 details={
@@ -116,34 +113,16 @@ class CheckInEmployeeUseCase:
 
         now = utc_now()
 
-        attendance = Attendance(
+        attendance = Attendance.create_for_day(
             employee_id=employee["_id"],
             attendance_date=attendance_date_utc,
-            check_in_time=None,
-            check_out_time=None,
             schedule_id=schedule.id,
             location_id=location.id if location else None,
-            check_in_latitude=None,
-            check_in_longitude=None,
-            check_out_latitude=None,
-            check_out_longitude=None,
-            status="checked_in",
             day_type=day_type,
             is_ot_eligible=day_type in {
                 AttendanceDayType.WEEKEND,
                 AttendanceDayType.PUBLIC_HOLIDAY,
             },
-            notes=None,
-            late_minutes=0,
-            early_leave_minutes=0,
-            wrong_location_reason=None,
-            location_review_status="not_required",
-            late_reason=None,
-            early_leave_reason=None,
-            early_leave_review_status="not_required",
-            admin_comment=None,
-            location_reviewed_by=None,
-            early_leave_reviewed_by=None,
             lifecycle=Lifecycle(
                 created_at=now,
                 updated_at=now,
@@ -259,6 +238,7 @@ class CheckInEmployeeUseCase:
             employee_id=employee_id,
             weekday_value=weekday_value,
         )
+
     def _ensure_not_checked_in(self, *, employee_id, attendance_date) -> None:
         existing = self.attendance_repository.find_by_employee_and_date(
             employee_id,
@@ -267,16 +247,6 @@ class CheckInEmployeeUseCase:
         if existing:
             raise AlreadyCheckedInTodayException(employee_id)
 
-    def _ensure_working_day(
-        self,
-        *,
-        schedule: WorkingSchedule,
-        check_out_time_local: datetime,
-        employee_id,
-    ) -> None:
-        weekday_value = check_out_time_local.weekday()
-        if not schedule.is_working_day(weekday_value):
-            raise NotScheduledWorkingDayException(employee_id=employee_id, weekday_value=weekday_value)
     def _is_valid_location(
         self,
         *,

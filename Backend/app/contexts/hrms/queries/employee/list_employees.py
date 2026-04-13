@@ -2,8 +2,8 @@ from __future__ import annotations
 
 
 class ListEmployeesQuery:
-    def __init__(self, *, employee_repository) -> None:
-        self.employee_repository = employee_repository
+    def __init__(self, *, employee_read_model) -> None:
+        self.employee_read_model = employee_read_model
 
     def execute(
         self,
@@ -13,7 +13,7 @@ class ListEmployeesQuery:
         page_size: int = 10,
         show_deleted: str = "active",
     ):
-        return self.employee_repository.list_employees(
+        return self.employee_read_model.get_page(
             q=q,
             page=page,
             page_size=page_size,

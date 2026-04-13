@@ -1,39 +1,41 @@
-# app/contexts/hrms/read_models/attendance_read_model.py
-from pymongo.database import Database
+from __future__ import annotations
+
 from bson import ObjectId
 from datetime import datetime, timedelta
+from pymongo.database import Database
 
+from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.shared.time_utils import (
     cambodia_start_of_day_as_utc,
     ensure_utc,
     utc_now,
 )
 
-from app.contexts.shared.model_converter import mongo_converter
+
 class AttendanceReadModel:
     def __init__(self, db: Database):
         self.collection = db["hr_attendances"]
 
-
     @staticmethod
-    def _oid(v) -> ObjectId | None:
-        if v is None:
+    def _oid(value) -> ObjectId | None:
+        if value is None:
             return None
-        if isinstance(v, ObjectId):
-            return v
-        if isinstance(v, str) and v.strip().lower() in {"", "null", "none", "undefined"}:
+        if isinstance(value, ObjectId):
+            return value
+        if isinstance(value, str) and value.strip().lower() in {
+            "",
+            "null",
+            "none",
+            "undefined",
+        }:
             return None
-        return mongo_converter.convert_to_object_id(v)
+        return mongo_converter.convert_to_object_id(value)
 
-    def find_by_id(self, attendance_id: ObjectId) -> dict | None:
-        """Find attendance by ID"""
+    def find_by_id(self, attendance_id) -> dict | None:
         return self.collection.find_one({"_id": self._oid(attendance_id)})
 
-    def find_by_employee_today(self, employee_id: ObjectId) -> dict | None:
-        """Find today's attendance for an employee"""
+    def find_by_employee_today(self, employee_id) -> dict | None:
         start_of_day = cambodia_start_of_day_as_utc(utc_now())
-        end_of_day = start_of_day + timedelta(days=1)
-        
         return self.collection.find_one({
             "employee_id": self._oid(employee_id),
             "attendance_date": start_of_day,
@@ -43,7 +45,8 @@ class AttendanceReadModel:
     def list_attendances(
         self,
         *,
-        employee_id: ObjectId | None = None,
+        employee_id=None,
+        employee_ids: list | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
         status: str | None = None,
@@ -52,11 +55,15 @@ class AttendanceReadModel:
         page: int = 1,
         limit: int = 10,
     ) -> tuple[list[dict], int]:
-        """List attendances with filters"""
         query = {}
 
         if employee_id:
             query["employee_id"] = self._oid(employee_id)
+
+        if employee_ids:
+            query["employee_id"] = {
+                "$in": [self._oid(item) for item in employee_ids if self._oid(item)]
+            }
 
         if start_date or end_date:
             query["check_in_time"] = {}
@@ -68,7 +75,6 @@ class AttendanceReadModel:
         if status:
             query["status"] = status
 
-        # Handle soft delete filters
         if deleted_only:
             query["lifecycle.deleted_at"] = {"$ne": None}
         elif not include_deleted:
@@ -83,15 +89,12 @@ class AttendanceReadModel:
             .skip(skip)
             .limit(limit)
         )
-
         return docs, total
 
-    def get_employee_stats(
-        self, employee_id: ObjectId, start_date: datetime, end_date: datetime
-    ) -> dict:
-        """Get attendance statistics for an employee"""
+    def get_employee_stats(self, *, employee_id, start_date: datetime, end_date: datetime) -> dict:
         start_date_utc = ensure_utc(start_date)
         end_date_utc = ensure_utc(end_date)
+
         pipeline = [
             {
                 "$match": {
@@ -117,7 +120,6 @@ class AttendanceReadModel:
         ]
 
         result = list(self.collection.aggregate(pipeline))
-        
         if not result:
             return {
                 "total_days": 0,
@@ -131,11 +133,8 @@ class AttendanceReadModel:
 
         stats = result[0]
         total_days = stats["total_days"]
-        
-        # Calculate expected working days
-        days_diff = (end_date_utc - start_date_utc).days + 1
-        expected_days = days_diff
-        
+        expected_days = (end_date_utc - start_date_utc).days + 1
+
         return {
             "total_days": total_days,
             "present_days": total_days,
@@ -145,6 +144,7 @@ class AttendanceReadModel:
             "total_early_leave_minutes": stats["total_early_leave_minutes"],
             "attendance_rate": (total_days / expected_days * 100) if expected_days > 0 else 0.0,
         }
+
     def list_wrong_location_cases(
         self,
         *,
@@ -153,15 +153,11 @@ class AttendanceReadModel:
         review_status: str | None = None,
         page: int = 1,
         limit: int = 10,
-    ):
+    ) -> tuple[list[dict], int]:
         query = {
             "lifecycle.deleted_at": None,
             "$or": [
-                {"location_review_status": {"$in": [
-                    "pending",
-                    "approved",
-                    "rejected",
-                ]}},
+                {"location_review_status": {"$in": ["pending", "approved", "rejected"]}},
                 {"status": {"$in": [
                     "wrong_location_pending",
                     "wrong_location_approved",
@@ -172,16 +168,13 @@ class AttendanceReadModel:
         }
 
         if review_status:
-            normalized_review_status = review_status.strip().lower()
+            normalized = review_status.strip().lower()
             legacy_map = {
                 "wrong_location_pending": "pending",
                 "wrong_location_approved": "approved",
                 "wrong_location_rejected": "rejected",
             }
-            query["location_review_status"] = legacy_map.get(
-                normalized_review_status,
-                normalized_review_status,
-            )
+            query["location_review_status"] = legacy_map.get(normalized, normalized)
 
         if start_date or end_date:
             query["check_in_time"] = {}

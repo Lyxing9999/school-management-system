@@ -1,34 +1,64 @@
+from __future__ import annotations
+
 from typing import Any, Dict, List, Tuple
+
 from bson import ObjectId
 from pymongo.database import Database
-from app.contexts.shared.lifecycle.filters import by_show_deleted, ShowDeleted
+
+from app.contexts.shared.lifecycle.filters import ShowDeleted, by_show_deleted
 from app.contexts.shared.model_converter import mongo_converter
+
 
 class EmployeeReadModel:
     def __init__(self, db: Database):
         self.collection = db["hr_employees"]
 
-    def get_by_id(self, employee_id: ObjectId | str, *, show_deleted: ShowDeleted = "active") -> dict | None:
-        oid = mongo_converter.convert_to_object_id(employee_id)
+    @staticmethod
+    def _oid(value) -> ObjectId | None:
+        return mongo_converter.convert_to_object_id(value)
+
+    def get_by_id(
+        self,
+        employee_id: ObjectId | str,
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> dict | None:
+        oid = self._oid(employee_id)
         if not oid:
             return None
-        return self.collection.find_one(by_show_deleted(show_deleted, {"_id": oid}))
 
-    def get_by_employee_code(self, employee_code: str, *, show_deleted: ShowDeleted = "active") -> dict | None:
+        return self.collection.find_one(
+            by_show_deleted(show_deleted, {"_id": oid})
+        )
+
+    def get_by_employee_code(
+        self,
+        employee_code: str,
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> dict | None:
         code = (employee_code or "").strip()
         if not code:
             return None
-        return self.collection.find_one(by_show_deleted(show_deleted, {"employee_code": code}))
 
+        return self.collection.find_one(
+            by_show_deleted(show_deleted, {"employee_code": code})
+        )
 
-    def find_employee_by_user_id(self, user_oid):
-        return self.collection.find_one({
-            "user_id": user_oid,
-            "$or": [
-                {"lifecycle.deleted_at": None},
-                {"lifecycle.deleted_at": {"$exists": False}},
-            ]
-        })
+    def find_by_user_id(
+        self,
+        user_id: ObjectId | str,
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> dict | None:
+        oid = self._oid(user_id)
+        if not oid:
+            return None
+
+        return self.collection.find_one(
+            by_show_deleted(show_deleted, {"user_id": oid})
+        )
+
     def get_page(
         self,
         *,
@@ -42,12 +72,13 @@ class EmployeeReadModel:
         skip = (page - 1) * page_size
 
         base: Dict[str, Any] = {}
-        if q and (s := q.strip()):
+
+        if q and (search := q.strip()):
             base["$or"] = [
-                {"employee_code": {"$regex": s, "$options": "i"}},
-                {"full_name": {"$regex": s, "$options": "i"}},
-                {"department": {"$regex": s, "$options": "i"}},
-                {"position": {"$regex": s, "$options": "i"}},
+                {"employee_code": {"$regex": search, "$options": "i"}},
+                {"full_name": {"$regex": search, "$options": "i"}},
+                {"department": {"$regex": search, "$options": "i"}},
+                {"position": {"$regex": search, "$options": "i"}},
             ]
 
         query = by_show_deleted(show_deleted, base)
