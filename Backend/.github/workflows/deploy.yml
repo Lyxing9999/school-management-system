@@ -21,17 +21,13 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 1. go to the project directory
+            set -e
             cd /home/ubuntu/hrms
-
-            # 2. update the codebase
             git fetch origin main
             git reset --hard origin/main
-
-            # 3. rebuild and restart the backend service
             docker compose stop backend
             docker compose rm -f backend
             docker compose up -d --build backend
-
-            # 4. clean up unused Docker images
+            sleep 5
+            curl -f http://localhost:5001/health || (docker logs flask-backend-lite-DDD-clean --tail 100 && exit 1)
             docker image prune -f
