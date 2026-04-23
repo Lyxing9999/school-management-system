@@ -271,12 +271,12 @@ const handlePageChange = async (page: number) => {
             {{ formatDate(row.request_date) }}
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="start_time" label="Start Time" width="100">
+        <ElTableColumn prop="start_time" label="Start Time" width="120">
           <template #default="{ row }">
             {{ formatTime(row.start_time) }}
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="end_time" label="End Time" width="100">
+        <ElTableColumn prop="end_time" label="End Time" width="120">
           <template #default="{ row }">
             {{ formatTime(row.end_time) }}
           </template>

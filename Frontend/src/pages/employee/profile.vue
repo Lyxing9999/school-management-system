@@ -240,8 +240,8 @@ onMounted(() => {
           <ElDescriptionsItem label="Pay On Weekend">
             {{ employee.contract?.pay_on_weekend ? "Yes" : "No" }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="Leave Policy ID" :span="2">
-            {{ employee.contract?.leave_policy_id || "-" }}
+          <ElDescriptionsItem label="Leave Policy" :span="2">
+            {{ employee.contract?.leave_policy_id ? "Configured" : "-" }}
           </ElDescriptionsItem>
         </ElDescriptions>
 

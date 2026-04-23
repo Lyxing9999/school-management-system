@@ -27,6 +27,7 @@ import type {
   HrEmployeeDTO,
   HrEmployeeWithAccountSummaryDTO,
 } from "~/api/hr_admin/employees/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 import { Status } from "~/api/types/enums/status.enum";
 import { Role } from "~/api/types/enums/role.enum";
@@ -276,9 +277,10 @@ async function submitCreateAccount() {
 async function handleDeleteAccount(row: AccountTableRow) {
   try {
     await ElMessageBox.confirm(
-      `Delete account for ${
-        row.account_name || row.email || row.user_id || row.id
-      }?`,
+      `Delete account for ${displayRelation(
+        row.account_name || row.email,
+        row.user_id || row.id,
+      )}?`,
       "Confirm Delete Account",
       {
         type: "warning",
@@ -304,9 +306,10 @@ async function handleDeleteAccount(row: AccountTableRow) {
 async function handleRestoreAccount(row: AccountTableRow) {
   try {
     await ElMessageBox.confirm(
-      `Restore account for ${
-        row.account_name || row.email || row.user_id || row.id
-      }?`,
+      `Restore account for ${displayRelation(
+        row.account_name || row.email,
+        row.user_id || row.id,
+      )}?`,
       "Confirm Restore Account",
       {
         type: "info",

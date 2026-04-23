@@ -360,8 +360,9 @@ async function showDetails(row: AttendanceDTO) {
       row.attendance_date,
     )}\nCheck In: ${formatDateTime(row.check_in_time)}\nStatus: ${statusLabel(
       row.status,
-    )}\nAssigned location: ${getLocationLabel(
-      row.location_name || row.location_id,
+    )}\nAssigned location: ${displayRelation(
+      row.location_name,
+      getLocationLabel(row.location_id),
     )}\nWrong-location reason: ${
       row.wrong_location_reason || "-"
     }\nReviewer comment: ${row.admin_comment || "-"}`,

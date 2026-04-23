@@ -18,6 +18,7 @@ import type {
 } from "~/api/hr_admin/overtime";
 import type { OvertimePayrollSummaryDTO } from "~/api/hr_admin/overtime";
 import type { ColumnConfig } from "~/components/types/tableEdit";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 definePageMeta({ layout: "default" });
 
@@ -37,7 +38,14 @@ const filters = reactive<{
 
 const columns: ColumnConfig<OvertimeRequestDTO>[] = [
   { field: "id", label: "Request ID", minWidth: "170px", visible: true },
-  { field: "employee_id", label: "Employee", minWidth: "130px", visible: true },
+  {
+    field: "employee_id",
+    label: "Employee",
+    minWidth: "130px",
+    visible: true,
+    render: (row: OvertimeRequestDTO) =>
+      displayRelation(row.employee_name, row.employee_id),
+  },
   {
     field: "request_date",
     label: "Request Date",

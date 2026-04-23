@@ -2,6 +2,7 @@
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import type { LeaveDTO } from "~/api/hr_admin/leave/dto";
 import dayjs from "dayjs";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 export const leaveColumns: ColumnConfig<LeaveDTO>[] = [
   {
@@ -16,6 +17,8 @@ export const leaveColumns: ColumnConfig<LeaveDTO>[] = [
     width: 150,
     visible: true,
     sortable: false,
+    formatter: (row: LeaveDTO) =>
+      displayRelation(row.employee_name, row.employee_id),
   },
   {
     prop: "leave_type",

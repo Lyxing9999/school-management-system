@@ -34,17 +34,20 @@ const lateReasonError = ref("");
 const earlyLeaveReasonDialogVisible = ref(false);
 const earlyLeaveReason = ref("");
 const earlyLeaveReasonError = ref("");
+
 const pendingCheckInPayload = ref<{
   check_in_time: string;
   latitude: number;
   longitude: number;
   wrong_location_reason?: string | null;
 } | null>(null);
+
 const pendingCheckOutPayload = ref<{
   check_out_time: string;
   latitude: number;
   longitude: number;
 } | null>(null);
+
 const employeeSchedule = ref<WorkingScheduleDTO | null>(null);
 const isLoadingSchedule = ref(false);
 
@@ -155,6 +158,7 @@ const formatDateOnly = (value?: string | null) => {
     day: "2-digit",
   });
 };
+
 const formatCoordinate = (value?: number | null) => {
   if (typeof value !== "number") return "-";
   return value.toFixed(6);
@@ -375,6 +379,7 @@ const loadMyAttendance = async () => {
     isLoadingAttendance.value = false;
   }
 };
+
 const handleRefresh = async () => {
   await loadMyAttendance();
 };
@@ -584,7 +589,7 @@ onUnmounted(() => {
       <template #actions>
         <button
           type="button"
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          class="btn btn-secondary rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="isLoadingAttendance || isCheckingIn || isCheckingOut"
           @click="handleRefresh"
         >
@@ -608,9 +613,10 @@ onUnmounted(() => {
         <div class="clock-hero__badge">HRMS</div>
       </div>
     </section>
+
     <div
       v-if="pageError"
-      class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+      class="alert alert-danger rounded-xl px-4 py-3 text-sm"
     >
       {{ pageError }}
     </div>
@@ -635,87 +641,51 @@ onUnmounted(() => {
         </div>
 
         <div v-if="isLoadingAttendance" class="mt-5 animate-pulse space-y-3">
-          <div class="h-10 rounded-lg bg-slate-100" />
-          <div class="h-10 rounded-lg bg-slate-100" />
-          <div class="h-10 rounded-lg bg-slate-100" />
+          <div class="skeleton h-10 rounded-lg" />
+          <div class="skeleton h-10 rounded-lg" />
+          <div class="skeleton h-10 rounded-lg" />
         </div>
 
         <div v-else-if="attendance" class="mt-5 space-y-4">
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div
-              class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-            >
-              <p
-                class="text-xs font-medium uppercase tracking-wide text-slate-500"
-              >
-                Attendance Date
-              </p>
-              <p class="mt-1 text-sm font-semibold text-slate-800">
+            <div class="info-tile rounded-xl px-4 py-3">
+              <p class="info-label">Attendance Date</p>
+              <p class="info-value">
                 {{ formatDateOnly(attendance.attendance_date) }}
               </p>
             </div>
 
-            <div
-              class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-            >
-              <p
-                class="text-xs font-medium uppercase tracking-wide text-slate-500"
-              >
-                Check-In Time
-              </p>
-              <p class="mt-1 text-sm font-semibold text-slate-800">
+            <div class="info-tile rounded-xl px-4 py-3">
+              <p class="info-label">Check-In Time</p>
+              <p class="info-value">
                 {{ formatDateTime(attendance.check_in_time) }}
               </p>
             </div>
 
-            <div
-              class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-            >
-              <p
-                class="text-xs font-medium uppercase tracking-wide text-slate-500"
-              >
-                Check-Out Time
-              </p>
-              <p class="mt-1 text-sm font-semibold text-slate-800">
+            <div class="info-tile rounded-xl px-4 py-3">
+              <p class="info-label">Check-Out Time</p>
+              <p class="info-value">
                 {{ formatDateTime(attendance.check_out_time) }}
               </p>
             </div>
 
-            <div
-              class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-            >
-              <p
-                class="text-xs font-medium uppercase tracking-wide text-slate-500"
-              >
-                Status
-              </p>
-              <p class="mt-1 text-sm font-semibold text-slate-800">
+            <div class="info-tile rounded-xl px-4 py-3">
+              <p class="info-label">Status</p>
+              <p class="info-value">
                 {{ formatStatusLabel(attendance.status) }}
               </p>
             </div>
 
-            <div
-              class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-            >
-              <p
-                class="text-xs font-medium uppercase tracking-wide text-slate-500"
-              >
-                Late Minutes
-              </p>
-              <p class="mt-1 text-sm font-semibold text-slate-800">
+            <div class="info-tile rounded-xl px-4 py-3">
+              <p class="info-label">Late Minutes</p>
+              <p class="info-value">
                 {{ attendance.late_minutes ?? 0 }}
               </p>
             </div>
 
-            <div
-              class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-            >
-              <p
-                class="text-xs font-medium uppercase tracking-wide text-slate-500"
-              >
-                Early Leave Minutes
-              </p>
-              <p class="mt-1 text-sm font-semibold text-slate-800">
+            <div class="info-tile rounded-xl px-4 py-3">
+              <p class="info-label">Early Leave Minutes</p>
+              <p class="info-value">
                 {{ attendance.early_leave_minutes ?? 0 }}
               </p>
             </div>
@@ -727,58 +697,49 @@ onUnmounted(() => {
                 Today&apos;s Work Schedule
               </h3>
               <span
-                class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700"
+                class="chip chip-primary rounded-full px-2 py-0.5 text-xs font-medium"
               >
                 {{ employeeSchedule?.name || "Not Assigned" }}
               </span>
             </div>
 
             <div v-if="isLoadingSchedule" class="grid gap-3 sm:grid-cols-3">
-              <div class="h-14 animate-pulse rounded-lg bg-slate-200" />
-              <div class="h-14 animate-pulse rounded-lg bg-slate-200" />
-              <div class="h-14 animate-pulse rounded-lg bg-slate-200" />
+              <div class="skeleton h-14 rounded-lg" />
+              <div class="skeleton h-14 rounded-lg" />
+              <div class="skeleton h-14 rounded-lg" />
             </div>
 
             <div
               v-else-if="scheduleError"
-              class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+              class="alert alert-warning rounded-lg px-3 py-2 text-sm"
             >
               {{ scheduleError }}
             </div>
 
             <div v-else-if="employeeSchedule" class="grid gap-3 sm:grid-cols-3">
-              <div class="rounded-lg border border-slate-200 bg-white p-3">
-                <p class="text-xs uppercase tracking-wide text-slate-500">
-                  Shift Time
-                </p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">
+              <div class="card-soft rounded-lg p-3">
+                <p class="info-label">Shift Time</p>
+                <p class="info-value">
                   {{ scheduleShiftLabel }}
                 </p>
               </div>
 
-              <div class="rounded-lg border border-slate-200 bg-white p-3">
-                <p class="text-xs uppercase tracking-wide text-slate-500">
-                  Working Days
-                </p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">
+              <div class="card-soft rounded-lg p-3">
+                <p class="info-label">Working Days</p>
+                <p class="info-value">
                   {{ scheduleWorkingDaysLabel }}
                 </p>
               </div>
 
-              <div class="rounded-lg border border-slate-200 bg-white p-3">
-                <p class="text-xs uppercase tracking-wide text-slate-500">
-                  Hours / Day
-                </p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">
+              <div class="card-soft rounded-lg p-3">
+                <p class="info-label">Hours / Day</p>
+                <p class="info-value">
                   {{ employeeSchedule.total_hours_per_day }} hrs
                 </p>
               </div>
             </div>
 
-            <div
-              v-else
-              class="rounded-lg border border-dashed border-slate-300 bg-white px-3 py-3 text-sm text-slate-500"
-            >
+            <div v-else class="empty-state rounded-lg px-3 py-3 text-sm">
               No schedule assigned for this attendance record.
             </div>
           </div>
@@ -788,9 +749,7 @@ onUnmounted(() => {
               <h3 class="text-sm font-semibold text-slate-800">
                 Employee Location Map
               </h3>
-              <span
-                class="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700"
-              >
+              <span class="chip chip-muted rounded-full px-2 py-0.5 text-xs">
                 {{
                   hasCheckOutCoordinates
                     ? "Checkout point"
@@ -803,7 +762,8 @@ onUnmounted(() => {
 
             <div
               v-if="primaryMapUrl"
-              class="overflow-hidden rounded-xl border border-slate-200"
+              class="overflow-hidden rounded-xl border"
+              style="border-color: var(--border-color)"
             >
               <iframe
                 title="Employee Attendance Location"
@@ -816,18 +776,16 @@ onUnmounted(() => {
 
             <div
               v-else
-              class="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500"
+              class="empty-state rounded-xl px-4 py-6 text-center text-sm"
             >
               No recorded coordinates yet. After check-in/check-out, location
               will appear here.
             </div>
 
             <div class="mt-3 grid gap-3 sm:grid-cols-2">
-              <div class="rounded-lg border border-slate-200 bg-white p-3">
-                <p class="text-xs font-medium uppercase text-slate-500">
-                  Check-In Coordinates
-                </p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">
+              <div class="card-soft rounded-lg p-3">
+                <p class="info-label">Check-In Coordinates</p>
+                <p class="info-value">
                   {{ formatCoordinate(checkInLat) }},
                   {{ formatCoordinate(checkInLng) }}
                 </p>
@@ -836,17 +794,15 @@ onUnmounted(() => {
                   :href="checkInGoogleMapsUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="mt-2 inline-block text-xs font-medium text-sky-700 hover:underline"
+                  class="theme-link mt-2 inline-block text-xs font-medium hover:underline"
                 >
                   Open Check-In in Google Maps
                 </a>
               </div>
 
-              <div class="rounded-lg border border-slate-200 bg-white p-3">
-                <p class="text-xs font-medium uppercase text-slate-500">
-                  Check-Out Coordinates
-                </p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">
+              <div class="card-soft rounded-lg p-3">
+                <p class="info-label">Check-Out Coordinates</p>
+                <p class="info-value">
                   {{ formatCoordinate(checkOutLat) }},
                   {{ formatCoordinate(checkOutLng) }}
                 </p>
@@ -855,7 +811,7 @@ onUnmounted(() => {
                   :href="checkOutGoogleMapsUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="mt-2 inline-block text-xs font-medium text-sky-700 hover:underline"
+                  class="theme-link mt-2 inline-block text-xs font-medium hover:underline"
                 >
                   Open Check-Out in Google Maps
                 </a>
@@ -865,7 +821,7 @@ onUnmounted(() => {
 
           <div
             v-if="showWrongLocationPending"
-            class="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800"
+            class="alert alert-warning rounded-xl px-4 py-3 text-sm"
           >
             Your check-in location is pending admin review. You can still
             monitor your status here.
@@ -874,7 +830,7 @@ onUnmounted(() => {
 
         <div
           v-else
-          class="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500"
+          class="empty-state mt-5 rounded-xl px-4 py-8 text-center text-sm"
         >
           No attendance record found for today yet. Use the action panel to
           check in.
@@ -894,14 +850,14 @@ onUnmounted(() => {
 
         <div
           v-if="geolocationError"
-          class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+          class="alert alert-warning mt-4 rounded-xl px-4 py-3 text-sm"
         >
           {{ geolocationError }}
         </div>
 
         <div
           v-else-if="actionError"
-          class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+          class="alert alert-danger mt-4 rounded-xl px-4 py-3 text-sm"
         >
           {{ actionError }}
         </div>
@@ -916,7 +872,7 @@ onUnmounted(() => {
               </h3>
               <span
                 class="text-xs font-medium"
-                :class="hasCheckedIn ? 'text-emerald-700' : 'text-slate-500'"
+                :class="hasCheckedIn ? 'state-success' : 'state-muted'"
               >
                 {{ hasCheckedIn ? "Completed" : "Pending" }}
               </span>
@@ -932,14 +888,14 @@ onUnmounted(() => {
               id="wrong-location-reason"
               v-model="wrongLocationReason"
               rows="3"
-              class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100"
+              class="theme-input mt-2 w-full rounded-lg px-3 py-2 text-sm outline-none transition disabled:cursor-not-allowed"
               :disabled="!canCheckIn"
               placeholder="If you are checking in from a different location, add a reason for admin review..."
             />
 
             <button
               type="button"
-              class="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              class="btn btn-primary mt-4 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed"
               :disabled="!canCheckIn"
               @click="handleCheckIn"
             >
@@ -962,7 +918,7 @@ onUnmounted(() => {
               </h3>
               <span
                 class="text-xs font-medium"
-                :class="hasCheckedOut ? 'text-emerald-700' : 'text-slate-500'"
+                :class="hasCheckedOut ? 'state-success' : 'state-muted'"
               >
                 {{ hasCheckedOut ? "Completed" : "Pending" }}
               </span>
@@ -975,7 +931,7 @@ onUnmounted(() => {
 
             <button
               type="button"
-              class="mt-4 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+              class="btn btn-success mt-4 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed"
               :disabled="!canCheckOut"
               @click="handleCheckOut"
             >
@@ -1014,7 +970,7 @@ onUnmounted(() => {
           v-model="lateReason"
           rows="4"
           maxlength="300"
-          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+          class="theme-input w-full rounded-lg px-3 py-2 text-sm outline-none transition"
           placeholder="Tell us why you checked in late..."
         />
         <div class="text-right text-xs text-slate-500">
@@ -1023,7 +979,7 @@ onUnmounted(() => {
 
         <div
           v-if="lateReasonError"
-          class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+          class="alert alert-danger rounded-lg px-3 py-2 text-sm"
         >
           {{ lateReasonError }}
         </div>
@@ -1033,7 +989,7 @@ onUnmounted(() => {
         <div class="flex justify-end gap-2">
           <button
             type="button"
-            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            class="btn btn-secondary rounded-lg px-4 py-2 text-sm font-medium"
             :disabled="isCheckingIn"
             @click="closeLateReasonDialog"
           >
@@ -1041,7 +997,7 @@ onUnmounted(() => {
           </button>
           <button
             type="button"
-            class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            class="btn btn-primary rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed"
             :disabled="isCheckingIn"
             @click="submitLateReason"
           >
@@ -1073,7 +1029,7 @@ onUnmounted(() => {
           v-model="earlyLeaveReason"
           rows="4"
           maxlength="300"
-          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+          class="theme-input w-full rounded-lg px-3 py-2 text-sm outline-none transition"
           placeholder="Tell us why you need to check out early..."
         />
         <div class="text-right text-xs text-slate-500">
@@ -1082,7 +1038,7 @@ onUnmounted(() => {
 
         <div
           v-if="earlyLeaveReasonError"
-          class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+          class="alert alert-danger rounded-lg px-3 py-2 text-sm"
         >
           {{ earlyLeaveReasonError }}
         </div>
@@ -1092,7 +1048,7 @@ onUnmounted(() => {
         <div class="flex justify-end gap-2">
           <button
             type="button"
-            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            class="btn btn-secondary rounded-lg px-4 py-2 text-sm font-medium"
             :disabled="isCheckingOut"
             @click="closeEarlyLeaveReasonDialog"
           >
@@ -1100,7 +1056,7 @@ onUnmounted(() => {
           </button>
           <button
             type="button"
-            class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+            class="btn btn-success rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed"
             :disabled="isCheckingOut"
             @click="submitEarlyLeaveReason"
           >
@@ -1111,8 +1067,120 @@ onUnmounted(() => {
     </el-dialog>
   </div>
 </template>
+<style>
+/* Theme variables for light and dark mode */
+:root {
+  --theme-primary: #2563eb;
+  --theme-primary-hover: #1d4ed8;
+  --theme-primary-soft: #e0e7ff;
+  --theme-primary-soft-2: #c7d2fe;
+  --theme-primary-ring: rgba(37, 99, 235, 0.22);
+  --theme-link: #2563eb;
 
-<style scoped>
+  --theme-success: #22c55e;
+  --theme-success-hover: #16a34a;
+  --theme-success-soft: #dcfce7;
+
+  --theme-warning: #f59e42;
+  --theme-warning-soft: #fef3c7;
+  --theme-warning-border: #fbbf24;
+
+  --theme-danger: #ef4444;
+  --theme-danger-soft: #fee2e2;
+  --theme-danger-border: #f87171;
+
+  --theme-muted-bg: #f3f4f6;
+  --theme-muted-bg-2: #e5e7eb;
+  --theme-muted-bg-3: #d1d5db;
+  --theme-muted-text: #6b7280;
+
+  --color-card: #fff;
+  --surface-soft: #f9fafb;
+  --border-color: #e5e7eb;
+  --text-color: #1e293b;
+  --muted-color: #64748b;
+  --input-bg: #fff;
+  --input-border: #cbd5e1;
+  --btn-disabled-bg: #f1f5f9;
+  --btn-disabled-text: #94a3b8;
+  --color-light: #fff;
+  --card-shadow: rgba(30, 41, 59, 0.06);
+  --hover-bg: #f3f4f6;
+
+  --status-success: #22c55e;
+  --status-success-bg: #dcfce7;
+  --status-success-border: #16a34a;
+  --status-warning: #f59e42;
+  --status-warning-bg: #fef3c7;
+  --status-warning-border: #fbbf24;
+  --status-danger: #ef4444;
+  --status-danger-bg: #fee2e2;
+  --status-danger-border: #f87171;
+  --status-info: #2563eb;
+  --status-info-bg: #e0e7ff;
+  --status-info-border: #2563eb;
+  --status-neutral: #64748b;
+  --status-neutral-bg: #f3f4f6;
+  --status-neutral-border: #cbd5e1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --theme-primary: #60a5fa;
+    --theme-primary-hover: #3b82f6;
+    --theme-primary-soft: #1e293b;
+    --theme-primary-soft-2: #334155;
+    --theme-primary-ring: rgba(96, 165, 250, 0.22);
+    --theme-link: #60a5fa;
+
+    --theme-success: #4ade80;
+    --theme-success-hover: #22c55e;
+    --theme-success-soft: #052e16;
+
+    --theme-warning: #fbbf24;
+    --theme-warning-soft: #78350f;
+    --theme-warning-border: #f59e42;
+
+    --theme-danger: #f87171;
+    --theme-danger-soft: #7f1d1d;
+    --theme-danger-border: #ef4444;
+
+    --theme-muted-bg: #1e293b;
+    --theme-muted-bg-2: #334155;
+    --theme-muted-bg-3: #475569;
+    --theme-muted-text: #cbd5e1;
+
+    --color-card: #0f172a;
+    --surface-soft: #1e293b;
+    --border-color: #334155;
+    --text-color: #f1f5f9;
+    --muted-color: #94a3b8;
+    --input-bg: #1e293b;
+    --input-border: #334155;
+    --btn-disabled-bg: #334155;
+    --btn-disabled-text: #64748b;
+    --color-light: #f1f5f9;
+    --card-shadow: rgba(2, 6, 23, 0.32);
+    --hover-bg: #334155;
+
+    --status-success: #4ade80;
+    --status-success-bg: #052e16;
+    --status-success-border: #22c55e;
+    --status-warning: #fbbf24;
+    --status-warning-bg: #78350f;
+    --status-warning-border: #f59e42;
+    --status-danger: #f87171;
+    --status-danger-bg: #7f1d1d;
+    --status-danger-border: #ef4444;
+    --status-info: #60a5fa;
+    --status-info-bg: #1e293b;
+    --status-info-border: #60a5fa;
+    --status-neutral: #94a3b8;
+    --status-neutral-bg: #1e293b;
+    --status-neutral-border: #334155;
+  }
+}
+
 .attendance-today-page {
   padding: 1.5rem;
   max-width: 1520px;
@@ -1129,7 +1197,11 @@ onUnmounted(() => {
 }
 
 .panel-card:hover {
-  border-color: color-mix(in srgb, var(--border-color) 70%, var(--color-primary) 30%);
+  border-color: color-mix(
+    in srgb,
+    var(--border-color) 70%,
+    var(--theme-primary) 30%
+  );
   box-shadow: 0 14px 30px var(--card-shadow);
   transform: translateY(-1px);
 }
@@ -1139,15 +1211,47 @@ onUnmounted(() => {
   background: var(--surface-soft);
 }
 
+.card-soft {
+  border: 1px solid var(--border-color);
+  background: var(--color-card);
+}
+
+.info-tile {
+  border: 1px solid var(--border-color);
+  background: var(--surface-soft);
+}
+
+.info-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-color);
+}
+
+.info-value {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.empty-state {
+  border: 1px dashed var(--border-color);
+  background: var(--color-card);
+  color: var(--muted-color);
+}
+
 .clock-hero {
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--theme-primary);
   background: linear-gradient(
     135deg,
-    var(--color-primary) 0%,
+    var(--theme-primary) 0%,
     var(--color-primary-light-1) 55%,
     var(--color-primary-light-2) 100%
   );
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 .clock-hero__eyebrow {
@@ -1156,7 +1260,7 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #ffffff;
+  color: #fff;
   opacity: 0.95;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
@@ -1166,14 +1270,14 @@ onUnmounted(() => {
   font-size: clamp(1.6rem, 2.5vw, 2.4rem);
   line-height: 1.2;
   font-weight: 700;
-  color: #ffffff;
+  color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .clock-hero__subtext {
   margin-top: 0.45rem;
   font-size: 0.92rem;
-  color: #ffffff;
+  color: #fff;
   opacity: 0.92;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
@@ -1190,7 +1294,7 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #ffffff;
+  color: #fff;
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(8px);
@@ -1231,7 +1335,110 @@ onUnmounted(() => {
   box-shadow: inset 0 0 0 1px var(--status-neutral-border);
 }
 
-/* Override Tailwind hardcoded colors with CSS variables */
+.btn {
+  transition: all 0.2s ease !important;
+}
+
+.btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  background: var(--btn-disabled-bg) !important;
+  color: var(--btn-disabled-text, var(--muted-color)) !important;
+}
+
+.btn-primary {
+  background: var(--theme-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--theme-primary-hover);
+}
+
+.btn-success {
+  background: var(--theme-success);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--theme-success-hover);
+}
+
+.btn-secondary {
+  border: 1px solid var(--border-color);
+  background: var(--color-card);
+  color: var(--text-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
+
+.alert {
+  border: 1px solid transparent;
+}
+
+.alert-danger {
+  border-color: var(--theme-danger-border);
+  background: var(--theme-danger-soft);
+  color: var(--theme-danger);
+}
+
+.alert-warning {
+  border-color: var(--theme-warning-border);
+  background: var(--theme-warning-soft);
+  color: var(--theme-warning);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+}
+
+.chip-primary {
+  background: var(--theme-primary-soft);
+  color: var(--theme-primary);
+}
+
+.chip-muted {
+  background: var(--theme-muted-bg-3);
+  color: var(--text-color);
+}
+
+.theme-link {
+  color: var(--theme-link);
+}
+
+.state-success {
+  color: var(--theme-success);
+}
+
+.state-muted {
+  color: var(--muted-color);
+}
+
+.theme-input {
+  background-color: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-color) !important;
+}
+
+.theme-input:focus {
+  border-color: var(--theme-primary) !important;
+  box-shadow: 0 0 0 2px var(--theme-primary-ring) !important;
+}
+
+.theme-input:disabled {
+  background-color: var(--btn-disabled-bg) !important;
+  color: var(--btn-disabled-text) !important;
+  cursor: not-allowed !important;
+}
+
+.skeleton {
+  background-color: var(--theme-muted-bg-2);
+}
+
+/* Theme overrides for existing Tailwind utility classes still in template */
 .attendance-today-page :deep(.bg-white) {
   background-color: var(--color-card) !important;
 }
@@ -1241,11 +1448,11 @@ onUnmounted(() => {
 }
 
 .attendance-today-page :deep(.bg-slate-100) {
-  background-color: color-mix(in srgb, var(--muted-color) 12%, var(--color-card) 88%) !important;
+  background-color: var(--theme-muted-bg-2) !important;
 }
 
 .attendance-today-page :deep(.bg-slate-200) {
-  background-color: color-mix(in srgb, var(--muted-color) 18%, var(--color-card) 82%) !important;
+  background-color: var(--theme-muted-bg-3) !important;
 }
 
 .attendance-today-page :deep(.border-slate-200),
@@ -1265,77 +1472,8 @@ onUnmounted(() => {
   color: var(--muted-color) !important;
 }
 
-.attendance-today-page :deep(.bg-slate-900) {
-  background-color: color-mix(in srgb, var(--text-color) 84%, var(--color-card) 16%) !important;
-}
-
-.attendance-today-page :deep(.hover\:bg-slate-700:hover) {
-  background-color: color-mix(in srgb, var(--text-color) 72%, var(--color-card) 28%) !important;
-}
-
-.attendance-today-page :deep(.hover\:bg-slate-50:hover) {
-  background-color: var(--hover-bg) !important;
-}
-
-.attendance-today-page :deep(.bg-emerald-600) {
-  background-color: var(--button-success-bg) !important;
-}
-
-.attendance-today-page :deep(.hover\:bg-emerald-500:hover) {
-  background-color: var(--button-success-hover-bg) !important;
-}
-
 .attendance-today-page :deep(.text-white) {
   color: var(--color-light) !important;
-}
-
-.attendance-today-page :deep(.text-sky-700) {
-  color: var(--button-info-bg) !important;
-}
-
-.attendance-today-page :deep(.border-rose-200) {
-  border-color: color-mix(in srgb, var(--button-danger-bg) 40%, var(--border-color) 60%) !important;
-}
-
-.attendance-today-page :deep(.bg-rose-50) {
-  background-color: color-mix(in srgb, var(--button-danger-bg) 10%, var(--color-card) 90%) !important;
-}
-
-.attendance-today-page :deep(.text-rose-700) {
-  color: var(--button-danger-bg) !important;
-}
-
-.attendance-today-page :deep(.border-amber-200) {
-  border-color: color-mix(in srgb, var(--button-warning-bg) 40%, var(--border-color) 60%) !important;
-}
-
-.attendance-today-page :deep(.bg-amber-50) {
-  background-color: color-mix(in srgb, var(--button-warning-bg) 12%, var(--color-card) 88%) !important;
-}
-
-.attendance-today-page :deep(.text-amber-800),
-.attendance-today-page :deep(.text-yellow-800) {
-  color: var(--button-warning-bg) !important;
-}
-
-.attendance-today-page :deep(.text-emerald-700) {
-  color: var(--button-success-bg) !important;
-}
-
-.attendance-today-page :deep(.bg-indigo-100) {
-  background-color: color-mix(in srgb, #6366f1 16%, var(--color-card) 84%) !important;
-}
-
-.attendance-today-page :deep(.text-indigo-700) {
-  color: #6366f1 !important;
-}
-
-.attendance-today-page :deep(.disabled\:bg-slate-300:disabled) {
-  background-color: var(--btn-disabled-bg) !important;
-}
-
-.attendance-today-page :deep(.disabled\:bg-slate-100:disabled) {
-  background-color: var(--btn-disabled-bg) !important;
 }
 
 .attendance-today-page :deep(.disabled\:cursor-not-allowed:disabled) {
@@ -1346,7 +1484,6 @@ onUnmounted(() => {
   opacity: 0.6 !important;
 }
 
-/* Input/textarea styling */
 .attendance-today-page :deep(textarea),
 .attendance-today-page :deep(input[type="text"]) {
   background-color: var(--input-bg) !important;
@@ -1356,8 +1493,8 @@ onUnmounted(() => {
 
 .attendance-today-page :deep(textarea:focus),
 .attendance-today-page :deep(input[type="text"]:focus) {
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 2px var(--color-primary-light-8) !important;
+  border-color: var(--theme-primary) !important;
+  box-shadow: 0 0 0 2px var(--theme-primary-ring) !important;
 }
 
 .attendance-today-page :deep(textarea:disabled),
@@ -1367,22 +1504,13 @@ onUnmounted(() => {
   cursor: not-allowed !important;
 }
 
-/* Button styling */
-.attendance-today-page :deep(button) {
-  transition: all 0.2s ease !important;
-}
-
-.attendance-today-page :deep(button:not(:disabled):hover) {
-  transform: translateY(-1px);
-}
-
-/* Skeleton loading */
 .attendance-today-page :deep(.animate-pulse) {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
