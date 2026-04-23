@@ -353,42 +353,25 @@ function closeRejectDialog() {
 }
 
 async function submitApprove() {
-  if (!activeRequest.value) return;
+  if (!activeRequest.value || !approveFormRef.value) return;
 
-  try {
-    await approveFormRef.value?.validate();
-  } catch {
-    ElMessage.error("Please complete the approval form");
-    return;
-  }
+  await approveFormRef.value.validate();
 
-  try {
-    await ElMessageBox.confirm(
-      `Approve ${
-        activeRequest.value.employee_id
-      }'s overtime for ${approveForm.approved_hours.toFixed(2)} hours?`,
-      "Confirm Approval",
-      {
-        confirmButtonText: "Approve",
-        cancelButtonText: "Cancel",
-        type: "success",
-      },
-    );
+  const payload: OvertimeApproveDTO = {
+    approved_hours: Number(approveForm.approved_hours),
 
-    await overtimeStore.approveRequest(activeRequest.value.id, {
-      approved_hours: Number(approveForm.approved_hours),
-      comment: String(approveForm.comment || "").trim() || null,
-    });
+    comment: String(approveForm.comment || "").trim() || "",
+  };
 
-    ElMessage.success("Overtime request approved");
-    closeApproveDialog();
-    await fetchQueue(paginationProps.value.currentPage);
-  } catch (error: any) {
-    if (error === "cancel") return;
-    ElMessage.error(
-      overtimeStore.getError("approveRequest") || "Failed to approve request",
-    );
-  }
+  console.log("submitApprove triggered");
+
+  console.log("approve payload", activeRequest.value.id, payload);
+
+  await overtimeStore.approveRequest(activeRequest.value.id, payload);
+
+  closeApproveDialog();
+
+  await fetchQueue(paginationProps.value.currentPage);
 }
 
 async function submitReject() {

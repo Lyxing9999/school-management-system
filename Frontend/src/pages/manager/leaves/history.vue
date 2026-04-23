@@ -1,56 +1,107 @@
 <script setup lang="ts">
-import { Calendar, Document } from "@element-plus/icons-vue";
-import PrototypePageShell from "~/components/hrms/PrototypePageShell.vue";
-import { ROUTES } from "~/constants/routes";
+import { ref, computed, onMounted, watch } from "vue";
+import { ElMessage, ElPagination, ElDatePicker } from "element-plus";
+import TableCard from "~/components/cards/TableCard.vue";
+import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
+import EmployeeAvatarCell from "~/components/table-edit/cells/EmployeeAvatarCell.vue";
+import { hrmsAdminService } from "~/api/hr_admin";
+import type {
+  LeaveRequestDTO,
+  LeaveRequestListParams,
+} from "~/api/hr_admin/leave/dto";
+import type { ColumnConfig } from "~/components/types/tableEdit";
 
-const stats = [
-  { label: "History Rows", value: "19", hint: "Prototype leave history" },
-  { label: "Approved", value: "15", hint: "Approved leave requests" },
-  { label: "Pending", value: "4", hint: "Waiting for review" },
-  { label: "Balance", value: "12 Days", hint: "Demo balance reference" },
-];
+const hrms = hrmsAdminService();
 
-const actions = [
-  {
-    title: "Leave Reviews",
-    description: "Return to the review queue.",
-    route: ROUTES.MANAGER.LEAVE_REVIEWS,
-    icon: Calendar,
-    color: "#16a34a",
-  },
-  {
-    title: "Team Attendance",
-    description: "Check attendance alongside leave usage.",
-    route: ROUTES.MANAGER.ATTENDANCE_TEAM,
-    icon: Document,
-    color: "#2563eb",
-  },
-  {
-    title: "Team Reports",
-    description: "Open the reporting hub.",
-    route: ROUTES.MANAGER.REPORTS_TEAM,
-    icon: Document,
-    color: "#d97706",
-  },
-];
+const loading = ref(false);
+const hasFetchedOnce = ref(false);
+const requests = ref<LeaveRequestDTO[]>([]);
+const total = ref(0);
+const page = ref(1);
+const pageSize = ref(10);
+const dateRange = ref<[string, string] | null>(null);
 
-const sections = [
+const fetchData = async () => {
+  loading.value = true;
+  try {
+    const params: LeaveRequestListParams = {
+      page: page.value,
+      limit: pageSize.value,
+      start_date: dateRange.value?.[0],
+      end_date: dateRange.value?.[1],
+    };
+    const res = await hrms.leaveRequest.getAll(params);
+    requests.value = res.items;
+    total.value = res.total;
+    hasFetchedOnce.value = true;
+  } catch (e: any) {
+    ElMessage.error(e?.message || "Failed to fetch leave requests");
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(fetchData);
+watch([page, pageSize, dateRange], fetchData);
+
+const columns = computed<ColumnConfig<LeaveRequestDTO>[]>(() => [
   {
-    title: "History columns",
-    items: ["employee", "leave type", "date range", "decision"],
+    label: "Employee",
+    field: "employee_id",
+    minWidth: 180,
+    useSlot: true,
+    slotName: "employee",
   },
-];
+  { label: "Type", field: "leave_type", minWidth: 120 },
+  { label: "From", field: "start_date", minWidth: 120 },
+  { label: "To", field: "end_date", minWidth: 120 },
+  { label: "Reason", field: "reason", minWidth: 180 },
+  { label: "Status", field: "status", minWidth: 120 },
+]);
 </script>
 
 <template>
-  <PrototypePageShell
-    title="Leave History"
-    description="Prototype leave history page for managers."
-    back-path="/manager/leaves"
-    badge="History"
-    accent="#2563eb"
-    :stats="stats"
-    :actions="actions"
-    :sections="sections"
-  />
+  <TableCard
+    title="Leave Request History"
+    description="View all leave requests submitted by your team."
+  >
+    <template #header-right>
+      <ElDatePicker
+        v-model="dateRange"
+        type="daterange"
+        range-separator="to"
+        start-placeholder="Start date"
+        end-placeholder="End date"
+        style="width: 260px"
+        format="YYYY-MM-DD"
+        value-format="YYYY-MM-DD"
+        clearable
+      />
+    </template>
+    <SmartTable
+      :data="requests"
+      :columns="columns"
+      :loading="loading"
+      :hasFetchedOnce="hasFetchedOnce"
+      :smartProps="{ border: true, stripe: true }"
+    >
+      <template #employee="{ row }">
+        <EmployeeAvatarCell :row="row" />
+        <span style="margin-left: 8px">{{
+          row.full_name || row.employee_id
+        }}</span>
+      </template>
+    </SmartTable>
+    <div style="margin-top: 16px; text-align: right">
+      <ElPagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-sizes="[10, 20, 50]"
+        layout="prev, pager, next, sizes"
+        background
+        small
+      />
+    </div>
+  </TableCard>
 </template>

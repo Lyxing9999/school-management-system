@@ -21,7 +21,7 @@ class EmployeeReadModel:
         self,
         employee_id: ObjectId | str,
         *,
-        show_deleted: ShowDeleted = "active",
+        show_deleted: str = "active",
     ) -> dict | None:
         oid = self._oid(employee_id)
         if not oid:
@@ -35,7 +35,7 @@ class EmployeeReadModel:
         self,
         employee_code: str,
         *,
-        show_deleted: ShowDeleted = "active",
+        show_deleted: str = "active",
     ) -> dict | None:
         code = (employee_code or "").strip()
         if not code:
@@ -49,7 +49,7 @@ class EmployeeReadModel:
         self,
         user_id: ObjectId | str,
         *,
-        show_deleted: ShowDeleted = "active",
+        show_deleted: str = "active",
     ) -> dict | None:
         oid = self._oid(user_id)
         if not oid:
@@ -65,7 +65,7 @@ class EmployeeReadModel:
         page: int = 1,
         page_size: int = 10,
         q: str | None = None,
-        show_deleted: ShowDeleted = "active",
+        show_deleted: str = "active",
     ) -> Tuple[List[dict], int]:
         page = max(1, int(page))
         page_size = min(max(1, int(page_size)), 100)
@@ -91,3 +91,24 @@ class EmployeeReadModel:
             .limit(page_size)
         )
         return items, total
+
+    def list_team_by_manager_user_id(
+        self,
+        *,
+        manager_user_id,
+        show_deleted: str = "active",
+    ) -> list[dict]:
+        manager_oid = self._oid(manager_user_id)
+        if not manager_oid:
+            return []
+
+        query = by_show_deleted(
+            show_deleted,
+            {
+                "manager_user_id": manager_oid,
+            },
+        )
+
+        return list(
+            self.collection.find(query).sort("full_name", 1)
+        )

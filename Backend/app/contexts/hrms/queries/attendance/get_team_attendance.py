@@ -16,10 +16,9 @@ class GetTeamAttendanceQuery:
         page: int = 1,
         page_size: int = 10,
     ):
-        employees, _ = self.employee_read_model.list_employees(
+        employees = self.employee_read_model.list_team_by_manager_user_id(
             manager_user_id=manager_user_id,
-            page=1,
-            limit=1000,
+            show_deleted="active",
         )
 
         employee_ids = [item["_id"] for item in employees]
