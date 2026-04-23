@@ -22,6 +22,7 @@ import BaseButton from "~/components/base/BaseButton.vue";
 import WorkLocationSelect from "~/components/selects/hr/WorkLocationSelect.vue";
 import { hrmsAdminService } from "~/api/hr_admin";
 import type { AttendanceDTO } from "~/api/hr_admin/attendance";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import type { ColumnConfig } from "~/components/types/tableEdit";
 
 definePageMeta({ layout: "default" });
@@ -85,6 +86,8 @@ const tableColumns: ColumnConfig<AttendanceDTO>[] = [
     label: "Employee",
     minWidth: "130px",
     visible: true,
+    render: (row: AttendanceDTO) =>
+      displayRelation(row.employee_name, row.employee_id),
   },
   {
     field: "attendance_date",
@@ -112,7 +115,8 @@ const tableColumns: ColumnConfig<AttendanceDTO>[] = [
     label: "Assigned Location",
     minWidth: "180px",
     visible: true,
-    render: (row: AttendanceDTO) => getLocationLabel(row.location_id),
+    render: (row: AttendanceDTO) =>
+      displayRelation(row.location_name, getLocationLabel(row.location_id)),
   },
   {
     field: "admin_comment",
@@ -154,7 +158,7 @@ const filteredRows = computed(() => {
       String(row.id || "")
         .toLowerCase()
         .includes(keyword) ||
-      String(row.employee_id || "")
+      String(displayRelation(row.employee_name, row.employee_id))
         .toLowerCase()
         .includes(keyword) ||
       String(row.wrong_location_reason || "")
@@ -351,13 +355,13 @@ async function submitReview() {
 async function showDetails(row: AttendanceDTO) {
   await ElMessageBox.alert(
     `Attendance ID: ${row.id}\nEmployee: ${
-      row.employee_id
+      displayRelation(row.employee_name, row.employee_id)
     }\nAttendance Date: ${formatDate(
       row.attendance_date,
     )}\nCheck In: ${formatDateTime(row.check_in_time)}\nStatus: ${statusLabel(
       row.status,
     )}\nAssigned location: ${getLocationLabel(
-      row.location_id,
+      row.location_name || row.location_id,
     )}\nWrong-location reason: ${
       row.wrong_location_reason || "-"
     }\nReviewer comment: ${row.admin_comment || "-"}`,
@@ -507,7 +511,12 @@ onMounted(() => {
       label-width="94px"
     >
       <ElFormItem label="Employee">
-        <ElInput :model-value="activeRow?.employee_id || '-'" readonly />
+        <ElInput
+          :model-value="
+            displayRelation(activeRow?.employee_name, activeRow?.employee_id)
+          "
+          readonly
+        />
       </ElFormItem>
       <ElFormItem label="Date">
         <ElInput

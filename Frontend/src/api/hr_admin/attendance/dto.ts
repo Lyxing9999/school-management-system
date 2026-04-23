@@ -15,13 +15,16 @@ export type AttendanceDayType = "working_day" | "weekend" | "public_holiday";
 export interface AttendanceDTO {
   id: string;
   employee_id: string;
+  employee_name?: string | null;
   attendance_date: string; // YYYY-MM-DD
 
   check_in_time: string | null;
   check_out_time: string | null;
 
   schedule_id: string | null;
+  schedule_name?: string | null;
   location_id: string | null;
+  location_name?: string | null;
 
   check_in_latitude: number | null;
   check_in_longitude: number | null;
@@ -44,7 +47,13 @@ export interface AttendanceDTO {
   admin_comment?: string | null;
 
   location_reviewed_by?: string | null;
+  location_reviewed_by_name?: string | null;
   early_leave_reviewed_by?: string | null;
+  early_leave_reviewed_by_name?: string | null;
+  created_by?: string | null;
+  created_by_name?: string | null;
+  deleted_by?: string | null;
+  deleted_by_name?: string | null;
 
   created_at: string | null;
   updated_at: string | null;

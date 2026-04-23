@@ -28,6 +28,7 @@ import type {
   OvertimeRequestListParams,
   OvertimeRequestStatus,
 } from "~/api/hr_admin/overtime/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -333,7 +334,7 @@ onMounted(() => {
           <ElInput
             v-model="filters.employee_id"
             clearable
-            placeholder="Filter by employee ID"
+            placeholder="Filter by employee id"
             @keyup.enter="applyFilters"
           />
         </el-col>
@@ -398,7 +399,7 @@ onMounted(() => {
             <template #default="{ row }">
               <div class="employee-cell">
                 <span class="employee-cell__primary">{{
-                  row.employee_id
+                  displayRelation(row.employee_name, row.employee_id)
                 }}</span>
                 <span class="employee-cell__secondary">{{ row.id }}</span>
               </div>
@@ -510,7 +511,9 @@ onMounted(() => {
       <template v-if="activeRequest">
         <div class="detail-head">
           <div>
-            <h3 class="detail-head__title">{{ activeRequest.employee_id }}</h3>
+            <h3 class="detail-head__title">
+              {{ displayRelation(activeRequest.employee_name, activeRequest.employee_id) }}
+            </h3>
             <p class="detail-head__subtitle">Request {{ activeRequest.id }}</p>
           </div>
 
@@ -530,8 +533,10 @@ onMounted(() => {
         </div>
 
         <ElDescriptions :column="2" border class="mt-4">
-          <ElDescriptionsItem label="Employee ID">
-            {{ activeRequest.employee_id }}
+          <ElDescriptionsItem label="Employee">
+            {{
+              displayRelation(activeRequest.employee_name, activeRequest.employee_id)
+            }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="Request Date">
             {{ formatDate(activeRequest.request_date) }}
@@ -557,8 +562,13 @@ onMounted(() => {
           <ElDescriptionsItem label="Basic Salary">
             {{ formatMoney(activeRequest.basic_salary) }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="Manager ID">
-            {{ activeRequest.manager_id || "—" }}
+          <ElDescriptionsItem label="Manager">
+            {{
+              displayRelation(
+                activeRequest.manager_name,
+                activeRequest.manager_user_id || activeRequest.manager_id,
+              )
+            }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="Reason" :span="2">
             {{ activeRequest.reason }}

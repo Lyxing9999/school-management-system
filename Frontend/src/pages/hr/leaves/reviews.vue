@@ -32,6 +32,7 @@ import type {
   LeaveRequestStatus,
   LeaveType,
 } from "~/api/hr_admin/leave/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -111,7 +112,7 @@ const filteredRows = computed(() => {
 
   return rows.value.filter((row) => {
     const byEmployee = keyword
-      ? String(row.employee_id || "")
+      ? String(displayRelation(row.employee_name, row.employee_id))
           .toLowerCase()
           .includes(keyword)
       : true;
@@ -481,7 +482,7 @@ onActivated(() => {
           <el-input
             v-model="searchEmployeeId"
             clearable
-            placeholder="Search by employee ID"
+            placeholder="Search by employee id"
             @keyup.enter="applyFilters"
           />
         </el-col>
@@ -552,7 +553,7 @@ onActivated(() => {
             <template #default="{ row }">
               <div class="employee-cell">
                 <span class="employee-cell__primary">{{
-                  row.employee_id
+                  displayRelation(row.employee_name, row.employee_id)
                 }}</span>
                 <span class="employee-cell__secondary">{{ row.id }}</span>
               </div>
@@ -680,7 +681,9 @@ onActivated(() => {
         <template v-if="detailRecord">
           <div class="detail-head">
             <div>
-              <h3 class="detail-head__title">{{ detailRecord.employee_id }}</h3>
+              <h3 class="detail-head__title">
+                {{ displayRelation(detailRecord.employee_name, detailRecord.employee_id) }}
+              </h3>
               <p class="detail-head__subtitle">Request {{ detailRecord.id }}</p>
             </div>
 
@@ -700,8 +703,10 @@ onActivated(() => {
           </div>
 
           <ElDescriptions :column="2" border class="mt-4">
-            <ElDescriptionsItem label="Employee ID">
-              {{ detailRecord.employee_id }}
+            <ElDescriptionsItem label="Employee">
+              {{
+                displayRelation(detailRecord.employee_name, detailRecord.employee_id)
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="Leave Type">
               {{ leaveTypeLabel(detailRecord.leave_type) }}
@@ -724,8 +729,10 @@ onActivated(() => {
             <ElDescriptionsItem label="Contract End">
               {{ formatDate(detailRecord.contract_end) }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="Manager User ID">
-              {{ detailRecord.manager_user_id || "-" }}
+            <ElDescriptionsItem label="Manager">
+              {{
+                displayRelation(detailRecord.manager_name, detailRecord.manager_user_id)
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="Reason" :span="2">
               {{ detailRecord.reason }}
@@ -750,7 +757,9 @@ onActivated(() => {
         <div class="dialog-summary">
           <div>
             <p class="dialog-summary__label">Employee</p>
-            <p class="dialog-summary__value">{{ activeRequest.employee_id }}</p>
+            <p class="dialog-summary__value">
+              {{ displayRelation(activeRequest.employee_name, activeRequest.employee_id) }}
+            </p>
           </div>
           <div>
             <p class="dialog-summary__label">Requested Days</p>
@@ -799,7 +808,9 @@ onActivated(() => {
         <div class="dialog-summary">
           <div>
             <p class="dialog-summary__label">Employee</p>
-            <p class="dialog-summary__value">{{ activeRequest.employee_id }}</p>
+            <p class="dialog-summary__value">
+              {{ displayRelation(activeRequest.employee_name, activeRequest.employee_id) }}
+            </p>
           </div>
           <div>
             <p class="dialog-summary__label">Leave Type</p>

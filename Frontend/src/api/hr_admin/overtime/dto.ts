@@ -14,6 +14,7 @@ export type OvertimeDayType = "working_day" | "weekend" | "public_holiday";
 export interface OvertimeRequestDTO {
   id: string;
   employee_id: string;
+  employee_name?: string | null;
   request_date: string;
   start_time: string;
   end_time: string;
@@ -24,9 +25,15 @@ export interface OvertimeRequestDTO {
   submitted_at: string;
   status: OvertimeRequestStatus;
   manager_id: string | null;
+  manager_user_id?: string | null;
+  manager_name?: string | null;
   manager_comment: string | null;
   approved_hours: number;
   calculated_payment: number;
+  created_by?: string | null;
+  created_by_name?: string | null;
+  deleted_by?: string | null;
+  deleted_by_name?: string | null;
   lifecycle: LifecycleDTO;
 }
 

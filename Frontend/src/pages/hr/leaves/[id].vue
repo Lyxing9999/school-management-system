@@ -24,6 +24,7 @@ import type {
   LeaveRejectDTO,
   LeaveRequestDTO,
 } from "~/api/hr_admin/leave/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -306,7 +307,7 @@ onMounted(() => {
             leaveRequest.id
           }}</ElDescriptionsItem>
           <ElDescriptionsItem label="Employee">{{
-            leaveRequest.employee_id
+            displayRelation(leaveRequest.employee_name, leaveRequest.employee_id)
           }}</ElDescriptionsItem>
           <ElDescriptionsItem label="Leave Type">{{
             leaveTypeLabel(leaveRequest.leave_type)
@@ -323,8 +324,8 @@ onMounted(() => {
           <ElDescriptionsItem label="Total Days">{{
             Number(leaveRequest.total_days || 0).toFixed(1)
           }}</ElDescriptionsItem>
-          <ElDescriptionsItem label="Manager User ID">{{
-            leaveRequest.manager_user_id || "-"
+          <ElDescriptionsItem label="Manager">{{
+            displayRelation(leaveRequest.manager_name, leaveRequest.manager_user_id)
           }}</ElDescriptionsItem>
           <ElDescriptionsItem label="Contract Start">{{
             formatDate(leaveRequest.contract_start)

@@ -8,12 +8,16 @@ export type LifecycleDTO = {
 export type WorkLocationDTO = {
   id: string;
   name: string;
+  location_name?: string | null;
   address: string;
   latitude: number;
   longitude: number;
   radius_meters: number;
   is_active: boolean;
   created_by?: string | null;
+  created_by_name?: string | null;
+  deleted_by?: string | null;
+  deleted_by_name?: string | null;
   lifecycle: LifecycleDTO;
 };
 

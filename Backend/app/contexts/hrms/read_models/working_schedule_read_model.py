@@ -8,7 +8,7 @@ from app.contexts.shared.model_converter import mongo_converter
 
 class WorkingScheduleReadModel:
     def __init__(self, db: Database):
-        self.collection = db["working_schedules"]
+        self.collection = db["hr_working_schedules"]
 
     def get_by_id(self, schedule_id: ObjectId | str, *, show_deleted: ShowDeleted = "active") -> dict | None:
         oid = mongo_converter.convert_to_object_id(schedule_id)
@@ -52,3 +52,17 @@ class WorkingScheduleReadModel:
             .limit(page_size)
         )
         return items, total
+
+    def list_by_ids(
+        self,
+        ids: List[ObjectId | str],
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> List[dict]:
+        oids = [mongo_converter.convert_to_object_id(item) for item in ids]
+        oids = [oid for oid in oids if oid is not None]
+        if not oids:
+            return []
+
+        query = by_show_deleted(show_deleted, {"_id": {"$in": oids}})
+        return list(self.collection.find(query))

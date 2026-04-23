@@ -8,6 +8,9 @@ export interface PublicHolidayDTO {
   is_paid: boolean;
   description: string | null;
   created_by: string | null;
+  created_by_name?: string | null;
+  deleted_by?: string | null;
+  deleted_by_name?: string | null;
   lifecycle: LifecycleDTO;
 }
 

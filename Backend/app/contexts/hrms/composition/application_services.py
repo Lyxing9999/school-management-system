@@ -126,11 +126,15 @@ from app.contexts.hrms.queries.payroll.list_payroll_runs import ListPayrollRunsQ
 from app.contexts.hrms.queries.payroll.get_payroll_run import GetPayrollRunQuery
 from app.contexts.hrms.queries.payroll.list_payslips import ListPayslipsQuery
 from app.contexts.hrms.queries.payroll.get_payslip import GetPayslipQuery
+from app.contexts.hrms.presenters.relation_resolver import HrmsRelationResolver
+from app.contexts.hrms.presenters.response_enricher import HrmsResponseEnricher
 
 
 class HrmsApplicationServices:
     def __init__(self, *, repositories: HrmsRepositories) -> None:
         self.repositories = repositories
+        self.relation_resolver = HrmsRelationResolver(repositories=repositories)
+        self.response_enricher = HrmsResponseEnricher(resolver=self.relation_resolver)
 
         # employee account / employee
         self.get_account = GetEmployeeAccountQuery(

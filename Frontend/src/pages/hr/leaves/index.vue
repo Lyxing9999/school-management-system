@@ -27,6 +27,7 @@ import type {
   LeaveRequestListParams,
   LeaveRequestStatus,
 } from "~/api/hr_admin/leave/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -282,7 +283,7 @@ onMounted(() => {
           <ElInput
             v-model="filters.employee_id"
             clearable
-            placeholder="Filter by employee ID"
+            placeholder="Filter by employee id"
             @keyup.enter="applyFilters"
           />
         </el-col>
@@ -349,7 +350,7 @@ onMounted(() => {
             <template #default="{ row }">
               <div class="employee-cell">
                 <span class="employee-cell__primary">{{
-                  row.employee_id
+                  displayRelation(row.employee_name, row.employee_id)
                 }}</span>
                 <span class="employee-cell__secondary">{{ row.id }}</span>
               </div>
@@ -466,7 +467,9 @@ onMounted(() => {
       <template v-if="activeRequest">
         <div class="detail-head">
           <div>
-            <h3 class="detail-head__title">{{ activeRequest.employee_id }}</h3>
+            <h3 class="detail-head__title">
+              {{ displayRelation(activeRequest.employee_name, activeRequest.employee_id) }}
+            </h3>
             <p class="detail-head__subtitle">Request {{ activeRequest.id }}</p>
           </div>
 
@@ -486,8 +489,10 @@ onMounted(() => {
         </div>
 
         <ElDescriptions :column="2" border class="mt-4">
-          <ElDescriptionsItem label="Employee ID">
-            {{ activeRequest.employee_id }}
+          <ElDescriptionsItem label="Employee">
+            {{
+              displayRelation(activeRequest.employee_name, activeRequest.employee_id)
+            }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="Leave Type">
             {{ leaveTypeLabel(activeRequest.leave_type) }}
@@ -504,8 +509,10 @@ onMounted(() => {
           <ElDescriptionsItem label="Paid Leave">
             {{ activeRequest.is_paid ? "Yes" : "No" }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="Manager User ID">
-            {{ activeRequest.manager_user_id || "—" }}
+          <ElDescriptionsItem label="Manager">
+            {{
+              displayRelation(activeRequest.manager_name, activeRequest.manager_user_id)
+            }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="Contract Start">
             {{ formatDate(activeRequest.contract_start) }}

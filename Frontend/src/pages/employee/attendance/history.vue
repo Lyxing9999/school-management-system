@@ -26,6 +26,7 @@ import type {
   AttendanceListParams,
   AttendanceStatus,
 } from "~/api/hr_admin/attendance";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -468,8 +469,8 @@ onMounted(() => {
           <ElDescriptionsItem label="Attendance ID">
             {{ activeRow.id }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="Employee ID">
-            {{ activeRow.employee_id }}
+          <ElDescriptionsItem label="Employee">
+            {{ displayRelation(activeRow.employee_name, activeRow.employee_id) }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="Date">
             {{ formatDate(activeRow.attendance_date) }}

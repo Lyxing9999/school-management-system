@@ -27,6 +27,7 @@ import type {
   LeaveRequestStatus,
   LeaveSummaryDTO,
 } from "~/api/hr_admin/leave/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -470,8 +471,8 @@ onMounted(() => {
           <ElDescriptionsItem label="Status">
             {{ String(activeRow.status || "-").toUpperCase() }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="Manager User ID">
-            {{ activeRow.manager_user_id || "-" }}
+          <ElDescriptionsItem label="Manager">
+            {{ displayRelation(activeRow.manager_name, activeRow.manager_user_id) }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="Contract Start">
             {{ formatDate(activeRow.contract_start) }}

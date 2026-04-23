@@ -30,6 +30,7 @@ import type {
   OvertimeRejectDTO,
   OvertimeRequestDTO,
 } from "~/api/hr_admin/overtime/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 import { useOvertimeStore } from "~/stores/overtimeStore";
 
@@ -386,7 +387,10 @@ async function submitReject() {
 
   try {
     await ElMessageBox.confirm(
-      `Reject overtime request from ${activeRequest.value.employee_id}?`,
+      `Reject overtime request from ${displayRelation(
+        activeRequest.value.employee_name,
+        activeRequest.value.employee_id,
+      )}?`,
       "Confirm Rejection",
       {
         confirmButtonText: "Reject",
@@ -498,7 +502,7 @@ onMounted(() => {
           <el-input
             v-model="searchEmployeeId"
             clearable
-            placeholder="Search by employee ID"
+            placeholder="Search by employee id"
             @keyup.enter="applyFilters"
           />
         </el-col>
@@ -555,7 +559,7 @@ onMounted(() => {
             <template #default="{ row }">
               <div class="employee-cell">
                 <span class="employee-cell__primary">{{
-                  row.employee_id
+                  displayRelation(row.employee_name, row.employee_id)
                 }}</span>
                 <span class="employee-cell__secondary">{{ row.id }}</span>
               </div>
@@ -679,7 +683,7 @@ onMounted(() => {
           <div class="detail-head">
             <div>
               <h3 class="detail-head__title">
-                {{ currentDetail.employee_id }}
+                {{ displayRelation(currentDetail.employee_name, currentDetail.employee_id) }}
               </h3>
               <p class="detail-head__subtitle">
                 Request {{ currentDetail.id }}
@@ -702,8 +706,10 @@ onMounted(() => {
           </div>
 
           <ElDescriptions :column="2" border class="mt-4">
-            <ElDescriptionsItem label="Employee ID">
-              {{ currentDetail.employee_id }}
+            <ElDescriptionsItem label="Employee">
+              {{
+                displayRelation(currentDetail.employee_name, currentDetail.employee_id)
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="Request Date">
               {{ formatDate(currentDetail.request_date) }}
@@ -729,8 +735,13 @@ onMounted(() => {
             <ElDescriptionsItem label="Basic Salary">
               {{ formatMoney(currentDetail.basic_salary) }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="Manager ID">
-              {{ currentDetail.manager_id || "—" }}
+            <ElDescriptionsItem label="Manager">
+              {{
+                displayRelation(
+                  currentDetail.manager_name,
+                  currentDetail.manager_user_id || currentDetail.manager_id,
+                )
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="Reason" :span="2">
               {{ currentDetail.reason }}
@@ -755,7 +766,9 @@ onMounted(() => {
         <div class="dialog-summary">
           <div>
             <p class="dialog-summary__label">Employee</p>
-            <p class="dialog-summary__value">{{ activeRequest.employee_id }}</p>
+            <p class="dialog-summary__value">
+              {{ displayRelation(activeRequest.employee_name, activeRequest.employee_id) }}
+            </p>
           </div>
           <div>
             <p class="dialog-summary__label">Suggested hours</p>
@@ -815,7 +828,9 @@ onMounted(() => {
         <div class="dialog-summary">
           <div>
             <p class="dialog-summary__label">Employee</p>
-            <p class="dialog-summary__value">{{ activeRequest.employee_id }}</p>
+            <p class="dialog-summary__value">
+              {{ displayRelation(activeRequest.employee_name, activeRequest.employee_id) }}
+            </p>
           </div>
           <div>
             <p class="dialog-summary__label">Request date</p>

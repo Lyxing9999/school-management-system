@@ -112,3 +112,22 @@ class EmployeeReadModel:
         return list(
             self.collection.find(query).sort("full_name", 1)
         )
+
+    def list_by_ids(
+        self,
+        ids: list[ObjectId | str],
+        *,
+        show_deleted: str = "active",
+    ) -> list[dict]:
+        oids = [self._oid(item) for item in ids]
+        oids = [oid for oid in oids if oid is not None]
+        if not oids:
+            return []
+
+        query = by_show_deleted(
+            show_deleted,
+            {
+                "_id": {"$in": oids},
+            },
+        )
+        return list(self.collection.find(query))

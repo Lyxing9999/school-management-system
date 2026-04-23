@@ -21,6 +21,7 @@ import type {
   OvertimeRequestListParams,
   OvertimeRequestStatus,
 } from "~/api/hr_admin/overtime/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { overtimeColumns } from "~/modules/tables/columns/hr_admin/overtimeColumns";
 
 definePageMeta({ layout: "default" });
@@ -128,7 +129,10 @@ function getStatusClass(status: string): string {
 
 async function showDetails(row: OvertimeRequestDTO) {
   await ElMessageBox.alert(
-    `Overtime ID: ${row.id}\nEmployee: ${row.employee_id}\nDate: ${
+    `Overtime ID: ${row.id}\nEmployee: ${displayRelation(
+      row.employee_name,
+      row.employee_id,
+    )}\nDate: ${
       row.request_date
     }\nStart: ${row.start_time}\nEnd: ${row.end_time}\nStatus: ${
       row.status
@@ -167,7 +171,7 @@ onMounted(() => {
       <ElInput
         v-model="filters.employee_id"
         clearable
-        placeholder="Filter by employee_id"
+        placeholder="Filter by employee id"
       />
     </el-col>
 

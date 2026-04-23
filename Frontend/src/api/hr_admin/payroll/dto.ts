@@ -20,7 +20,14 @@ export type PayrollRunStatus = "draft" | "finalized" | "paid";
 export interface PayrollRunDTO {
   id: string;
   month: string;
+  payroll_month?: string | null;
+  payroll_run_label?: string | null;
   generated_by: string;
+  generated_by_name?: string | null;
+  created_by?: string | null;
+  created_by_name?: string | null;
+  deleted_by?: string | null;
+  deleted_by_name?: string | null;
   status: PayrollRunStatus | string;
   lifecycle: LifecycleDTO;
 }
@@ -41,7 +48,10 @@ export interface PayrollRunPaginatedDTO {
 export interface PayslipDTO {
   id: string;
   payroll_run_id: string;
+  payroll_month?: string | null;
+  payroll_run_label?: string | null;
   employee_id: string;
+  employee_name?: string | null;
   month: string;
   base_salary: number;
   payable_working_days: number;
@@ -52,6 +62,10 @@ export interface PayslipDTO {
   total_deductions: number;
   net_salary: number;
   status: string;
+  created_by?: string | null;
+  created_by_name?: string | null;
+  deleted_by?: string | null;
+  deleted_by_name?: string | null;
   lifecycle: LifecycleDTO;
 }
 

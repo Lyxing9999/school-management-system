@@ -13,13 +13,16 @@ class AttendanceDTO(BaseModel):
 
     id: str
     employee_id: str
+    employee_name: Optional[str] = None
     attendance_date: Optional[date] = None
 
     check_in_time: Optional[datetime] = None
     check_out_time: Optional[datetime] = None
 
     schedule_id: Optional[str] = None
+    schedule_name: Optional[str] = None
     location_id: Optional[str] = None
+    location_name: Optional[str] = None
 
     check_in_latitude: Optional[float] = None
     check_in_longitude: Optional[float] = None
@@ -43,7 +46,13 @@ class AttendanceDTO(BaseModel):
 
     admin_comment: Optional[str] = None
     location_reviewed_by: Optional[str] = None
+    location_reviewed_by_name: Optional[str] = None
     early_leave_reviewed_by: Optional[str] = None
+    early_leave_reviewed_by_name: Optional[str] = None
+    created_by: Optional[str] = None
+    created_by_name: Optional[str] = None
+    deleted_by: Optional[str] = None
+    deleted_by_name: Optional[str] = None
 
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

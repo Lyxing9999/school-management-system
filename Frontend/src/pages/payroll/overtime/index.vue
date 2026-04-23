@@ -17,6 +17,7 @@ import {
   ElDatePicker,
 } from "element-plus";
 import { useOvertimeStore } from "~/stores/overtimeStore";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 definePageMeta({ layout: "default" });
 
@@ -177,7 +178,11 @@ const handleDateRangeChange = async () => {
       />
 
       <ElTable v-else :data="payrollApprovedRequests" stripe>
-        <ElTableColumn prop="employee_id" label="Employee" width="120" />
+        <ElTableColumn label="Employee" width="180">
+          <template #default="{ row }">
+            {{ displayRelation(row.employee_name, row.employee_id) }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn prop="request_date" label="Date" width="120">
           <template #default="{ row }">
             {{ formatDate(row.request_date) }}
@@ -245,8 +250,10 @@ const handleDateRangeChange = async () => {
     >
       <div v-if="requestDetail" class="detail-content">
         <div class="detail-row">
-          <span class="label">Employee ID:</span>
-          <span class="value">{{ requestDetail.employee_id }}</span>
+          <span class="label">Employee:</span>
+          <span class="value">{{
+            displayRelation(requestDetail.employee_name, requestDetail.employee_id)
+          }}</span>
         </div>
         <div class="detail-row">
           <span class="label">Request Date:</span>

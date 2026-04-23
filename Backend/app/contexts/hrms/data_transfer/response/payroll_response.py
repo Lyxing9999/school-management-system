@@ -15,7 +15,14 @@ class PayrollRunDTO(BaseModel):
 
     id: str
     month: str
+    payroll_month: str | None = None
+    payroll_run_label: str | None = None
     generated_by: str
+    generated_by_name: str | None = None
+    created_by: str | None = None
+    created_by_name: str | None = None
+    deleted_by: str | None = None
+    deleted_by_name: str | None = None
     status: str
     lifecycle: LifecycleDTO
 
@@ -29,7 +36,10 @@ class PayslipDTO(BaseModel):
 
     id: str
     payroll_run_id: str
+    payroll_month: str | None = None
+    payroll_run_label: str | None = None
     employee_id: str
+    employee_name: str | None = None
     month: str
     base_salary: float
     payable_working_days: int
@@ -40,6 +50,10 @@ class PayslipDTO(BaseModel):
     total_deductions: float
     net_salary: float
     status: str
+    created_by: str | None = None
+    created_by_name: str | None = None
+    deleted_by: str | None = None
+    deleted_by_name: str | None = None
     lifecycle: LifecycleDTO
 
 

@@ -16,6 +16,7 @@ import type {
   AttendanceDTO,
   AttendanceTeamListParams,
 } from "~/api/hr_admin/attendance/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 const hrms = hrmsAdminService();
 
@@ -148,7 +149,7 @@ const columns = computed(() => [
       <template #employee="{ row }">
         <EmployeeAvatarCell :row="row" />
         <span style="margin-left: 8px">{{
-          row.full_name || row.employee_id
+          displayRelation(row.employee_name || row.full_name, row.employee_id)
         }}</span>
       </template>
       <template #status="{ row }">

@@ -8,7 +8,7 @@ from app.contexts.shared.model_converter import mongo_converter
 
 class WorkLocationReadModel:
     def __init__(self, db: Database):
-        self.collection = db["work_locations"]
+        self.collection = db["hr_work_locations"]
 
     def get_by_id(self, location_id: ObjectId | str, *, show_deleted: ShowDeleted = "active") -> dict | None:
         oid = mongo_converter.convert_to_object_id(location_id)
@@ -60,3 +60,17 @@ class WorkLocationReadModel:
             .limit(page_size)
         )
         return items, total
+
+    def list_by_ids(
+        self,
+        ids: List[ObjectId | str],
+        *,
+        show_deleted: ShowDeleted = "active",
+    ) -> List[dict]:
+        oids = [mongo_converter.convert_to_object_id(item) for item in ids]
+        oids = [oid for oid in oids if oid is not None]
+        if not oids:
+            return []
+
+        query = by_show_deleted(show_deleted, {"_id": {"$in": oids}})
+        return list(self.collection.find(query))

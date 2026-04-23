@@ -24,6 +24,7 @@ import type {
   OvertimeRejectDTO,
   OvertimeRequestDTO,
 } from "~/api/hr_admin/overtime/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { useAuthStore } from "~/stores/authStore";
 import { ROUTES } from "~/constants/routes";
 
@@ -256,7 +257,7 @@ await fetchDetail();
       <ElDescriptions :column="2" border class="mt-3">
         <ElDescriptionsItem label="ID">{{ overtime.id }}</ElDescriptionsItem>
         <ElDescriptionsItem label="Employee">{{
-          overtime.employee_id
+          displayRelation(overtime.employee_name, overtime.employee_id)
         }}</ElDescriptionsItem>
         <ElDescriptionsItem label="Request Date">{{
           overtime.request_date

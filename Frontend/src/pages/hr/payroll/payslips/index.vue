@@ -15,6 +15,7 @@ import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 import { hrmsAdminService } from "~/api/hr_admin";
 import type { PayslipDTO, PayslipListParams } from "~/api/hr_admin/payroll";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import type { ColumnConfig } from "~/components/types/tableEdit";
 
 definePageMeta({ layout: "default" });
@@ -52,18 +53,24 @@ const tableColumns: ColumnConfig<PayslipDTO>[] = [
     label: "Payroll Run",
     minWidth: "180px",
     visible: true,
+    render: (row: PayslipDTO) =>
+      displayRelation(row.payroll_run_label, row.payroll_run_id),
   },
   {
     field: "employee_id",
     label: "Employee",
     minWidth: "130px",
     visible: true,
+    render: (row: PayslipDTO) =>
+      displayRelation(row.employee_name, row.employee_id),
   },
   {
     field: "month",
     label: "Month",
     width: "110px",
     visible: true,
+    render: (row: PayslipDTO) =>
+      displayRelation(row.payroll_month, row.month),
   },
   {
     field: "base_salary",
@@ -250,7 +257,7 @@ onMounted(() => {
       <ElInput
         v-model="filters.payroll_run_id"
         clearable
-        placeholder="Filter by payroll_run_id"
+        placeholder="Filter by payroll run id"
         @keyup.enter="applyFilters"
       />
     </el-col>
@@ -259,7 +266,7 @@ onMounted(() => {
       <ElInput
         v-model="filters.employee_id"
         clearable
-        placeholder="Filter by employee_id"
+        placeholder="Filter by employee id"
         @keyup.enter="applyFilters"
       />
     </el-col>

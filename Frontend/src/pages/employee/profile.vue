@@ -19,6 +19,7 @@ import type {
   HrSalaryType,
   HrEmploymentType,
 } from "~/api/hr_admin/employees/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -207,8 +208,13 @@ onMounted(() => {
           <ElDescriptionsItem label="Status">
             {{ String(employee.status || "-").toUpperCase() }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="User ID">
-            {{ employee.user_id || "-" }}
+          <ElDescriptionsItem label="Account">
+            {{
+              displayRelation(
+                employee.account_name || employee.account_email,
+                employee.user_id,
+              )
+            }}
           </ElDescriptionsItem>
         </ElDescriptions>
 

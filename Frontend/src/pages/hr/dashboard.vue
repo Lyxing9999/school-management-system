@@ -10,6 +10,7 @@ import type { LeaveRequestDTO } from "~/api/hr_admin/leave/dto";
 import type { PayrollRunDTO } from "~/api/hr_admin/payroll/dto";
 import type { HrEmployeeWithAccountSummaryDTO } from "~/api/hr_admin/employees/dto";
 import type { PublicHolidayDTO } from "~/api/hr_admin/publicHoliday/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -106,19 +107,6 @@ function initialsFromName(value?: string): string {
     .map((p) => p[0]?.toUpperCase() || "")
     .join("");
 }
-
-const employeeNameById = computed(() => {
-  const map = new Map<string, string>();
-  for (const row of employees.value) {
-    if (row.employee?.id) {
-      map.set(
-        row.employee.id,
-        row.employee.full_name || row.employee.employee_code || row.employee.id,
-      );
-    }
-  }
-  return map;
-});
 
 const greetingTitle = computed(() => {
   const hour = new Date().getHours();
@@ -692,13 +680,13 @@ onActivated(() => {
               <div class="leave-card__avatar">
                 {{
                   initialsFromName(
-                    employeeNameById.get(row.employee_id) || row.employee_id,
+                    displayRelation(row.employee_name, row.employee_id),
                   )
                 }}
               </div>
               <div class="leave-card__info">
                 <h4>
-                  {{ employeeNameById.get(row.employee_id) || row.employee_id }}
+                  {{ displayRelation(row.employee_name, row.employee_id) }}
                 </h4>
                 <p>
                   {{ String(row.leave_type).toUpperCase() }}

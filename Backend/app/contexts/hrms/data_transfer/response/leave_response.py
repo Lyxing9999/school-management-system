@@ -14,6 +14,7 @@ class LeaveRequestDTO(BaseModel):
 
     id: str
     employee_id: str
+    employee_name: Optional[str] = None
     leave_type: str
     start_date: date
     end_date: date
@@ -23,7 +24,12 @@ class LeaveRequestDTO(BaseModel):
     is_paid: bool
     status: str
     manager_user_id: Optional[str] = None
+    manager_name: Optional[str] = None
     manager_comment: Optional[str] = None
+    created_by: Optional[str] = None
+    created_by_name: Optional[str] = None
+    deleted_by: Optional[str] = None
+    deleted_by_name: Optional[str] = None
     total_days: int
     lifecycle: LifecycleDTO
 

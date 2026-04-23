@@ -23,6 +23,7 @@ import type {
   PublicHolidayUpdateDTO,
   PublicHolidayImportResultDTO,
 } from "~/api/hr_admin/publicHoliday";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 type HolidayFilter = "active" | "deleted" | "all";
 
@@ -847,7 +848,13 @@ watch(filter, async () => {
                 }}
               </div>
               <div class="text-xs text-gray-500">
-                by {{ (row as PublicHolidayDTO).created_by || "-" }}
+                by
+                {{
+                  displayRelation(
+                    (row as PublicHolidayDTO).created_by_name,
+                    (row as PublicHolidayDTO).created_by,
+                  )
+                }}
               </div>
             </div>
           </template>

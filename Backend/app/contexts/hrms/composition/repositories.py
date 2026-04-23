@@ -20,6 +20,8 @@ from app.contexts.hrms.services.cambodia_public_holiday_provider import Cambodia
 from app.contexts.hrms.read_models.overtime_read_model import OvertimeReadModel
 from app.contexts.hrms.read_models.attendance_read_model import AttendanceReadModel
 from app.contexts.hrms.read_models.employee_read_model import EmployeeReadModel
+from app.contexts.hrms.read_models.working_schedule_read_model import WorkingScheduleReadModel
+from app.contexts.hrms.read_models.work_location_read_model import WorkLocationReadModel
 
 
 class HrmsRepositories:
@@ -40,6 +42,8 @@ class HrmsRepositories:
         self.overtime_read_model = OvertimeReadModel(db)
         self.attendance_read_model = AttendanceReadModel(db)
         self.employee_read_model = EmployeeReadModel(db)
+        self.working_schedule_read_model = WorkingScheduleReadModel(db)
+        self.work_location_read_model = WorkLocationReadModel(db)
         self.cambodia_public_holiday_provider = CambodiaPublicHolidayProvider(
         api_key=settings.CALENDARIFIC_API_KEY or "",
         )

@@ -19,5 +19,9 @@ class WorkingScheduleDTO(BaseModel):
     weekend_days: list[int]
     total_hours_per_day: float
     is_default: bool
+    schedule_name: Optional[str] = None
     created_by: Optional[str] = None
+    created_by_name: Optional[str] = None
+    deleted_by: Optional[str] = None
+    deleted_by_name: Optional[str] = None
     lifecycle: LifecycleDTO

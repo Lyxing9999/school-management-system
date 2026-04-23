@@ -11,11 +11,6 @@ from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.iam.auth.jwt_utils import login_required
 
 from app.contexts.hrms.mapper.attendance_mapper import AttendanceMapper
-from app.contexts.hrms.data_transfer.response.attendance_response import (
-    AttendancePaginatedDTO,
-    PaginationDTO,
-    AttendanceTodayDTO,
-)
 attendance_query_bp = Blueprint("attendance_query_bp", __name__)
 mapper = AttendanceMapper()
 
@@ -42,16 +37,18 @@ def get_my_attendance():
     )
 
     total_pages = max(1, math.ceil(int(total) / page_size))
+    rows = [mapper.to_dto(x).model_dump(mode="json") for x in items]
+    g.hrms.response_enricher.enrich_attendance_records(rows)
 
-    return AttendancePaginatedDTO(
-        items=[mapper.to_dto(x) for x in items],
-        pagination=PaginationDTO(
-            total=int(total),
-            page=page,
-            page_size=page_size,
-            total_pages=total_pages,
-        ),
-    )
+    return {
+        "items": rows,
+        "pagination": {
+            "total": int(total),
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        },
+    }
 
 
 @attendance_query_bp.route("/attendance", methods=["GET"], strict_slashes=False)
@@ -79,16 +76,18 @@ def list_attendance():
     )
 
     total_pages = max(1, math.ceil(int(total) / page_size))
+    rows = [mapper.to_dto(x).model_dump(mode="json") for x in items]
+    g.hrms.response_enricher.enrich_attendance_records(rows)
 
-    return AttendancePaginatedDTO(
-        items=[mapper.to_dto(x) for x in items],
-        pagination=PaginationDTO(
-            total=int(total),
-            page=page,
-            page_size=page_size,
-            total_pages=total_pages,
-        ),
-    )
+    return {
+        "items": rows,
+        "pagination": {
+            "total": int(total),
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        },
+    }
 
 
 @attendance_query_bp.route("/attendance/team", methods=["GET"], strict_slashes=False)
@@ -113,16 +112,18 @@ def get_team_attendance():
     )
 
     total_pages = max(1, math.ceil(int(total) / page_size))
+    rows = [mapper.to_dto(x).model_dump(mode="json") for x in items]
+    g.hrms.response_enricher.enrich_attendance_records(rows)
 
-    return AttendancePaginatedDTO(
-        items=[mapper.to_dto(x) for x in items],
-        pagination=PaginationDTO(
-            total=int(total),
-            page=page,
-            page_size=page_size,
-            total_pages=total_pages,
-        ),
-    )
+    return {
+        "items": rows,
+        "pagination": {
+            "total": int(total),
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        },
+    }
 @attendance_query_bp.route("/attendance/reports/wrong-location", methods=["GET"], strict_slashes=False)
 @login_required(allowed_roles=["hr_admin", "manager"])
 @wrap_response
@@ -146,15 +147,18 @@ def get_wrong_location_report():
     )
 
     total_pages = max(1, math.ceil(int(total) / page_size))
-    return AttendancePaginatedDTO(
-        items=[mapper.to_dto(x) for x in items],
-        pagination=PaginationDTO(
-            total=int(total),
-            page=page,
-            page_size=page_size,
-            total_pages=total_pages,
-        ),
-    )
+    rows = [mapper.to_dto(x).model_dump(mode="json") for x in items]
+    g.hrms.response_enricher.enrich_attendance_records(rows)
+
+    return {
+        "items": rows,
+        "pagination": {
+            "total": int(total),
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        },
+    }
 
 
 
@@ -168,6 +172,6 @@ def get_my_attendance_today():
         employee_id=employee_id,
     )
 
-    return AttendanceTodayDTO(
-        item=mapper.to_dto(item) if item else None,
-    )
+    row = mapper.to_dto(item).model_dump(mode="json") if item else None
+    row = g.hrms.response_enricher.enrich_single(row, kind="attendance")
+    return {"item": row}

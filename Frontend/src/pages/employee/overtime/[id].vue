@@ -22,6 +22,7 @@ import type {
   OvertimeCancelDTO,
   OvertimeRequestDTO,
 } from "~/api/hr_admin/overtime/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -270,8 +271,13 @@ onMounted(() => {
           <ElDescriptionsItem label="Basic Salary">
             {{ formatMoney(overtime.basic_salary) }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="Manager ID">
-            {{ overtime.manager_id || "-" }}
+          <ElDescriptionsItem label="Manager">
+            {{
+              displayRelation(
+                overtime.manager_name,
+                overtime.manager_user_id || overtime.manager_id,
+              )
+            }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="Reason" :span="2">
             {{ overtime.reason }}

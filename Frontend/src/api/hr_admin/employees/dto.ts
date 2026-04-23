@@ -18,7 +18,10 @@ export type HrEmployeeContractDTO = {
 
 export type HrEmployeeDTO = {
   id: string;
+  employee_name?: string | null;
   user_id?: string | null;
+  account_name?: string | null;
+  account_email?: string | null;
   employee_code: string;
   full_name: string;
   department?: string | null;
@@ -26,13 +29,23 @@ export type HrEmployeeDTO = {
   employment_type: HrEmploymentType;
   basic_salary: number;
   contract?: HrEmployeeContractDTO | null;
+  schedule_id?: string | null;
+  schedule_name?: string | null;
+  work_location_id?: string | null;
+  work_location_name?: string | null;
+  manager_user_id?: string | null;
+  manager_name?: string | null;
   status: HrEmployeeStatus;
   created_by?: string | null;
+  created_by_name?: string | null;
+  deleted_by?: string | null;
+  deleted_by_name?: string | null;
   photo_url?: string | null;
   lifecycle?: {
     created_at?: string;
     updated_at?: string;
     deleted_at?: string | null;
+    deleted_by?: string | null;
   } | null;
 };
 
@@ -62,7 +75,9 @@ export type ListEmployeesParams = {
 
 export interface HrEmployeeAccountDTO {
   id: string;
+  user_id?: string | null;
   email?: string | null;
+  account_email?: string | null;
   username?: string | null;
   role?: string | null;
   status?: string | null;

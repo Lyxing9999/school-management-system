@@ -27,9 +27,11 @@ def list_overtime_requests():
         page=page,
         limit=limit,
     )
+    rows = [mapper.to_dto(item).model_dump(mode="json") for item in items]
+    g.hrms.response_enricher.enrich_overtime_records(rows)
 
     return {
-        "items": [mapper.to_dto(item).model_dump(mode="json") for item in items],
+        "items": rows,
         "total": total,
         "page": page,
         "limit": limit,
@@ -51,9 +53,11 @@ def list_my_overtime_requests():
         page=page,
         limit=limit,
     )
+    rows = [mapper.to_dto(item).model_dump(mode="json") for item in items]
+    g.hrms.response_enricher.enrich_overtime_records(rows)
 
     return {
-        "items": [mapper.to_dto(item).model_dump(mode="json") for item in items],
+        "items": rows,
         "total": total,
         "page": page,
         "limit": limit,
@@ -65,7 +69,8 @@ def list_my_overtime_requests():
 @wrap_response
 def get_overtime_request(overtime_id: str):
     overtime = g.hrms.overtime.get(overtime_id=overtime_id)
-    return mapper.to_dto(overtime).model_dump(mode="json")
+    row = mapper.to_dto(overtime).model_dump(mode="json")
+    return g.hrms.response_enricher.enrich_single(row, kind="overtime")
 
 
 @overtime_query_bp.route("/overtime-requests/pending-approval", methods=["GET"], strict_slashes=False)
@@ -81,9 +86,11 @@ def list_pending_approval_overtime_requests():
         page=page,
         limit=limit,
     )
+    rows = [mapper.to_dto(item).model_dump(mode="json") for item in items]
+    g.hrms.response_enricher.enrich_overtime_records(rows)
 
     return {
-        "items": [mapper.to_dto(item).model_dump(mode="json") for item in items],
+        "items": rows,
         "total": total,
         "page": page,
         "limit": limit,
@@ -112,7 +119,9 @@ def list_approved_overtime_for_payroll():
         employee_id=employee_id,
     )
 
-    return [mapper.to_dto(item).model_dump(mode="json") for item in items]
+    rows = [mapper.to_dto(item).model_dump(mode="json") for item in items]
+    g.hrms.response_enricher.enrich_overtime_records(rows)
+    return rows
 
 
 @overtime_query_bp.route("/overtime-requests/payroll-summary", methods=["GET"], strict_slashes=False)

@@ -24,7 +24,9 @@ def list_public_holidays():
         include_deleted=include_deleted,
         deleted_only=deleted_only,
     )
-    return [mapper.to_dto(item).model_dump(mode="json") for item in items]
+    rows = [mapper.to_dto(item).model_dump(mode="json") for item in items]
+    g.hrms.response_enricher.enrich_public_holiday_records(rows)
+    return rows
 
 
 @public_holiday_query_bp.route("/public-holidays/<holiday_id>", methods=["GET"], strict_slashes=False)
@@ -32,7 +34,8 @@ def list_public_holidays():
 @wrap_response
 def get_public_holiday(holiday_id: str):
     holiday = g.hrms.public_holiday.get(holiday_id=holiday_id)
-    return mapper.to_dto(holiday).model_dump(mode="json")
+    row = mapper.to_dto(holiday).model_dump(mode="json")
+    return g.hrms.response_enricher.enrich_single(row, kind="public_holiday")
 
 
 @public_holiday_query_bp.route("/public-holidays/by-date", methods=["GET"], strict_slashes=False)
@@ -42,4 +45,5 @@ def check_public_holiday_by_date():
     holiday_date_str = request.args.get("date")
     holiday_date = date.fromisoformat(holiday_date_str)
     holiday = g.hrms.public_holiday.check_by_date(date=holiday_date)
-    return mapper.to_dto(holiday).model_dump(mode="json") if holiday else None
+    row = mapper.to_dto(holiday).model_dump(mode="json") if holiday else None
+    return g.hrms.response_enricher.enrich_single(row, kind="public_holiday")

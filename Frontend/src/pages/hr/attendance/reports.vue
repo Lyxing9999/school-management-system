@@ -5,6 +5,7 @@ import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 import { hrmsAdminService } from "~/api/hr_admin";
 import type { AttendanceDTO } from "~/api/hr_admin/attendance";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 definePageMeta({ layout: "default" });
 
@@ -401,11 +402,11 @@ onMounted(() => {
               row-key="id"
               @current-change="handleMapRowChange"
             >
-              <el-table-column
-                prop="employee_id"
-                label="Employee"
-                min-width="180"
-              />
+              <el-table-column label="Employee" min-width="180">
+                <template #default="{ row }">
+                  {{ displayRelation(row.employee_name, row.employee_id) }}
+                </template>
+              </el-table-column>
               <el-table-column label="Check-In Time" min-width="180">
                 <template #default="{ row }">
                   {{ formatDateTime(row.check_in_time) }}

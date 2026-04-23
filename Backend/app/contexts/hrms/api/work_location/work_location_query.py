@@ -42,7 +42,9 @@ def list_work_locations():
         deleted_only=deleted_only,
         is_active=is_active,
     )
-    return [mapper.to_dto(item).model_dump(mode="json") for item in items]
+    rows = [mapper.to_dto(item).model_dump(mode="json") for item in items]
+    g.hrms.response_enricher.enrich_work_location_records(rows)
+    return rows
 
 
 @work_location_query_bp.route("/work-locations/<location_id>", methods=["GET"], strict_slashes=False)
@@ -50,7 +52,8 @@ def list_work_locations():
 @wrap_response
 def get_work_location(location_id: str):
     item = g.hrms.work_location.get(location_id=location_id)
-    return mapper.to_dto(item).model_dump(mode="json")
+    row = mapper.to_dto(item).model_dump(mode="json")
+    return g.hrms.response_enricher.enrich_single(row, kind="work_location")
 
 
 @work_location_query_bp.route("/work-locations/active", methods=["GET"], strict_slashes=False)
@@ -58,7 +61,8 @@ def get_work_location(location_id: str):
 @wrap_response
 def get_active_work_location():
     item = g.hrms.work_location.get_active()
-    return mapper.to_dto(item).model_dump(mode="json") if item else None
+    row = mapper.to_dto(item).model_dump(mode="json") if item else None
+    return g.hrms.response_enricher.enrich_single(row, kind="work_location")
 
 
 

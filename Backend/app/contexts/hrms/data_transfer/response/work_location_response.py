@@ -17,5 +17,9 @@ class WorkLocationDTO(BaseModel):
     longitude: float
     radius_meters: int
     is_active: bool
+    location_name: Optional[str] = None
     created_by: Optional[str] = None
+    created_by_name: Optional[str] = None
+    deleted_by: Optional[str] = None
+    deleted_by_name: Optional[str] = None
     lifecycle: LifecycleDTO

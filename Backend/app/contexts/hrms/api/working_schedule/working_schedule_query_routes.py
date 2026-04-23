@@ -13,7 +13,9 @@ mapper = WorkingScheduleMapper()
 @wrap_response
 def list_working_schedules():
     schedules = g.hrms.working_schedule.list()
-    return [mapper.to_dto(schedule).model_dump(mode="json") for schedule in schedules]
+    rows = [mapper.to_dto(schedule).model_dump(mode="json") for schedule in schedules]
+    g.hrms.response_enricher.enrich_working_schedule_records(rows)
+    return rows
 
 
 @working_schedule_query_bp.route("/working-schedules/<schedule_id>", methods=["GET"], strict_slashes=False)
@@ -21,7 +23,8 @@ def list_working_schedules():
 @wrap_response
 def get_working_schedule(schedule_id: str):
     schedule = g.hrms.working_schedule.get(schedule_id=schedule_id)
-    return mapper.to_dto(schedule).model_dump(mode="json")
+    row = mapper.to_dto(schedule).model_dump(mode="json")
+    return g.hrms.response_enricher.enrich_single(row, kind="working_schedule")
 
 
 @working_schedule_query_bp.route("/working-schedules/default", methods=["GET"], strict_slashes=False)
@@ -29,7 +32,8 @@ def get_working_schedule(schedule_id: str):
 @wrap_response
 def get_default_working_schedule():
     schedule = g.hrms.working_schedule.get_default()
-    return mapper.to_dto(schedule).model_dump(mode="json")
+    row = mapper.to_dto(schedule).model_dump(mode="json")
+    return g.hrms.response_enricher.enrich_single(row, kind="working_schedule")
 
 
 

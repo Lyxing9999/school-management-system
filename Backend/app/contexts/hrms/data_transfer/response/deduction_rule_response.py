@@ -16,6 +16,9 @@ class DeductionRuleDTO(BaseModel):
     deduction_percentage: float
     is_active: bool
     created_by: str | None = None
+    created_by_name: str | None = None
+    deleted_by: str | None = None
+    deleted_by_name: str | None = None
     lifecycle: LifecycleDTO
 
 

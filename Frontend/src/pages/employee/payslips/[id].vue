@@ -11,6 +11,7 @@ import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 import { hrmsAdminService } from "~/api/hr_admin";
 import type { PayslipDTO } from "~/api/hr_admin/payroll/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 
 definePageMeta({ layout: "default" });
@@ -96,7 +97,7 @@ onMounted(() => {
     <el-card shadow="hover" v-loading="loading" class="detail-card">
       <template v-if="payslip">
         <div class="detail-head">
-          <h3>{{ payslip.month }}</h3>
+          <h3>{{ displayRelation(payslip.payroll_month, payslip.month) }}</h3>
           <el-tag :type="statusTagType(payslip.status)" effect="plain" round>
             {{ String(payslip.status || "-").toUpperCase() }}
           </el-tag>
@@ -106,15 +107,15 @@ onMounted(() => {
           <el-descriptions-item label="Payslip ID">{{
             payslip.id
           }}</el-descriptions-item>
-          <el-descriptions-item label="Payroll Run ID">{{
-            payslip.payroll_run_id
+          <el-descriptions-item label="Payroll Run">{{
+            displayRelation(payslip.payroll_run_label, payslip.payroll_run_id)
           }}</el-descriptions-item>
 
-          <el-descriptions-item label="Employee ID">{{
-            payslip.employee_id
+          <el-descriptions-item label="Employee">{{
+            displayRelation(payslip.employee_name, payslip.employee_id)
           }}</el-descriptions-item>
           <el-descriptions-item label="Month">{{
-            payslip.month
+            displayRelation(payslip.payroll_month, payslip.month)
           }}</el-descriptions-item>
 
           <el-descriptions-item label="Base Salary">{{

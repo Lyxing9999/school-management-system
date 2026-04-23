@@ -1,6 +1,7 @@
 // frontend/src/modules/tables/columns/hr_admin/overtimeColumns.ts
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import type { OvertimeRequestDTO } from "~/api/hr_admin/overtime/dto";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 
@@ -19,6 +20,8 @@ export const overtimeColumns: ColumnConfig<OvertimeRequestDTO>[] = [
     width: "150px",
     visible: true,
     sortable: false,
+    render: (row: OvertimeRequestDTO) =>
+      displayRelation(row.employee_name, row.employee_id),
   },
   {
     field: "request_date",

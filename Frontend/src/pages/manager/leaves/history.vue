@@ -10,6 +10,7 @@ import type {
   LeaveRequestListParams,
 } from "~/api/hr_admin/leave/dto";
 import type { ColumnConfig } from "~/components/types/tableEdit";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 const hrms = hrmsAdminService();
 
@@ -88,7 +89,7 @@ const columns = computed<ColumnConfig<LeaveRequestDTO>[]>(() => [
       <template #employee="{ row }">
         <EmployeeAvatarCell :row="row" />
         <span style="margin-left: 8px">{{
-          row.full_name || row.employee_id
+          displayRelation(row.employee_name || row.full_name, row.employee_id)
         }}</span>
       </template>
     </SmartTable>

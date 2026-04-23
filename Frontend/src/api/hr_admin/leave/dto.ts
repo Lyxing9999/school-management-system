@@ -14,6 +14,7 @@ export type LeaveRequestStatus =
 export interface LeaveRequestDTO {
   id: string;
   employee_id: string;
+  employee_name?: string | null;
   leave_type: LeaveType;
   start_date: string;
   end_date: string;
@@ -23,7 +24,12 @@ export interface LeaveRequestDTO {
   is_paid: boolean;
   status: LeaveRequestStatus;
   manager_user_id: string | null;
+  manager_name?: string | null;
   manager_comment: string | null;
+  created_by?: string | null;
+  created_by_name?: string | null;
+  deleted_by?: string | null;
+  deleted_by_name?: string | null;
   total_days: number;
   lifecycle: LifecycleDTO;
 }

@@ -19,6 +19,9 @@ class PublicHolidayDTO(BaseModel):
     is_paid: bool
     description: Optional[str] = None
     created_by: Optional[str] = None
+    created_by_name: Optional[str] = None
+    deleted_by: Optional[str] = None
+    deleted_by_name: Optional[str] = None
     lifecycle: LifecycleDTO
 
 

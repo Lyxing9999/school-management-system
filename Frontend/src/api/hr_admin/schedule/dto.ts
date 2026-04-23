@@ -4,6 +4,7 @@ import type { LifecycleDTO } from "~/api/types/lifecycle.dto";
 export interface WorkingScheduleDTO {
   id: string;
   name: string;
+  schedule_name?: string | null;
   start_time: string; // HH:MM:SS
   end_time: string; // HH:MM:SS
   working_days: number[]; // 0=Monday, 6=Sunday
@@ -11,6 +12,9 @@ export interface WorkingScheduleDTO {
   total_hours_per_day: number;
   is_default: boolean;
   created_by: string | null;
+  created_by_name?: string | null;
+  deleted_by?: string | null;
+  deleted_by_name?: string | null;
   lifecycle: LifecycleDTO;
 }
 

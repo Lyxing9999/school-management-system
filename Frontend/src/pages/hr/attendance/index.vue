@@ -21,6 +21,7 @@ import type {
   AttendanceDTO,
   AttendanceListParams,
 } from "~/api/hr_admin/attendance";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import type { ColumnConfig } from "~/components/types/tableEdit";
 
 definePageMeta({ layout: "default" });
@@ -59,6 +60,8 @@ const tableColumns: ColumnConfig<AttendanceDTO>[] = [
     label: "Employee",
     minWidth: "120px",
     visible: true,
+    render: (row: AttendanceDTO) =>
+      displayRelation(row.employee_name, row.employee_id),
   },
   {
     field: "attendance_date",
@@ -294,9 +297,10 @@ async function handlePageSizeChange(size: number) {
 
 function showDetails(row: AttendanceDTO) {
   ElMessage.info(
-    `Attendance ${row.id} | ${statusLabel(row.status)} | ${formatDate(
-      row.attendance_date,
-    )}`,
+    `Attendance ${row.id} | ${displayRelation(
+      row.employee_name,
+      row.employee_id,
+    )} | ${statusLabel(row.status)} | ${formatDate(row.attendance_date)}`,
   );
 }
 
@@ -337,7 +341,7 @@ onMounted(() => {
       <ElInput
         v-model="filters.employee_id"
         clearable
-        placeholder="Filter by employee_id"
+        placeholder="Filter by employee name or id"
         class="toolbar-input"
       />
 
