@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import {
   ElButton,
   ElCard,
@@ -226,7 +226,9 @@ function refreshPage() {
   void loadPage();
 }
 
-await loadPage();
+onMounted(() => {
+  void loadPage();
+});
 </script>
 
 <template>

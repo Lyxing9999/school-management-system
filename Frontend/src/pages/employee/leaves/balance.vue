@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
   ElCard,
   ElCol,
@@ -146,7 +146,9 @@ async function refreshPage() {
   await Promise.all([fetchBalance(), fetchSummary()]);
 }
 
-await refreshPage();
+onMounted(() => {
+  void refreshPage();
+});
 </script>
 
 <template>

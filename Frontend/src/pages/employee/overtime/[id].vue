@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   ElButton,
@@ -192,7 +192,9 @@ async function submitCancel() {
   }
 }
 
-await fetchDetail();
+onMounted(() => {
+  void fetchDetail();
+});
 </script>
 
 <template>

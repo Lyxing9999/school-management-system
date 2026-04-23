@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import {
   ElButton,
   ElCard,
@@ -268,7 +268,9 @@ function refreshHistory() {
   void fetchHistory(pagination.page, pagination.limit);
 }
 
-await fetchHistory(1, pagination.limit);
+onMounted(() => {
+  void fetchHistory(1, pagination.limit);
+});
 </script>
 
 <template>

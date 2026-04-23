@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
   ElCard,
   ElDescriptions,
@@ -74,7 +74,9 @@ function refreshPage() {
   void fetchPayslipDetail();
 }
 
-await fetchPayslipDetail();
+onMounted(() => {
+  void fetchPayslipDetail();
+});
 </script>
 
 <template>

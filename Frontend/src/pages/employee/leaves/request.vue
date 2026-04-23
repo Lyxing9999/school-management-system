@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
 import {
   ElButton,
@@ -202,7 +202,9 @@ async function refreshPage() {
   await loadBalance();
 }
 
-await loadBalance();
+onMounted(() => {
+  void loadBalance();
+});
 </script>
 
 <template>

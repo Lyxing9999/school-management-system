@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
   ElButton,
   ElCard,
@@ -134,7 +134,9 @@ async function refreshProfile() {
   ElMessage.success("Profile refreshed");
 }
 
-await fetchProfile();
+onMounted(() => {
+  void fetchProfile();
+});
 </script>
 
 <template>
