@@ -44,12 +44,25 @@ class HRMSIamGateway:
         return normalized
 
     def _summary_from_raw_user(self, raw_user: dict) -> dict:
+        lifecycle = raw_user.get("lifecycle")
+        lifecycle = lifecycle if isinstance(lifecycle, dict) else {}
+
+        user_id = str(raw_user.get("_id")) if raw_user.get("_id") is not None else None
+        username = raw_user.get("username")
+        email = raw_user.get("email")
+        deleted_at = raw_user.get("deleted_at") or lifecycle.get("deleted_at")
+
         return {
-            "id": str(raw_user.get("_id")),
-            "email": raw_user.get("email"),
-            "username": raw_user.get("username"),
+            "id": user_id,
+            "user_id": user_id,
+            "email": email,
+            "account_email": email,
+            "username": username,
+            "account_name": username or email,
             "role": raw_user.get("role"),
             "status": raw_user.get("status"),
+            "deleted_at": deleted_at,
+            "lifecycle": lifecycle or None,
         }
 
     # command side

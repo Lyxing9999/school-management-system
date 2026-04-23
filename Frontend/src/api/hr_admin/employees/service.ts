@@ -185,12 +185,12 @@ export class EmployeeService {
   }
 
   async setEmployeeAccountStatus(
-    employeeId: string,
+    userId: string,
     payload: { status: Status },
     options?: ApiCallOptions,
   ) {
     const data = await this.callApi<{ id: string; status: Status }>(
-      () => this.employeeApi.setEmployeeAccountStatus(employeeId, payload),
+      () => this.employeeApi.setEmployeeAccountStatus(userId, payload),
       { showSuccess: true, ...(options ?? {}) },
     );
     return data!;

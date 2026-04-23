@@ -6,7 +6,7 @@ from app.contexts.hrms.errors.employee_exceptions import (
 )
 
 
-class SoftDeleteEmployeeAccountUseCase:
+class RestoreEmployeeAccountUseCase:
     def __init__(self, *, employee_repository, iam_gateway) -> None:
         self.employee_repository = employee_repository
         self.iam_gateway = iam_gateway
@@ -20,7 +20,7 @@ class SoftDeleteEmployeeAccountUseCase:
         if not user_id:
             raise EmployeeLinkedAccountRequiredException(str(employee["_id"]))
 
-        self.iam_gateway.soft_delete_user(
+        self.iam_gateway.restore_user(
             user_id=user_id,
             actor_id=actor_id,
         )

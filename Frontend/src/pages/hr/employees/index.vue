@@ -2,6 +2,9 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import {
   ElCard,
+  ElDialog,
+  ElForm,
+  ElFormItem,
   ElInput,
   ElMessage,
   ElMessageBox,
@@ -15,25 +18,37 @@ import BaseButton from "~/components/base/BaseButton.vue";
 import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
 import EmployeeRowActions from "~/components/hrms/employees/EmployeeRowActions.vue";
 import EmployeeOnboardDialog from "~/components/hrms/employees/EmployeeOnboardDialog.vue";
+import { hrmsAdminService } from "~/api/hr_admin";
 import { ROUTES } from "~/constants/routes";
 import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
 import { Role } from "~/api/types/enums/role.enum";
 import PageToolbar from "~/components/page-toolbar/PageToolbar.vue";
 import type {
   HrCreateEmployeeDTO,
+  HrUpdateEmployeeDTO,
   HrEmployeeWithAccountSummaryDTO,
 } from "~/api/hr_admin/employees/dto";
+import type { SelectOptionDTO } from "~/api/types/common/select-option.type";
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import SummaryCardGrid from "~/components/summary/SummaryCardGrid.vue";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 definePageMeta({ layout: "default" });
 
 const router = useRouter();
 const employeeStore = useHrEmployeeStore();
+const hrms = hrmsAdminService();
+const workingScheduleService = hrms.workingSchedule;
+const workLocationService = hrms.workLocation;
 
 const loading = ref(false);
 const hasFetchedOnce = ref(false);
 const onboardVisible = ref(false);
 const actionLoadingById = ref<Record<string, boolean>>({});
+const assignmentVisible = ref(false);
+const assignmentSaving = ref(false);
+const assignmentOptionsLoading = ref(false);
+const scheduleOptions = ref<SelectOptionDTO[]>([]);
+const workLocationOptions = ref<SelectOptionDTO[]>([]);
 
 const filters = reactive({
   q: "",
@@ -53,6 +68,11 @@ type EmployeeTableRow = {
   full_name: string;
   department: string;
   position: string;
+  manager_name: string;
+  schedule_name: string;
+  work_location_name: string;
+  schedule_id: string | null;
+  work_location_id: string | null;
   employment_type: string;
   basic_salary: number;
   employee_status: string;
@@ -62,6 +82,18 @@ type EmployeeTableRow = {
   deleted_at: string | null;
   raw: HrEmployeeWithAccountSummaryDTO;
 };
+
+const assignmentForm = reactive<{
+  employee_id: string;
+  employee_name: string;
+  schedule_id: string | null;
+  work_location_id: string | null;
+}>({
+  employee_id: "",
+  employee_name: "",
+  schedule_id: null,
+  work_location_id: null,
+});
 
 const isDirty = computed(() => {
   return Boolean(filters.q || filters.hasAccount || filters.status);
@@ -92,6 +124,9 @@ const filteredSourceRows = computed(() => {
         employee.full_name,
         employee.department || "",
         employee.position || "",
+        employee.manager_name || "",
+        employee.schedule_name || "",
+        employee.work_location_name || "",
         account?.email || "",
         account?.username || "",
       ]
@@ -113,12 +148,27 @@ const filteredRows = computed<EmployeeTableRow[]>(() => {
       full_name: employee.full_name || "-",
       department: employee.department || "-",
       position: employee.position || "-",
+      manager_name: displayRelation(
+        employee.manager_name,
+        employee.manager_user_id,
+      ),
+      schedule_name: displayRelation(employee.schedule_name, employee.schedule_id),
+      work_location_name: displayRelation(
+        employee.work_location_name,
+        employee.work_location_id,
+      ),
+      schedule_id: employee.schedule_id ?? null,
+      work_location_id: employee.work_location_id ?? null,
       employment_type: employee.employment_type || "-",
       basic_salary: Number(employee.basic_salary || 0),
       employee_status: employee.status || "unknown",
       has_account: Boolean(account),
       account_status: account?.status || (account ? "linked" : "not linked"),
-      account_meta: account?.email || account?.username || account?.id || "",
+      account_meta: displayRelation(
+        account?.email || account?.username || account?.account_name,
+        account?.id,
+        "",
+      ),
       deleted_at: employee.lifecycle?.deleted_at || null,
       raw: row,
     };
@@ -193,6 +243,27 @@ const columns: ColumnConfig<EmployeeTableRow>[] = [
     minWidth: "140px",
     useSlot: true,
     slotName: "position",
+  },
+  {
+    field: "manager_name",
+    label: "Manager",
+    minWidth: "160px",
+    useSlot: true,
+    slotName: "manager_name",
+  },
+  {
+    field: "schedule_name",
+    label: "Schedule",
+    minWidth: "160px",
+    useSlot: true,
+    slotName: "schedule_name",
+  },
+  {
+    field: "work_location_name",
+    label: "Work Location",
+    minWidth: "180px",
+    useSlot: true,
+    slotName: "work_location_name",
   },
   {
     field: "employment_type",
@@ -283,8 +354,75 @@ function goDetail(row: EmployeeTableRow) {
   router.push(ROUTES.HR_ADMIN.EMPLOYEE_DETAIL(row.id));
 }
 
-function assignSchedule(row: EmployeeTableRow) {
-  router.push(ROUTES.HR_ADMIN.EMPLOYEE_DETAIL(row.id));
+async function loadAssignmentOptions() {
+  assignmentOptionsLoading.value = true;
+  try {
+    const [schedules, locations] = await Promise.all([
+      workingScheduleService.getScheduleSelectOptions({ showError: false }),
+      workLocationService.getWorkLocationSelectOptions({ showError: false }),
+    ]);
+    scheduleOptions.value = schedules;
+    workLocationOptions.value = locations;
+  } finally {
+    assignmentOptionsLoading.value = false;
+  }
+}
+
+function openAssignDialog(row: EmployeeTableRow) {
+  assignmentForm.employee_id = row.id;
+  assignmentForm.employee_name = row.full_name;
+  assignmentForm.schedule_id = row.schedule_id;
+  assignmentForm.work_location_id = row.work_location_id;
+  assignmentVisible.value = true;
+
+  if (!scheduleOptions.value.length || !workLocationOptions.value.length) {
+    void loadAssignmentOptions();
+  }
+}
+
+function closeAssignDialog() {
+  assignmentVisible.value = false;
+  assignmentForm.employee_id = "";
+  assignmentForm.employee_name = "";
+  assignmentForm.schedule_id = null;
+  assignmentForm.work_location_id = null;
+}
+
+async function submitAssignment() {
+  if (!assignmentForm.employee_id) return;
+
+  assignmentSaving.value = true;
+  try {
+    const payload: HrUpdateEmployeeDTO = {
+      schedule_id: assignmentForm.schedule_id || null,
+      work_location_id: assignmentForm.work_location_id || null,
+    };
+
+    await employeeStore.updateEmployee(assignmentForm.employee_id, payload, {
+      showSuccess: false,
+    });
+
+    ElMessage.success("Employee assignment updated");
+    closeAssignDialog();
+    await fetchEmployees();
+  } catch (error) {
+    ElMessage.error(
+      (
+        error as {
+          response?: { data?: { user_message?: string; message?: string } };
+        }
+      )?.response?.data?.user_message ||
+        (
+          error as {
+            response?: { data?: { user_message?: string; message?: string } };
+          }
+        )?.response?.data?.message ||
+        (error as Error)?.message ||
+        "Failed to update assignment",
+    );
+  } finally {
+    assignmentSaving.value = false;
+  }
 }
 
 async function confirmDeleteEmployee(fullName: string) {
@@ -463,6 +601,18 @@ onMounted(() => {
           {{ row.position }}
         </template>
 
+        <template #manager_name="{ row }">
+          {{ row.manager_name }}
+        </template>
+
+        <template #schedule_name="{ row }">
+          {{ row.schedule_name }}
+        </template>
+
+        <template #work_location_name="{ row }">
+          {{ row.work_location_name }}
+        </template>
+
         <template #employment_type="{ row }">
           <ElTag effect="plain">{{ row.employment_type }}</ElTag>
         </template>
@@ -505,7 +655,7 @@ onMounted(() => {
             }"
             :loading="actionLoadingById[row.id]"
             @detail="goDetail(row)"
-            @assign-schedule="assignSchedule(row)"
+            @assign-schedule="openAssignDialog(row)"
             @delete="deleteEmployee(row)"
             @restore="restoreEmployee(row)"
           />
@@ -529,6 +679,69 @@ onMounted(() => {
       :loading="loading"
       @submitted="submitOnboard"
     />
+
+    <ElDialog
+      v-model="assignmentVisible"
+      width="520px"
+      title="Assign Schedule & Location"
+      :close-on-click-modal="false"
+      @closed="closeAssignDialog"
+    >
+      <ElForm label-position="top">
+        <ElFormItem label="Employee">
+          <ElInput :model-value="assignmentForm.employee_name" disabled />
+        </ElFormItem>
+
+        <ElFormItem label="Working Schedule">
+          <ElSelect
+            v-model="assignmentForm.schedule_id"
+            clearable
+            filterable
+            placeholder="Select schedule"
+            :loading="assignmentOptionsLoading"
+          >
+            <ElOption
+              v-for="item in scheduleOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </ElSelect>
+        </ElFormItem>
+
+        <ElFormItem label="Work Location">
+          <ElSelect
+            v-model="assignmentForm.work_location_id"
+            clearable
+            filterable
+            placeholder="Select work location"
+            :loading="assignmentOptionsLoading"
+          >
+            <ElOption
+              v-for="item in workLocationOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </ElSelect>
+        </ElFormItem>
+      </ElForm>
+
+      <template #footer>
+        <div class="assignment-actions">
+          <BaseButton plain :disabled="assignmentSaving" @click="closeAssignDialog">
+            Cancel
+          </BaseButton>
+          <BaseButton
+            type="primary"
+            :loading="assignmentSaving"
+            @click="submitAssignment"
+          >
+            Save Assignment
+          </BaseButton>
+        </div>
+      </template>
+    </ElDialog>
   </div>
 </template>
 
@@ -537,12 +750,26 @@ onMounted(() => {
   padding: 16px;
   max-width: 1460px;
   margin: 0 auto;
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 .table-shell {
   margin-top: 12px;
   border: 1px solid var(--border-color);
   background: var(--color-card);
+  box-shadow: var(--shadow-sm, 0 6px 16px rgba(16, 24, 40, 0.05));
+}
+
+.page-tool-bar {
+  margin-block: 12px;
+}
+
+.toolbar-search {
+  min-width: min(460px, 100%);
+}
+
+.toolbar-select {
+  min-width: 140px;
 }
 
 .account-cell {
@@ -564,12 +791,26 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
 }
-.page-tool-bar {
-  margin-block: 12px;
+
+.assignment-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
+
 @media (max-width: 780px) {
   .pagination-wrap {
     justify-content: flex-start;
+  }
+
+  .assignment-actions {
+    justify-content: stretch;
+  }
+
+  .assignment-actions :deep(.el-button),
+  .assignment-actions :deep(button) {
+    width: 100%;
   }
 }
 </style>

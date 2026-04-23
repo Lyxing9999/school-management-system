@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { CopyDocument, Refresh, UserFilled } from "@element-plus/icons-vue";
 
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 import { hrmsAdminService } from "~/api/hr_admin";
 import type {
+  HrEmployeeAccountListItemDTO,
   HrEmployeeDTO,
   HrUpdateEmployeeAccountDTO,
   HrUpdateEmployeeDTO,
@@ -14,6 +15,7 @@ import type {
 } from "~/api/hr_admin/employees/dto";
 import type { SelectOptionDTO } from "~/api/types/common/select-option.type";
 import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 
 definePageMeta({ layout: "default" });
@@ -43,6 +45,8 @@ type EmployeeForm = {
   full_name: string;
   department: string;
   position: string;
+  manager_user_id: string | null;
+  work_location_id: string | null;
   employment_type: EmploymentType;
   basic_salary: number | null;
   status: EmployeeStatus;
@@ -60,6 +64,7 @@ const router = useRouter();
 
 const employeeStore = useHrEmployeeStore();
 const scheduleService = hrmsAdminService().workingSchedule;
+const workLocationService = hrmsAdminService().workLocation;
 const { $api } = useNuxtApp();
 
 const employeeId = computed(() => String(route.params.id ?? ""));
@@ -73,13 +78,17 @@ const resetSaving = ref(false);
 const defaultResetSaving = ref(false);
 
 const scheduleOptionsLoading = ref(false);
+const locationOptionsLoading = ref(false);
 const accountOptionsLoading = ref(false);
+const managerOptionsLoading = ref(false);
 
 const employee = ref<HrEmployeeDTO | null>(null);
 const account = ref<AccountSummary>(null);
 const resetInfo = ref<{ message?: string; reset_link?: string } | null>(null);
 
 const scheduleOptions = ref<SelectOptionDTO[]>([]);
+const locationOptions = ref<SelectOptionDTO[]>([]);
+const managerOptions = ref<Array<{ value: string; label: string }>>([]);
 const accountOptions = ref<Array<{ value: string; label: string }>>([]);
 
 const employeeForm = reactive<EmployeeForm>(createEmptyEmployeeForm());
@@ -110,6 +119,8 @@ function createEmptyEmployeeForm(): EmployeeForm {
     full_name: "",
     department: "",
     position: "",
+    manager_user_id: null,
+    work_location_id: null,
     employment_type: "permanent",
     basic_salary: null,
     status: "active",
@@ -171,6 +182,8 @@ function fillEmployeeForm(data: HrEmployeeDTO) {
   employeeForm.full_name = data.full_name ?? "";
   employeeForm.department = data.department ?? "";
   employeeForm.position = data.position ?? "";
+  employeeForm.manager_user_id = data.manager_user_id ?? null;
+  employeeForm.work_location_id = data.work_location_id ?? null;
   employeeForm.employment_type =
     data.employment_type === "contract" ? "contract" : "permanent";
   employeeForm.basic_salary = data.basic_salary ?? 0;
@@ -235,6 +248,8 @@ function buildEmployeePayload(): HrUpdateEmployeeDTO | null {
     full_name: employeeForm.full_name.trim(),
     department: employeeForm.department.trim() || null,
     position: employeeForm.position.trim() || null,
+    manager_user_id: employeeForm.manager_user_id || null,
+    work_location_id: employeeForm.work_location_id || null,
     employment_type: employeeForm.employment_type,
     basic_salary: Number(employeeForm.basic_salary),
     status: employeeForm.status,
@@ -284,6 +299,61 @@ async function loadScheduleOptions() {
   }
 }
 
+async function loadWorkLocationOptions() {
+  locationOptionsLoading.value = true;
+  try {
+    locationOptions.value = await workLocationService.getWorkLocationSelectOptions(
+      { showError: false },
+    );
+  } catch {
+    locationOptions.value = [];
+  } finally {
+    locationOptionsLoading.value = false;
+  }
+}
+
+function normalizeRole(raw?: string | null): string {
+  return String(raw ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function buildAccountOptionLabel(
+  item: HrEmployeeAccountListItemDTO,
+  fallbackLabel: string,
+): string {
+  const primary = displayRelation(
+    item.account_name ?? item.username ?? item.email,
+    item.user_id ?? item.id,
+    fallbackLabel,
+  );
+  const secondary = String(item.account_email ?? item.email ?? "").trim();
+  if (!secondary || secondary === primary) return primary;
+  return `${primary} • ${secondary}`;
+}
+
+async function loadManagerOptions() {
+  managerOptionsLoading.value = true;
+  try {
+    const response = await employeeStore.getEmployeeAccounts({
+      page: 1,
+      limit: 500,
+      status: "active",
+    });
+
+    managerOptions.value = (response.items ?? [])
+      .filter((item) => normalizeRole(item.role) === "manager")
+      .map((item) => ({
+        value: String(item.user_id ?? item.id),
+        label: buildAccountOptionLabel(item, "Manager"),
+      }));
+  } catch {
+    managerOptions.value = [];
+  } finally {
+    managerOptionsLoading.value = false;
+  }
+}
+
 async function loadAccountOptions() {
   accountOptionsLoading.value = true;
   try {
@@ -293,11 +363,8 @@ async function loadAccountOptions() {
     });
 
     accountOptions.value = (response.items ?? []).map((item) => ({
-      value: item.id,
-      label:
-        item.email ||
-        item.username ||
-        `${item.role || "account"} (${item.id.slice(0, 8)}...)`,
+      value: String(item.user_id ?? item.id),
+      label: buildAccountOptionLabel(item, "Account"),
     }));
   } catch {
     accountOptions.value = [];
@@ -322,8 +389,71 @@ async function loadDetail() {
     account.value = accountRes;
     fillEmployeeForm(employeeRes);
     fillAccountForm();
+    assignForm.schedule_id = employeeRes.schedule_id ?? "";
 
-    await Promise.all([loadScheduleOptions(), loadAccountOptions()]);
+    await Promise.all([
+      loadScheduleOptions(),
+      loadWorkLocationOptions(),
+      loadManagerOptions(),
+      loadAccountOptions(),
+    ]);
+
+    if (
+      employeeRes.manager_user_id &&
+      !managerOptions.value.some(
+        (option) => option.value === employeeRes.manager_user_id,
+      )
+    ) {
+      managerOptions.value = [
+        {
+          value: employeeRes.manager_user_id,
+          label: displayRelation(
+            employeeRes.manager_name,
+            employeeRes.manager_user_id,
+            "Assigned manager",
+          ),
+        },
+        ...managerOptions.value,
+      ];
+    }
+
+    if (
+      employeeRes.work_location_id &&
+      !locationOptions.value.some(
+        (option) => option.value === employeeRes.work_location_id,
+      )
+    ) {
+      locationOptions.value = [
+        {
+          value: employeeRes.work_location_id,
+          label: displayRelation(
+            employeeRes.work_location_name,
+            employeeRes.work_location_id,
+            "Current work location",
+          ),
+        },
+        ...locationOptions.value,
+      ];
+    }
+
+    if (
+      employeeRes.schedule_id &&
+      !scheduleOptions.value.some(
+        (option) => option.value === employeeRes.schedule_id,
+      )
+    ) {
+      scheduleOptions.value = [
+        {
+          value: employeeRes.schedule_id,
+          label: displayRelation(
+            employeeRes.schedule_name,
+            employeeRes.schedule_id,
+            "Current schedule",
+          ),
+        },
+        ...scheduleOptions.value,
+      ];
+    }
   } catch (error) {
     notifyError(error, "Failed to load employee detail");
   } finally {
@@ -450,13 +580,40 @@ async function requestPasswordReset() {
 async function resetPasswordDefault() {
   if (!employeeId.value) return;
 
+  let newPassword = "";
+  try {
+    const prompt = await ElMessageBox.prompt(
+      "Enter a new password (minimum 6 characters).",
+      "Reset Employee Password",
+      {
+        inputType: "password",
+        inputValue: "",
+        inputPlaceholder: "New password",
+        confirmButtonText: "Reset",
+        cancelButtonText: "Cancel",
+        inputValidator: (value) => {
+          if (!value || value.trim().length < 6) {
+            return "Password must be at least 6 characters";
+          }
+          return true;
+        },
+      },
+    );
+    newPassword = String(prompt.value ?? "").trim();
+    if (!newPassword) return;
+  } catch (error) {
+    if (error === "cancel" || error === "close") return;
+    notifyError(error, "Failed to collect new password");
+    return;
+  }
+
   defaultResetSaving.value = true;
   try {
     if (!$api) throw new Error("API client unavailable");
 
     await ($api as any).post(
       `/api/hrms/employees/${employeeId.value}/account/reset-password`,
-      {},
+      { new_password: newPassword },
     );
 
     ElMessage.success("Password reset successfully");
@@ -537,6 +694,24 @@ onMounted(loadDetail);
               <strong>{{ employee?.department || "-" }}</strong>
             </div>
             <div class="mini-item">
+              <span>Manager</span>
+              <strong>{{
+                displayRelation(
+                  employee?.manager_name,
+                  employee?.manager_user_id,
+                )
+              }}</strong>
+            </div>
+            <div class="mini-item">
+              <span>Location</span>
+              <strong>{{
+                displayRelation(
+                  employee?.work_location_name,
+                  employee?.work_location_id,
+                )
+              }}</strong>
+            </div>
+            <div class="mini-item">
               <span>Salary</span>
               <strong>{{ formatCurrency(employee?.basic_salary) }}</strong>
             </div>
@@ -596,6 +771,40 @@ onMounted(loadDetail);
 
             <el-form-item label="Position">
               <el-input v-model="employeeForm.position" />
+            </el-form-item>
+
+            <el-form-item label="Manager">
+              <el-select
+                v-model="employeeForm.manager_user_id"
+                clearable
+                filterable
+                placeholder="Select manager"
+                :loading="managerOptionsLoading"
+              >
+                <el-option
+                  v-for="item in managerOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="Work Location">
+              <el-select
+                v-model="employeeForm.work_location_id"
+                clearable
+                filterable
+                placeholder="Select work location"
+                :loading="locationOptionsLoading"
+              >
+                <el-option
+                  v-for="item in locationOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
             </el-form-item>
 
             <el-form-item label="Employment Type">
@@ -821,6 +1030,10 @@ onMounted(loadDetail);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 16px;
+  max-width: 1460px;
+  margin: 0 auto;
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 .header-actions {
@@ -844,7 +1057,9 @@ onMounted(loadDetail);
 
 .profile-card,
 .section-card {
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid var(--border-color, var(--el-border-color-light));
+  background: var(--color-card, var(--el-bg-color));
+  box-shadow: var(--shadow-sm, 0 6px 16px rgba(16, 24, 40, 0.05));
 }
 
 .profile-head {
@@ -873,7 +1088,7 @@ onMounted(loadDetail);
 .profile-meta {
   margin-top: 2px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--muted-color, var(--el-text-color-secondary));
   word-break: break-word;
 }
 
@@ -884,22 +1099,23 @@ onMounted(loadDetail);
 }
 
 .mini-item {
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--border-color, var(--el-border-color-lighter));
   border-radius: 10px;
   padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  background: color-mix(in srgb, var(--color-card, #fff) 92%, var(--color-bg, #f7f8fa) 8%);
 }
 
 .mini-item span {
   font-size: 11px;
-  color: var(--el-text-color-secondary);
+  color: var(--muted-color, var(--el-text-color-secondary));
 }
 
 .mini-item strong {
   font-size: 13px;
-  color: var(--el-text-color-primary);
+  color: var(--text-color, var(--el-text-color-primary));
   word-break: break-word;
 }
 
@@ -907,12 +1123,14 @@ onMounted(loadDetail);
   font-size: 15px;
   font-weight: 700;
   margin-bottom: 10px;
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 .sub-title {
   font-size: 13px;
   font-weight: 650;
   margin-bottom: 10px;
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 .form-grid {
@@ -945,39 +1163,48 @@ onMounted(loadDetail);
   padding: 5px 10px;
   border-radius: 999px;
   font-size: 12px;
-  color: var(--el-color-success-dark-2);
-  background: var(--el-color-success-light-9);
+  color: var(--color-success-dark-2, var(--el-color-success-dark-2));
+  background: color-mix(
+    in srgb,
+    var(--button-success-bg, var(--el-color-success)) 12%,
+    var(--color-card, #fff) 88%
+  );
 }
 
 .account-badge--none {
-  color: var(--el-color-warning-dark-2);
-  background: var(--el-color-warning-light-9);
+  color: var(--color-warning-dark-2, var(--el-color-warning-dark-2));
+  background: color-mix(
+    in srgb,
+    var(--button-warning-bg, var(--el-color-warning)) 14%,
+    var(--color-card, #fff) 86%
+  );
 }
 
 .reset-link-box {
-  border: 1px dashed var(--el-border-color);
+  border: 1px dashed var(--border-color, var(--el-border-color));
   border-radius: 10px;
   padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  background: color-mix(in srgb, var(--color-card, #fff) 94%, var(--color-bg, #f7f8fa) 6%);
 }
 
 .reset-link-title {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--muted-color, var(--el-text-color-secondary));
 }
 
 .reset-link-value {
   font-size: 12px;
   word-break: break-all;
-  color: var(--el-text-color-primary);
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 .contract-section-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
+  color: var(--text-color, var(--el-text-color-primary));
   margin-bottom: 8px;
 }
 

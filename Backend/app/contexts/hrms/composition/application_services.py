@@ -43,6 +43,7 @@ from app.contexts.hrms.queries.employee.find_employee_by_user_id import FindEmpl
 
 
 from app.contexts.hrms.use_cases.employee.soft_delete_employee_account import SoftDeleteEmployeeAccountUseCase
+from app.contexts.hrms.use_cases.employee.restore_employee_account import RestoreEmployeeAccountUseCase
 from app.contexts.hrms.use_cases.working_schedule.create_working_schedule import CreateWorkingScheduleUseCase
 from app.contexts.hrms.use_cases.working_schedule.update_working_schedule import UpdateWorkingScheduleUseCase
 from app.contexts.hrms.use_cases.working_schedule.set_default_working_schedule import SetDefaultWorkingScheduleUseCase
@@ -169,6 +170,10 @@ class HrmsApplicationServices:
         )
 
         self.soft_delete_employee_account = SoftDeleteEmployeeAccountUseCase(  
+            employee_repository=repositories.employee_repository,
+            iam_gateway=repositories.iam_gateway,
+        )
+        self.restore_employee_account = RestoreEmployeeAccountUseCase(
             employee_repository=repositories.employee_repository,
             iam_gateway=repositories.iam_gateway,
         )
@@ -492,6 +497,7 @@ class HrmsApplicationServices:
             assign_employee_schedule=self.assign_employee_schedule.execute,
             onboard_with_account=self.onboard_employee_with_account.execute,    
             soft_delete_account=self.soft_delete_employee_account.execute,
+            restore_account=self.restore_employee_account.execute,
         )
 
         self.attendance = SimpleNamespace(

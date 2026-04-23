@@ -57,7 +57,11 @@ export type HrCreateEmployeeDTO = {
   employment_type?: HrEmploymentType;
   basic_salary: number;
   contract?: HrEmployeeContractDTO | null;
+  manager_user_id?: string | null;
+  schedule_id?: string | null;
+  work_location_id?: string | null;
   status?: HrEmployeeStatus;
+  photo_url?: string | null;
 };
 
 export type HrUpdateEmployeeDTO = Partial<HrCreateEmployeeDTO> & {
@@ -82,6 +86,13 @@ export interface HrEmployeeAccountDTO {
   role?: string | null;
   status?: string | null;
   account_name?: string | null;
+  deleted_at?: string | null;
+  lifecycle?: {
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+    deleted_by?: string | null;
+  } | null;
   full_name?: string | null;
   display_name?: string | null;
   name?: string | null;
@@ -148,10 +159,17 @@ export type ListEmployeeAccountsParams = {
 
 export interface HrEmployeeAccountListItemDTO {
   id: string;
+  user_id?: string | null;
   email?: string | null;
+  account_email?: string | null;
   username?: string | null;
+  account_name?: string | null;
   role?: string | null;
   status?: string | null;
+  deleted_at?: string | null;
+  lifecycle?: {
+    deleted_at?: string | null;
+  } | null;
 }
 
 export interface HrEmployeeAccountPaginatedDTO {

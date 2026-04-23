@@ -4,10 +4,13 @@ import { ElDialog, ElMessage } from "element-plus";
 import { Role } from "~/api/types/enums/role.enum";
 import type {
   HrCreateEmployeeDTO,
+  HrEmployeeAccountListItemDTO,
   HrEmployeeContractDTO,
 } from "~/api/hr_admin/employees/dto";
 import EmployeeFormFields from "~/components/hrms/employees/EmployeeFormFields.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
+import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 type HrOnboardRole = Role.EMPLOYEE | Role.MANAGER | Role.PAYROLL_MANAGER;
 
@@ -16,6 +19,7 @@ type EmployeeFormModel = {
   full_name: string;
   department: string;
   position: string;
+  manager_user_id: string | null;
   employment_type: "permanent" | "contract";
   basic_salary: number | null;
   status: "active" | "inactive";
@@ -65,6 +69,7 @@ function createDefaultForm(): EmployeeFormModel {
     full_name: "",
     department: "",
     position: "",
+    manager_user_id: null,
     employment_type: "permanent",
     basic_salary: null,
     status: "active",
@@ -77,6 +82,9 @@ function createDefaultForm(): EmployeeFormModel {
 }
 
 const form = ref<EmployeeFormModel>(createDefaultForm());
+const employeeStore = useHrEmployeeStore();
+const managerOptionsLoading = ref(false);
+const managerOptions = ref<Array<{ value: string; label: string }>>([]);
 
 watch(
   () => form.value.employment_type,
@@ -134,6 +142,58 @@ function handleClosed() {
   resetForm();
 }
 
+function normalizeRole(raw?: string | null): string {
+  return String(raw ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function buildAccountOptionLabel(
+  item: HrEmployeeAccountListItemDTO,
+  fallbackLabel: string,
+): string {
+  const primary = displayRelation(
+    item.account_name ?? item.username ?? item.email,
+    item.user_id ?? item.id,
+    fallbackLabel,
+  );
+  const secondary = String(item.account_email ?? item.email ?? "").trim();
+  if (!secondary || secondary === primary) return primary;
+  return `${primary} • ${secondary}`;
+}
+
+async function loadManagerOptions() {
+  managerOptionsLoading.value = true;
+  try {
+    const response = await employeeStore.getEmployeeAccounts({
+      page: 1,
+      limit: 500,
+      status: "active",
+    });
+
+    managerOptions.value = (response.items ?? [])
+      .filter((item) => normalizeRole(item.role) === "manager")
+      .map((item) => ({
+        value: String(item.user_id ?? item.id),
+        label: buildAccountOptionLabel(item, "Manager"),
+      }));
+  } catch {
+    managerOptions.value = [];
+  } finally {
+    managerOptionsLoading.value = false;
+  }
+}
+
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible && !managerOptions.value.length) {
+      void loadManagerOptions();
+    }
+  },
+  { immediate: true },
+);
+
 function submit() {
   const current = form.value;
 
@@ -186,6 +246,7 @@ function submit() {
     full_name: current.full_name.trim(),
     department: current.department.trim() || null,
     position: current.position.trim() || null,
+    manager_user_id: current.manager_user_id || null,
     employment_type: current.employment_type,
     basic_salary: Number(current.basic_salary),
     status: current.status,
@@ -223,7 +284,12 @@ function submit() {
     @update:model-value="emit('update:visible', $event)"
     @closed="handleClosed"
   >
-    <EmployeeFormFields v-model="form" mode="onboard" />
+    <EmployeeFormFields
+      v-model="form"
+      mode="onboard"
+      :manager-options="managerOptions"
+      :manager-options-loading="managerOptionsLoading"
+    />
 
     <template #footer>
       <div class="dialog-actions">

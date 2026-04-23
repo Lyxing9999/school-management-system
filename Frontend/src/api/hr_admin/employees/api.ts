@@ -111,16 +111,16 @@ export class EmployeeApi {
     return res.data;
   }
 
-  async softDeleteEmployeeAccount(id: string) {
+  async softDeleteEmployeeAccount(employeeId: string) {
     const res = await this.$api.post<HrSoftDeleteEmployeeAccountResponse>(
-      `${this.baseURL}/${id}/account/soft-delete`,
+      `${this.baseURL}/${employeeId}/account/soft-delete`,
     );
     return res.data;
   }
 
-  async restoreEmployeeAccount(id: string) {
+  async restoreEmployeeAccount(employeeId: string) {
     const res = await this.$api.post<HrRestoreEmployeeAccountResponse>(
-      `${this.baseURL}/${id}/account/restore`,
+      `${this.baseURL}/${employeeId}/account/restore`,
     );
     return res.data;
   }
@@ -141,30 +141,32 @@ export class EmployeeApi {
     return res.data;
   }
 
-  async updateEmployeeAccount(id: string, payload: HrUpdateEmployeeAccountDTO) {
+  async updateEmployeeAccount(
+    employeeId: string,
+    payload: HrUpdateEmployeeAccountDTO,
+  ) {
     const res = await this.$api.patch<ApiResponse<HrEmployeeAccountDTO>>(
-      `${this.baseURL}/${id}/account`,
+      `${this.baseURL}/${employeeId}/account`,
       payload,
     );
     return res.data;
   }
 
-  async requestEmployeeAccountPasswordReset(id: string) {
+  async requestEmployeeAccountPasswordReset(employeeId: string) {
     const res = await this.$api.post<ApiResponse<HrPasswordResetResponse>>(
-      `${this.baseURL}/${id}/account/password-reset`,
+      `${this.baseURL}/${employeeId}/account/password-reset`,
       {},
     );
     return res.data;
   }
 
   async setEmployeeAccountStatus(
-    employeeId: string,
+    userId: string,
     payload: { status: Status },
   ) {
-    console.log("employee api baseURL:", this.$api.defaults.baseURL);
     const res = await this.$api.patch<
       ApiResponse<{ id: string; status: Status }>
-    >(`${this.baseURL}/${employeeId}/account/status`, payload);
+    >(`${this.baseURL}/${userId}/account/status`, payload);
     return res.data;
   }
 }

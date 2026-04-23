@@ -14,6 +14,7 @@ interface EmployeeFormModel {
   full_name: string;
   department: string;
   position: string;
+  manager_user_id: string | null;
   employment_type: HrEmploymentType;
   basic_salary: number | null;
   status: "active" | "inactive";
@@ -27,6 +28,8 @@ interface EmployeeFormModel {
 const props = defineProps<{
   modelValue: EmployeeFormModel;
   mode: Mode;
+  managerOptions?: Array<{ value: string; label: string }>;
+  managerOptionsLoading?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -125,6 +128,24 @@ function updateEmploymentType(value: HrEmploymentType) {
           placeholder="Position"
           @update:model-value="update('position', $event)"
         />
+      </el-form-item>
+
+      <el-form-item label="Manager">
+        <el-select
+          :model-value="form.manager_user_id"
+          clearable
+          filterable
+          placeholder="Select manager"
+          :loading="props.managerOptionsLoading"
+          @update:model-value="update('manager_user_id', $event || null)"
+        >
+          <el-option
+            v-for="item in props.managerOptions || []"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
       </el-form-item>
 
       <el-form-item label="Employment Type">

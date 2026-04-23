@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import {
   ElCard,
   ElDialog,
@@ -23,7 +23,6 @@ import type { ColumnConfig } from "~/components/types/tableEdit";
 
 import type {
   HrCreateEmployeeAccountDTO,
-  HrEmployeeAccountListItemDTO,
   HrEmployeeDTO,
   HrEmployeeWithAccountSummaryDTO,
 } from "~/api/hr_admin/employees/dto";
@@ -40,9 +39,12 @@ type AccountStatusValue = `${Status}`;
 
 interface AccountTableRow {
   id: string;
-  user_id?: string | null;
+  employee_id: string;
+  user_id: string | null;
+  employee_name: string;
+  account_name: string;
+  account_email?: string | null;
   is_linked?: boolean;
-  account_name?: string | null;
   email?: string | null;
   username?: string | null;
   role?: string | null;
@@ -85,7 +87,8 @@ const createForm = reactive<{
 
 const tableColumns: ColumnConfig<AccountTableRow>[] = [
   { field: "username", label: "Username", minWidth: "180px" },
-  { field: "account_name", label: "Account Name", minWidth: "220px" },
+  { field: "employee_name", label: "Employee", minWidth: "220px" },
+  { field: "account_name", label: "Account", minWidth: "220px" },
   { field: "email", label: "Email", minWidth: "260px" },
   {
     field: "role",
@@ -146,6 +149,11 @@ function toManagerAccountRow(
   const account = item.account ?? item.user ?? null;
   if (!account) return null;
 
+  const employeeId = String(item.employee.id ?? "").trim();
+  if (!employeeId) return null;
+
+  const userId = String(account.user_id ?? account.id ?? "").trim() || null;
+
   const role = normalizeRole(account.role);
   if (!roleAllowed(role)) return null;
 
@@ -159,10 +167,19 @@ function toManagerAccountRow(
     null;
 
   return {
-    id: item.employee.id,
-    user_id: account.id,
-    account_name: item.employee.full_name ?? null,
-    email: account.email ?? null,
+    id: employeeId,
+    employee_id: employeeId,
+    user_id: userId,
+    employee_name: displayRelation(
+      item.employee.employee_name ?? item.employee.full_name,
+      employeeId,
+    ),
+    account_name: displayRelation(
+      account.account_name ?? account.username ?? account.email,
+      userId,
+    ),
+    account_email: account.account_email ?? account.email ?? null,
+    email: account.account_email ?? account.email ?? null,
     username: account.username ?? null,
     role,
     status: account.status ?? null,
@@ -171,11 +188,31 @@ function toManagerAccountRow(
   };
 }
 
-function resolveIamTargetId(row: AccountTableRow): string {
-  const iamId = String(row.user_id ?? "").trim();
-  if (iamId) return iamId;
-  return String(row.id);
+function employeeActionKey(row: AccountTableRow): string {
+  return String(row.employee_id || row.id);
 }
+
+function userActionKey(row: AccountTableRow): string {
+  return String(row.user_id ?? "").trim();
+}
+
+function requireUserTargetId(row: AccountTableRow): string | null {
+  const userId = userActionKey(row);
+  if (userId) return userId;
+
+  ElMessage.warning(
+    `Missing linked account id for ${displayRelation(
+      row.employee_name,
+      row.employee_id,
+    )}`,
+  );
+  return null;
+}
+
+// HRMS account routes are mixed-scope:
+// - soft-delete / restore are employee-scoped
+// - status update is IAM user-scoped
+// Keep both IDs on each row and route them explicitly.
 
 async function fetchManagerAccounts(page = currentPage.value) {
   loading.value = true;
@@ -278,8 +315,8 @@ async function handleDeleteAccount(row: AccountTableRow) {
   try {
     await ElMessageBox.confirm(
       `Delete account for ${displayRelation(
-        row.account_name || row.email,
-        row.user_id || row.id,
+        row.employee_name,
+        row.employee_id,
       )}?`,
       "Confirm Delete Account",
       {
@@ -289,17 +326,17 @@ async function handleDeleteAccount(row: AccountTableRow) {
       },
     );
 
-    const targetId = resolveIamTargetId(row);
-    const rowId = targetId;
+    const targetEmployeeId = employeeActionKey(row);
+    const rowId = targetEmployeeId;
     deleteAccountSaving.value[rowId] = true;
-    await employeeStore.softDeleteEmployeeAccount(targetId);
+    await employeeStore.softDeleteEmployeeAccount(targetEmployeeId);
     ElMessage.success("Account deleted successfully");
     await fetchManagerAccounts(currentPage.value);
   } catch (error: any) {
     if (error === "cancel" || error === "close") return;
     ElMessage.error(mapError(error, "Failed to delete account"));
   } finally {
-    deleteAccountSaving.value[resolveIamTargetId(row)] = false;
+    deleteAccountSaving.value[employeeActionKey(row)] = false;
   }
 }
 
@@ -307,8 +344,8 @@ async function handleRestoreAccount(row: AccountTableRow) {
   try {
     await ElMessageBox.confirm(
       `Restore account for ${displayRelation(
-        row.account_name || row.email,
-        row.user_id || row.id,
+        row.employee_name,
+        row.employee_id,
       )}?`,
       "Confirm Restore Account",
       {
@@ -318,17 +355,17 @@ async function handleRestoreAccount(row: AccountTableRow) {
       },
     );
 
-    const targetId = resolveIamTargetId(row);
-    const rowId = targetId;
+    const targetEmployeeId = employeeActionKey(row);
+    const rowId = targetEmployeeId;
     restoreAccountSaving.value[rowId] = true;
-    await employeeStore.restoreEmployeeAccount(targetId);
+    await employeeStore.restoreEmployeeAccount(targetEmployeeId);
     ElMessage.success("Account restored successfully");
     await fetchManagerAccounts(currentPage.value);
   } catch (error: any) {
     if (error === "cancel" || error === "close") return;
     ElMessage.error(mapError(error, "Failed to restore account"));
   } finally {
-    restoreAccountSaving.value[resolveIamTargetId(row)] = false;
+    restoreAccountSaving.value[employeeActionKey(row)] = false;
   }
 }
 
@@ -341,12 +378,14 @@ async function handleSetAccountStatus(
   const previous = String(row.status ?? Status.ACTIVE);
   if (previous === status) return;
 
-  const targetId = resolveIamTargetId(row);
-  const rowId = targetId;
+  const targetUserId = requireUserTargetId(row);
+  if (!targetUserId) return;
+
+  const rowId = targetUserId;
   updateStatusSaving.value[rowId] = true;
 
   try {
-    await employeeStore.setEmployeeAccountStatus(targetId, {
+    await employeeStore.setEmployeeAccountStatus(targetUserId, {
       status: status as Status,
     });
     row.status = status;
@@ -362,6 +401,12 @@ async function handleSetAccountStatus(
 async function handleSearch() {
   currentPage.value = 1;
   await fetchManagerAccounts(1);
+}
+
+function resetFilters() {
+  search.value = "";
+  roleFilter.value = "all";
+  void fetchManagerAccounts(1);
 }
 
 onMounted(async () => {
@@ -418,7 +463,7 @@ onMounted(async () => {
       </template>
     </PageToolbar>
 
-    <ElCard>
+    <ElCard class="table-shell" shadow="never">
       <SmartTable
         :data="rows"
         :columns="tableColumns"
@@ -460,7 +505,7 @@ onMounted(async () => {
               :model-value="String(row.status || Status.ACTIVE)"
               size="small"
               style="width: 132px"
-              :disabled="updateStatusSaving?.[String(row.id)] ?? false"
+              :disabled="!row.user_id || (updateStatusSaving?.[userActionKey(row)] ?? false)"
               @change="(value) => handleSetAccountStatus(row, value as AccountStatusValue)"
             >
               <ElOption label="Active" :value="Status.ACTIVE" />
@@ -473,7 +518,7 @@ onMounted(async () => {
               size="small"
               type="danger"
               plain
-              :loading="deleteAccountSaving?.[String(row.id)] ?? false"
+              :loading="deleteAccountSaving?.[employeeActionKey(row)] ?? false"
               @click="handleDeleteAccount(row)"
             >
               Delete
@@ -483,7 +528,7 @@ onMounted(async () => {
               size="small"
               type="success"
               plain
-              :loading="restoreAccountSaving?.[String(row.id)] ?? false"
+              :loading="restoreAccountSaving?.[employeeActionKey(row)] ?? false"
               @click="handleRestoreAccount(row)"
             >
               Restore
@@ -610,9 +655,14 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-width: 1460px;
+  margin: 0 auto;
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 .table-shell {
-  padding: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--color-card);
+  box-shadow: var(--shadow-sm, 0 6px 16px rgba(16, 24, 40, 0.05));
 }
 </style>
