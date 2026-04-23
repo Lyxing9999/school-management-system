@@ -23,10 +23,15 @@ import type { ColumnConfig } from "~/components/types/tableEdit";
 
 import type {
   HrCreateEmployeeAccountDTO,
+  HrEmployeeAccountListItemDTO,
   HrEmployeeDTO,
   HrEmployeeWithAccountSummaryDTO,
 } from "~/api/hr_admin/employees/dto";
 import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
+import {
+  buildAccountOptionLabel,
+  normalizeAccountRole,
+} from "~/api/hr_admin/employees/accountOptions";
 import { ROUTES } from "~/constants/routes";
 import { Status } from "~/api/types/enums/status.enum";
 import { Role } from "~/api/types/enums/role.enum";
@@ -115,12 +120,6 @@ const tableColumns: ColumnConfig<AccountTableRow>[] = [
   },
 ];
 
-function normalizeRole(raw?: string | null): string {
-  return String(raw ?? "")
-    .trim()
-    .toLowerCase();
-}
-
 function roleAllowed(role: string) {
   if (roleFilter.value === "all") {
     return (
@@ -128,19 +127,6 @@ function roleAllowed(role: string) {
     );
   }
   return role === roleFilter.value;
-}
-
-function mapError(error: unknown, fallback: string) {
-  if (error && typeof error === "object" && "response" in error) {
-    const e = error as {
-      response?: { data?: { user_message?: string; message?: string } };
-    };
-    return (
-      e.response?.data?.user_message || e.response?.data?.message || fallback
-    );
-  }
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
 }
 
 function toManagerAccountRow(
@@ -152,9 +138,9 @@ function toManagerAccountRow(
   const employeeId = String(item.employee.id ?? "").trim();
   if (!employeeId) return null;
 
-  const userId = String(account.user_id ?? account.id ?? "").trim() || null;
+  const userId = String(account.user_id ?? "").trim() || null;
 
-  const role = normalizeRole(account.role);
+  const role = normalizeAccountRole(account.role);
   if (!roleAllowed(role)) return null;
 
   const accountRecord = account as unknown as Record<string, unknown>;
@@ -174,9 +160,9 @@ function toManagerAccountRow(
       item.employee.employee_name ?? item.employee.full_name,
       employeeId,
     ),
-    account_name: displayRelation(
-      account.account_name ?? account.username ?? account.email,
-      userId,
+    account_name: buildAccountOptionLabel(
+      account as HrEmployeeAccountListItemDTO,
+      "Account",
     ),
     account_email: account.account_email ?? account.email ?? null,
     email: account.account_email ?? account.email ?? null,
@@ -231,8 +217,8 @@ async function fetchManagerAccounts(page = currentPage.value) {
 
     totalRows.value = rows.value.length;
     currentPage.value = page;
-  } catch (error) {
-    ElMessage.error(mapError(error, "Failed to load employee accounts"));
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -259,8 +245,8 @@ async function fetchCreateCandidates(keyword = "") {
     createCandidates.value = (res.items ?? [])
       .filter((item) => !(item.account ?? item.user))
       .map((item) => item.employee);
-  } catch (error) {
-    ElMessage.error(mapError(error, "Failed to load available employees"));
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     createCandidatesLoading.value = false;
   }
@@ -301,11 +287,10 @@ async function submitCreateAccount() {
   createSaving.value = true;
   try {
     await employeeStore.createAccount(createForm.employee_id, payload);
-    ElMessage.success("Employee account created successfully");
     closeCreateDialog();
     await fetchManagerAccounts(currentPage.value);
-  } catch (error) {
-    ElMessage.error(mapError(error, "Failed to create account"));
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     createSaving.value = false;
   }
@@ -330,11 +315,9 @@ async function handleDeleteAccount(row: AccountTableRow) {
     const rowId = targetEmployeeId;
     deleteAccountSaving.value[rowId] = true;
     await employeeStore.softDeleteEmployeeAccount(targetEmployeeId);
-    ElMessage.success("Account deleted successfully");
     await fetchManagerAccounts(currentPage.value);
   } catch (error: any) {
     if (error === "cancel" || error === "close") return;
-    ElMessage.error(mapError(error, "Failed to delete account"));
   } finally {
     deleteAccountSaving.value[employeeActionKey(row)] = false;
   }
@@ -359,11 +342,9 @@ async function handleRestoreAccount(row: AccountTableRow) {
     const rowId = targetEmployeeId;
     restoreAccountSaving.value[rowId] = true;
     await employeeStore.restoreEmployeeAccount(targetEmployeeId);
-    ElMessage.success("Account restored successfully");
     await fetchManagerAccounts(currentPage.value);
   } catch (error: any) {
     if (error === "cancel" || error === "close") return;
-    ElMessage.error(mapError(error, "Failed to restore account"));
   } finally {
     restoreAccountSaving.value[employeeActionKey(row)] = false;
   }
@@ -389,10 +370,8 @@ async function handleSetAccountStatus(
       status: status as Status,
     });
     row.status = status;
-    ElMessage.success("Account status updated");
-  } catch (error) {
+  } catch {
     row.status = previous;
-    ElMessage.error(mapError(error, "Failed to update account status"));
   } finally {
     updateStatusSaving.value[rowId] = false;
   }

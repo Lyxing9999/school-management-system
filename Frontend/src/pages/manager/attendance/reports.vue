@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import {
-  ElMessage,
   ElPagination,
   ElSelect,
   ElOption,
@@ -76,8 +75,8 @@ const fetchTeam = async () => {
     teamAttendances.value = res.items;
     teamTotal.value = res.pagination.total;
     hasFetchedTeam.value = true;
-  } catch (e: any) {
-    ElMessage.error(e?.message || "Failed to fetch team attendance");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     loadingTeam.value = false;
   }
@@ -98,8 +97,8 @@ const fetchWrong = async () => {
     wrongLocationReports.value = res.items;
     wrongTotal.value = res.pagination.total;
     hasFetchedWrong.value = true;
-  } catch (e: any) {
-    ElMessage.error(e?.message || "Failed to fetch wrong location reports");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     loadingWrong.value = false;
   }

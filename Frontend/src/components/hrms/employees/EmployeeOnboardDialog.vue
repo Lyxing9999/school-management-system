@@ -4,13 +4,12 @@ import { ElDialog, ElMessage } from "element-plus";
 import { Role } from "~/api/types/enums/role.enum";
 import type {
   HrCreateEmployeeDTO,
-  HrEmployeeAccountListItemDTO,
   HrEmployeeContractDTO,
 } from "~/api/hr_admin/employees/dto";
 import EmployeeFormFields from "~/components/hrms/employees/EmployeeFormFields.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
-import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
+import { toManagerSelectOptions } from "~/api/hr_admin/employees/accountOptions";
 
 type HrOnboardRole = Role.EMPLOYEE | Role.MANAGER | Role.PAYROLL_MANAGER;
 
@@ -142,26 +141,6 @@ function handleClosed() {
   resetForm();
 }
 
-function normalizeRole(raw?: string | null): string {
-  return String(raw ?? "")
-    .trim()
-    .toLowerCase();
-}
-
-function buildAccountOptionLabel(
-  item: HrEmployeeAccountListItemDTO,
-  fallbackLabel: string,
-): string {
-  const primary = displayRelation(
-    item.account_name ?? item.username ?? item.email,
-    item.user_id ?? item.id,
-    fallbackLabel,
-  );
-  const secondary = String(item.account_email ?? item.email ?? "").trim();
-  if (!secondary || secondary === primary) return primary;
-  return `${primary} • ${secondary}`;
-}
-
 async function loadManagerOptions() {
   managerOptionsLoading.value = true;
   try {
@@ -171,12 +150,7 @@ async function loadManagerOptions() {
       status: "active",
     });
 
-    managerOptions.value = (response.items ?? [])
-      .filter((item) => normalizeRole(item.role) === "manager")
-      .map((item) => ({
-        value: String(item.user_id ?? item.id),
-        label: buildAccountOptionLabel(item, "Manager"),
-      }));
+    managerOptions.value = toManagerSelectOptions(response.items ?? []);
   } catch {
     managerOptions.value = [];
   } finally {

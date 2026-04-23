@@ -6,7 +6,6 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElMessage,
   ElMessageBox,
   ElOption,
   ElPagination,
@@ -32,6 +31,7 @@ import type { SelectOptionDTO } from "~/api/types/common/select-option.type";
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import SummaryCardGrid from "~/components/summary/SummaryCardGrid.vue";
 import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
+import { toManagerSelectOptions } from "~/api/hr_admin/employees/accountOptions";
 definePageMeta({ layout: "default" });
 
 const router = useRouter();
@@ -49,6 +49,7 @@ const assignmentSaving = ref(false);
 const assignmentOptionsLoading = ref(false);
 const scheduleOptions = ref<SelectOptionDTO[]>([]);
 const workLocationOptions = ref<SelectOptionDTO[]>([]);
+const managerOptions = ref<Array<{ value: string; label: string }>>([]);
 
 const filters = reactive({
   q: "",
@@ -69,6 +70,7 @@ type EmployeeTableRow = {
   department: string;
   position: string;
   manager_name: string;
+  manager_user_id: string | null;
   schedule_name: string;
   work_location_name: string;
   schedule_id: string | null;
@@ -86,11 +88,13 @@ type EmployeeTableRow = {
 const assignmentForm = reactive<{
   employee_id: string;
   employee_name: string;
+  manager_user_id: string | null;
   schedule_id: string | null;
   work_location_id: string | null;
 }>({
   employee_id: "",
   employee_name: "",
+  manager_user_id: null,
   schedule_id: null,
   work_location_id: null,
 });
@@ -152,6 +156,7 @@ const filteredRows = computed<EmployeeTableRow[]>(() => {
         employee.manager_name,
         employee.manager_user_id,
       ),
+      manager_user_id: employee.manager_user_id ?? null,
       schedule_name: displayRelation(employee.schedule_name, employee.schedule_id),
       work_location_name: displayRelation(
         employee.work_location_name,
@@ -323,21 +328,8 @@ async function fetchEmployees() {
       Math.ceil(filteredSourceRows.value.length / pageSize.value),
     );
     if (page.value > maxPage) page.value = maxPage;
-  } catch (error) {
-    const message =
-      (
-        error as {
-          response?: { data?: { user_message?: string; message?: string } };
-        }
-      )?.response?.data?.user_message ||
-      (
-        error as {
-          response?: { data?: { user_message?: string; message?: string } };
-        }
-      )?.response?.data?.message ||
-      (error as Error)?.message ||
-      "Failed to load employees";
-    ElMessage.error(message);
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -357,12 +349,22 @@ function goDetail(row: EmployeeTableRow) {
 async function loadAssignmentOptions() {
   assignmentOptionsLoading.value = true;
   try {
-    const [schedules, locations] = await Promise.all([
+    const [schedules, locations, managerAccounts] = await Promise.all([
       workingScheduleService.getScheduleSelectOptions({ showError: false }),
       workLocationService.getWorkLocationSelectOptions({ showError: false }),
+      employeeStore.getEmployeeAccounts({
+        page: 1,
+        limit: 500,
+        status: "active",
+      }),
     ]);
     scheduleOptions.value = schedules;
     workLocationOptions.value = locations;
+    managerOptions.value = toManagerSelectOptions(managerAccounts.items ?? []);
+  } catch {
+    scheduleOptions.value = [];
+    workLocationOptions.value = [];
+    managerOptions.value = [];
   } finally {
     assignmentOptionsLoading.value = false;
   }
@@ -371,12 +373,28 @@ async function loadAssignmentOptions() {
 function openAssignDialog(row: EmployeeTableRow) {
   assignmentForm.employee_id = row.id;
   assignmentForm.employee_name = row.full_name;
+  assignmentForm.manager_user_id = row.manager_user_id;
   assignmentForm.schedule_id = row.schedule_id;
   assignmentForm.work_location_id = row.work_location_id;
   assignmentVisible.value = true;
 
-  if (!scheduleOptions.value.length || !workLocationOptions.value.length) {
+  if (
+    !scheduleOptions.value.length ||
+    !workLocationOptions.value.length ||
+    !managerOptions.value.length
+  ) {
     void loadAssignmentOptions();
+  }
+
+  if (
+    row.manager_user_id &&
+    row.manager_name &&
+    !managerOptions.value.some((option) => option.value === row.manager_user_id)
+  ) {
+    managerOptions.value = [
+      { value: row.manager_user_id, label: row.manager_name },
+      ...managerOptions.value,
+    ];
   }
 }
 
@@ -384,6 +402,7 @@ function closeAssignDialog() {
   assignmentVisible.value = false;
   assignmentForm.employee_id = "";
   assignmentForm.employee_name = "";
+  assignmentForm.manager_user_id = null;
   assignmentForm.schedule_id = null;
   assignmentForm.work_location_id = null;
 }
@@ -394,32 +413,17 @@ async function submitAssignment() {
   assignmentSaving.value = true;
   try {
     const payload: HrUpdateEmployeeDTO = {
+      manager_user_id: assignmentForm.manager_user_id || null,
       schedule_id: assignmentForm.schedule_id || null,
       work_location_id: assignmentForm.work_location_id || null,
     };
 
-    await employeeStore.updateEmployee(assignmentForm.employee_id, payload, {
-      showSuccess: false,
-    });
+    await employeeStore.updateEmployee(assignmentForm.employee_id, payload);
 
-    ElMessage.success("Employee assignment updated");
     closeAssignDialog();
     await fetchEmployees();
-  } catch (error) {
-    ElMessage.error(
-      (
-        error as {
-          response?: { data?: { user_message?: string; message?: string } };
-        }
-      )?.response?.data?.user_message ||
-        (
-          error as {
-            response?: { data?: { user_message?: string; message?: string } };
-          }
-        )?.response?.data?.message ||
-        (error as Error)?.message ||
-        "Failed to update assignment",
-    );
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     assignmentSaving.value = false;
   }
@@ -457,23 +461,9 @@ async function restoreEmployee(row: EmployeeTableRow) {
   try {
     actionLoadingById.value[id] = true;
     await employeeStore.restoreEmployee(id);
-    ElMessage.success("Employee restored");
     await fetchEmployees();
-  } catch (error) {
-    ElMessage.error(
-      (
-        error as {
-          response?: { data?: { user_message?: string; message?: string } };
-        }
-      )?.response?.data?.user_message ||
-        (
-          error as {
-            response?: { data?: { user_message?: string; message?: string } };
-          }
-        )?.response?.data?.message ||
-        (error as Error)?.message ||
-        "Failed to restore employee",
-    );
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     actionLoadingById.value[id] = false;
   }
@@ -683,13 +673,30 @@ onMounted(() => {
     <ElDialog
       v-model="assignmentVisible"
       width="520px"
-      title="Assign Schedule & Location"
+      title="Assign Manager, Schedule & Location"
       :close-on-click-modal="false"
       @closed="closeAssignDialog"
     >
       <ElForm label-position="top">
         <ElFormItem label="Employee">
           <ElInput :model-value="assignmentForm.employee_name" disabled />
+        </ElFormItem>
+
+        <ElFormItem label="Manager">
+          <ElSelect
+            v-model="assignmentForm.manager_user_id"
+            clearable
+            filterable
+            placeholder="Select manager"
+            :loading="assignmentOptionsLoading"
+          >
+            <ElOption
+              v-for="item in managerOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </ElSelect>
         </ElFormItem>
 
         <ElFormItem label="Working Schedule">

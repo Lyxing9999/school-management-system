@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import {
-  ElMessage,
   ElPagination,
   ElSelect,
   ElOption,
@@ -55,8 +54,8 @@ const fetchData = async () => {
     attendances.value = res.items;
     total.value = res.pagination.total;
     hasFetchedOnce.value = true;
-  } catch (e: any) {
-    ElMessage.error(e?.message || "Failed to fetch team attendance");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }

@@ -1,26 +1,9 @@
-const MONGO_OBJECT_ID_REGEX = /^[a-f0-9]{24}$/i;
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
+import type { HrEmployeeAccountListItemDTO } from "./dto";
 
-export function displayRelation(
-  name?: string | null,
-  fallbackId?: string | null,
-  fallback = "-",
-): string {
-  const normalizedName = String(name ?? "").trim();
-  if (normalizedName) return normalizedName;
-
-  const normalizedId = String(fallbackId ?? "").trim();
-  if (!normalizedId) return fallback;
-  if (MONGO_OBJECT_ID_REGEX.test(normalizedId)) return fallback;
-  return normalizedId;
-}
-
-export type EmployeeAccountOptionInput = {
-  account_name?: string | null;
-  account_email?: string | null;
-  username?: string | null;
-  email?: string | null;
-  role?: string | null;
-  user_id?: string | null;
+export type AccountSelectOption = {
+  value: string;
+  label: string;
 };
 
 export function normalizeAccountRole(raw?: string | null): string {
@@ -30,7 +13,7 @@ export function normalizeAccountRole(raw?: string | null): string {
 }
 
 export function buildAccountOptionLabel(
-  item: EmployeeAccountOptionInput,
+  item: HrEmployeeAccountListItemDTO,
   fallbackLabel: string,
 ): string {
   const primary = displayRelation(
@@ -44,9 +27,9 @@ export function buildAccountOptionLabel(
 }
 
 export function toAccountSelectOption(
-  item: EmployeeAccountOptionInput,
+  item: HrEmployeeAccountListItemDTO,
   fallbackLabel = "Account",
-): { value: string; label: string } | null {
+): AccountSelectOption | null {
   const userId = String(item.user_id ?? "").trim();
   if (!userId) return null;
   return {
@@ -56,10 +39,10 @@ export function toAccountSelectOption(
 }
 
 export function toManagerSelectOptions(
-  items: EmployeeAccountOptionInput[],
-): Array<{ value: string; label: string }> {
+  items: HrEmployeeAccountListItemDTO[],
+): AccountSelectOption[] {
   return items
     .filter((item) => normalizeAccountRole(item.role) === "manager")
     .map((item) => toAccountSelectOption(item, "Manager"))
-    .filter((item): item is { value: string; label: string } => !!item);
+    .filter((item): item is AccountSelectOption => !!item);
 }

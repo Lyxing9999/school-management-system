@@ -4,10 +4,10 @@ import {
   ElButton,
   ElCol,
   ElDatePicker,
-  ElInput,
-  ElMessage,
+  ElOption,
   ElPagination,
   ElRow,
+  ElSelect,
   ElTag,
 } from "element-plus";
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
@@ -17,13 +17,18 @@ import { hrmsAdminService } from "~/api/hr_admin";
 import type { PayslipDTO, PayslipListParams } from "~/api/hr_admin/payroll";
 import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import type { ColumnConfig } from "~/components/types/tableEdit";
+import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
 
 definePageMeta({ layout: "default" });
 
 const payrollService = hrmsAdminService().payrollRun;
+const employeeStore = useHrEmployeeStore();
 
 const loading = ref(false);
 const rows = ref<PayslipDTO[]>([]);
+const filterOptionsLoading = ref(false);
+const runOptions = ref<Array<{ value: string; label: string }>>([]);
+const employeeOptions = ref<Array<{ value: string; label: string }>>([]);
 
 const pagination = reactive({
   page: 1,
@@ -42,12 +47,6 @@ const filters = reactive<{
 });
 
 const tableColumns: ColumnConfig<PayslipDTO>[] = [
-  {
-    field: "id",
-    label: "Payslip ID",
-    minWidth: "180px",
-    visible: true,
-  },
   {
     field: "payroll_run_id",
     label: "Payroll Run",
@@ -190,9 +189,39 @@ async function fetchPayslips(page = pagination.page, limit = pagination.limit) {
     pagination.page = response.page ?? page;
     pagination.limit = response.page_size ?? limit;
   } catch {
-    ElMessage.error("Failed to load payslips");
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadFilterOptions() {
+  filterOptionsLoading.value = true;
+  try {
+    const [runRes, employeeRes] = await Promise.all([
+      payrollService.listRuns({ page: 1, limit: 200 }, { showError: false }),
+      employeeStore.getEmployeesWithAccounts(
+        { page: 1, limit: 400, with_accounts: true },
+        { showError: false },
+      ),
+    ]);
+
+    runOptions.value = (runRes.items ?? []).map((run) => ({
+      value: run.id,
+      label: displayRelation(run.payroll_run_label, run.payroll_month || run.month),
+    }));
+    employeeOptions.value = (employeeRes.items ?? []).map((item) => ({
+      value: item.employee.id,
+      label: displayRelation(
+        item.employee.employee_name ?? item.employee.full_name,
+        item.employee.id,
+      ),
+    }));
+  } catch {
+    runOptions.value = [];
+    employeeOptions.value = [];
+  } finally {
+    filterOptionsLoading.value = false;
   }
 }
 
@@ -222,6 +251,7 @@ async function handlePageSizeChange(size: number) {
 import { onMounted } from "vue";
 onMounted(() => {
   fetchPayslips(1, pagination.limit);
+  loadFilterOptions();
 });
 </script>
 
@@ -254,21 +284,37 @@ onMounted(() => {
 
   <el-row :gutter="12" class="mb-4">
     <el-col :xs="24" :sm="12" :md="8" :lg="6">
-      <ElInput
+      <ElSelect
         v-model="filters.payroll_run_id"
+        filterable
         clearable
-        placeholder="Filter by payroll run id"
-        @keyup.enter="applyFilters"
-      />
+        :loading="filterOptionsLoading"
+        placeholder="Select payroll run"
+      >
+        <ElOption
+          v-for="item in runOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </ElSelect>
     </el-col>
 
     <el-col :xs="24" :sm="12" :md="8" :lg="6">
-      <ElInput
+      <ElSelect
         v-model="filters.employee_id"
+        filterable
         clearable
-        placeholder="Filter by employee id"
-        @keyup.enter="applyFilters"
-      />
+        :loading="filterOptionsLoading"
+        placeholder="Select employee"
+      >
+        <ElOption
+          v-for="item in employeeOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </ElSelect>
     </el-col>
 
     <el-col :xs="24" :sm="12" :md="8" :lg="6">
@@ -369,14 +415,22 @@ onMounted(() => {
 }
 
 .status-pill--draft {
-  border-color: #e6a23c;
-  color: #b88230;
-  background: #fff8eb;
+  border-color: var(--button-warning-bg, var(--el-color-warning));
+  color: var(--color-warning-dark-2, var(--el-color-warning-dark-2));
+  background: color-mix(
+    in srgb,
+    var(--button-warning-bg, var(--el-color-warning)) 12%,
+    var(--color-card, #fff) 88%
+  );
 }
 
 .status-pill--paid {
-  border-color: #67c23a;
-  color: #3b8f1d;
-  background: #f1faec;
+  border-color: var(--button-success-bg, var(--el-color-success));
+  color: var(--color-success-dark-2, var(--el-color-success-dark-2));
+  background: color-mix(
+    in srgb,
+    var(--button-success-bg, var(--el-color-success)) 12%,
+    var(--color-card, #fff) 88%
+  );
 }
 </style>

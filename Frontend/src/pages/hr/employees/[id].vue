@@ -7,7 +7,6 @@ import OverviewHeader from "~/components/overview/OverviewHeader.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 import { hrmsAdminService } from "~/api/hr_admin";
 import type {
-  HrEmployeeAccountListItemDTO,
   HrEmployeeDTO,
   HrUpdateEmployeeAccountDTO,
   HrUpdateEmployeeDTO,
@@ -16,6 +15,10 @@ import type {
 import type { SelectOptionDTO } from "~/api/types/common/select-option.type";
 import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
 import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
+import {
+  toAccountSelectOption,
+  toManagerSelectOptions,
+} from "~/api/hr_admin/employees/accountOptions";
 
 
 definePageMeta({ layout: "default" });
@@ -312,26 +315,6 @@ async function loadWorkLocationOptions() {
   }
 }
 
-function normalizeRole(raw?: string | null): string {
-  return String(raw ?? "")
-    .trim()
-    .toLowerCase();
-}
-
-function buildAccountOptionLabel(
-  item: HrEmployeeAccountListItemDTO,
-  fallbackLabel: string,
-): string {
-  const primary = displayRelation(
-    item.account_name ?? item.username ?? item.email,
-    item.user_id ?? item.id,
-    fallbackLabel,
-  );
-  const secondary = String(item.account_email ?? item.email ?? "").trim();
-  if (!secondary || secondary === primary) return primary;
-  return `${primary} • ${secondary}`;
-}
-
 async function loadManagerOptions() {
   managerOptionsLoading.value = true;
   try {
@@ -341,12 +324,7 @@ async function loadManagerOptions() {
       status: "active",
     });
 
-    managerOptions.value = (response.items ?? [])
-      .filter((item) => normalizeRole(item.role) === "manager")
-      .map((item) => ({
-        value: String(item.user_id ?? item.id),
-        label: buildAccountOptionLabel(item, "Manager"),
-      }));
+    managerOptions.value = toManagerSelectOptions(response.items ?? []);
   } catch {
     managerOptions.value = [];
   } finally {
@@ -362,10 +340,9 @@ async function loadAccountOptions() {
       limit: 300,
     });
 
-    accountOptions.value = (response.items ?? []).map((item) => ({
-      value: String(item.user_id ?? item.id),
-      label: buildAccountOptionLabel(item, "Account"),
-    }));
+    accountOptions.value = (response.items ?? [])
+      .map((item) => toAccountSelectOption(item, "Account"))
+      .filter((item): item is { value: string; label: string } => !!item);
   } catch {
     accountOptions.value = [];
   } finally {
@@ -454,8 +431,8 @@ async function loadDetail() {
         ...scheduleOptions.value,
       ];
     }
-  } catch (error) {
-    notifyError(error, "Failed to load employee detail");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     pageLoading.value = false;
   }
@@ -475,9 +452,8 @@ async function submitEmployeeUpdate() {
     );
     employee.value = updated;
     fillEmployeeForm(updated);
-    ElMessage.success("Employee updated successfully");
-  } catch (error) {
-    notifyError(error, "Failed to update employee");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     employeeSaving.value = false;
   }
@@ -497,9 +473,8 @@ async function submitAccountUpdate() {
     );
     account.value = updated;
     fillAccountForm();
-    ElMessage.success("Employee account updated successfully");
-  } catch (error) {
-    notifyError(error, "Failed to update employee account");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     accountSaving.value = false;
   }
@@ -550,10 +525,8 @@ async function submitLinkAccount() {
     account.value = await employeeStore.getEmployeeAccount(employeeId.value);
     fillAccountForm();
     linkForm.user_id = "";
-
-    ElMessage.success("Account linked successfully");
-  } catch (error) {
-    notifyError(error, "Failed to link account");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     linkSaving.value = false;
   }
@@ -566,6 +539,7 @@ async function requestPasswordReset() {
   try {
     const response = await employeeStore.requestEmployeeAccountPasswordReset(
       employeeId.value,
+      { showError: false, showSuccess: false },
     );
 
     resetInfo.value = response;

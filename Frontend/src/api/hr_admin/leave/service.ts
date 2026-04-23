@@ -59,6 +59,14 @@ export class LeaveRequestService {
     );
   }
 
+  // Backward-compatible alias for legacy callers.
+  async getAll(
+    params?: LeaveRequestListParams,
+    options?: ApiCallOptions,
+  ): Promise<LeaveRequestListResponseDTO> {
+    return this.getRequests(params, options);
+  }
+
   /**
    * Get my leave requests
    * GET /api/hrms/leave-requests/my

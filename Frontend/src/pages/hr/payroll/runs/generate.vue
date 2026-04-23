@@ -10,7 +10,6 @@ import {
   ElDescriptionsItem,
   ElForm,
   ElFormItem,
-  ElMessage,
   ElRow,
   ElTag,
 } from "element-plus";
@@ -19,6 +18,7 @@ import BaseButton from "~/components/base/BaseButton.vue";
 import { hrmsAdminService } from "~/api/hr_admin";
 import type { PayrollRunGenerateResponseDTO } from "~/api/hr_admin/payroll";
 import { ROUTES } from "~/constants/routes";
+import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 
 definePageMeta({ layout: "default" });
 
@@ -64,8 +64,11 @@ const formattedGeneratedAt = computed(() => {
   });
 });
 
-const generatedRunId = computed(() => {
-  return result.value?.run_id || result.value?.id || "-";
+const generatedRunLabel = computed(() => {
+  return displayRelation(
+    result.value?.payroll_run_label || result.value?.month,
+    result.value?.month || form.month,
+  );
 });
 
 const resultStatus = computed(() => {
@@ -105,9 +108,8 @@ async function submitGenerate() {
   try {
     const data = await payrollService.generateRun({ month: form.month });
     result.value = data;
-    ElMessage.success("Payroll run generated successfully");
   } catch {
-    ElMessage.error("Failed to generate payroll run");
+    // API notifications are handled by service layer
   } finally {
     submitting.value = false;
   }
@@ -193,8 +195,8 @@ function goToPayslips() {
 
         <div v-if="result">
           <ElDescriptions :column="1" border>
-            <ElDescriptionsItem label="Run ID">
-              {{ generatedRunId }}
+            <ElDescriptionsItem label="Payroll Run">
+              {{ generatedRunLabel }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="Month">
               {{ result.month || form.month || "-" }}
@@ -269,7 +271,7 @@ function goToPayslips() {
 
 .generate-card__subtitle {
   margin: 0;
-  color: #606266;
+  color: var(--muted-color, var(--el-text-color-secondary));
   font-size: 13px;
 }
 
@@ -295,13 +297,13 @@ function goToPayslips() {
   align-items: flex-start;
   justify-content: center;
   gap: 6px;
-  color: #606266;
+  color: var(--muted-color, var(--el-text-color-secondary));
 }
 
 .result-empty__title {
   margin: 0;
   font-weight: 700;
-  color: #303133;
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 .result-empty__desc {

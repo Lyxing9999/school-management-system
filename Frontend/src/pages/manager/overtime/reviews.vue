@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import {
-  ElMessage,
   ElPagination,
   ElButton,
   ElDialog,
@@ -45,8 +44,8 @@ const fetchData = async () => {
     requests.value = res.items;
     total.value = res.total;
     hasFetchedOnce.value = true;
-  } catch (e: any) {
-    ElMessage.error(e?.message || "Failed to fetch overtime requests");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -111,11 +110,10 @@ async function handleApprove() {
       comment: approveForm.value.comment,
     };
     await hrms.overtimeRequest.approveRequest(currentRequest.value.id, payload);
-    ElMessage.success("Overtime approved");
     dialogVisible.value = false;
     fetchData();
-  } catch (e: any) {
-    ElMessage.error(e?.message || "Failed to approve");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     dialogLoading.value = false;
   }
@@ -126,11 +124,10 @@ async function handleReject() {
   try {
     const payload: OvertimeRejectDTO = { comment: rejectForm.value.comment };
     await hrms.overtimeRequest.rejectRequest(currentRequest.value.id, payload);
-    ElMessage.success("Overtime rejected");
     dialogVisible.value = false;
     fetchData();
-  } catch (e: any) {
-    ElMessage.error(e?.message || "Failed to reject");
+  } catch {
+    // API notifications are handled by service layer
   } finally {
     dialogLoading.value = false;
   }

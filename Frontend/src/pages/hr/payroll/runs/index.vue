@@ -5,7 +5,6 @@ import {
   ElDescriptions,
   ElDescriptionsItem,
   ElDialog,
-  ElMessage,
   ElMessageBox,
   ElPagination,
   ElTag,
@@ -38,10 +37,12 @@ const activeRun = ref<PayrollRunDTO | null>(null);
 
 const tableColumns: ColumnConfig<PayrollRunDTO>[] = [
   {
-    field: "id",
-    label: "Run ID",
-    minWidth: "190px",
+    field: "payroll_run_label",
+    label: "Payroll Run",
+    minWidth: "180px",
     visible: true,
+    render: (row: PayrollRunDTO) =>
+      displayRelation(row.payroll_run_label, row.payroll_month || row.month),
   },
   {
     field: "month",
@@ -159,7 +160,7 @@ async function fetchRuns(page = pagination.page, limit = pagination.limit) {
     pagination.page = response.page ?? page;
     pagination.limit = response.page_size ?? limit;
   } catch {
-    ElMessage.error("Failed to load payroll runs");
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -171,7 +172,6 @@ async function openDetail(row: PayrollRunDTO) {
   try {
     activeRun.value = await payrollService.getRun(row.id);
   } catch {
-    ElMessage.error("Failed to load payroll run detail");
     detailDialogVisible.value = false;
   } finally {
     detailLoading.value = false;
@@ -199,10 +199,9 @@ async function finalizeRun(row: PayrollRunDTO) {
   actionLoading.value[row.id] = true;
   try {
     await payrollService.finalizeRun(row.id);
-    ElMessage.success("Payroll run finalized successfully");
     await fetchRuns(pagination.page, pagination.limit);
   } catch {
-    ElMessage.error("Failed to finalize payroll run");
+    // API notifications are handled by service layer
   } finally {
     actionLoading.value[row.id] = false;
   }
@@ -229,10 +228,9 @@ async function markRunPaid(row: PayrollRunDTO) {
   actionLoading.value[row.id] = true;
   try {
     await payrollService.markRunPaid(row.id);
-    ElMessage.success("Payroll run marked as paid");
     await fetchRuns(pagination.page, pagination.limit);
   } catch {
-    ElMessage.error("Failed to mark payroll run as paid");
+    // API notifications are handled by service layer
   } finally {
     actionLoading.value[row.id] = false;
   }
@@ -366,8 +364,13 @@ onMounted(() => {
   >
     <div v-loading="detailLoading">
       <ElDescriptions v-if="activeRun" :column="1" border>
-        <ElDescriptionsItem label="Run ID">
-          {{ activeRun.id }}
+        <ElDescriptionsItem label="Payroll Run">
+          {{
+            displayRelation(
+              activeRun.payroll_run_label,
+              activeRun.payroll_month || activeRun.month,
+            )
+          }}
         </ElDescriptionsItem>
         <ElDescriptionsItem label="Month">
           {{ displayRelation(activeRun.payroll_month, activeRun.month) }}
@@ -414,21 +417,33 @@ onMounted(() => {
 }
 
 .status-pill--draft {
-  border-color: #e6a23c;
-  color: #b88230;
-  background: #fff8eb;
+  border-color: var(--button-warning-bg, var(--el-color-warning));
+  color: var(--color-warning-dark-2, var(--el-color-warning-dark-2));
+  background: color-mix(
+    in srgb,
+    var(--button-warning-bg, var(--el-color-warning)) 12%,
+    var(--color-card, #fff) 88%
+  );
 }
 
 .status-pill--finalized {
-  border-color: #909399;
-  color: #5d6066;
-  background: #f4f4f5;
+  border-color: var(--button-default-border, var(--el-border-color));
+  color: var(--muted-color, var(--el-text-color-secondary));
+  background: color-mix(
+    in srgb,
+    var(--button-default-bg, var(--el-fill-color-light)) 72%,
+    var(--color-card, #fff) 28%
+  );
 }
 
 .status-pill--paid {
-  border-color: #67c23a;
-  color: #3b8f1d;
-  background: #f1faec;
+  border-color: var(--button-success-bg, var(--el-color-success));
+  color: var(--color-success-dark-2, var(--el-color-success-dark-2));
+  background: color-mix(
+    in srgb,
+    var(--button-success-bg, var(--el-color-success)) 12%,
+    var(--color-card, #fff) 88%
+  );
 }
 
 .action-group {

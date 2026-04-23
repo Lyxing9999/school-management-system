@@ -1218,7 +1218,7 @@ watch(filter, async () => {
 <style scoped lang="scss">
 .holiday-page {
   padding: 24px;
-  background: var(--el-bg-color);
+  background: var(--color-bg);
   min-height: 100vh;
 }
 
@@ -1386,7 +1386,7 @@ watch(filter, async () => {
   line-height: 1.6;
 
   div:first-child {
-    color: var(--color-dark);
+    color: var(--text-color);
     font-weight: 500;
   }
 }
@@ -1414,13 +1414,13 @@ watch(filter, async () => {
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--color-dark);
+  color: var(--text-color);
 }
 
 .holiday-form-error {
   margin-top: 16px;
   padding: 12px;
-  background: color-mix(in srgb, var(--el-color-warning) 10%, white);
+  background: color-mix(in srgb, var(--el-color-warning) 10%, var(--color-card));
   border-left: 3px solid var(--el-color-warning);
   color: var(--el-color-warning);
   font-size: 12px;
@@ -1481,7 +1481,7 @@ watch(filter, async () => {
 .calendar-month-year {
   font-size: 24px;
   font-weight: 600;
-  color: var(--color-dark);
+  color: var(--text-color);
   flex: 1;
   text-align: center;
   margin: 0;
@@ -1536,12 +1536,12 @@ watch(filter, async () => {
 
   &--holiday {
     cursor: pointer;
-    background: color-mix(in srgb, var(--color-primary) 8%, white);
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-card) 92%);
     border-color: var(--color-primary);
     font-weight: 500;
 
     &:hover {
-      background: color-mix(in srgb, var(--color-primary) 15%, white);
+      background: color-mix(in srgb, var(--color-primary) 15%, var(--color-card) 85%);
       box-shadow: 0 2px 8px var(--card-shadow);
       transform: translateY(-2px);
     }
@@ -1549,7 +1549,7 @@ watch(filter, async () => {
 
   &--today {
     box-shadow: inset 0 0 0 2px
-      color-mix(in srgb, var(--color-primary) 45%, white);
+      color-mix(in srgb, var(--color-primary) 45%, var(--color-card));
   }
 }
 
@@ -1562,7 +1562,7 @@ watch(filter, async () => {
 .calendar-day-number {
   font-size: 13px;
   font-weight: 700;
-  color: var(--color-dark);
+  color: var(--text-color);
 }
 
 .calendar-day-count {
@@ -1599,7 +1599,7 @@ watch(filter, async () => {
 }
 
 .calendar-holiday-pill {
-  background: color-mix(in srgb, var(--color-primary) 14%, white);
+  background: color-mix(in srgb, var(--color-primary) 14%, var(--color-card));
   color: var(--color-primary);
 }
 
@@ -1680,7 +1680,7 @@ watch(filter, async () => {
 .summary-holiday-name {
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-dark);
+  color: var(--text-color);
   flex: 1;
 }
 
@@ -1724,7 +1724,7 @@ watch(filter, async () => {
 }
 
 .info-value {
-  color: var(--color-dark);
+  color: var(--text-color);
 }
 
 .summary-holiday-actions {
@@ -1788,7 +1788,7 @@ watch(filter, async () => {
   margin-top: 6px;
   font-size: 24px;
   font-weight: 700;
-  color: var(--color-dark);
+  color: var(--text-color);
 }
 
 .import-list-block {
@@ -1804,7 +1804,7 @@ watch(filter, async () => {
 .import-list-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-dark);
+  color: var(--text-color);
   margin-bottom: 10px;
 }
 
@@ -1830,7 +1830,7 @@ watch(filter, async () => {
 }
 
 .import-list-item .name {
-  color: var(--color-dark);
+  color: var(--text-color);
   font-weight: 500;
 }
 
