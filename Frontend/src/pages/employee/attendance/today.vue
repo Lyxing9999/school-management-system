@@ -1114,27 +1114,10 @@ onUnmounted(() => {
 
 <style scoped>
 .attendance-today-page {
+  padding: 1.5rem;
+  max-width: 1520px;
+  margin: 0 auto;
   color: var(--text-color);
-  --page-surface-soft: color-mix(
-    in srgb,
-    var(--muted-color) 8%,
-    var(--color-card) 92%
-  );
-  --page-surface-soft-2: color-mix(
-    in srgb,
-    var(--muted-color) 14%,
-    var(--color-card) 86%
-  );
-  --page-panel-hover-border: color-mix(
-    in srgb,
-    var(--muted-color) 26%,
-    var(--border-color) 74%
-  );
-  --page-panel-hover-shadow: color-mix(
-    in srgb,
-    var(--muted-color) 14%,
-    transparent
-  );
 }
 
 .panel-card {
@@ -1146,26 +1129,25 @@ onUnmounted(() => {
 }
 
 .panel-card:hover {
-  border-color: var(--page-panel-hover-border);
-  box-shadow: 0 14px 30px var(--page-panel-hover-shadow);
+  border-color: color-mix(in srgb, var(--border-color) 70%, var(--color-primary) 30%);
+  box-shadow: 0 14px 30px var(--card-shadow);
   transform: translateY(-1px);
 }
 
 .surface-card {
   border: 1px solid var(--border-color);
-  background: var(--page-surface-soft);
+  background: var(--surface-soft);
 }
 
 .clock-hero {
-  border: 1px solid var(--hrms-border);
-  color: white;
+  border: 1px solid var(--color-primary);
   background: linear-gradient(
     135deg,
-    var(--hrms-primary-500) 0%,
-    var(--hrms-primary-600) 55%,
-    var(--hrms-primary-700) 100%
+    var(--color-primary) 0%,
+    var(--color-primary-light-1) 55%,
+    var(--color-primary-light-2) 100%
   );
-  box-shadow: 0 10px 24px rgba(244, 63, 107, 0.18);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .clock-hero__eyebrow {
@@ -1174,7 +1156,9 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.82);
+  color: #ffffff;
+  opacity: 0.95;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .clock-hero__time {
@@ -1183,12 +1167,15 @@ onUnmounted(() => {
   line-height: 1.2;
   font-weight: 700;
   color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .clock-hero__subtext {
   margin-top: 0.45rem;
   font-size: 0.92rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: #ffffff;
+  opacity: 0.92;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .clock-hero__badge {
@@ -1203,76 +1190,13 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-}
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  border-radius: 0.9rem;
-  padding: 0.75rem 1rem;
-  font-size: 0.92rem;
-  font-weight: 700;
-  border: 1px solid transparent;
-  transition: all 0.18s ease;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.btn-primary {
-  color: #fff;
-  background: linear-gradient(
-    135deg,
-    var(--hrms-primary-500) 0%,
-    var(--hrms-primary-600) 100%
-  );
-  border-color: var(--hrms-primary-600);
-  box-shadow: 0 8px 18px rgba(244, 63, 107, 0.2);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: linear-gradient(
-    135deg,
-    var(--hrms-primary-600) 0%,
-    var(--hrms-primary-700) 100%
-  );
-}
-
-.btn-secondary {
-  color: var(--hrms-text);
-  background: #ffffff;
-  border-color: var(--hrms-border);
-}
-.surface-card {
-  border: 1px solid var(--hrms-border);
-  background: var(--hrms-surface-soft);
-}
-
-.panel-card {
-  border: 1px solid var(--hrms-border);
-  background: var(--hrms-surface);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-}
-.btn-secondary:hover:not(:disabled) {
-  background: var(--hrms-primary-50);
-  border-color: var(--hrms-primary-200);
-}
-
-.btn-success {
-  color: #fff;
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-  border-color: #15803d;
-}
 .status-badge {
   border-color: transparent;
 }
@@ -1307,24 +1231,21 @@ onUnmounted(() => {
   box-shadow: inset 0 0 0 1px var(--status-neutral-border);
 }
 
+/* Override Tailwind hardcoded colors with CSS variables */
 .attendance-today-page :deep(.bg-white) {
   background-color: var(--color-card) !important;
 }
 
 .attendance-today-page :deep(.bg-slate-50) {
-  background-color: var(--page-surface-soft) !important;
+  background-color: var(--surface-soft) !important;
 }
 
 .attendance-today-page :deep(.bg-slate-100) {
-  background-color: var(--page-surface-soft-2) !important;
+  background-color: color-mix(in srgb, var(--muted-color) 12%, var(--color-card) 88%) !important;
 }
 
 .attendance-today-page :deep(.bg-slate-200) {
-  background-color: color-mix(
-    in srgb,
-    var(--muted-color) 18%,
-    var(--color-card) 82%
-  ) !important;
+  background-color: color-mix(in srgb, var(--muted-color) 18%, var(--color-card) 82%) !important;
 }
 
 .attendance-today-page :deep(.border-slate-200),
@@ -1340,25 +1261,20 @@ onUnmounted(() => {
 }
 
 .attendance-today-page :deep(.text-slate-600),
-.attendance-today-page :deep(.text-slate-500),
-.attendance-today-page :deep(.text-slate-300) {
+.attendance-today-page :deep(.text-slate-500) {
   color: var(--muted-color) !important;
 }
 
 .attendance-today-page :deep(.bg-slate-900) {
-  background-color: color-mix(
-    in srgb,
-    var(--text-color) 84%,
-    var(--color-card) 16%
-  ) !important;
+  background-color: color-mix(in srgb, var(--text-color) 84%, var(--color-card) 16%) !important;
 }
 
 .attendance-today-page :deep(.hover\:bg-slate-700:hover) {
-  background-color: color-mix(
-    in srgb,
-    var(--text-color) 72%,
-    var(--color-card) 28%
-  ) !important;
+  background-color: color-mix(in srgb, var(--text-color) 72%, var(--color-card) 28%) !important;
+}
+
+.attendance-today-page :deep(.hover\:bg-slate-50:hover) {
+  background-color: var(--hover-bg) !important;
 }
 
 .attendance-today-page :deep(.bg-emerald-600) {
@@ -1378,19 +1294,11 @@ onUnmounted(() => {
 }
 
 .attendance-today-page :deep(.border-rose-200) {
-  border-color: color-mix(
-    in srgb,
-    var(--button-danger-bg) 40%,
-    var(--border-color) 60%
-  ) !important;
+  border-color: color-mix(in srgb, var(--button-danger-bg) 40%, var(--border-color) 60%) !important;
 }
 
 .attendance-today-page :deep(.bg-rose-50) {
-  background-color: color-mix(
-    in srgb,
-    var(--button-danger-bg) 10%,
-    var(--color-card) 90%
-  ) !important;
+  background-color: color-mix(in srgb, var(--button-danger-bg) 10%, var(--color-card) 90%) !important;
 }
 
 .attendance-today-page :deep(.text-rose-700) {
@@ -1398,19 +1306,11 @@ onUnmounted(() => {
 }
 
 .attendance-today-page :deep(.border-amber-200) {
-  border-color: color-mix(
-    in srgb,
-    var(--button-warning-bg) 40%,
-    var(--border-color) 60%
-  ) !important;
+  border-color: color-mix(in srgb, var(--button-warning-bg) 40%, var(--border-color) 60%) !important;
 }
 
 .attendance-today-page :deep(.bg-amber-50) {
-  background-color: color-mix(
-    in srgb,
-    var(--button-warning-bg) 12%,
-    var(--color-card) 88%
-  ) !important;
+  background-color: color-mix(in srgb, var(--button-warning-bg) 12%, var(--color-card) 88%) !important;
 }
 
 .attendance-today-page :deep(.text-amber-800),
@@ -1420,5 +1320,73 @@ onUnmounted(() => {
 
 .attendance-today-page :deep(.text-emerald-700) {
   color: var(--button-success-bg) !important;
+}
+
+.attendance-today-page :deep(.bg-indigo-100) {
+  background-color: color-mix(in srgb, #6366f1 16%, var(--color-card) 84%) !important;
+}
+
+.attendance-today-page :deep(.text-indigo-700) {
+  color: #6366f1 !important;
+}
+
+.attendance-today-page :deep(.disabled\:bg-slate-300:disabled) {
+  background-color: var(--btn-disabled-bg) !important;
+}
+
+.attendance-today-page :deep(.disabled\:bg-slate-100:disabled) {
+  background-color: var(--btn-disabled-bg) !important;
+}
+
+.attendance-today-page :deep(.disabled\:cursor-not-allowed:disabled) {
+  cursor: not-allowed !important;
+}
+
+.attendance-today-page :deep(.disabled\:opacity-60:disabled) {
+  opacity: 0.6 !important;
+}
+
+/* Input/textarea styling */
+.attendance-today-page :deep(textarea),
+.attendance-today-page :deep(input[type="text"]) {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-color) !important;
+}
+
+.attendance-today-page :deep(textarea:focus),
+.attendance-today-page :deep(input[type="text"]:focus) {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-light-8) !important;
+}
+
+.attendance-today-page :deep(textarea:disabled),
+.attendance-today-page :deep(input[type="text"]:disabled) {
+  background-color: var(--btn-disabled-bg) !important;
+  color: var(--btn-disabled-text) !important;
+  cursor: not-allowed !important;
+}
+
+/* Button styling */
+.attendance-today-page :deep(button) {
+  transition: all 0.2s ease !important;
+}
+
+.attendance-today-page :deep(button:not(:disabled):hover) {
+  transform: translateY(-1px);
+}
+
+/* Skeleton loading */
+.attendance-today-page :deep(.animate-pulse) {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 </style>

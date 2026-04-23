@@ -45,3 +45,15 @@ class AttendanceApproveWrongLocationSchema(BaseModel):
         if self.location_id is not None:
             self.location_id = self.location_id.strip() or None
         return self
+    
+
+
+class AttendanceApproveEarlyLeaveSchema(BaseModel):
+    approved: bool
+    comment: str | None = Field(default=None, max_length=300)
+
+    @model_validator(mode="after")
+    def normalize_comment(self):
+        if self.comment is not None:
+            self.comment = self.comment.strip() or None
+        return self

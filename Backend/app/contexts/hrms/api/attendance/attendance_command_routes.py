@@ -14,6 +14,7 @@ from app.contexts.hrms.data_transfer.request.attendance_request import (
     AttendanceCheckInSchema,
     AttendanceCheckOutSchema,
     AttendanceApproveWrongLocationSchema,
+    AttendanceApproveEarlyLeaveSchema,
 )
 from app.contexts.hrms.mapper.attendance_mapper import AttendanceMapper
 
@@ -75,6 +76,46 @@ def review_wrong_location(attendance_id: str):
         approved=payload.approved,
         comment=payload.comment,
         location_id=payload.location_id,
+    )
+
+    return mapper.to_dto(attendance)
+
+@attendance_command_bp.route(
+
+    "/attendance/<attendance_id>/early-leave/review",
+
+    methods=["POST"],
+
+    strict_slashes=False,
+
+)
+
+@login_required(allowed_roles=["hr_admin"])
+
+@wrap_response
+
+def review_early_leave(attendance_id: str):
+
+    admin_id = get_current_staff_id()
+
+    payload = pydantic_converter.convert_to_model(
+
+        request.json,
+
+        AttendanceApproveEarlyLeaveSchema,
+
+    )
+
+    attendance = g.hrms.attendance.review_early_leave(
+
+        attendance_id=attendance_id,
+
+        admin_id=admin_id,
+
+        approved=payload.approved,
+
+        comment=payload.comment,
+
     )
 
     return mapper.to_dto(attendance)

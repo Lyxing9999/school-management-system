@@ -4,11 +4,10 @@ from bson import ObjectId
 from datetime import datetime, date
 from calendar import monthrange
 from pymongo.database import Database
-
 from app.contexts.hrms.domain.attendance import Attendance
 from app.contexts.hrms.mapper.attendance_mapper import AttendanceMapper
 from app.contexts.hrms.errors.attendance_exceptions import AttendanceNotFoundException
-
+from pymongo import ReturnDocument
 
 class MongoAttendanceRepository:
     def __init__(self, db: Database):
@@ -33,6 +32,26 @@ class MongoAttendanceRepository:
         doc = self.mapper.to_persistence(attendance)
         self.collection.replace_one({"_id": doc["_id"]}, doc, upsert=True)
         return attendance
+
+    def update_fields(self, attendance_id, update_data: dict) -> Attendance:
+
+        update_doc = {"$set": update_data}
+
+        updated_doc = self.collection.find_one_and_update(
+
+            {"_id": self._oid(attendance_id)},
+
+            update_doc,
+
+            return_document=ReturnDocument.AFTER,
+
+        )
+
+        if not updated_doc:
+
+            raise AttendanceNotFoundException(attendance_id)
+
+        return self.mapper.to_domain(updated_doc)
 
     def find_by_id(self, attendance_id) -> Attendance:
         doc = self.collection.find_one({"_id": self._oid(attendance_id)})

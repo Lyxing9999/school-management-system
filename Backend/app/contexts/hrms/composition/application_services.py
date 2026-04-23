@@ -10,6 +10,8 @@ from app.contexts.hrms.use_cases.attendance.check_in_employee import CheckInEmpl
 from app.contexts.hrms.use_cases.attendance.check_out_employee import CheckOutEmployeeUseCase
 from app.contexts.hrms.use_cases.attendance.approve_wrong_location import ApproveWrongLocationUseCase
 
+from app.contexts.hrms.use_cases.attendance.review_early_leave import ReviewEarlyLeaveUseCase
+
 from app.contexts.hrms.queries.attendance.get_my_attendance import GetMyAttendanceQuery
 from app.contexts.hrms.queries.attendance.list_attendance import ListAttendanceQuery
 from app.contexts.hrms.queries.attendance.get_team_attendance import GetTeamAttendanceQuery
@@ -25,6 +27,7 @@ from app.contexts.hrms.use_cases.employee.assign_employee_schedule import Assign
 from app.contexts.hrms.use_cases.employee.request_employee_account_password_reset import (
     RequestEmployeeAccountPasswordResetUseCase,
 )
+
 from app.contexts.hrms.use_cases.employee.set_account_status import SetAccountStatusUseCase
 from app.contexts.hrms.use_cases.employee.link_employee_account import LinkEmployeeAccountUseCase
 from app.contexts.hrms.use_cases.employee.change_employee_account_password import ChangeEmployeeAccountPasswordUseCase
@@ -124,6 +127,7 @@ from app.contexts.hrms.queries.payroll.get_payroll_run import GetPayrollRunQuery
 from app.contexts.hrms.queries.payroll.list_payslips import ListPayslipsQuery
 from app.contexts.hrms.queries.payroll.get_payslip import GetPayslipQuery
 
+
 class HrmsApplicationServices:
     def __init__(self, *, repositories: HrmsRepositories) -> None:
         self.repositories = repositories
@@ -207,6 +211,10 @@ class HrmsApplicationServices:
             public_holiday_repository=repositories.public_holiday_repository,
             attendance_repository=repositories.attendance_repository,
             audit_log_repository=repositories.audit_log_repository,
+        )
+
+        self.review_early_leave = ReviewEarlyLeaveUseCase(
+            attendance_repository=repositories.attendance_repository,
         )
         self.check_out_employee = CheckOutEmployeeUseCase(
             employee_repository=repositories.employee_repository,
@@ -341,7 +349,7 @@ class HrmsApplicationServices:
         )
         # payroll
         self.generate_monthly_payroll = GenerateMonthlyPayrollUseCase(
-            employee_repository=repositories.employee_repository,
+            employee_read_model=repositories.employee_read_model,
             working_schedule_repository=repositories.working_schedule_repository,
             public_holiday_repository=repositories.public_holiday_repository,
             attendance_repository=repositories.attendance_repository,
@@ -491,6 +499,7 @@ class HrmsApplicationServices:
             get_team_attendance=self.get_team_attendance.execute,
             get_wrong_location_report=self.get_wrong_location_report.execute,
             get_my_attendance_today=self.get_my_attendance_today.execute,
+            review_early_leave=self.review_early_leave.execute,
         )
 
         self.working_schedule = SimpleNamespace(
