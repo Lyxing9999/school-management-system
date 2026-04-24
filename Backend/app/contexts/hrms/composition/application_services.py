@@ -114,6 +114,7 @@ from app.contexts.hrms.queries.leave.list_my_leave_requests import ListMyLeaveRe
 from app.contexts.hrms.queries.leave.list_pending_leave_requests import ListPendingLeaveRequestsQuery
 from app.contexts.hrms.queries.leave.get_my_leave_summary import GetMyLeaveSummaryQuery
 from app.contexts.hrms.queries.leave.get_my_leave_balance import GetMyLeaveBalanceQuery
+from app.contexts.hrms.queries.leave.list_leave_balances import ListLeaveBalancesQuery
 
 
 
@@ -127,6 +128,7 @@ from app.contexts.hrms.queries.payroll.list_payroll_runs import ListPayrollRunsQ
 from app.contexts.hrms.queries.payroll.get_payroll_run import GetPayrollRunQuery
 from app.contexts.hrms.queries.payroll.list_payslips import ListPayslipsQuery
 from app.contexts.hrms.queries.payroll.get_payslip import GetPayslipQuery
+from app.contexts.hrms.queries.audit.list_audit_logs import ListAuditLogsQuery
 from app.contexts.hrms.presenters.relation_resolver import HrmsRelationResolver
 from app.contexts.hrms.presenters.response_enricher import HrmsResponseEnricher
 
@@ -288,15 +290,20 @@ class HrmsApplicationServices:
             working_schedule_repository=repositories.working_schedule_repository,
             public_holiday_repository=repositories.public_holiday_repository,
             overtime_repository=repositories.overtime_repository,
+            audit_log_repository=repositories.audit_log_repository,
         )
         self.approve_overtime_request = ApproveOvertimeRequestUseCase(
             overtime_repository=repositories.overtime_repository,
+            audit_log_repository=repositories.audit_log_repository,
         )
         self.reject_overtime_request = RejectOvertimeRequestUseCase(
             overtime_repository=repositories.overtime_repository,
+            audit_log_repository=repositories.audit_log_repository,
         )
         self.cancel_overtime_request = CancelOvertimeRequestUseCase(
             overtime_repository=repositories.overtime_repository,
+            employee_repository=repositories.employee_repository,
+            audit_log_repository=repositories.audit_log_repository,
         )
         self.list_overtime_requests = ListOvertimeRequestsQuery(
             overtime_read_model=repositories.overtime_read_model,
@@ -336,6 +343,8 @@ class HrmsApplicationServices:
         )
         self.cancel_leave_request = CancelLeaveRequestUseCase(
             leave_repository=repositories.leave_repository,
+            employee_repository=repositories.employee_repository,
+            audit_log_repository=repositories.audit_log_repository,
         )
 
         self.get_leave_request = GetLeaveRequestQuery(
@@ -356,6 +365,10 @@ class HrmsApplicationServices:
         self.get_my_leave_balance = GetMyLeaveBalanceQuery(
             leave_repository=repositories.leave_repository,
         )
+        self.list_leave_balances = ListLeaveBalancesQuery(
+            employee_read_model=repositories.employee_read_model,
+            leave_repository=repositories.leave_repository,
+        )
         # payroll
         self.generate_monthly_payroll = GenerateMonthlyPayrollUseCase(
             employee_read_model=repositories.employee_read_model,
@@ -374,11 +387,13 @@ class HrmsApplicationServices:
 
         self.finalize_payroll_run = FinalizePayrollRunUseCase(
             payroll_run_repository=repositories.payroll_run_repository,
+            audit_log_repository=repositories.audit_log_repository,
         )
 
         self.mark_payroll_run_paid = MarkPayrollRunPaidUseCase(
             payroll_run_repository=repositories.payroll_run_repository,
             payslip_repository=repositories.payslip_repository,
+            audit_log_repository=repositories.audit_log_repository,
         )
 
         self.list_payroll_runs = ListPayrollRunsQuery(
@@ -395,6 +410,9 @@ class HrmsApplicationServices:
 
         self.get_payslip = GetPayslipQuery(
             payslip_repository=repositories.payslip_repository,
+        )
+        self.list_audit_logs = ListAuditLogsQuery(
+            audit_log_repository=repositories.audit_log_repository,
         )
         # work location
         self.create_work_location = CreateWorkLocationUseCase(
@@ -548,6 +566,7 @@ class HrmsApplicationServices:
             list_pending=self.list_pending_leave_requests.execute,
             get_my_summary=self.get_my_leave_summary.execute,
             get_my_balance=self.get_my_leave_balance.execute,
+            list_balances=self.list_leave_balances.execute,
         )
 
         self.payroll = SimpleNamespace(
@@ -596,4 +615,8 @@ class HrmsApplicationServices:
             get_run=self.get_payroll_run.execute,
             list_payslips=self.list_payslips.execute,
             get_payslip=self.get_payslip.execute,
+        )
+
+        self.audit = SimpleNamespace(
+            list=self.list_audit_logs.execute,
         )

@@ -147,7 +147,7 @@ const filteredRows = computed(() => {
   const keyword = query.value.trim().toLowerCase();
 
   return rows.value.filter((row) => {
-    const statusKey = normalizeWrongLocationStatus(row.status);
+    const statusKey = normalizeWrongLocationStatus(wrongLocationStatusKey(row));
     if (statusFilter.value !== "all" && statusKey !== statusFilter.value) {
       return false;
     }
@@ -176,8 +176,22 @@ const displayedTotal = computed(() => {
   return totalRows.value;
 });
 
+function wrongLocationStatusKey(row: AttendanceDTO): string {
+  const derived = String(row.wrong_location_status || "").trim().toLowerCase();
+  if (derived) return derived;
+
+  const reviewStatus = String(row.location_review_status || "")
+    .trim()
+    .toLowerCase();
+  if (reviewStatus === "pending") return "wrong_location_pending";
+  if (reviewStatus === "approved") return "wrong_location_approved";
+  if (reviewStatus === "rejected") return "wrong_location_rejected";
+
+  return String(row.status || "").trim().toLowerCase();
+}
+
 function normalizeWrongLocationStatus(status?: string | null): StatusFilter {
-  const value = String(status || "").toLowerCase();
+  const value = String(status || "").trim().toLowerCase();
   if (value === "wrong_location_pending") return "pending";
   if (value === "wrong_location_approved") return "approved";
   if (value === "wrong_location_rejected") return "rejected";
@@ -260,7 +274,7 @@ function getLocationLabel(locationId?: string | null): string {
   const found = workLocationOptions.value.find(
     (opt) => opt.value === locationId,
   );
-  return found?.label || locationId;
+  return found?.label || "-";
 }
 
 async function fetchWorkLocations() {
@@ -278,16 +292,11 @@ async function fetchWrongLocationReports(page = currentPage.value) {
   loading.value = true;
 
   try {
-    const statusParam =
-      statusFilter.value === "all"
-        ? undefined
-        : `wrong_location_${statusFilter.value}`;
-
     const response = await attendanceService.getWrongLocationReports({
       page,
       limit: pageSize.value,
-      ...(statusParam ? { status: statusParam } : {}),
-    } as any);
+      review_status: statusFilter.value === "all" ? undefined : statusFilter.value,
+    }, { showError: false });
 
     rows.value = response.items ?? [];
     const pagination = response.pagination;
@@ -303,7 +312,7 @@ async function fetchWrongLocationReports(page = currentPage.value) {
 }
 
 function openReviewDialog(row: AttendanceDTO, action: ReviewAction) {
-  if (!isPendingWrongLocation(row.status)) {
+  if (!isPendingWrongLocation(wrongLocationStatusKey(row))) {
     ElMessageBox.alert(
       "Only pending wrong-location cases can be reviewed",
       "Cannot Review",
@@ -334,7 +343,7 @@ async function submitReview() {
         reviewAction.value === "approve"
           ? reviewForm.location_id || null
           : null,
-    });
+    }, { showSuccess: false, showError: false });
 
     ElMessage.success(
       reviewAction.value === "approve"
@@ -354,12 +363,13 @@ async function submitReview() {
 
 async function showDetails(row: AttendanceDTO) {
   await ElMessageBox.alert(
-    `Attendance ID: ${row.id}\nEmployee: ${
-      displayRelation(row.employee_name, row.employee_id)
-    }\nAttendance Date: ${formatDate(
+    `Employee: ${displayRelation(
+      row.employee_name,
+      row.employee_id,
+    )}\nAttendance Date: ${formatDate(
       row.attendance_date,
     )}\nCheck In: ${formatDateTime(row.check_in_time)}\nStatus: ${statusLabel(
-      row.status,
+      wrongLocationStatusKey(row),
     )}\nAssigned location: ${displayRelation(
       row.location_name,
       getLocationLabel(row.location_id),
@@ -407,7 +417,7 @@ onMounted(() => {
     <el-col :span="12">
       <el-input
         v-model="query"
-        placeholder="Search ID, employee, reason"
+        placeholder="Search employee, reason, comment"
         clearable
       />
     </el-col>
@@ -437,19 +447,21 @@ onMounted(() => {
   >
     <template #status="{ row }">
       <el-tag
-        :type="statusTagType(row.status)"
+        :type="statusTagType(wrongLocationStatusKey(row as AttendanceDTO))"
         effect="plain"
         round
         size="small"
-        :class="statusClass(row.status)"
+        :class="statusClass(wrongLocationStatusKey(row as AttendanceDTO))"
       >
-        {{ statusLabel(row.status) }}
+        {{ statusLabel(wrongLocationStatusKey(row as AttendanceDTO)) }}
       </el-tag>
     </template>
 
     <template #operation="{ row }">
       <el-space class="review-actions" :size="6">
-        <template v-if="isPendingWrongLocation(row.status)">
+        <template
+          v-if="isPendingWrongLocation(wrongLocationStatusKey(row as AttendanceDTO))"
+        >
           <el-button
             type="success"
             size="small"

@@ -450,9 +450,6 @@ onMounted(() => {
     >
       <template v-if="activeRow">
         <ElDescriptions :column="2" border>
-          <ElDescriptionsItem label="Request ID">
-            {{ activeRow.id }}
-          </ElDescriptionsItem>
           <ElDescriptionsItem label="Leave Type">
             {{ leaveTypeLabel(activeRow.leave_type) }}
           </ElDescriptionsItem>

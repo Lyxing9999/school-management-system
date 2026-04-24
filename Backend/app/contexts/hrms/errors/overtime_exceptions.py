@@ -39,6 +39,7 @@ class InvalidOvertimeTimeRangeException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Invalid overtime time range.",
             recoverable=True,
         )
 
@@ -51,6 +52,7 @@ class OvertimeEndTimeInvalidException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Overtime end time must be after start time.",
             recoverable=True,
         )
 
@@ -63,6 +65,7 @@ class InvalidLocalizedOvertimeTimeRangeException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Invalid overtime time range in local time.",
             recoverable=True,
         )
 
@@ -75,6 +78,7 @@ class OvertimeRequestDateMismatchException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Request date must match the overtime start date.",
             details={
                 "request_date": str(request_date),
                 "start_date_local": str(start_date_local),
@@ -91,6 +95,7 @@ class WorkingDayOvertimeStartInvalidException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Working day overtime must start after your scheduled work shift.",
             recoverable=True,
         )
 
@@ -103,6 +108,7 @@ class OverlappingOvertimeRequestException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="An overlapping overtime request already exists for this date.",
             details={"employee_id": employee_id, "request_date": str(request_date)},
             recoverable=True,
         )
@@ -116,6 +122,7 @@ class OvertimeReasonRequiredException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Overtime reason is required.",
             recoverable=True,
         )
 
@@ -128,6 +135,7 @@ class OvertimeBasicSalaryInvalidException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Basic salary cannot be negative.",
             recoverable=True,
         )
 
@@ -140,6 +148,7 @@ class OvertimeSubmissionDeadlineExceededException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Overtime request must be submitted at least 3 hours before the end of the work day.",
             recoverable=True,
         )
 
@@ -152,6 +161,7 @@ class OvertimeApprovalStateInvalidException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Only pending overtime requests can be approved.",
             details={"overtime_id": overtime_id, "status": status},
             recoverable=True,
         )
@@ -165,6 +175,7 @@ class OvertimeApprovedHoursNegativeException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Approved hours cannot be negative.",
             recoverable=True,
         )
 
@@ -177,6 +188,7 @@ class OvertimeApprovedHoursExceedsRequestedException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Approved hours cannot exceed requested hours.",
             recoverable=True,
         )
 
@@ -189,6 +201,7 @@ class OvertimeRejectionStateInvalidException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Only pending overtime requests can be rejected.",
             details={"overtime_id": overtime_id, "status": status},
             recoverable=True,
         )
@@ -202,6 +215,7 @@ class OvertimeCancellationStateInvalidException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Only pending overtime requests can be cancelled.",
             details={"overtime_id": overtime_id, "status": status},
             recoverable=True,
         )

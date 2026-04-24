@@ -97,7 +97,6 @@ async function submitCreateRequest() {
   try {
     await createFormRef.value.validate();
     await overtimeStore.createRequest(createForm.value);
-    ElMessage.success("Overtime request created successfully");
     closeCreateDialog();
     await overtimeStore.fetchMyList();
   } catch (error: any) {
@@ -111,8 +110,8 @@ async function viewDetail(id: string) {
   try {
     await overtimeStore.fetchOne(id);
     detailDialogVisible.value = true;
-  } catch (error) {
-    ElMessage.error("Failed to load request detail");
+  } catch {
+    // API notifications are handled by service layer
   }
 }
 
@@ -150,14 +149,11 @@ async function submitCancel() {
     await overtimeStore.cancelRequest(cancelingRequestId.value, {
       reason: cancelForm.value.reason || undefined,
     });
-    ElMessage.success("Overtime request cancelled successfully");
     closeCancelDialog();
     await overtimeStore.fetchMyList();
   } catch (error: any) {
     if (error !== "cancel") {
-      ElMessage.error(
-        overtimeStore.getError("cancelRequest") || "Failed to cancel request",
-      );
+      // API notifications are handled by service layer
     }
   }
 }
@@ -196,8 +192,8 @@ onMounted(async () => {
       overtimeStore.fetchMyList(),
       overtimeStore.fetchMySummary(),
     ]);
-  } catch (error) {
-    ElMessage.error("Failed to load overtime information");
+  } catch {
+    // API notifications are handled by service layer
   }
 });
 
@@ -383,7 +379,7 @@ const handlePageChange = async (page: number) => {
             v-model="createForm.reason"
             type="textarea"
             placeholder="Explain why you need overtime"
-            rows="4"
+            :rows="4"
           />
         </ElFormItem>
       </ElForm>
@@ -454,7 +450,7 @@ const handlePageChange = async (page: number) => {
             v-model="cancelForm.reason"
             type="textarea"
             placeholder="Optional: Explain why you're cancelling"
-            rows="3"
+            :rows="3"
           />
         </ElFormItem>
       </ElForm>

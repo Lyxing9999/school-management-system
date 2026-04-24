@@ -4,7 +4,7 @@ from flask import Blueprint, request, g
 
 from app.contexts.core.security.auth_utils import (
     get_current_employee_id,
-    get_current_staff_id,
+    get_current_user_oid,
 )
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.shared.model_converter import pydantic_converter
@@ -64,7 +64,7 @@ def check_out():
 @login_required(allowed_roles=["hr_admin"])
 @wrap_response
 def review_wrong_location(attendance_id: str):
-    admin_id = get_current_staff_id()
+    admin_id = get_current_user_oid()
     payload = pydantic_converter.convert_to_model(
         request.json,
         AttendanceApproveWrongLocationSchema,
@@ -96,7 +96,7 @@ def review_wrong_location(attendance_id: str):
 
 def review_early_leave(attendance_id: str):
 
-    admin_id = get_current_staff_id()
+    admin_id = get_current_user_oid()
 
     payload = pydantic_converter.convert_to_model(
 

@@ -198,6 +198,18 @@ function statusLabel(status?: string | null): string {
   return map[String(status || "").toLowerCase()] || String(status || "Unknown");
 }
 
+function resolvedStatus(row: AttendanceDTO): string {
+  const wrongLocationStatus = String(row.wrong_location_status || "").trim();
+  if (wrongLocationStatus) return wrongLocationStatus;
+
+  const reviewStatus = String(row.location_review_status || "").trim().toLowerCase();
+  if (reviewStatus === "pending") return "wrong_location_pending";
+  if (reviewStatus === "approved") return "wrong_location_approved";
+  if (reviewStatus === "rejected") return "wrong_location_rejected";
+
+  return String(row.status || "");
+}
+
 function statusTagType(
   status?: string | null,
 ): "warning" | "success" | "danger" | "info" | "primary" {
@@ -256,6 +268,7 @@ async function fetchAttendances(
   try {
     const response = await attendanceService.getAttendances(
       buildParams(page, limit),
+      { showError: false },
     );
     rows.value = response.items ?? [];
     pagination.total = response.pagination?.total ?? rows.value.length;
@@ -297,10 +310,10 @@ async function handlePageSizeChange(size: number) {
 
 function showDetails(row: AttendanceDTO) {
   ElMessage.info(
-    `Attendance ${row.id} | ${displayRelation(
+    `${displayRelation(
       row.employee_name,
       row.employee_id,
-    )} | ${statusLabel(row.status)} | ${formatDate(row.attendance_date)}`,
+    )} | ${statusLabel(resolvedStatus(row))} | ${formatDate(row.attendance_date)}`,
   );
 }
 
@@ -341,7 +354,7 @@ onMounted(() => {
       <ElInput
         v-model="filters.employee_id"
         clearable
-        placeholder="Filter by employee name or id"
+        placeholder="Filter by employee"
         class="toolbar-input"
       />
 
@@ -431,13 +444,13 @@ onMounted(() => {
   >
     <template #status="{ row }">
       <ElTag
-        :type="statusTagType(row.status)"
+        :type="statusTagType(resolvedStatus(row as AttendanceDTO))"
         effect="plain"
         round
         size="small"
-        :class="statusClass(row.status)"
+        :class="statusClass(resolvedStatus(row as AttendanceDTO))"
       >
-        {{ statusLabel(row.status) }}
+        {{ statusLabel(resolvedStatus(row as AttendanceDTO)) }}
       </ElTag>
     </template>
 

@@ -11,7 +11,6 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElMessage,
   ElTag,
   type FormInstance,
   type FormRules,
@@ -161,7 +160,7 @@ async function fetchDetail() {
   try {
     leaveRequest.value = await leaveService.getRequest(leaveId.value);
   } catch {
-    ElMessage.error("Failed to load leave request detail");
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -217,11 +216,10 @@ async function submitApprove() {
       comment: String(approveForm.comment || "").trim() || null,
     });
 
-    ElMessage.success("Leave request approved");
     approveDialogVisible.value = false;
     await fetchDetail();
   } catch {
-    ElMessage.error("Failed to approve leave request");
+    // API notifications are handled by service layer
   } finally {
     actionLoading.value = false;
   }
@@ -238,11 +236,10 @@ async function submitReject() {
       comment: String(rejectForm.comment || "").trim() || null,
     });
 
-    ElMessage.success("Leave request rejected");
     rejectDialogVisible.value = false;
     await fetchDetail();
   } catch {
-    ElMessage.error("Failed to reject leave request");
+    // API notifications are handled by service layer
   } finally {
     actionLoading.value = false;
   }
@@ -256,7 +253,7 @@ onMounted(() => {
 <template>
   <div class="leave-detail-page">
     <OverviewHeader
-      :title="`Leave Detail (${leaveId || '-'})`"
+      :title="'Leave Detail'"
       :description="'Review a single leave request and approve or reject it'"
       :backPath="ROUTES.HR_ADMIN.LEAVES"
     >
@@ -285,7 +282,6 @@ onMounted(() => {
         <div class="detail-head">
           <div>
             <h3 class="detail-title">Request Information</h3>
-            <p class="detail-subtitle">Leave request {{ leaveRequest.id }}</p>
           </div>
 
           <ElTag
@@ -303,9 +299,6 @@ onMounted(() => {
         </div>
 
         <ElDescriptions :column="2" border class="mt-3">
-          <ElDescriptionsItem label="ID">{{
-            leaveRequest.id
-          }}</ElDescriptionsItem>
           <ElDescriptionsItem label="Employee">{{
             displayRelation(leaveRequest.employee_name, leaveRequest.employee_id)
           }}</ElDescriptionsItem>
@@ -365,7 +358,7 @@ onMounted(() => {
       </template>
 
       <template v-else>
-        <ElEmpty description="No leave request found for this ID" />
+        <ElEmpty description="No leave request found" />
       </template>
     </ElCard>
 

@@ -37,7 +37,6 @@ const filters = reactive<{
 }>({ employee_id: "", status: "", start_date: "", end_date: "" });
 
 const columns: ColumnConfig<OvertimeRequestDTO>[] = [
-  { field: "id", label: "Request ID", minWidth: "170px", visible: true },
   {
     field: "employee_id",
     label: "Employee",
@@ -228,14 +227,14 @@ onMounted(() => {
       ><ElInput
         v-model="filters.employee_id"
         clearable
-        placeholder="employee_id"
+        placeholder="Employee"
         @keyup.enter="applyFilters"
     /></el-col>
     <el-col :xs="24" :sm="12" :md="6"
       ><ElInput
         v-model="filters.status"
         clearable
-        placeholder="status"
+        placeholder="Status"
         @keyup.enter="applyFilters"
     /></el-col>
     <el-col :xs="24" :sm="12" :md="6"
@@ -243,14 +242,14 @@ onMounted(() => {
         v-model="filters.start_date"
         class="w-full"
         value-format="YYYY-MM-DD"
-        placeholder="start_date"
+        placeholder="Start date"
     /></el-col>
     <el-col :xs="24" :sm="12" :md="6"
       ><ElDatePicker
         v-model="filters.end_date"
         class="w-full"
         value-format="YYYY-MM-DD"
-        placeholder="end_date"
+        placeholder="End date"
     /></el-col>
   </el-row>
 

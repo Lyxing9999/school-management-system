@@ -16,8 +16,14 @@ class AuditAction(str, Enum):
     OT_SUBMITTED = "ot_submitted"
     OT_APPROVED = "ot_approved"
     OT_REJECTED = "ot_rejected"
+    OT_CANCELLED = "ot_cancelled"
+    LEAVE_SUBMITTED = "leave_submitted"
+    LEAVE_APPROVED = "leave_approved"
+    LEAVE_REJECTED = "leave_rejected"
+    LEAVE_CANCELLED = "leave_cancelled"
     PAYROLL_GENERATED = "payroll_generated"
     PAYROLL_FINALIZED = "payroll_finalized"
+    PAYROLL_MARKED_PAID = "payroll_marked_paid"
 
 
 class AuditLog:

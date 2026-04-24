@@ -15,6 +15,7 @@ class InvalidEnrollmentStatusException(AppBaseException):
             error_code="INVALID_ENROLLMENT_STATUS",
             status_code=422,
             severity=ErrorSeverity.HIGH,
+            user_message="Invalid enrollment status provided.",
             details={"received": received_value},
             hint="Allowed values: active, dropped, completed",
             received_value=received_value,
@@ -30,6 +31,7 @@ class EnrollmentAlreadyCompletedException(AppBaseException):
             error_code="ENROLLMENT_ALREADY_COMPLETED",
             status_code=409,
             severity=ErrorSeverity.HIGH,
+            user_message="This enrollment has already been completed.",
             details={"enrollment_id": str(enrollment_id)},
             hint="Completed enrollment records are immutable.",
         )
@@ -44,6 +46,7 @@ class EnrollmentAlreadyDroppedException(AppBaseException):
             error_code="ENROLLMENT_ALREADY_DROPPED",
             status_code=409,
             severity=ErrorSeverity.MEDIUM,
+            user_message="This enrollment has already been dropped.",
             details={"enrollment_id": str(enrollment_id)},
             hint="Drop status cannot be applied twice.",
         )

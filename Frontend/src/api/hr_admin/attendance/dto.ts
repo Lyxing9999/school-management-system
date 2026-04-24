@@ -41,6 +41,7 @@ export interface AttendanceDTO {
 
   wrong_location_reason?: string | null;
   location_review_status?: string | null;
+  wrong_location_status?: string | null;
   late_reason?: string | null;
   early_leave_reason?: string | null;
   early_leave_review_status?: string | null;

@@ -126,7 +126,7 @@ const queueStats = computed(() => {
     {
       label: "Employees",
       value: uniqueEmployees,
-      hint: "Unique employee IDs on this page",
+      hint: "Unique employees on this page",
     },
     {
       label: "Average hours",
@@ -291,7 +291,7 @@ async function fetchQueue(page = 1) {
   try {
     await overtimeStore.fetchPendingApproval(page);
   } catch {
-    ElMessage.error("Failed to load overtime review queue");
+    // API notifications are handled by service layer
   }
 }
 
@@ -313,9 +313,7 @@ async function loadDetail(id: string) {
   try {
     await overtimeStore.fetchOne(id);
   } catch {
-    if (!activeRequest.value) {
-      ElMessage.error("Failed to load request details");
-    }
+    // API notifications are handled by service layer
   }
 }
 
@@ -364,10 +362,6 @@ async function submitApprove() {
     comment: String(approveForm.comment || "").trim() || "",
   };
 
-  console.log("submitApprove triggered");
-
-  console.log("approve payload", activeRequest.value.id, payload);
-
   await overtimeStore.approveRequest(activeRequest.value.id, payload);
 
   closeApproveDialog();
@@ -403,14 +397,11 @@ async function submitReject() {
       comment: String(rejectForm.comment || "").trim(),
     });
 
-    ElMessage.success("Overtime request rejected");
     closeRejectDialog();
     await fetchQueue(paginationProps.value.currentPage);
   } catch (error: any) {
     if (error === "cancel") return;
-    ElMessage.error(
-      overtimeStore.getError("rejectRequest") || "Failed to reject request",
-    );
+    // API notifications are handled by service layer
   }
 }
 
@@ -502,7 +493,7 @@ onMounted(() => {
           <el-input
             v-model="searchEmployeeId"
             clearable
-            placeholder="Search by employee id"
+            placeholder="Search by employee"
             @keyup.enter="applyFilters"
           />
         </el-col>
@@ -561,7 +552,6 @@ onMounted(() => {
                 <span class="employee-cell__primary">{{
                   displayRelation(row.employee_name, row.employee_id)
                 }}</span>
-                <span class="employee-cell__secondary">{{ row.id }}</span>
               </div>
             </template>
           </el-table-column>
@@ -685,9 +675,6 @@ onMounted(() => {
               <h3 class="detail-head__title">
                 {{ displayRelation(currentDetail.employee_name, currentDetail.employee_id) }}
               </h3>
-              <p class="detail-head__subtitle">
-                Request {{ currentDetail.id }}
-              </p>
             </div>
 
             <ElTag

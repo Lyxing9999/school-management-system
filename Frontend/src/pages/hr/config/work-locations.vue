@@ -613,7 +613,7 @@ function handleCurrentChange(page: number) {
 
 function handleSortChange(sort: any) {
   // Implement sorting if needed
-  console.log("Sort change:", sort);
+  void sort;
 }
 
 function openCreateDialog() {

@@ -9,6 +9,7 @@ class PayrollAlreadyFinalizedException(AppBaseException):
             error_code="PAYROLL_ALREADY_FINALIZED",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message=f"Payroll run has already been finalized (status: {status}).",
             details={"payroll_run_id": str(payroll_run_id), "status": status},
             hint="Only draft payroll can be recalculated/finalized",
             recoverable=True,
@@ -35,6 +36,7 @@ class PayrollRunDeletedException(AppBaseException):
             error_code="PAYROLL_RUN_DELETED",
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This payroll run has been deleted.",
             details={"payroll_run_id": str(payroll_run_id)},
             hint="Restore payroll run or generate a new one",
             recoverable=True,
@@ -64,6 +66,7 @@ class PayrollRunNotFoundException(AppBaseException):
             status_code=404,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Payroll run not found.",
             context={"payroll_run_id": str(payroll_run_id)},
             recoverable=True,
         )
@@ -77,6 +80,7 @@ class PayslipNotFoundException(AppBaseException):
             status_code=404,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Payslip not found.",
             context={"payslip_id": str(payslip_id)},
             recoverable=True,
         )
@@ -90,6 +94,7 @@ class PayrollMonthRequiredException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Payroll month is required.",
             recoverable=True,
         )
 
@@ -102,6 +107,7 @@ class PayrollFinalizeStateInvalidException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Only draft payroll runs can be finalized.",
             details={"payroll_run_id": payroll_run_id, "status": status},
             recoverable=True,
         )
@@ -115,6 +121,7 @@ class PayrollMarkPaidStateInvalidException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Only finalized payroll runs can be marked as paid.",
             details={"payroll_run_id": payroll_run_id, "status": status},
             recoverable=True,
         )
@@ -128,6 +135,7 @@ class PayslipMonthRequiredException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Payslip month is required.",
             recoverable=True,
         )
 
@@ -140,6 +148,7 @@ class PayrollExpectedWorkingDaysInvalidException(AppBaseException):
             status_code=400,
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Expected working days must be positive.",
             details={"expected_working_days": expected_working_days},
             recoverable=True,
         )

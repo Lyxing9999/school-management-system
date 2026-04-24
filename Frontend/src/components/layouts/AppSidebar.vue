@@ -345,6 +345,11 @@ const menus: Record<AppRoleKey, MenuItem[]> = {
           icon: "Document",
           route: ROUTES.HR_ADMIN.REPORTS_WRONG_LOCATION,
         },
+        {
+          title: "Audit Logs",
+          icon: "Tickets",
+          route: ROUTES.HR_ADMIN.AUDIT_LOGS,
+        },
       ],
     },
   ],
@@ -488,6 +493,11 @@ const menus: Record<AppRoleKey, MenuItem[]> = {
           title: "Team Reports",
           icon: "Document",
           route: ROUTES.MANAGER.REPORTS_TEAM,
+        },
+        {
+          title: "Audit Logs",
+          icon: "Tickets",
+          route: ROUTES.MANAGER.AUDIT_LOGS,
         },
       ],
     },

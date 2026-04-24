@@ -1420,7 +1420,11 @@ watch(filter, async () => {
 .holiday-form-error {
   margin-top: 16px;
   padding: 12px;
-  background: color-mix(in srgb, var(--el-color-warning) 10%, var(--color-card));
+  background: color-mix(
+    in srgb,
+    var(--el-color-warning) 10%,
+    var(--color-card)
+  );
   border-left: 3px solid var(--el-color-warning);
   color: var(--el-color-warning);
   font-size: 12px;
@@ -1536,12 +1540,20 @@ watch(filter, async () => {
 
   &--holiday {
     cursor: pointer;
-    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-card) 92%);
+    background: color-mix(
+      in srgb,
+      var(--color-primary) 8%,
+      var(--color-card) 92%
+    );
     border-color: var(--color-primary);
     font-weight: 500;
 
     &:hover {
-      background: color-mix(in srgb, var(--color-primary) 15%, var(--color-card) 85%);
+      background: color-mix(
+        in srgb,
+        var(--color-primary) 15%,
+        var(--color-card) 85%
+      );
       box-shadow: 0 2px 8px var(--card-shadow);
       transform: translateY(-2px);
     }

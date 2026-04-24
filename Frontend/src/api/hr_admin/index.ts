@@ -9,6 +9,8 @@ import { OvertimeRequestApi } from "./overtime/api";
 import { OvertimeRequestService } from "./overtime/service";
 import { LeaveRequestApi } from "./leave/api";
 import { LeaveRequestService } from "./leave/service";
+import { AuditLogApi } from "./audit/api";
+import { AuditLogService } from "./audit/service";
 import { DeductionRuleApi } from "./deduction/api";
 import { DeductionRuleService } from "./deduction/service";
 import { PayrollRunApi } from "./payroll/api";
@@ -27,6 +29,7 @@ function createHrmsAdminService() {
     publicHoliday: new PublicHolidayApi($api),
     overtimeRequest: new OvertimeRequestApi($api),
     leaveRequest: new LeaveRequestApi($api),
+    auditLog: new AuditLogApi($api),
     deductionRule: new DeductionRuleApi($api),
     payrollRun: new PayrollRunApi($api),
   };
@@ -39,6 +42,7 @@ function createHrmsAdminService() {
     publicHoliday: new PublicHolidayService(hrmsApi.publicHoliday),
     overtimeRequest: new OvertimeRequestService(hrmsApi.overtimeRequest),
     leaveRequest: new LeaveRequestService(hrmsApi.leaveRequest),
+    auditLog: new AuditLogService(hrmsApi.auditLog),
     deductionRule: new DeductionRuleService(hrmsApi.deductionRule),
     payrollRun: new PayrollRunService(hrmsApi.payrollRun),
   };

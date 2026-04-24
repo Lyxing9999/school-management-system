@@ -23,6 +23,10 @@ class MongoAuditLogRepository:
         entity_type: str | None = None,
         entity_id: ObjectId | None = None,
         actor_id: ObjectId | None = None,
+        action: str | None = None,
+        start_at=None,
+        end_at=None,
+        include_deleted: bool = False,
         page: int = 1,
         limit: int = 20,
     ) -> tuple[list[AuditLog], int]:
@@ -34,6 +38,16 @@ class MongoAuditLogRepository:
             query["entity_id"] = entity_id
         if actor_id:
             query["actor_id"] = actor_id
+        if action:
+            query["action"] = str(action).strip().lower()
+        if start_at or end_at:
+            query["action_at"] = {}
+            if start_at is not None:
+                query["action_at"]["$gte"] = start_at
+            if end_at is not None:
+                query["action_at"]["$lte"] = end_at
+        if not include_deleted:
+            query["lifecycle.deleted_at"] = None
 
         total = self.collection.count_documents(query)
         skip = (page - 1) * limit

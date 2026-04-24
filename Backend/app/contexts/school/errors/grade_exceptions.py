@@ -146,6 +146,7 @@ class GradeRecordDeletedException(AppBaseException):
             error_code="GRADE_RECORD_DELETED",
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This grade record has been deleted.",
             details={"grade_id": str(grade_id)},
             hint="Restore the grade record before modifying it, or create a new one.",
             recoverable=True,

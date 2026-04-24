@@ -10,7 +10,6 @@ import {
   ElDialog,
   ElEmpty,
   ElInput,
-  ElMessage,
   ElPagination,
   ElRow,
   ElSelect,
@@ -189,7 +188,7 @@ async function fetchLeaveRequests(
     pagination.page = response.page ?? page;
     pagination.limit = response.page_size ?? limit;
   } catch {
-    ElMessage.error("Failed to load leave requests");
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -283,7 +282,7 @@ onMounted(() => {
           <ElInput
             v-model="filters.employee_id"
             clearable
-            placeholder="Filter by employee id"
+            placeholder="Filter by employee"
             @keyup.enter="applyFilters"
           />
         </el-col>
@@ -352,7 +351,6 @@ onMounted(() => {
                 <span class="employee-cell__primary">{{
                   displayRelation(row.employee_name, row.employee_id)
                 }}</span>
-                <span class="employee-cell__secondary">{{ row.id }}</span>
               </div>
             </template>
           </ElTableColumn>
@@ -470,7 +468,6 @@ onMounted(() => {
             <h3 class="detail-head__title">
               {{ displayRelation(activeRequest.employee_name, activeRequest.employee_id) }}
             </h3>
-            <p class="detail-head__subtitle">Request {{ activeRequest.id }}</p>
           </div>
 
           <ElTag

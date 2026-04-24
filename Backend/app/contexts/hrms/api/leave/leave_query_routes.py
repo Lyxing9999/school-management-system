@@ -3,7 +3,11 @@ from __future__ import annotations
 import math
 from flask import Blueprint, request, g
 
-from app.contexts.core.security.auth_utils import get_current_employee_id
+from app.contexts.core.security.auth_utils import (
+    get_current_employee_id,
+    get_current_user,
+    get_current_user_oid,
+)
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.iam.auth.jwt_utils import login_required
 
@@ -111,6 +115,38 @@ def list_pending_leave_requests():
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
+    }
+
+
+@leave_query_bp.route("/leave-requests/balances", methods=["GET"], strict_slashes=False)
+@login_required(allowed_roles=["manager", "hr_admin"])
+@wrap_response
+def list_leave_balances():
+    current_user = get_current_user()
+    current_role = str(current_user.get("role") or "").strip().lower()
+    manager_user_id = get_current_user_oid() if current_role == "manager" else None
+
+    page = max(int(request.args.get("page") or 1), 1)
+    page_size = min(max(int(request.args.get("limit") or 20), 1), 200)
+    q = (request.args.get("q") or "").strip() or None
+    employee_id = (request.args.get("employee_id") or "").strip() or None
+
+    rows, total, current_page, resolved_page_size, total_pages = g.hrms.leave.list_balances(
+        page=page,
+        page_size=page_size,
+        q=q,
+        employee_id=employee_id,
+        manager_user_id=manager_user_id,
+    )
+
+    g.hrms.response_enricher.enrich_leave_balance_records(rows)
+
+    return {
+        "items": rows,
+        "total": int(total),
+        "page": int(current_page),
+        "page_size": int(resolved_page_size),
+        "total_pages": int(total_pages),
     }
 
 

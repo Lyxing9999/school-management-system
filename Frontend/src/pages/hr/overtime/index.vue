@@ -4,7 +4,6 @@ import {
   ElButton,
   ElCol,
   ElInput,
-  ElMessage,
   ElMessageBox,
   ElOption,
   ElPagination,
@@ -77,7 +76,7 @@ async function fetchOvertimeRequests(
     pagination.page = response.page ?? page;
     pagination.limit = response.limit ?? limit;
   } catch {
-    ElMessage.error("Failed to load overtime records");
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -129,7 +128,7 @@ function getStatusClass(status: string): string {
 
 async function showDetails(row: OvertimeRequestDTO) {
   await ElMessageBox.alert(
-    `Overtime ID: ${row.id}\nEmployee: ${displayRelation(
+    `Employee: ${displayRelation(
       row.employee_name,
       row.employee_id,
     )}\nDate: ${
@@ -171,7 +170,7 @@ onMounted(() => {
       <ElInput
         v-model="filters.employee_id"
         clearable
-        placeholder="Filter by employee id"
+        placeholder="Filter by employee"
       />
     </el-col>
 

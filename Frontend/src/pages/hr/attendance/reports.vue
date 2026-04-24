@@ -53,6 +53,22 @@ function toLabel(key: string, map: Record<string, string>): string {
   );
 }
 
+function normalizedAttendanceStatus(row: AttendanceDTO): string {
+  const wrongLocationStatus = String(row.wrong_location_status || "")
+    .trim()
+    .toLowerCase();
+  if (wrongLocationStatus) return wrongLocationStatus;
+
+  const reviewStatus = String(row.location_review_status || "")
+    .trim()
+    .toLowerCase();
+  if (reviewStatus === "pending") return "wrong_location_pending";
+  if (reviewStatus === "approved") return "wrong_location_approved";
+  if (reviewStatus === "rejected") return "wrong_location_rejected";
+
+  return String(row.status || "").toLowerCase();
+}
+
 function aggregateBy(
   rows: AttendanceDTO[],
   keySelector: (row: AttendanceDTO) => string | null | undefined,
@@ -80,7 +96,7 @@ function aggregateBy(
 const attendanceStatusSummary = computed(() =>
   aggregateBy(
     attendanceRows.value,
-    (row) => String(row.status || "unknown").toLowerCase(),
+    (row) => normalizedAttendanceStatus(row),
     statusLabelMap,
   ),
 );
@@ -96,7 +112,7 @@ const attendanceDayTypeSummary = computed(() =>
 const wrongLocationStatusSummary = computed(() =>
   aggregateBy(
     wrongLocationRows.value,
-    (row) => String(row.status || "unknown").toLowerCase(),
+    (row) => normalizedAttendanceStatus(row),
     {
       wrong_location_pending: "Pending",
       wrong_location_approved: "Approved",
@@ -110,9 +126,8 @@ const totalWrongLocationRecords = computed(() => wrongLocationTotal.value);
 
 const totalLate = computed(
   () =>
-    attendanceRows.value.filter(
-      (row) => String(row.status || "").toLowerCase() === "late",
-    ).length,
+    attendanceRows.value.filter((row) => Number(row.late_minutes || 0) > 0)
+      .length,
 );
 
 const totalAbsent = computed(

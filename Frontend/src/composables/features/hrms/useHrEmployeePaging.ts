@@ -43,10 +43,11 @@ export function useHrEmployeePaging(
 
   const paging = usePaginatedFetch<HrEmployeeRow, Filter>(
     async (filter, page, pageSize) => {
-      const res = await api.employee.({
+      const res = await api.employee.getEmployeesWithAccounts({
         page,
         limit: pageSize,
         q: filter.q,
+        with_accounts: true,
       });
 
       let rows = mapRows(res.items);

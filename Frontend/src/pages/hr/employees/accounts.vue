@@ -23,15 +23,14 @@ import type { ColumnConfig } from "~/components/types/tableEdit";
 
 import type {
   HrCreateEmployeeAccountDTO,
-  HrEmployeeAccountListItemDTO,
   HrEmployeeDTO,
   HrEmployeeWithAccountSummaryDTO,
 } from "~/api/hr_admin/employees/dto";
-import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import {
+  displayRelation,
   buildAccountOptionLabel,
   normalizeAccountRole,
-} from "~/api/hr_admin/employees/accountOptions";
+} from "~/api/hr_admin/shared/displayRelation";
 import { ROUTES } from "~/constants/routes";
 import { Status } from "~/api/types/enums/status.enum";
 import { Role } from "~/api/types/enums/role.enum";
@@ -138,7 +137,8 @@ function toManagerAccountRow(
   const employeeId = String(item.employee.id ?? "").trim();
   if (!employeeId) return null;
 
-  const userId = String(account.user_id ?? "").trim() || null;
+  const userId =
+    String(account.user_id ?? account.id ?? "").trim() || null;
 
   const role = normalizeAccountRole(account.role);
   if (!roleAllowed(role)) return null;
@@ -161,7 +161,7 @@ function toManagerAccountRow(
       employeeId,
     ),
     account_name: buildAccountOptionLabel(
-      account as HrEmployeeAccountListItemDTO,
+      account,
       "Account",
     ),
     account_email: account.account_email ?? account.email ?? null,

@@ -9,6 +9,8 @@ import type {
   LeaveRequestListResponseDTO,
   LeaveSummaryDTO,
   LeaveBalanceDTO,
+  LeaveBalanceListParams,
+  LeaveBalanceListResponseDTO,
 } from "./dto";
 
 export class LeaveRequestApi {
@@ -51,6 +53,11 @@ export class LeaveRequestApi {
       },
     );
     return res.data;
+  }
+
+  // Legacy alias for older callers
+  async getAll(params?: LeaveRequestListParams) {
+    return this.getRequests(params);
   }
 
   /**
@@ -126,6 +133,25 @@ export class LeaveRequestApi {
     const res = await this.$api.get<ApiResponse<LeaveBalanceDTO>>(
       `${this.baseURL}/my-balance`,
     );
+    return res.data;
+  }
+
+  /**
+   * Get leave balances by employee
+   * GET /api/hrms/leave-requests/balances
+   */
+  async getBalances(params?: LeaveBalanceListParams) {
+    const res = await this.$api.get<
+      ApiResponse<LeaveBalanceListResponseDTO>
+    >(`${this.baseURL}/balances`, {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        q: params?.q,
+        employee_id: params?.employee_id,
+      },
+      signal: params?.signal,
+    });
     return res.data;
   }
 

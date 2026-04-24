@@ -23,6 +23,7 @@ class EmployeeDeletedException(AppBaseException):
             error_code="EMPLOYEE_DELETED",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This employee has been deleted.",
             details={"employee_id": str(employee_id)},
             hint="Restore employee before linking account",
             recoverable=True,
@@ -47,6 +48,7 @@ class ContractRequiredException(AppBaseException):
             error_code="EMPLOYEE_CONTRACT_REQUIRED",
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="A contract is required for this employee type.",
             details={"employee_id": str(employee_id)},
             recoverable=True,
         )
@@ -58,6 +60,7 @@ class ContractDateInvalidException(AppBaseException):
             error_code="EMPLOYEE_CONTRACT_DATE_INVALID",
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.VALIDATION,
+            user_message="Invalid contract date range provided.",
             details={"start_date": str(start_date), "end_date": str(end_date)},
             hint="contract.end_date must be >= contract.start_date",
             recoverable=True,
@@ -140,6 +143,51 @@ class EmployeeAccountAlreadyLinkedException(AppBaseException):
             user_message="This account is already linked to another employee.",
             details={"user_id": user_id, "linked_employee_id": linked_employee_id},
             hint="Unlink the account from the current employee before linking it again.",
+            recoverable=True,
+        )
+
+
+class EmployeeAlreadyHasLinkedAccountException(AppBaseException):
+    def __init__(self, employee_id: str):
+        super().__init__(
+            message=f"Employee '{employee_id}' already has an IAM account linked",
+            error_code="EMPLOYEE_ALREADY_HAS_LINKED_ACCOUNT",
+            status_code=409,
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This employee already has an account linked.",
+            details={"employee_id": employee_id},
+            hint="Use a different employee or unlink the existing account first.",
+            recoverable=True,
+        )
+
+
+class EmployeeIamAccountCreationFailedException(AppBaseException):
+    def __init__(self, employee_id: str):
+        super().__init__(
+            message=f"Failed to create IAM account for employee '{employee_id}'",
+            error_code="EMPLOYEE_IAM_ACCOUNT_CREATION_FAILED",
+            status_code=500,
+            severity=ErrorSeverity.HIGH,
+            category=ErrorCategory.SYSTEM,
+            user_message="Unable to create account for employee.",
+            details={"employee_id": employee_id},
+            hint="Verify IAM service availability and retry the operation.",
+            recoverable=True,
+        )
+
+
+class EmployeeAccountLinkConflictException(AppBaseException):
+    def __init__(self, employee_id: str):
+        super().__init__(
+            message=f"Employee '{employee_id}' could not be linked because the account is already claimed",
+            error_code="EMPLOYEE_ACCOUNT_LINK_CONFLICT",
+            status_code=409,
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This employee already has an account linked.",
+            details={"employee_id": employee_id},
+            hint="Verify the employee has not been linked by another process.",
             recoverable=True,
         )
 

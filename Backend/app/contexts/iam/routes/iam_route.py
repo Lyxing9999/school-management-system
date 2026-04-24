@@ -65,6 +65,12 @@ def logout_user():
 # -------------------------
 # AUTH: REFRESH (ROTATE)
 # -------------------------
+def _refresh_failure(message: str):
+    response = make_response(jsonify({"msg": message}), 401)
+    clear_refresh_cookie(response)
+    return response
+
+
 @iam_bp.route("/refresh", methods=["POST"])
 def refresh_access_token():
     db = get_db()
@@ -72,45 +78,42 @@ def refresh_access_token():
 
     rt = request.cookies.get("refresh_token")
     if not rt:
-        return jsonify({"msg": "Missing refresh token"}), 401
+        return _refresh_failure("Missing refresh token")
 
     rt_hash = hash_refresh_token(rt)
-    doc = refresh_tokens.find_one({"token_hash": rt_hash})
+    doc = refresh_tokens.find_one({"token_hash": rt_hash, "revoked_at": None})
     if not doc:
-        return jsonify({"msg": "Invalid refresh token"}), 401
+        return _refresh_failure("Invalid refresh token")
 
-    if doc.get("revoked_at") is not None:
-        return jsonify({"msg": "Refresh token revoked"}), 401
-
-    # Ensure timezone-aware comparison — MongoDB returns naive UTC datetimes
+    now = now_utc()
     expires_at = ensure_utc_from_db(doc.get("expires_at"))
-    if expires_at and expires_at < now_utc():
-        return jsonify({"msg": "Refresh token expired"}), 401
+    if expires_at is None or expires_at <= now:
+        return _refresh_failure("Refresh token expired")
 
     iam_service = IAMService(db)
 
     raw_user = iam_service._iam_read_model.get_by_id(doc["user_id"])
     if not raw_user:
-        return jsonify({"msg": "User not found"}), 401
+        return _refresh_failure("User not found")
 
     iam_model = iam_service._iam_mapper.to_domain(raw_user)
     safe_dict = iam_service._iam_mapper.to_safe_dict(iam_model)
 
-    # Rotate refresh token
+    # Rotate refresh token using the same reference time for consistency
     new_rt = create_refresh_token()
     new_hash = hash_refresh_token(new_rt)
 
     refresh_tokens.update_one(
         {"_id": doc["_id"]},
-        {"$set": {"revoked_at": ensure_utc(now_utc()), "replaced_by_hash": new_hash}},
+        {"$set": {"revoked_at": ensure_utc(now), "replaced_by_hash": new_hash}},
     )
 
     refresh_tokens.insert_one(
         {
             "user_id": str(safe_dict["id"]),
             "token_hash": new_hash,
-            "created_at": ensure_utc(now_utc()),
-            "expires_at": ensure_utc(now_utc() + REFRESH_TTL),
+            "created_at": ensure_utc(now),
+            "expires_at": ensure_utc(now + REFRESH_TTL),
             "revoked_at": None,
             "replaced_by_hash": None,
         }

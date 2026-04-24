@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+from datetime import datetime, time
 from pymongo.errors import DuplicateKeyError
 
-from app.contexts.shared.model_converter import mongo_converter
 from app.contexts.hrms.errors.employee_exceptions import (
     EmployeeAccountAlreadyLinkedException,
+    EmployeeAccountLinkConflictException,
+    EmployeeIamAccountCreationFailedException,
 )
-from app.contexts.core.errors import AppBaseException, ErrorSeverity, ErrorCategory
-from datetime import datetime, time
+from app.contexts.iam.errors.iam_exception import (
+    EmailAlreadyExistsException,
+    UsernameAlreadyExistsException,
+)
+from app.contexts.shared.model_converter import mongo_converter
 
 class OnboardEmployeeWithAccountUseCase:
     def __init__(
@@ -81,14 +86,7 @@ class OnboardEmployeeWithAccountUseCase:
 
                     user_id = getattr(iam_user, "id", None)
                     if not user_id:
-                        raise AppBaseException(
-                            message="Failed to create IAM user",
-                            user_message="Unable to create account for employee.",
-                            severity=ErrorSeverity.MEDIUM,
-                            category=ErrorCategory.SYSTEM,
-                            recoverable=True,
-                            status_code=500,
-                        )
+                        raise EmployeeIamAccountCreationFailedException(str(employee_doc.get("_id")))
 
                     # 3. atomic conditional link
                     linked_employee = self.employee_repository.link_user_if_empty_with_session(
@@ -98,14 +96,7 @@ class OnboardEmployeeWithAccountUseCase:
                     )
 
                     if not linked_employee:
-                        raise AppBaseException(
-                            message="Employee account link failed because employee was already linked",
-                            user_message="This employee already has an account linked.",
-                            severity=ErrorSeverity.MEDIUM,
-                            category=ErrorCategory.BUSINESS_RULE,
-                            recoverable=True,
-                            status_code=409,
-                        )
+                        raise EmployeeAccountLinkConflictException(str(employee_doc["_id"]))
 
                     return iam_user, linked_employee
 
@@ -113,33 +104,12 @@ class OnboardEmployeeWithAccountUseCase:
                     msg = str(e)
 
                     if "uq_employee_user_id" in msg:
-                        raise AppBaseException(
-                            message="User account already linked to another employee",
-                            user_message="This account is already linked to another employee.",
-                            severity=ErrorSeverity.MEDIUM,
-                            category=ErrorCategory.BUSINESS_RULE,
-                            recoverable=True,
-                            status_code=409,
-                        )
+                        raise EmployeeAccountLinkConflictException(str(employee_doc.get("_id")))
 
                     if "uq_iam_username" in msg:
-                        raise AppBaseException(
-                            message="Username already exists",
-                            user_message="This username is already taken.",
-                            severity=ErrorSeverity.LOW,
-                            category=ErrorCategory.VALIDATION,
-                            recoverable=True,
-                            status_code=409,
-                        )
+                        raise UsernameAlreadyExistsException(username or "")
 
                     if "uq_iam_email" in msg:
-                        raise AppBaseException(
-                            message="Email already exists",
-                            user_message="This email is already in use.",
-                            severity=ErrorSeverity.LOW,
-                            category=ErrorCategory.VALIDATION,
-                            recoverable=True,
-                            status_code=409,
-                        )
+                        raise EmailAlreadyExistsException(email or "")
 
                     raise

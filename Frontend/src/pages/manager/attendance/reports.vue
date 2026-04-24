@@ -39,7 +39,6 @@ const wrongLocationReports = ref<AttendanceDTO[]>([]);
 const wrongTotal = ref(0);
 const wrongPage = ref(1);
 const wrongPageSize = ref(10);
-const wrongStatus = ref<string | undefined>(undefined);
 const wrongReviewStatus = ref<string | undefined>(undefined);
 const wrongDateRange = ref<[string, string] | null>(null);
 
@@ -88,7 +87,6 @@ const fetchWrong = async () => {
     const params: WrongLocationReportParams = {
       page: wrongPage.value,
       limit: wrongPageSize.value,
-      status: wrongStatus.value || undefined,
       review_status: wrongReviewStatus.value || undefined,
       start_date: wrongDateRange.value?.[0],
       end_date: wrongDateRange.value?.[1],
@@ -111,7 +109,7 @@ onMounted(() => {
 
 watch([teamPage, teamPageSize, teamStatus, teamDateRange], fetchTeam);
 watch(
-  [wrongPage, wrongPageSize, wrongStatus, wrongReviewStatus, wrongDateRange],
+  [wrongPage, wrongPageSize, wrongReviewStatus, wrongDateRange],
   fetchWrong,
 );
 
@@ -184,6 +182,8 @@ const wrongColumns = computed(() => [
     label: "Review Status",
     field: "location_review_status",
     minWidth: 140,
+    useSlot: true,
+    slotName: "review_status",
   },
   {
     label: "Admin Comment",
@@ -191,6 +191,30 @@ const wrongColumns = computed(() => [
     minWidth: 160,
   },
 ]);
+
+function resolvedStatus(row: AttendanceDTO): string {
+  const wrongLocationStatus = String(row.wrong_location_status || "")
+    .trim()
+    .toLowerCase();
+  if (wrongLocationStatus) return wrongLocationStatus;
+
+  const reviewStatus = String(row.location_review_status || "")
+    .trim()
+    .toLowerCase();
+  if (reviewStatus === "pending") return "wrong_location_pending";
+  if (reviewStatus === "approved") return "wrong_location_approved";
+  if (reviewStatus === "rejected") return "wrong_location_rejected";
+
+  return String(row.status || "").toLowerCase();
+}
+
+function reviewStatusLabel(row: AttendanceDTO): string {
+  const status = resolvedStatus(row);
+  if (status === "wrong_location_pending") return "Pending";
+  if (status === "wrong_location_approved") return "Approved";
+  if (status === "wrong_location_rejected") return "Rejected";
+  return "-";
+}
 </script>
 
 <template>
@@ -241,9 +265,9 @@ const wrongColumns = computed(() => [
           <template #status="{ row }">
             <InlineStatusCell
               :row-id="row.id"
-              :value="row.status"
+              :value="resolvedStatus(row as AttendanceDTO)"
               :editing-row-id="null"
-              :draft="row.status"
+              :draft="resolvedStatus(row as AttendanceDTO)"
               :options="statusOptions.filter((o) => o.value)"
               :tag-type="
                 (v) => {
@@ -296,18 +320,6 @@ const wrongColumns = computed(() => [
       >
         <template #header-right>
           <ElSelect
-            v-model="wrongStatus"
-            placeholder="Status"
-            style="width: 140px; margin-right: 8px"
-          >
-            <ElOption
-              v-for="opt in statusOptions"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
-            />
-          </ElSelect>
-          <ElSelect
             v-model="wrongReviewStatus"
             placeholder="Review Status"
             style="width: 140px; margin-right: 8px"
@@ -343,6 +355,9 @@ const wrongColumns = computed(() => [
             <span style="margin-left: 8px">{{
               displayRelation(row.employee_name || row.full_name, row.employee_id)
             }}</span>
+          </template>
+          <template #review_status="{ row }">
+            {{ reviewStatusLabel(row as AttendanceDTO) }}
           </template>
         </SmartTable>
         <div style="margin-top: 16px; text-align: right">

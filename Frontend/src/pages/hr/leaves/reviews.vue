@@ -482,7 +482,7 @@ onActivated(() => {
           <el-input
             v-model="searchEmployeeId"
             clearable
-            placeholder="Search by employee id"
+            placeholder="Search by employee"
             @keyup.enter="applyFilters"
           />
         </el-col>
@@ -555,7 +555,6 @@ onActivated(() => {
                 <span class="employee-cell__primary">{{
                   displayRelation(row.employee_name, row.employee_id)
                 }}</span>
-                <span class="employee-cell__secondary">{{ row.id }}</span>
               </div>
             </template>
           </el-table-column>
@@ -684,7 +683,6 @@ onActivated(() => {
               <h3 class="detail-head__title">
                 {{ displayRelation(detailRecord.employee_name, detailRecord.employee_id) }}
               </h3>
-              <p class="detail-head__subtitle">Request {{ detailRecord.id }}</p>
             </div>
 
             <ElTag

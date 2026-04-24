@@ -39,6 +39,7 @@ class AttendanceDTO(BaseModel):
 
     wrong_location_reason: Optional[str] = None
     location_review_status: str
+    wrong_location_status: Optional[str] = None
 
     late_reason: Optional[str] = None
     early_leave_reason: Optional[str] = None

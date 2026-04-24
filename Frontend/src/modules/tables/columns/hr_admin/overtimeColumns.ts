@@ -9,12 +9,6 @@ dayjs.extend(duration);
 
 export const overtimeColumns: ColumnConfig<OvertimeRequestDTO>[] = [
   {
-    field: "id",
-    label: "ID",
-    width: "100px",
-    visible: false,
-  },
-  {
     field: "employee_id",
     label: "Employee",
     width: "150px",

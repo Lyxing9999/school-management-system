@@ -84,7 +84,7 @@ onMounted(() => {
   <div class="employee-payslip-detail-page">
     <OverviewHeader
       title="Payslip Detail"
-      :description="`Payslip ID: ${payslipId}`"
+      :description="'Review payroll payout details'"
       :backPath="ROUTES.EMPLOYEE.PAYSLIPS"
     >
       <template #actions>
@@ -104,9 +104,6 @@ onMounted(() => {
         </div>
 
         <el-descriptions :column="2" border class="detail-grid">
-          <el-descriptions-item label="Payslip ID">{{
-            payslip.id
-          }}</el-descriptions-item>
           <el-descriptions-item label="Payroll Run">{{
             displayRelation(payslip.payroll_run_label, payslip.payroll_run_id)
           }}</el-descriptions-item>

@@ -10,6 +10,7 @@ class NotClassTeacherException(AppBaseException):
             message=f"Teacher {teacher_id} is not assigned to class {class_id}.",
             error_code="ATTENDANCE_NOT_CLASS_TEACHER",
             severity=ErrorSeverity.LOW,
+            user_message="You are not assigned to this class.",
             details={"teacher_id": str(teacher_id), "class_id": str(class_id)},
             hint="Ensure the teacher is assigned to the class before marking attendance."
         )
@@ -22,6 +23,7 @@ class StudentNotEnrolledInClassException(AppBaseException):
             message=f"Student {student_id} is not enrolled in class {class_id}.",
             error_code="ATTENDANCE_STUDENT_NOT_ENROLLED",
             severity=ErrorSeverity.LOW,
+            user_message="Student is not enrolled in this class.",
             details={"student_id": str(student_id), "class_id": str(class_id)},
             hint="Ensure the student is enrolled in the class before marking attendance."
         )
@@ -34,6 +36,7 @@ class AttendanceAlreadyMarkedException(AppBaseException):
             message=f"Attendance for student {student_id} in class {class_id} on {record_date} is already marked.",
             error_code="ATTENDANCE_ALREADY_MARKED",
             severity=ErrorSeverity.LOW,
+            user_message="Attendance has already been marked for this student today.",
             details={"student_id": str(student_id), "class_id": str(class_id), "date": str(record_date)},
             hint="Cannot mark attendance more than once for the same student, class, and date."
         )
@@ -46,6 +49,7 @@ class InvalidAttendanceStatusException(AppBaseException):
             message=f"Invalid attendance status: {received_value}.",
             error_code="ATTENDANCE_INVALID_STATUS",
             severity=ErrorSeverity.LOW,
+            user_message="Invalid attendance status provided.",
             received_value=received_value,
             hint=f"Status must be one of: present, absent, excused."
         )
@@ -58,6 +62,7 @@ class AttendanceDateInFutureException(AppBaseException):
             message=f"Attendance date {received_date} cannot be in the future.",
             error_code="ATTENDANCE_DATE_IN_FUTURE",
             severity=ErrorSeverity.LOW,
+            user_message="Attendance date cannot be in the future.",
             received_value=received_date,
             hint="Use the current date or a past date for marking attendance."
         )
@@ -89,6 +94,7 @@ class AttendanceTeacherInactiveException(AppBaseException):
             error_code="ATTENDANCE_TEACHER_INACTIVE",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Your account is not active. You cannot mark attendance.",
             details={"teacher_id": str(teacher_id), "status": status},
             hint="Activate the teacher account or use an active teacher to mark attendance.",
             recoverable=True,
@@ -103,6 +109,7 @@ class AttendanceClassInactiveException(AppBaseException):
             error_code="ATTENDANCE_CLASS_INACTIVE",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This class is currently inactive.",
             details={"class_id": str(class_id), "status": status},
             hint="Set the class status to active before marking attendance.",
             recoverable=True,
@@ -117,6 +124,7 @@ class AttendanceStudentInactiveException(AppBaseException):
             error_code="ATTENDANCE_STUDENT_INACTIVE",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This student is currently inactive.",
             details={"student_id": str(student_id), "status": status},
             hint="Activate the student or restore the account before marking attendance.",
             recoverable=True,
@@ -131,6 +139,7 @@ class AttendanceRecordDeletedException(AppBaseException):
             error_code="ATTENDANCE_RECORD_DELETED",
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This attendance record has been deleted.",
             details={"attendance_id": str(attendance_id)},
             hint="Restore the attendance record before modifying it, or create a new record.",
             recoverable=True,

@@ -23,7 +23,6 @@ const runPagination = reactive({ page: 1, limit: 10, total: 0 });
 const payslipPagination = reactive({ page: 1, limit: 10, total: 0 });
 
 const runColumns: ColumnConfig<PayrollRunDTO>[] = [
-  { field: "id", label: "Run ID", minWidth: "180px", visible: true },
   {
     field: "month",
     label: "Month",
@@ -57,10 +56,9 @@ const runColumns: ColumnConfig<PayrollRunDTO>[] = [
 ];
 
 const payslipColumns: ColumnConfig<PayslipDTO>[] = [
-  { field: "id", label: "Payslip ID", minWidth: "180px", visible: true },
   {
     field: "payroll_run_id",
-    label: "Run ID",
+    label: "Payroll Run",
     minWidth: "180px",
     visible: true,
     render: (row: PayslipDTO) =>

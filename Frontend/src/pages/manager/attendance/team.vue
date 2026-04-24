@@ -106,6 +106,22 @@ const columns = computed(() => [
     minWidth: 120,
   },
 ]);
+
+function resolvedStatus(row: AttendanceDTO): string {
+  const wrongLocationStatus = String(row.wrong_location_status || "")
+    .trim()
+    .toLowerCase();
+  if (wrongLocationStatus) return wrongLocationStatus;
+
+  const reviewStatus = String(row.location_review_status || "")
+    .trim()
+    .toLowerCase();
+  if (reviewStatus === "pending") return "wrong_location_pending";
+  if (reviewStatus === "approved") return "wrong_location_approved";
+  if (reviewStatus === "rejected") return "wrong_location_rejected";
+
+  return String(row.status || "").toLowerCase();
+}
 </script>
 
 <template>
@@ -154,9 +170,9 @@ const columns = computed(() => [
       <template #status="{ row }">
         <InlineStatusCell
           :row-id="row.id"
-          :value="row.status"
+          :value="resolvedStatus(row as AttendanceDTO)"
           :editing-row-id="null"
-          :draft="row.status"
+          :draft="resolvedStatus(row as AttendanceDTO)"
           :options="statusOptions.filter((o) => o.value)"
           :tag-type="
             (v) => {

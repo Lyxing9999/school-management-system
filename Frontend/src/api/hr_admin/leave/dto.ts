@@ -111,3 +111,40 @@ export interface LeaveBalanceDTO {
   used_days: number;
   remaining_days: number;
 }
+
+export interface LeaveBalanceItemDTO {
+  employee_id: string;
+  employee_name?: string | null;
+  employee_code?: string | null;
+  department?: string | null;
+  position?: string | null;
+  employee_status?: string | null;
+  manager_user_id?: string | null;
+  manager_name?: string | null;
+  annual_entitlement: number;
+  used_days: number;
+  remaining_days: number;
+  pending_days: number;
+  approved_days: number;
+  approved_annual_days: number;
+  approved_sick_days: number;
+  approved_unpaid_days: number;
+  approved_other_days: number;
+  last_approved_end_date?: string | null;
+}
+
+export interface LeaveBalanceListParams {
+  page?: number;
+  limit?: number;
+  q?: string;
+  employee_id?: string;
+  signal?: AbortSignal;
+}
+
+export interface LeaveBalanceListResponseDTO {
+  items: LeaveBalanceItemDTO[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}

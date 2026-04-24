@@ -86,6 +86,7 @@ class ScheduleSlotDeletedException(AppBaseException):
             error_code="SCHEDULE_SLOT_DELETED",
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This schedule slot has been deleted.",
             details={"slot_id": str(slot_id)},
             hint="Restore the schedule slot before modifying it, or create a new one.",
             recoverable=True,

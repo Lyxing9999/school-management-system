@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from app.contexts.hrms.domain.payroll import PayrollRun, Payslip
+from app.contexts.hrms.domain.audit_log import AuditLog
 from app.contexts.hrms.errors.payroll_exceptions import PayrollRunAlreadyExistsException
+from app.contexts.shared.time_utils import utc_now
 
 
 class GenerateMonthlyPayrollUseCase:
@@ -168,6 +170,18 @@ class GenerateMonthlyPayrollUseCase:
             )
             created_payslips.append(self.payslip_repository.save(payslip))
 
+        self._write_audit_log(
+            action="payroll_generated",
+            actor_id=generated_by,
+            entity_id=run.id,
+            details={
+                "month": month,
+                "employee_count": len(active_employees),
+                "generated_count": len(created_payslips),
+                "skipped_count": len(skipped_employees),
+            },
+        )
+
         return {
             "payroll_run": run,
             "payslips": created_payslips,
@@ -206,3 +220,18 @@ class GenerateMonthlyPayrollUseCase:
             total += (overlap_end - overlap_start).days + 1
 
         return total
+
+    def _write_audit_log(self, *, action: str, actor_id, entity_id, details: dict) -> None:
+        if not self.audit_log_repository:
+            return
+
+        audit_log = AuditLog(
+            id=None,
+            entity_type="payroll_run",
+            entity_id=entity_id,
+            action=action,
+            actor_id=actor_id,
+            action_at=utc_now(),
+            details=details,
+        )
+        self.audit_log_repository.save(audit_log)

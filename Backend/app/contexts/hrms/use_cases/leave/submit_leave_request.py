@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.contexts.hrms.domain.leave import LeaveRequest, LeaveType
+from app.contexts.hrms.domain.audit_log import AuditLog
 from app.contexts.hrms.errors.employee_exceptions import (
     EmployeeInactiveException,
     EmployeeNotFoundException,
@@ -11,6 +12,7 @@ from app.contexts.hrms.errors.leave_exceptions import (
     LeaveOverlapExistsException,
 )
 from app.contexts.shared.time_utils import coerce_date
+from app.contexts.shared.time_utils import utc_now
 
 
 class SubmitLeaveRequestUseCase:
@@ -82,4 +84,36 @@ class SubmitLeaveRequestUseCase:
             is_paid=is_paid,
         )
 
-        return self.leave_repository.save(leave)
+        saved = self.leave_repository.save(leave)
+        self._write_audit_log(
+            action="leave_submitted",
+            actor_id=employee.get("user_id"),
+            entity_id=saved.id,
+            details={
+                "employee_id": str(saved.employee_id),
+                "leave_type": (
+                    saved.leave_type.value
+                    if hasattr(saved.leave_type, "value")
+                    else str(saved.leave_type)
+                ),
+                "start_date": str(saved.start_date),
+                "end_date": str(saved.end_date),
+                "total_days": int(saved.total_days()),
+            },
+        )
+        return saved
+
+    def _write_audit_log(self, *, action: str, actor_id, entity_id, details: dict) -> None:
+        if not self.audit_log_repository:
+            return
+
+        audit_log = AuditLog(
+            id=None,
+            entity_type="leave",
+            entity_id=entity_id,
+            action=action,
+            actor_id=actor_id,
+            action_at=utc_now(),
+            details=details,
+        )
+        self.audit_log_repository.save(audit_log)

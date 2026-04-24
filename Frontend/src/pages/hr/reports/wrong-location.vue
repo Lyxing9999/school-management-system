@@ -33,7 +33,6 @@ const filters = reactive<{
 }>({ review_status: "", start_date: "", end_date: "" });
 
 const columns: ColumnConfig<AttendanceDTO>[] = [
-  { field: "id", label: "Attendance ID", minWidth: "180px", visible: true },
   {
     field: "employee_id",
     label: "Employee",
@@ -76,13 +75,35 @@ const columns: ColumnConfig<AttendanceDTO>[] = [
 const reviewSummary = computed(() => {
   const counts = { pending: 0, approved: 0, rejected: 0 };
   for (const row of rows.value) {
-    const status = String(row.location_review_status || "").toLowerCase();
+    const status = wrongLocationReviewStatus(row);
     if (status === "pending") counts.pending += 1;
     if (status === "approved") counts.approved += 1;
     if (status === "rejected") counts.rejected += 1;
   }
   return counts;
 });
+
+function wrongLocationReviewStatus(row: AttendanceDTO): string {
+  const review = String(row.location_review_status || "")
+    .trim()
+    .toLowerCase();
+  if (review) return review;
+
+  const wrongLocationStatus = String(row.wrong_location_status || "")
+    .trim()
+    .toLowerCase();
+  if (wrongLocationStatus.startsWith("wrong_location_")) {
+    return wrongLocationStatus.replace("wrong_location_", "");
+  }
+
+  const status = String(row.status || "").trim().toLowerCase();
+  const legacyMap: Record<string, string> = {
+    wrong_location_pending: "pending",
+    wrong_location_approved: "approved",
+    wrong_location_rejected: "rejected",
+  };
+  return legacyMap[status] || "";
+}
 
 function formatDateTime(value?: string | null): string {
   if (!value) return "-";
@@ -189,7 +210,7 @@ onMounted(() => {
       ><ElInput
         v-model="filters.review_status"
         clearable
-        placeholder="review_status"
+        placeholder="Review status (pending/approved/rejected)"
         @keyup.enter="applyFilters"
     /></el-col>
     <el-col :xs="24" :sm="8"
@@ -197,14 +218,14 @@ onMounted(() => {
         v-model="filters.start_date"
         class="w-full"
         value-format="YYYY-MM-DD"
-        placeholder="start_date"
+        placeholder="Start date"
     /></el-col>
     <el-col :xs="24" :sm="8"
       ><ElDatePicker
         v-model="filters.end_date"
         class="w-full"
         value-format="YYYY-MM-DD"
-        placeholder="end_date"
+        placeholder="End date"
     /></el-col>
   </el-row>
 
@@ -229,12 +250,12 @@ onMounted(() => {
   >
     <template #review_status="{ row }">
       <ElTag
-        :type="reviewStatusType(row.location_review_status)"
+        :type="reviewStatusType(wrongLocationReviewStatus(row))"
         effect="plain"
         round
         size="small"
       >
-        {{ String(row.location_review_status || "-").toUpperCase() }}
+        {{ String(wrongLocationReviewStatus(row) || "-").toUpperCase() }}
       </ElTag>
     </template>
   </SmartTable>

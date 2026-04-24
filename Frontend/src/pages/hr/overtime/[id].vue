@@ -11,7 +11,6 @@ import {
   ElFormItem,
   ElInput,
   ElInputNumber,
-  ElMessage,
   ElTag,
   type FormInstance,
   type FormRules,
@@ -147,7 +146,7 @@ async function fetchDetail() {
   try {
     overtime.value = await overtimeService.getRequest(overtimeId.value);
   } catch {
-    ElMessage.error("Failed to load overtime request detail");
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -177,11 +176,10 @@ async function submitApprove() {
       comment: String(approveForm.comment || "").trim() || null,
     });
 
-    ElMessage.success("Overtime request approved");
     approveDialogVisible.value = false;
     await fetchDetail();
   } catch {
-    ElMessage.error("Failed to approve overtime request");
+    // API notifications are handled by service layer
   } finally {
     actionLoading.value = false;
   }
@@ -198,11 +196,10 @@ async function submitReject() {
       comment: String(rejectForm.comment || "").trim(),
     });
 
-    ElMessage.success("Overtime request rejected");
     rejectDialogVisible.value = false;
     await fetchDetail();
   } catch {
-    ElMessage.error("Failed to reject overtime request");
+    // API notifications are handled by service layer
   } finally {
     actionLoading.value = false;
   }
@@ -213,7 +210,7 @@ await fetchDetail();
 
 <template>
   <OverviewHeader
-    :title="`Overtime Detail (${overtimeId || '-'})`"
+    :title="'Overtime Detail'"
     :description="'Review a single overtime request and optionally approve or reject it'"
     :backPath="ROUTES.HR_ADMIN.OVERTIME"
   >
@@ -255,7 +252,6 @@ await fetchDetail();
       </div>
 
       <ElDescriptions :column="2" border class="mt-3">
-        <ElDescriptionsItem label="ID">{{ overtime.id }}</ElDescriptionsItem>
         <ElDescriptionsItem label="Employee">{{
           displayRelation(overtime.employee_name, overtime.employee_id)
         }}</ElDescriptionsItem>
@@ -310,7 +306,7 @@ await fetchDetail();
     </template>
 
     <template v-else>
-      <div class="empty-box">No overtime request found for this ID.</div>
+      <div class="empty-box">No overtime request found.</div>
     </template>
   </ElCard>
 

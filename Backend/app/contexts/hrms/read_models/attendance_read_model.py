@@ -73,7 +73,19 @@ class AttendanceReadModel:
                 query["check_in_time"]["$lte"] = ensure_utc(end_date)
 
         if status:
-            query["status"] = status
+            normalized_status = str(status).strip().lower()
+            wrong_location_status_map = {
+                "wrong_location_pending": "pending",
+                "wrong_location_approved": "approved",
+                "wrong_location_rejected": "rejected",
+            }
+            if normalized_status in wrong_location_status_map:
+                query["$or"] = [
+                    {"location_review_status": wrong_location_status_map[normalized_status]},
+                    {"status": normalized_status},
+                ]
+            else:
+                query["status"] = normalized_status
 
         if deleted_only:
             query["lifecycle.deleted_at"] = {"$ne": None}
@@ -174,7 +186,15 @@ class AttendanceReadModel:
                 "wrong_location_approved": "approved",
                 "wrong_location_rejected": "rejected",
             }
-            query["location_review_status"] = legacy_map.get(normalized, normalized)
+            normalized_review_status = legacy_map.get(normalized, normalized)
+            query["$and"] = [
+                {
+                    "$or": [
+                        {"location_review_status": normalized_review_status},
+                        {"status": f"wrong_location_{normalized_review_status}"},
+                    ]
+                }
+            ]
 
         if start_date or end_date:
             query["check_in_time"] = {}

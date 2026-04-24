@@ -86,6 +86,7 @@ class SubjectDeletedException(AppBaseException):
             error_code="SUBJECT_DELETED",
             severity=ErrorSeverity.LOW,
             category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="This subject has been deleted.",
             details={"subject_id": str(subject_id)},
             hint="Restore the subject before modifying it, or create a new one.",
             recoverable=True,

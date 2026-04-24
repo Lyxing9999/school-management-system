@@ -89,6 +89,7 @@ export const ROUTES = {
     REPORTS_OVERTIME: "/hr/reports/overtime",
     REPORTS_PAYROLL: "/hr/reports/payroll",
     REPORTS_WRONG_LOCATION: "/hr/reports/wrong-location",
+    AUDIT_LOGS: "/hr/audit",
     SETTINGS: "/hr/settings",
   },
 
@@ -126,6 +127,7 @@ export const ROUTES = {
     LEAVE_REVIEWS: "/manager/leaves/reviews",
     LEAVE_HISTORY: "/manager/leaves/history",
     LEAVE_DETAIL: (id: string) => `/manager/leaves/${id}`,
+    AUDIT_LOGS: "/manager/audit",
 
     REPORTS_TEAM: "/manager/reports/team",
     SETTINGS: "/manager/settings",

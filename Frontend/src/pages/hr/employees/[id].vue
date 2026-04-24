@@ -14,11 +14,11 @@ import type {
 } from "~/api/hr_admin/employees/dto";
 import type { SelectOptionDTO } from "~/api/types/common/select-option.type";
 import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
-import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
 import {
+  displayRelation,
   toAccountSelectOption,
   toManagerSelectOptions,
-} from "~/api/hr_admin/employees/accountOptions";
+} from "~/api/hr_admin/shared/displayRelation";
 
 
 definePageMeta({ layout: "default" });
@@ -864,10 +864,10 @@ onMounted(loadDetail);
                 </el-checkbox>
               </el-form-item>
 
-              <el-form-item label="Leave Policy ID">
+              <el-form-item label="Leave Policy Reference">
                 <el-input
                   v-model="employeeForm.contract.leave_policy_id"
-                  placeholder="Optional leave policy ID"
+                  placeholder="Optional policy reference"
                 />
               </el-form-item>
             </template>

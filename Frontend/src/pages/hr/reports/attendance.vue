@@ -210,7 +210,7 @@ onMounted(() => {
       <ElInput
         v-model="filters.employee_id"
         clearable
-        placeholder="employee_id"
+        placeholder="Employee"
         @keyup.enter="applyFilters"
       />
     </el-col>
@@ -218,7 +218,7 @@ onMounted(() => {
       <ElInput
         v-model="filters.status"
         clearable
-        placeholder="status"
+        placeholder="Status"
         @keyup.enter="applyFilters"
       />
     </el-col>
@@ -227,7 +227,7 @@ onMounted(() => {
         v-model="filters.start_date"
         class="w-full"
         value-format="YYYY-MM-DD"
-        placeholder="start_date"
+        placeholder="Start date"
       />
     </el-col>
     <el-col :xs="24" :sm="12" :md="6">
@@ -235,7 +235,7 @@ onMounted(() => {
         v-model="filters.end_date"
         class="w-full"
         value-format="YYYY-MM-DD"
-        placeholder="end_date"
+        placeholder="End date"
       />
     </el-col>
   </el-row>

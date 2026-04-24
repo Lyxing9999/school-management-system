@@ -11,7 +11,6 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElMessage,
   ElMessageBox,
   ElTag,
 } from "element-plus";
@@ -144,7 +143,7 @@ async function fetchDetail() {
   try {
     overtime.value = await overtimeService.getRequest(overtimeId.value);
   } catch {
-    ElMessage.error("Failed to load overtime request detail");
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -183,11 +182,10 @@ async function submitCancel() {
       reason: String(cancelForm.reason || "").trim() || null,
     });
 
-    ElMessage.success("Overtime request cancelled");
     closeCancelDialog();
     await fetchDetail();
   } catch {
-    ElMessage.error("Failed to cancel overtime request");
+    // API notifications are handled by service layer
   } finally {
     actionLoading.value = false;
   }
@@ -201,7 +199,7 @@ onMounted(() => {
 <template>
   <div class="employee-overtime-detail-page">
     <OverviewHeader
-      :title="`Overtime Detail (${overtimeId || '-'})`"
+      :title="'Overtime Detail'"
       description="Detail of one overtime request from /api/hrms/overtime-requests/:id"
       :backPath="ROUTES.EMPLOYEE.OVERTIME_HISTORY"
     >
@@ -225,7 +223,6 @@ onMounted(() => {
         <div class="detail-head">
           <div>
             <h3 class="detail-title">Request Information</h3>
-            <p class="detail-subtitle">Request ID {{ overtime.id }}</p>
           </div>
 
           <ElTag
@@ -298,7 +295,7 @@ onMounted(() => {
         </div>
       </template>
 
-      <ElEmpty v-else description="No overtime request found for this ID" />
+      <ElEmpty v-else description="No overtime request found" />
     </ElCard>
 
     <ElDialog

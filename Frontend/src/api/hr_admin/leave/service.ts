@@ -12,6 +12,8 @@ import type {
   LeaveRequestListResponseDTO,
   LeaveSummaryDTO,
   LeaveBalanceDTO,
+  LeaveBalanceListParams,
+  LeaveBalanceListResponseDTO,
 } from "./dto";
 
 import { LeaveRequestApi } from "./api";
@@ -163,6 +165,29 @@ export class LeaveRequestService {
         annual_entitlement: 0,
         used_days: 0,
         remaining_days: 0,
+      }
+    );
+  }
+
+  /**
+   * Get leave balances by employee
+   * GET /api/hrms/leave-requests/balances
+   */
+  async getBalances(
+    params?: LeaveBalanceListParams,
+    options?: ApiCallOptions,
+  ): Promise<LeaveBalanceListResponseDTO> {
+    const data = await this.callApi<LeaveBalanceListResponseDTO>(
+      () => this.leaveRequestApi.getBalances(params),
+      options,
+    );
+    return (
+      data ?? {
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 20,
+        total_pages: 0,
       }
     );
   }

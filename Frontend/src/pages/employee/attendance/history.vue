@@ -466,9 +466,6 @@ onMounted(() => {
     >
       <template v-if="activeRow">
         <ElDescriptions :column="2" border>
-          <ElDescriptionsItem label="Attendance ID">
-            {{ activeRow.id }}
-          </ElDescriptionsItem>
           <ElDescriptionsItem label="Employee">
             {{ displayRelation(activeRow.employee_name, activeRow.employee_id) }}
           </ElDescriptionsItem>

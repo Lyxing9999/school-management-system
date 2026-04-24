@@ -30,8 +30,10 @@ import type {
 import type { SelectOptionDTO } from "~/api/types/common/select-option.type";
 import type { ColumnConfig } from "~/components/types/tableEdit";
 import SummaryCardGrid from "~/components/summary/SummaryCardGrid.vue";
-import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
-import { toManagerSelectOptions } from "~/api/hr_admin/employees/accountOptions";
+import {
+  displayRelation,
+  toManagerSelectOptions,
+} from "~/api/hr_admin/shared/displayRelation";
 definePageMeta({ layout: "default" });
 
 const router = useRouter();

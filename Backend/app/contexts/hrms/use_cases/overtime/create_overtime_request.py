@@ -18,7 +18,9 @@ from app.contexts.hrms.errors.overtime_exceptions import (
     WorkingDayOvertimeStartInvalidException,
 )
 from app.contexts.hrms.errors.schedule_exceptions import WorkingScheduleNotFoundException
+from app.contexts.hrms.domain.audit_log import AuditLog
 from app.contexts.shared.time_utils import ensure_utc, to_cambodia
+from app.contexts.shared.time_utils import utc_now
 
 
 class CreateOvertimeRequestUseCase:
@@ -29,11 +31,13 @@ class CreateOvertimeRequestUseCase:
         working_schedule_repository,
         public_holiday_repository,
         overtime_repository,
+        audit_log_repository=None,
     ) -> None:
         self.employee_repository = employee_repository
         self.working_schedule_repository = working_schedule_repository
         self.public_holiday_repository = public_holiday_repository
         self.overtime_repository = overtime_repository
+        self.audit_log_repository = audit_log_repository
 
     def execute(self, *, employee_id, payload):
         employee = self.employee_repository.find_by_id(employee_id)
@@ -116,7 +120,24 @@ class CreateOvertimeRequestUseCase:
             basic_salary=float(employee.get("basic_salary") or 0),
         )
 
-        return self.overtime_repository.save(ot)
+        saved = self.overtime_repository.save(ot)
+
+        self._write_audit_log(
+            action="ot_submitted",
+            actor_id=employee.get("user_id"),
+            entity_id=saved.id,
+            details={
+                "employee_id": str(saved.employee_id),
+                "request_date": str(saved.request_date),
+                "day_type": (
+                    saved.day_type.value
+                    if hasattr(saved.day_type, "value")
+                    else str(saved.day_type)
+                ),
+            },
+        )
+
+        return saved
 
     def _resolve_day_type(self, *, request_date, schedule):
         holiday = self.public_holiday_repository.find_by_date(request_date)
@@ -127,3 +148,18 @@ class CreateOvertimeRequestUseCase:
             return OvertimeDayType.WEEKEND
 
         return OvertimeDayType.WORKING_DAY
+
+    def _write_audit_log(self, *, action: str, actor_id, entity_id, details: dict) -> None:
+        if not self.audit_log_repository:
+            return
+
+        audit_log = AuditLog(
+            id=None,
+            entity_type="overtime",
+            entity_id=entity_id,
+            action=action,
+            actor_id=actor_id,
+            action_at=utc_now(),
+            details=details,
+        )
+        self.audit_log_repository.save(audit_log)

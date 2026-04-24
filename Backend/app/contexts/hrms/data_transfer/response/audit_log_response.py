@@ -15,8 +15,11 @@ class AuditLogDTO(BaseModel):
     id: str
     entity_type: str
     entity_id: str
+    entity_name: Optional[str] = None
     action: str
     actor_id: Optional[str] = None
+    actor_name: Optional[str] = None
+    actor_email: Optional[str] = None
     action_at: datetime
     details: Dict[str, Any] = {}
     lifecycle: LifecycleDTO

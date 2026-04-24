@@ -9,7 +9,7 @@ import type {
 import EmployeeFormFields from "~/components/hrms/employees/EmployeeFormFields.vue";
 import BaseButton from "~/components/base/BaseButton.vue";
 import { useHrEmployeeStore } from "~/stores/hrEmployeeStore";
-import { toManagerSelectOptions } from "~/api/hr_admin/employees/accountOptions";
+import { toManagerSelectOptions } from "~/api/hr_admin/shared/displayRelation";
 
 type HrOnboardRole = Role.EMPLOYEE | Role.MANAGER | Role.PAYROLL_MANAGER;
 
