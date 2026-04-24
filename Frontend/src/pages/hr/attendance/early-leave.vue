@@ -162,6 +162,15 @@ function earlyLeaveStatusKey(row: AttendanceDTO): string {
   if (reviewStatus === "approved") return "early_leave_approved";
   if (reviewStatus === "rejected") return "early_leave_rejected";
 
+  // Backward compatibility for legacy records that still use
+  // status=early_leave without explicit review_status.
+  if (
+    String(row.status || "").trim().toLowerCase() === "early_leave" &&
+    Number(row.early_leave_minutes || 0) > 0
+  ) {
+    return "early_leave_pending";
+  }
+
   return String(row.status || "").trim().toLowerCase();
 }
 
@@ -315,11 +324,23 @@ async function submitReview() {
     reviewDialogVisible.value = false;
     activeRow.value = null;
     await fetchEarlyLeaveReports(currentPage.value);
-  } catch {
-    ElMessage.error("Failed to submit review action");
+  } catch (error) {
+    ElMessage.error(mapError(error, "Failed to submit review action"));
   } finally {
     reviewLoading.value = false;
   }
+}
+
+function mapError(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "response" in error) {
+    const e = error as {
+      response?: { data?: { user_message?: string; message?: string } };
+    };
+    return e.response?.data?.user_message || e.response?.data?.message || fallback;
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
 }
 
 async function showDetails(row: AttendanceDTO) {

@@ -238,6 +238,18 @@ class AttendanceReadModel:
             "$or": [
                 {"early_leave_review_status": {"$in": ["pending", "approved", "rejected"]}},
                 {"status": {"$in": ["early_leave_pending", "early_leave_approved", "early_leave_rejected"]}},
+                {
+                    "$and": [
+                        {"status": "early_leave"},
+                        {"early_leave_minutes": {"$gt": 0}},
+                        {"$or": [
+                            {"early_leave_review_status": {"$exists": False}},
+                            {"early_leave_review_status": None},
+                            {"early_leave_review_status": ""},
+                            {"early_leave_review_status": "not_required"},
+                        ]},
+                    ]
+                },
             ],
         }
 
@@ -254,6 +266,24 @@ class AttendanceReadModel:
                     "$or": [
                         {"early_leave_review_status": normalized_review_status},
                         {"status": f"early_leave_{normalized_review_status}"},
+                        *(
+                            [
+                                {
+                                    "$and": [
+                                        {"status": "early_leave"},
+                                        {"early_leave_minutes": {"$gt": 0}},
+                                        {"$or": [
+                                            {"early_leave_review_status": {"$exists": False}},
+                                            {"early_leave_review_status": None},
+                                            {"early_leave_review_status": ""},
+                                            {"early_leave_review_status": "not_required"},
+                                        ]},
+                                    ]
+                                }
+                            ]
+                            if normalized_review_status == "pending"
+                            else []
+                        ),
                     ]
                 }
             ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.contexts.hrms.domain.attendance import ReviewStatus
 from app.contexts.hrms.domain.audit_log import AuditLog
 from app.contexts.hrms.errors.attendance_exceptions import (
     AttendanceEarlyLeaveReviewStateException,
@@ -37,6 +38,17 @@ class ReviewEarlyLeaveUseCase:
             if hasattr(attendance.early_leave_review_status, "value")
             else str(attendance.early_leave_review_status)
         )
+
+        # Backward compatibility:
+        # legacy rows may still carry `early_leave_review_status=not_required`
+        # even when they are genuine early-leave review cases.
+        if (
+            current_review_status in {"", "none", "null", "not_required"}
+            and int(getattr(attendance, "early_leave_minutes", 0) or 0) > 0
+        ):
+            attendance.early_leave_review_status = ReviewStatus.PENDING
+            current_review_status = "pending"
+
         if current_review_status != "pending":
             raise AttendanceEarlyLeaveReviewStateException(
                 attendance_id=attendance_id,

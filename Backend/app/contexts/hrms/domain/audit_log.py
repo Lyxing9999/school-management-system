@@ -12,6 +12,8 @@ class AuditAction(str, Enum):
     ATTENDANCE_CHECK_OUT = "attendance_check_out"
     ATTENDANCE_WRONG_LOCATION_APPROVED = "attendance_wrong_location_approved"
     ATTENDANCE_WRONG_LOCATION_REJECTED = "attendance_wrong_location_rejected"
+    ATTENDANCE_EARLY_LEAVE_APPROVED = "attendance_early_leave_approved"
+    ATTENDANCE_EARLY_LEAVE_REJECTED = "attendance_early_leave_rejected"
     ATTENDANCE_MARKED_MISSING_CHECK_OUT = "attendance_marked_missing_check_out"
     OT_SUBMITTED = "ot_submitted"
     OT_APPROVED = "ot_approved"
