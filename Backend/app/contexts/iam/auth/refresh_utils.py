@@ -6,7 +6,16 @@ from app.contexts.shared.time_utils import utc_now
 
 from app.contexts.core.config.setting import settings 
 
-REFRESH_TTL = timedelta(days=14)
+def _refresh_ttl_days() -> int:
+    raw = getattr(settings, "REFRESH_TOKEN_EXPIRE_DAYS", 14)
+    try:
+        days = int(raw)
+    except (TypeError, ValueError):
+        return 14
+    return days if days > 0 else 14
+
+
+REFRESH_TTL = timedelta(days=_refresh_ttl_days())
 
 REFRESH_PEPPER = getattr(settings, "REFRESH_PEPPER", settings.SECRET_KEY)
 

@@ -1,60 +1,9 @@
 <script setup lang="ts">
-import { Calendar, Document, Money } from "@element-plus/icons-vue";
-import PrototypePageShell from "~/components/hrms/PrototypePageShell.vue";
-import { ROUTES } from "~/constants/routes";
+import PayrollReportsPage from "./payroll.vue";
 
-const stats = [
-  { label: "Gross Payroll", value: "$240K", hint: "Prototype monthly figure" },
-  { label: "Net Payroll", value: "$181K", hint: "After deductions" },
-  {
-    label: "Deductions",
-    value: "$59K",
-    hint: "Includes late and absence deductions",
-  },
-  { label: "Reports", value: "Ready", hint: "Summary routes available" },
-];
-
-const actions = [
-  {
-    title: "Payroll Runs",
-    description: "Return to payroll run history.",
-    route: ROUTES.PAYROLL_MANAGER.PAYROLL_RUNS,
-    icon: Document,
-    color: "var(--chart-6)",
-  },
-  {
-    title: "Generate Payroll",
-    description: "Open the payroll generation page.",
-    route: ROUTES.PAYROLL_MANAGER.PAYROLL_GENERATE,
-    icon: Money,
-    color: "var(--button-success-bg)",
-  },
-  {
-    title: "Approved OT",
-    description: "Review overtime included in payroll.",
-    route: ROUTES.PAYROLL_MANAGER.OVERTIME_APPROVED,
-    icon: Calendar,
-    color: "var(--button-warning-bg)",
-  },
-];
-
-const sections = [
-  {
-    title: "Report panels",
-    items: ["gross payroll", "net payroll", "deductions", "payslip completion"],
-  },
-];
+definePageMeta({ layout: "default" });
 </script>
 
 <template>
-  <PrototypePageShell
-    title="Payroll Reports"
-    description="Prototype payroll reporting hub for month-end review and summary analysis."
-    back-path="/payroll/dashboard"
-    badge="Reports"
-    accent="var(--chart-6)"
-    :stats="stats"
-    :actions="actions"
-    :sections="sections"
-  />
+  <PayrollReportsPage />
 </template>

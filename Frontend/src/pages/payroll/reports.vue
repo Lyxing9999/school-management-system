@@ -1,18 +1,9 @@
 <script setup lang="ts">
+import PayrollReportsPage from "./reports/payroll.vue";
+
 definePageMeta({ layout: "default" });
 </script>
 
 <template>
-  <div class="page-container">
-    <div class="page-header">
-      <h1>Payroll Reports</h1>
-    </div>
-    <el-empty description="Reports component to be implemented" />
-  </div>
+  <PayrollReportsPage />
 </template>
-
-<style scoped>
-.page-container {
-  padding: 20px;
-}
-</style>

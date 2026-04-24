@@ -148,6 +148,22 @@ class CheckInEmployeeUseCase:
 
         attendance = self.attendance_repository.save(attendance)
 
+        location_review_status = (
+            attendance.location_review_status.value
+            if hasattr(attendance.location_review_status, "value")
+            else str(attendance.location_review_status)
+        )
+        if (
+            self.notification_service
+            and location_review_status == "pending"
+        ):
+            self.notification_service.notify_wrong_location_submitted(
+                attendance_id=attendance.id,
+                employee_id=attendance.employee_id,
+                attendance_date=attendance.attendance_date,
+                reason=attendance.wrong_location_reason,
+            )
+
         self._write_audit_log(
             action="attendance_check_in",
             actor_id=actor_user_id or employee.get("user_id") or employee["_id"],

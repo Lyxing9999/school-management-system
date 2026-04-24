@@ -4,6 +4,7 @@ from datetime import datetime
 from bson import ObjectId
 
 from app.contexts.hrms.errors.attendance_exceptions import (
+    AttendanceEarlyLeaveReviewStateException,
     AttendanceWrongLocationReviewStateException,
     InvalidLateMinutesException,
 )
@@ -355,6 +356,12 @@ class Attendance:
         admin_id: ObjectId,
         comment: str | None = None,
     ) -> None:
+        if self.early_leave_review_status != ReviewStatus.PENDING:
+            raise AttendanceEarlyLeaveReviewStateException(
+                attendance_id=self.id,
+                current_status=self.early_leave_review_status.value,
+            )
+
         self.early_leave_review_status = ReviewStatus.APPROVED
         self.early_leave_reviewed_by = admin_id
         self.admin_comment = (comment or "").strip() or None
@@ -366,6 +373,12 @@ class Attendance:
         admin_id: ObjectId,
         comment: str | None = None,
     ) -> None:
+        if self.early_leave_review_status != ReviewStatus.PENDING:
+            raise AttendanceEarlyLeaveReviewStateException(
+                attendance_id=self.id,
+                current_status=self.early_leave_review_status.value,
+            )
+
         self.early_leave_review_status = ReviewStatus.REJECTED
         self.early_leave_reviewed_by = admin_id
         self.admin_comment = (comment or "").strip() or None

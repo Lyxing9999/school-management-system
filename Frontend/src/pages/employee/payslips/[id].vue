@@ -4,7 +4,6 @@ import {
   ElCard,
   ElDescriptions,
   ElDescriptionsItem,
-  ElMessage,
   ElTag,
 } from "element-plus";
 import OverviewHeader from "~/components/overview/OverviewHeader.vue";
@@ -64,7 +63,7 @@ async function fetchPayslipDetail() {
   try {
     payslip.value = await payrollService.getPayslip(payslipId.value);
   } catch {
-    ElMessage.error("Failed to load payslip detail or you do not have access.");
+    // API notifications are handled by service layer
     router.push(ROUTES.EMPLOYEE.PAYSLIPS);
   } finally {
     loading.value = false;
@@ -105,7 +104,10 @@ onMounted(() => {
 
         <el-descriptions :column="2" border class="detail-grid">
           <el-descriptions-item label="Payroll Run">{{
-            displayRelation(payslip.payroll_run_label, payslip.payroll_run_id)
+            displayRelation(
+              payslip.payroll_run_label,
+              payslip.payroll_month || payslip.month || payslip.payroll_run_id,
+            )
           }}</el-descriptions-item>
 
           <el-descriptions-item label="Employee">{{
@@ -181,7 +183,7 @@ onMounted(() => {
 
 .detail-head h3 {
   margin: 0;
-  color: #222730;
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 .detail-grid {
@@ -189,12 +191,12 @@ onMounted(() => {
 }
 
 .net-salary {
-  color: #186a3b;
+  color: var(--color-success-dark-2, var(--el-color-success-dark-2));
 }
 
 .empty-note {
   margin: 0;
-  color: #7f8793;
+  color: var(--muted-color, var(--el-text-color-secondary));
 }
 
 @media (max-width: 768px) {

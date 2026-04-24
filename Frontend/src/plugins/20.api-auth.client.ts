@@ -7,6 +7,11 @@ import type {
 import { useAuthStore } from "~/stores/authStore";
 
 type RetryConfig = AxiosRequestConfig & { _retry?: boolean };
+type PendingRequest = {
+  request: RetryConfig;
+  resolve: (value: unknown) => void;
+  reject: (reason?: any) => void;
+};
 
 export default defineNuxtPlugin(() => {
   if (import.meta.server) return;
@@ -15,6 +20,25 @@ export default defineNuxtPlugin(() => {
   if (!$api) return;
 
   const auth = useAuthStore();
+  const tokenCookie = useCookie<string | null>("access_token", {
+    sameSite: "lax",
+    path: "/",
+  });
+  const roleCookie = useCookie<string | null>("user_role", {
+    sameSite: "lax",
+    path: "/",
+  });
+  const userCookie = useCookie<Record<string, any> | null>("user_cache", {
+    sameSite: "lax",
+    path: "/",
+  });
+
+  function clearAuthSession() {
+    tokenCookie.value = null;
+    roleCookie.value = null;
+    userCookie.value = null;
+    auth.resetForGuest();
+  }
 
   $api.interceptors.request.use((cfg: InternalAxiosRequestConfig) => {
     const token = auth.token;
@@ -28,11 +52,24 @@ export default defineNuxtPlugin(() => {
   });
 
   let isRefreshing = false;
-  let queue: Array<(token: string) => void> = [];
+  let queue: PendingRequest[] = [];
 
   function flushQueue(newToken: string) {
-    queue.forEach((cb) => cb(newToken));
+    const pending = queue.slice();
     queue = [];
+    for (const item of pending) {
+      item.request.headers = item.request.headers ?? {};
+      (item.request.headers as any).Authorization = `Bearer ${newToken}`;
+      item.resolve($api(item.request));
+    }
+  }
+
+  function rejectQueue(error: unknown) {
+    const pending = queue.slice();
+    queue = [];
+    for (const item of pending) {
+      item.reject(error);
+    }
   }
 
   $api.interceptors.response.use(
@@ -50,18 +87,14 @@ export default defineNuxtPlugin(() => {
       if (status !== 401 || isAuthRoute) return Promise.reject(error);
 
       if (original._retry) {
-        auth.resetForGuest();
+        clearAuthSession();
         return Promise.reject(error);
       }
       original._retry = true;
 
       if (isRefreshing) {
-        return new Promise((resolve) => {
-          queue.push((newToken: string) => {
-            original.headers = original.headers ?? {};
-            (original.headers as any).Authorization = `Bearer ${newToken}`;
-            resolve($api(original));
-          });
+        return new Promise((resolve, reject) => {
+          queue.push({ request: original, resolve, reject });
         });
       }
 
@@ -72,13 +105,14 @@ export default defineNuxtPlugin(() => {
         const newToken = (r.data as any)?.access_token as string | undefined;
 
         if (!newToken) {
-          auth.resetForGuest();
+          rejectQueue(error);
+          clearAuthSession();
           isRefreshing = false;
-          queue = [];
           return Promise.reject(error);
         }
 
         auth.setToken(newToken);
+        tokenCookie.value = newToken;
 
         isRefreshing = false;
         flushQueue(newToken);
@@ -88,8 +122,8 @@ export default defineNuxtPlugin(() => {
         return $api(original);
       } catch (refreshErr) {
         isRefreshing = false;
-        queue = [];
-        auth.resetForGuest();
+        rejectQueue(refreshErr);
+        clearAuthSession();
         return Promise.reject(refreshErr);
       }
     }

@@ -95,6 +95,8 @@ class ApproveWrongLocationUseCase:
                 attendance_id=updated.id,
                 employee_id=updated.employee_id,
                 approved=approved,
+                reviewer_user_id=admin_id,
+                comment=comment,
             )
 
         return updated

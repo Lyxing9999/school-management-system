@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.contexts.core.config.setting import settings
+from app.contexts.iam.auth.refresh_utils import REFRESH_TTL
 
 COOKIE_NAME = "refresh_token"
 
@@ -27,7 +28,7 @@ def set_refresh_cookie(resp, refresh_token: str):
         samesite=samesite,     # "Lax" (dev) or "None" (prod cross-site)
         domain=domain,         # usually None for Render/Vercel different domains
         path=path,             # must match clear_refresh_cookie
-        max_age=14 * 24 * 3600,
+        max_age=max(1, int(REFRESH_TTL.total_seconds())),
     )
 
 

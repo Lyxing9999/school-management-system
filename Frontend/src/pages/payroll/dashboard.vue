@@ -83,14 +83,14 @@ const sections = [
     ],
   },
   {
-    title: "Prototype scope",
+    title: "Workspace scope",
     items: [
       "Generate payroll",
       "Review run history",
       "Publish payslips",
       "Inspect reports",
     ],
-    note: "Matches the payroll manager role in the app",
+    note: "Payroll manager end-to-end workflow",
   },
 ];
 </script>
@@ -98,8 +98,8 @@ const sections = [
 <template>
   <PrototypePageShell
     title="Payroll Workspace"
-    description="Prototype landing page for payroll managers. It mirrors the backend payroll pipeline and exposes the core payroll review routes."
-    badge="Payroll Prototype"
+    description="Payroll landing page for payroll managers. It mirrors the backend payroll pipeline and exposes the core review routes."
+    badge="Payroll"
     accent="var(--button-success-bg)"
     :stats="stats"
     :actions="actions"

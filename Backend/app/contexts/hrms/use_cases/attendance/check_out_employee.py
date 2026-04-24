@@ -101,6 +101,23 @@ class CheckOutEmployeeUseCase:
 
         attendance = self.attendance_repository.save(attendance)
 
+        early_leave_review_status = (
+            attendance.early_leave_review_status.value
+            if hasattr(attendance.early_leave_review_status, "value")
+            else str(attendance.early_leave_review_status)
+        )
+        if (
+            self.notification_service
+            and early_leave_review_status == "pending"
+        ):
+            self.notification_service.notify_early_leave_submitted(
+                attendance_id=attendance.id,
+                employee_id=attendance.employee_id,
+                attendance_date=attendance.attendance_date,
+                early_leave_minutes=attendance.early_leave_minutes,
+                reason=attendance.early_leave_reason,
+            )
+
         self._write_audit_log(
             action="attendance_check_out",
             actor_id=actor_user_id or employee.get("user_id") or employee["_id"],

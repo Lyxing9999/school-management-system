@@ -108,6 +108,27 @@ class AttendanceWrongLocationReviewStateException(AppBaseException):
         )
 
 
+class AttendanceEarlyLeaveReviewStateException(AppBaseException):
+    def __init__(self, attendance_id, current_status: str):
+        super().__init__(
+            message=(
+                f"Attendance '{attendance_id}' is not pending early-leave review "
+                f"(current_status='{current_status}')"
+            ),
+            error_code="ATTENDANCE_EARLY_LEAVE_REVIEW_STATE_INVALID",
+            status_code=400,
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.BUSINESS_LOGIC,
+            user_message="Attendance is not waiting for early-leave review.",
+            details={
+                "attendance_id": str(attendance_id),
+                "current_status": current_status,
+            },
+            hint="Only attendance with early_leave_review_status='pending' can be reviewed.",
+            recoverable=True,
+        )
+
+
 class LocationValidationException(AppBaseException):
     def __init__(self, message: str, details: dict | None = None):
         super().__init__(

@@ -1,18 +1,9 @@
 <script setup lang="ts">
+import PayrollOvertimePage from "./overtime/index.vue";
+
 definePageMeta({ layout: "default" });
 </script>
 
 <template>
-  <div class="page-container">
-    <div class="page-header">
-      <h1>Overtime</h1>
-    </div>
-    <el-empty description="Overtime component to be implemented" />
-  </div>
+  <PayrollOvertimePage />
 </template>
-
-<style scoped>
-.page-container {
-  padding: 20px;
-}
-</style>

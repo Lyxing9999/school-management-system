@@ -1,18 +1,9 @@
 <script setup lang="ts">
+import PayrollPayslipsPage from "./payslips/index.vue";
+
 definePageMeta({ layout: "default" });
 </script>
 
 <template>
-  <div class="page-container">
-    <div class="page-header">
-      <h1>Payslips</h1>
-    </div>
-    <el-empty description="Payslips component to be implemented" />
-  </div>
+  <PayrollPayslipsPage />
 </template>
-
-<style scoped>
-.page-container {
-  padding: 20px;
-}
-</style>

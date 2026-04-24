@@ -50,8 +50,12 @@ const rules: FormRules = {
 
 const canSubmit = computed(() => Boolean(form.month));
 
+const generatedRun = computed(() => result.value?.payroll_run ?? null);
+const resultMeta = computed(() => result.value?.meta ?? null);
+
 const formattedGeneratedAt = computed(() => {
-  const value = result.value?.generated_at;
+  const value =
+    generatedRun.value?.lifecycle?.created_at ?? result.value?.generated_at;
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
@@ -66,29 +70,76 @@ const formattedGeneratedAt = computed(() => {
 
 const generatedRunLabel = computed(() => {
   return displayRelation(
-    result.value?.payroll_run_label || result.value?.month,
-    result.value?.month || form.month,
+    generatedRun.value?.payroll_run_label ?? result.value?.payroll_run_label,
+    generatedRun.value?.payroll_month ??
+      generatedRun.value?.month ??
+      result.value?.payroll_month ??
+      result.value?.month ??
+      form.month,
   );
 });
 
+const resultMonth = computed(() => {
+  const value =
+    generatedRun.value?.payroll_month ??
+    generatedRun.value?.month ??
+    result.value?.payroll_month ??
+    result.value?.month ??
+    form.month;
+  return String(value ?? "").trim() || "-";
+});
+
 const resultStatus = computed(() => {
-  const status = String(result.value?.status || "").toLowerCase();
+  const status = String(
+    generatedRun.value?.status ?? result.value?.status ?? "",
+  ).toLowerCase();
   if (!status) return "-";
   return status.toUpperCase();
 });
 
 const resultStatusTagType = computed<"warning" | "success" | "info">(() => {
-  const status = String(result.value?.status || "").toLowerCase();
+  const status = String(
+    generatedRun.value?.status ?? result.value?.status ?? "",
+  ).toLowerCase();
   if (status === "draft") return "warning";
   if (status === "paid") return "success";
   return "info";
 });
 
 const resultStatusClass = computed(() => {
-  const status = String(result.value?.status || "").toLowerCase();
+  const status = String(
+    generatedRun.value?.status ?? result.value?.status ?? "",
+  ).toLowerCase();
   if (status === "draft") return "status-pill status-pill--draft";
   if (status === "paid") return "status-pill status-pill--paid";
   return "status-pill status-pill--finalized";
+});
+
+const resultEmployeeCount = computed(() => {
+  const value =
+    resultMeta.value?.employee_count ?? result.value?.total_employees ?? 0;
+  return Number(value);
+});
+
+const resultGeneratedCount = computed(() => {
+  return Number(
+    resultMeta.value?.generated_count ??
+      result.value?.generated_count ??
+      result.value?.payslips?.length ??
+      0,
+  );
+});
+
+const resultTotalAmount = computed(() => {
+  const metaTotal = Number(
+    resultMeta.value?.total_amount ?? result.value?.total_amount ?? NaN,
+  );
+  if (Number.isFinite(metaTotal)) return metaTotal;
+  const payslipRows = result.value?.payslips ?? [];
+  return payslipRows.reduce(
+    (sum, row) => sum + Number(row?.net_salary ?? 0),
+    0,
+  );
 });
 
 function resetForm() {
@@ -199,7 +250,7 @@ function goToPayslips() {
               {{ generatedRunLabel }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="Month">
-              {{ result.month || form.month || "-" }}
+              {{ resultMonth }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="Status">
               <ElTag
@@ -213,11 +264,14 @@ function goToPayslips() {
               </ElTag>
             </ElDescriptionsItem>
             <ElDescriptionsItem label="Total Employees">
-              {{ Number(result.total_employees || 0) }}
+              {{ resultEmployeeCount }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="Generated Payslips">
+              {{ resultGeneratedCount }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="Total Amount">
               {{
-                Number(result.total_amount || 0).toLocaleString("en-US", {
+                resultTotalAmount.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })
@@ -317,20 +371,32 @@ function goToPayslips() {
 }
 
 .status-pill--draft {
-  border-color: #e6a23c;
-  color: #b88230;
-  background: #fff8eb;
+  border-color: var(--button-warning-bg, var(--el-color-warning));
+  color: var(--color-warning-dark-2, var(--el-color-warning-dark-2));
+  background: color-mix(
+    in srgb,
+    var(--button-warning-bg, var(--el-color-warning)) 12%,
+    var(--color-card, #fff) 88%
+  );
 }
 
 .status-pill--finalized {
-  border-color: #909399;
-  color: #5d6066;
-  background: #f4f4f5;
+  border-color: var(--button-default-border, var(--el-border-color));
+  color: var(--muted-color, var(--el-text-color-secondary));
+  background: color-mix(
+    in srgb,
+    var(--button-default-bg, var(--el-fill-color-light)) 72%,
+    var(--color-card, #fff) 28%
+  );
 }
 
 .status-pill--paid {
-  border-color: #67c23a;
-  color: #3b8f1d;
-  background: #f1faec;
+  border-color: var(--button-success-bg, var(--el-color-success));
+  color: var(--color-success-dark-2, var(--el-color-success-dark-2));
+  background: color-mix(
+    in srgb,
+    var(--button-success-bg, var(--el-color-success)) 12%,
+    var(--color-card, #fff) 88%
+  );
 }
 </style>

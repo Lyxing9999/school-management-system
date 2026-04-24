@@ -62,7 +62,10 @@ const payslipColumns: ColumnConfig<PayslipDTO>[] = [
     minWidth: "180px",
     visible: true,
     render: (row: PayslipDTO) =>
-      displayRelation(row.payroll_run_label, row.payroll_run_id),
+      displayRelation(
+        row.payroll_run_label,
+        row.payroll_month || row.month || row.payroll_run_id,
+      ),
   },
   {
     field: "employee_id",

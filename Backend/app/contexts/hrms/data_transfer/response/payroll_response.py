@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.contexts.admin.data_transfer.responses.common import PaginatedDTO
 from app.contexts.shared.lifecycle.dto import LifecycleDTO
@@ -65,6 +65,28 @@ class PayslipPaginatedDTO(PaginatedDTO[PayslipDTO]):
     pass
 
 
+class GeneratePayrollMetaDTO(BaseModel):
+    employee_count: int = 0
+    generated_count: int = 0
+    skipped_employees: list[dict] = Field(default_factory=list)
+    total_amount: float | None = None
+
+
 class GeneratePayrollResultDTO(BaseModel):
     payroll_run: PayrollRunDTO
     payslips: list[PayslipDTO]
+    meta: GeneratePayrollMetaDTO | None = None
+
+    # Legacy flat fields kept for backward compatibility with older UI clients.
+    id: str | None = None
+    run_id: str | None = None
+    month: str | None = None
+    payroll_month: str | None = None
+    payroll_run_label: str | None = None
+    status: str | None = None
+    generated_by: str | None = None
+    generated_by_name: str | None = None
+    total_employees: int | None = None
+    generated_count: int | None = None
+    total_amount: float | None = None
+    generated_at: str | None = None

@@ -2,12 +2,27 @@ export interface PayrollRunGenerateDTO {
   month: string;
 }
 
+export interface GeneratePayrollMetaDTO {
+  employee_count: number;
+  generated_count: number;
+  skipped_employees: Array<Record<string, any>>;
+  total_amount?: number | null;
+}
+
 export interface PayrollRunGenerateResponseDTO {
+  payroll_run?: PayrollRunDTO;
+  payslips?: PayslipDTO[];
+  meta?: GeneratePayrollMetaDTO | null;
   id?: string;
   run_id?: string;
   month?: string;
+  payroll_month?: string | null;
+  payroll_run_label?: string | null;
   status?: string;
+  generated_by?: string | null;
+  generated_by_name?: string | null;
   total_employees?: number;
+  generated_count?: number;
   total_amount?: number;
   generated_at?: string;
   [key: string]: any;

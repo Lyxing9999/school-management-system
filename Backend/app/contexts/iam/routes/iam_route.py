@@ -103,10 +103,14 @@ def refresh_access_token():
     new_rt = create_refresh_token()
     new_hash = hash_refresh_token(new_rt)
 
-    refresh_tokens.update_one(
-        {"_id": doc["_id"]},
+    rotated = refresh_tokens.update_one(
+        {"_id": doc["_id"], "revoked_at": None},
         {"$set": {"revoked_at": ensure_utc(now), "replaced_by_hash": new_hash}},
     )
+
+    # Replay/race safety: only one refresh request can rotate this token.
+    if int(rotated.modified_count or 0) != 1:
+        return _refresh_failure("Refresh token already used")
 
     refresh_tokens.insert_one(
         {

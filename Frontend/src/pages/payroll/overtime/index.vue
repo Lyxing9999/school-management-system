@@ -7,7 +7,6 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElMessage,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -52,8 +51,8 @@ async function viewDetail(id: string) {
   try {
     await overtimeStore.fetchOne(id);
     detailDialogVisible.value = true;
-  } catch (error) {
-    ElMessage.error("Failed to load request detail");
+  } catch {
+    // API notifications are handled by service/store layer
   }
 }
 
@@ -86,8 +85,8 @@ onMounted(async () => {
       overtimeStore.fetchPayrollApproved(),
       overtimeStore.fetchPayrollSummary(),
     ]);
-  } catch (error) {
-    ElMessage.error("Failed to load payroll information");
+  } catch {
+    // API notifications are handled by service/store layer
   }
 });
 

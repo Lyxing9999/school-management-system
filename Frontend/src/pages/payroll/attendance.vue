@@ -1,18 +1,9 @@
 <script setup lang="ts">
+import PayrollAttendanceFinalPage from "./attendance/final.vue";
+
 definePageMeta({ layout: "default" });
 </script>
 
 <template>
-  <div class="page-container">
-    <div class="page-header">
-      <h1>Attendance</h1>
-    </div>
-    <el-empty description="Attendance component to be implemented" />
-  </div>
+  <PayrollAttendanceFinalPage />
 </template>
-
-<style scoped>
-.page-container {
-  padding: 20px;
-}
-</style>

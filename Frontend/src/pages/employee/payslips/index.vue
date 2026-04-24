@@ -4,7 +4,6 @@ import {
   ElCard,
   ElCol,
   ElEmpty,
-  ElMessage,
   ElPagination,
   ElRow,
   ElTable,
@@ -110,7 +109,7 @@ async function fetchPayslips(page = pagination.page, limit = pagination.limit) {
     pagination.limit = response.page_size ?? limit;
     pagination.total = response.total ?? rows.value.length;
   } catch {
-    ElMessage.error("Failed to load payslips");
+    // API notifications are handled by service layer
   } finally {
     loading.value = false;
   }
@@ -253,7 +252,7 @@ onMounted(() => {
 
 .summary-card__label {
   margin: 0;
-  color: #7a7f89;
+  color: var(--muted-color, var(--el-text-color-secondary));
   font-size: 12px;
   text-transform: uppercase;
 }
@@ -262,12 +261,12 @@ onMounted(() => {
   margin: 6px 0 4px;
   font-size: 26px;
   font-weight: 800;
-  color: #21242a;
+  color: var(--text-color, var(--el-text-color-primary));
 }
 
 .summary-card__hint {
   margin: 0;
-  color: #8a8f98;
+  color: var(--muted-color, var(--el-text-color-secondary));
   font-size: 12px;
 }
 

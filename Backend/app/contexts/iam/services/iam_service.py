@@ -112,13 +112,14 @@ class IAMService:
 
         access = self._auth_service.create_access_token(safe_dict)
         refresh = create_refresh_token()
+        issued_at = ensure_utc(now_utc())
 
         self._refresh_tokens.insert_one(
             {
                 "user_id": str(safe_dict["id"]),
                 "token_hash": hash_refresh_token(refresh),
-                "created_at": ensure_utc(now_utc()),
-                "expires_at": ensure_utc(now_utc() + REFRESH_TTL),
+                "created_at": issued_at,
+                "expires_at": ensure_utc(issued_at + REFRESH_TTL),
                 "revoked_at": None,
                 "replaced_by_hash": None,
             }

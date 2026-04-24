@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from app.contexts.hrms.domain.audit_log import AuditLog
-from app.contexts.hrms.errors.attendance_exceptions import AttendanceNotFoundException
+from app.contexts.hrms.errors.attendance_exceptions import (
+    AttendanceEarlyLeaveReviewStateException,
+    AttendanceNotFoundException,
+)
 from app.contexts.shared.time_utils import utc_now
 
 
@@ -29,22 +32,34 @@ class ReviewEarlyLeaveUseCase:
         if not attendance:
             raise AttendanceNotFoundException(str(attendance_id))
 
-        review_status = "approved" if approved else "rejected"
+        current_review_status = (
+            attendance.early_leave_review_status.value
+            if hasattr(attendance.early_leave_review_status, "value")
+            else str(attendance.early_leave_review_status)
+        )
+        if current_review_status != "pending":
+            raise AttendanceEarlyLeaveReviewStateException(
+                attendance_id=attendance_id,
+                current_status=current_review_status,
+            )
 
-        fields = {
-            "early_leave_review_status": review_status,
-            "admin_comment": comment,
-            "early_leave_reviewed_by": admin_id,
-        }
+        if approved:
+            attendance.approve_early_leave(
+                admin_id=admin_id,
+                comment=comment,
+            )
+            action = "attendance_early_leave_approved"
+        else:
+            attendance.reject_early_leave(
+                admin_id=admin_id,
+                comment=comment,
+            )
+            action = "attendance_early_leave_rejected"
 
-        updated = self.attendance_repository.update_fields(attendance_id, fields)
+        updated = self.attendance_repository.save(attendance)
 
         self._write_audit_log(
-            action=(
-                "attendance_early_leave_approved"
-                if approved
-                else "attendance_early_leave_rejected"
-            ),
+            action=action,
             actor_id=admin_id,
             entity_id=updated.id,
             details={
@@ -74,6 +89,8 @@ class ReviewEarlyLeaveUseCase:
                 attendance_id=updated.id,
                 employee_id=updated.employee_id,
                 approved=approved,
+                reviewer_user_id=admin_id,
+                comment=comment,
             )
 
         return updated
