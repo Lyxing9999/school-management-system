@@ -63,6 +63,7 @@ export const ROUTES = {
 
     ATTENDANCE: "/hr/attendance",
     ATTENDANCE_WRONG_LOCATION: "/hr/attendance/wrong-location",
+    ATTENDANCE_EARLY_LEAVE: "/hr/attendance/early-leave",
     ATTENDANCE_REPORTS: "/hr/attendance/reports",
 
     OVERTIME: "/hr/overtime",

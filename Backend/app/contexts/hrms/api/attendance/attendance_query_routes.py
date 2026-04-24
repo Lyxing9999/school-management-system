@@ -161,6 +161,43 @@ def get_wrong_location_report():
     }
 
 
+@attendance_query_bp.route("/attendance/reports/early-leave", methods=["GET"], strict_slashes=False)
+@login_required(allowed_roles=["hr_admin", "manager"])
+@wrap_response
+def get_early_leave_report():
+    page = max(int(request.args.get("page") or 1), 1)
+    page_size = min(max(int(request.args.get("limit") or 10), 1), 100)
+    review_status = (
+        (request.args.get("review_status") or "").strip()
+        or (request.args.get("status") or "").strip()
+        or None
+    )
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+
+    items, total = g.hrms.attendance.get_early_leave_report(
+        page=page,
+        page_size=page_size,
+        review_status=review_status,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    total_pages = max(1, math.ceil(int(total) / page_size))
+    rows = [mapper.to_dto(x).model_dump(mode="json") for x in items]
+    g.hrms.response_enricher.enrich_attendance_records(rows)
+
+    return {
+        "items": rows,
+        "pagination": {
+            "total": int(total),
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        },
+    }
+
+
 
 @attendance_query_bp.route("/attendance/me/today", methods=["GET"], strict_slashes=False)
 @login_required(allowed_roles=["employee", "hr_admin", "manager", "payroll_manager"])

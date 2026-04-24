@@ -79,10 +79,20 @@ class AttendanceReadModel:
                 "wrong_location_approved": "approved",
                 "wrong_location_rejected": "rejected",
             }
+            early_leave_status_map = {
+                "early_leave_pending": "pending",
+                "early_leave_approved": "approved",
+                "early_leave_rejected": "rejected",
+            }
             if normalized_status in wrong_location_status_map:
                 query["$or"] = [
                     {"location_review_status": wrong_location_status_map[normalized_status]},
                     {"status": normalized_status},
+                ]
+            elif normalized_status in early_leave_status_map:
+                query["$or"] = [
+                    {"early_leave_review_status": early_leave_status_map[normalized_status]},
+                    {"status": f"early_leave_{early_leave_status_map[normalized_status]}"},
                 ]
             else:
                 query["status"] = normalized_status
@@ -209,6 +219,58 @@ class AttendanceReadModel:
         items = list(
             self.collection.find(query)
             .sort("check_in_time", -1)
+            .skip(skip)
+            .limit(limit)
+        )
+        return items, total
+
+    def list_early_leave_cases(
+        self,
+        *,
+        start_date=None,
+        end_date=None,
+        review_status: str | None = None,
+        page: int = 1,
+        limit: int = 10,
+    ) -> tuple[list[dict], int]:
+        query = {
+            "lifecycle.deleted_at": None,
+            "$or": [
+                {"early_leave_review_status": {"$in": ["pending", "approved", "rejected"]}},
+                {"status": {"$in": ["early_leave_pending", "early_leave_approved", "early_leave_rejected"]}},
+            ],
+        }
+
+        if review_status:
+            normalized = review_status.strip().lower()
+            legacy_map = {
+                "early_leave_pending": "pending",
+                "early_leave_approved": "approved",
+                "early_leave_rejected": "rejected",
+            }
+            normalized_review_status = legacy_map.get(normalized, normalized)
+            query["$and"] = [
+                {
+                    "$or": [
+                        {"early_leave_review_status": normalized_review_status},
+                        {"status": f"early_leave_{normalized_review_status}"},
+                    ]
+                }
+            ]
+
+        if start_date or end_date:
+            query["check_out_time"] = {}
+            if start_date:
+                query["check_out_time"]["$gte"] = ensure_utc(start_date)
+            if end_date:
+                query["check_out_time"]["$lte"] = ensure_utc(end_date)
+
+        total = self.collection.count_documents(query)
+        skip = (page - 1) * limit
+
+        items = list(
+            self.collection.find(query)
+            .sort("check_out_time", -1)
             .skip(skip)
             .limit(limit)
         )

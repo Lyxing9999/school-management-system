@@ -95,6 +95,11 @@ export interface AttendanceApproveWrongLocationDTO {
   location_id?: string | null;
 }
 
+export interface AttendanceApproveEarlyLeaveDTO {
+  approved: boolean;
+  comment?: string | null;
+}
+
 export interface AttendanceListParams {
   employee_id?: string;
   status?: string;
@@ -115,6 +120,15 @@ export interface AttendanceTeamListParams {
 }
 
 export interface WrongLocationReportParams {
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  review_status?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface EarlyLeaveReportParams {
   start_date?: string;
   end_date?: string;
   status?: string;

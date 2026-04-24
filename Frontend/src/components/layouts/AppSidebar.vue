@@ -221,6 +221,11 @@ const menus: Record<AppRoleKey, MenuItem[]> = {
           route: ROUTES.HR_ADMIN.ATTENDANCE_WRONG_LOCATION,
         },
         {
+          title: "Early Leave",
+          icon: "Timer",
+          route: ROUTES.HR_ADMIN.ATTENDANCE_EARLY_LEAVE,
+        },
+        {
           title: "Attendance Reports",
           icon: "Document",
           route: ROUTES.HR_ADMIN.ATTENDANCE_REPORTS,

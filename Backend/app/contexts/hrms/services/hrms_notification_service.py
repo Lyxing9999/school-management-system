@@ -622,12 +622,56 @@ class HrmsNotificationService:
         except Exception:
             return
 
+    def notify_wrong_location_submitted(
+        self,
+        *,
+        attendance_id,
+        employee_id,
+        attendance_date=None,
+        reason: str | None = None,
+    ) -> None:
+        try:
+            employee = self._employee_or_none(employee_id)
+            employee_name = self._employee_name(employee) or "Employee"
+
+            recipients = self._manager_and_hr_admin_recipients(
+                employee=employee,
+                exclude_user_ids={self._sid(employee.get("user_id"))} if employee else set(),
+            )
+            if not recipients:
+                return
+
+            date_text = str(attendance_date) if attendance_date else "today"
+            reason_text = str(reason or "").strip()
+            reason_part = f" Reason: {reason_text}" if reason_text else ""
+
+            self._notify_many(
+                recipients=recipients,
+                type_=HrmsNotificationType.ATTENDANCE_WRONG_LOCATION_SUBMITTED,
+                title="Wrong-location review required",
+                message=f"{employee_name} reported wrong-location attendance on {date_text}.{reason_part}",
+                entity_type="hrms_attendance",
+                entity_id=self._sid(attendance_id),
+                data={
+                    "route": "/hr/attendance/wrong-location",
+                    "attendance_id": self._sid(attendance_id),
+                    "employee_id": self._sid(employee_id),
+                    "employee_name": employee_name,
+                    "attendance_date": date_text,
+                    "reason": reason_text or None,
+                },
+            )
+        except Exception:
+            return
+
     def notify_wrong_location_reviewed(
         self,
         *,
         attendance_id,
         employee_id,
         approved: bool,
+        reviewer_user_id=None,
+        comment: str | None = None,
     ) -> None:
         try:
             employee = self._employee_or_none(employee_id)
@@ -641,19 +685,75 @@ class HrmsNotificationService:
                 if approved
                 else HrmsNotificationType.ATTENDANCE_WRONG_LOCATION_REJECTED
             )
+            reviewer_name = self._user_name(reviewer_user_id)
+            by_part = f" by {reviewer_name}" if reviewer_name else ""
+            comment_text = str(comment or "").strip()
+            comment_part = f" Comment: {comment_text}" if comment_text else ""
 
             self._notify_user(
                 user_id=employee_user_id,
                 role="employee",
                 type_=type_,
                 title=f"Wrong-location review {status_text}",
-                message=f"Your wrong-location attendance review was {status_text}.",
+                message=(
+                    f"Your wrong-location attendance review was {status_text}{by_part}."
+                    f"{comment_part}"
+                ),
                 entity_type="hrms_attendance",
                 entity_id=self._sid(attendance_id),
                 data={
-                    "route": "/hr/attendance",
+                    "route": "/employee/attendance/history",
                     "attendance_id": self._sid(attendance_id),
                     "status": status_text,
+                    "comment": comment_text or None,
+                },
+            )
+        except Exception:
+            return
+
+    def notify_early_leave_submitted(
+        self,
+        *,
+        attendance_id,
+        employee_id,
+        attendance_date=None,
+        early_leave_minutes: int | None = None,
+        reason: str | None = None,
+    ) -> None:
+        try:
+            employee = self._employee_or_none(employee_id)
+            employee_name = self._employee_name(employee) or "Employee"
+
+            recipients = self._manager_and_hr_admin_recipients(
+                employee=employee,
+                exclude_user_ids={self._sid(employee.get("user_id"))} if employee else set(),
+            )
+            if not recipients:
+                return
+
+            date_text = str(attendance_date) if attendance_date else "today"
+            minutes = int(early_leave_minutes or 0)
+            reason_text = str(reason or "").strip()
+            reason_part = f" Reason: {reason_text}" if reason_text else ""
+
+            self._notify_many(
+                recipients=recipients,
+                type_=HrmsNotificationType.ATTENDANCE_EARLY_LEAVE_SUBMITTED,
+                title="Early-leave review required",
+                message=(
+                    f"{employee_name} submitted an early-leave case on {date_text} "
+                    f"({minutes} minutes).{reason_part}"
+                ),
+                entity_type="hrms_attendance",
+                entity_id=self._sid(attendance_id),
+                data={
+                    "route": "/hr/attendance/early-leave",
+                    "attendance_id": self._sid(attendance_id),
+                    "employee_id": self._sid(employee_id),
+                    "employee_name": employee_name,
+                    "attendance_date": date_text,
+                    "early_leave_minutes": minutes,
+                    "reason": reason_text or None,
                 },
             )
         except Exception:
@@ -665,6 +765,8 @@ class HrmsNotificationService:
         attendance_id,
         employee_id,
         approved: bool,
+        reviewer_user_id=None,
+        comment: str | None = None,
     ) -> None:
         try:
             employee = self._employee_or_none(employee_id)
@@ -678,19 +780,24 @@ class HrmsNotificationService:
                 if approved
                 else HrmsNotificationType.ATTENDANCE_EARLY_LEAVE_REJECTED
             )
+            reviewer_name = self._user_name(reviewer_user_id)
+            by_part = f" by {reviewer_name}" if reviewer_name else ""
+            comment_text = str(comment or "").strip()
+            comment_part = f" Comment: {comment_text}" if comment_text else ""
 
             self._notify_user(
                 user_id=employee_user_id,
                 role="employee",
                 type_=type_,
                 title=f"Early-leave review {status_text}",
-                message=f"Your early-leave review was {status_text}.",
+                message=f"Your early-leave review was {status_text}{by_part}.{comment_part}",
                 entity_type="hrms_attendance",
                 entity_id=self._sid(attendance_id),
                 data={
-                    "route": "/hr/attendance",
+                    "route": "/employee/attendance/history",
                     "attendance_id": self._sid(attendance_id),
                     "status": status_text,
+                    "comment": comment_text or None,
                 },
             )
         except Exception:

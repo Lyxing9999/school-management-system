@@ -2,10 +2,12 @@ import type { AxiosInstance } from "axios";
 import type { ApiResponse } from "~/api/types/common/api-response.type";
 
 import type {
+  AttendanceApproveEarlyLeaveDTO,
   AttendanceApproveWrongLocationDTO,
   AttendanceCheckInDTO,
   AttendanceCheckOutDTO,
   AttendanceDTO,
+  EarlyLeaveReportParams,
   AttendanceListParams,
   AttendancePaginatedDTO,
   AttendanceTeamListParams,
@@ -46,6 +48,17 @@ export class AttendanceApi {
     return res.data;
   }
 
+  async reviewEarlyLeave(
+    attendanceId: string,
+    payload: AttendanceApproveEarlyLeaveDTO,
+  ) {
+    const res = await this.$api.post<ApiResponse<AttendanceDTO>>(
+      `${this.baseURL}/${attendanceId}/early-leave/review`,
+      payload,
+    );
+    return res.data;
+  }
+
   async getMyAttendance(params?: Omit<AttendanceListParams, "employee_id" | "include_deleted" | "deleted_only">) {
     const res = await this.$api.get<ApiResponse<AttendancePaginatedDTO>>(
       `${this.baseURL}/me`,
@@ -80,6 +93,14 @@ export class AttendanceApi {
   async getWrongLocationReports(params?: WrongLocationReportParams) {
     const res = await this.$api.get<ApiResponse<AttendancePaginatedDTO>>(
       `${this.baseURL}/reports/wrong-location`,
+      { params },
+    );
+    return res.data;
+  }
+
+  async getEarlyLeaveReports(params?: EarlyLeaveReportParams) {
+    const res = await this.$api.get<ApiResponse<AttendancePaginatedDTO>>(
+      `${this.baseURL}/reports/early-leave`,
       { params },
     );
     return res.data;

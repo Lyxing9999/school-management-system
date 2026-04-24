@@ -85,41 +85,22 @@ def review_wrong_location(attendance_id: str):
     return mapper.to_dto(attendance)
 
 @attendance_command_bp.route(
-
     "/attendance/<attendance_id>/early-leave/review",
-
     methods=["POST"],
-
     strict_slashes=False,
-
 )
-
 @login_required(allowed_roles=["hr_admin"])
-
 @wrap_response
-
 def review_early_leave(attendance_id: str):
-
     admin_id = get_current_user_oid()
-
     payload = pydantic_converter.convert_to_model(
-
         request.json,
-
         AttendanceApproveEarlyLeaveSchema,
-
     )
-
     attendance = g.hrms.attendance.review_early_leave(
-
         attendance_id=attendance_id,
-
         admin_id=admin_id,
-
         approved=payload.approved,
-
         comment=payload.comment,
-
     )
-
     return mapper.to_dto(attendance)

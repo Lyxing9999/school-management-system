@@ -4,10 +4,12 @@ import {
 } from "~/composables/system/useApiUtils";
 
 import type {
+  AttendanceApproveEarlyLeaveDTO,
   AttendanceApproveWrongLocationDTO,
   AttendanceCheckInDTO,
   AttendanceCheckOutDTO,
   AttendanceDTO,
+  EarlyLeaveReportParams,
   AttendanceListParams,
   AttendancePaginatedDTO,
   AttendanceTeamListParams,
@@ -45,6 +47,18 @@ export class AttendanceService {
   ) {
     const data = await this.callApi<AttendanceDTO>(
       () => this.attendanceApi.reviewWrongLocation(attendanceId, payload),
+      { showSuccess: true, ...(options ?? {}) },
+    );
+    return data!;
+  }
+
+  async reviewEarlyLeave(
+    attendanceId: string,
+    payload: AttendanceApproveEarlyLeaveDTO,
+    options?: ApiCallOptions,
+  ) {
+    const data = await this.callApi<AttendanceDTO>(
+      () => this.attendanceApi.reviewEarlyLeave(attendanceId, payload),
       { showSuccess: true, ...(options ?? {}) },
     );
     return data!;
@@ -136,6 +150,28 @@ export class AttendanceService {
   ): Promise<AttendancePaginatedDTO> {
     const data = await this.callApi<AttendancePaginatedDTO>(
       () => this.attendanceApi.getWrongLocationReports(params),
+      options,
+    );
+
+    return (
+      data ?? {
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          page_size: 10,
+          total_pages: 0,
+        },
+      }
+    );
+  }
+
+  async getEarlyLeaveReports(
+    params?: EarlyLeaveReportParams,
+    options?: ApiCallOptions,
+  ): Promise<AttendancePaginatedDTO> {
+    const data = await this.callApi<AttendancePaginatedDTO>(
+      () => this.attendanceApi.getEarlyLeaveReports(params),
       options,
     );
 

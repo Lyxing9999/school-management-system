@@ -15,6 +15,7 @@ from app.contexts.hrms.use_cases.attendance.review_early_leave import ReviewEarl
 from app.contexts.hrms.queries.attendance.get_my_attendance import GetMyAttendanceQuery
 from app.contexts.hrms.queries.attendance.list_attendance import ListAttendanceQuery
 from app.contexts.hrms.queries.attendance.get_team_attendance import GetTeamAttendanceQuery
+from app.contexts.hrms.queries.attendance.get_early_leave_report import GetEarlyLeaveReportQuery
 from app.contexts.hrms.queries.attendance.get_wrong_location_report import GetWrongLocationReportQuery
 from app.contexts.hrms.use_cases.employee.onboard_employee_with_account import OnboardEmployeeWithAccountUseCase
 from app.contexts.hrms.use_cases.employee.create_employee import CreateEmployeeUseCase
@@ -261,6 +262,9 @@ class HrmsApplicationServices:
             attendance_read_model=repositories.attendance_read_model,
         )
         self.get_wrong_location_report = GetWrongLocationReportQuery(
+            attendance_read_model=repositories.attendance_read_model,
+        )
+        self.get_early_leave_report = GetEarlyLeaveReportQuery(
             attendance_read_model=repositories.attendance_read_model,
         )
         self.onboard_employee_with_account = OnboardEmployeeWithAccountUseCase(
@@ -550,6 +554,7 @@ class HrmsApplicationServices:
             list_attendance=self.list_attendance.execute,
             get_team_attendance=self.get_team_attendance.execute,
             get_wrong_location_report=self.get_wrong_location_report.execute,
+            get_early_leave_report=self.get_early_leave_report.execute,
             get_my_attendance_today=self.get_my_attendance_today.execute,
             review_early_leave=self.review_early_leave.execute,
         )
