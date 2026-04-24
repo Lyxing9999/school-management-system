@@ -120,6 +120,7 @@ export const ROUTES = {
 
     ATTENDANCE_TEAM: "/manager/attendance/team",
     ATTENDANCE_REPORTS: "/manager/attendance/reports",
+    ATTENDANCE_EARLY_LEAVE: "/manager/attendance/early-leave",
 
     OVERTIME_REVIEWS: "/manager/overtime/reviews",
     OVERTIME_HISTORY: "/manager/overtime/history",

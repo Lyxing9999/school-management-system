@@ -36,6 +36,7 @@ class MongoLeaveRepository:
         self,
         *,
         employee_id: ObjectId | None = None,
+        employee_ids: list[ObjectId] | None = None,
         status: str | None = None,
         include_deleted: bool = False,
         deleted_only: bool = False,
@@ -46,6 +47,10 @@ class MongoLeaveRepository:
 
         if employee_id:
             query["employee_id"] = self._oid(employee_id)
+        elif employee_ids:
+            query["employee_id"] = {
+                "$in": [self._oid(item) for item in employee_ids if self._oid(item)]
+            }
         if status:
             query["status"] = status
 

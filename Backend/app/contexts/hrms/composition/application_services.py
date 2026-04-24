@@ -233,6 +233,7 @@ class HrmsApplicationServices:
 
         self.review_early_leave = ReviewEarlyLeaveUseCase(
             attendance_repository=repositories.attendance_repository,
+            employee_repository=repositories.employee_repository,
             audit_log_repository=repositories.audit_log_repository,
             notification_service=self.notification_service,
         )
@@ -262,9 +263,11 @@ class HrmsApplicationServices:
             attendance_read_model=repositories.attendance_read_model,
         )
         self.get_wrong_location_report = GetWrongLocationReportQuery(
+            employee_read_model=repositories.employee_read_model,
             attendance_read_model=repositories.attendance_read_model,
         )
         self.get_early_leave_report = GetEarlyLeaveReportQuery(
+            employee_read_model=repositories.employee_read_model,
             attendance_read_model=repositories.attendance_read_model,
         )
         self.onboard_employee_with_account = OnboardEmployeeWithAccountUseCase(
@@ -326,6 +329,7 @@ class HrmsApplicationServices:
             notification_service=self.notification_service,
         )
         self.list_overtime_requests = ListOvertimeRequestsQuery(
+            employee_read_model=repositories.employee_read_model,
             overtime_read_model=repositories.overtime_read_model,
         )
         self.get_overtime_request = GetOvertimeRequestQuery(
@@ -338,6 +342,7 @@ class HrmsApplicationServices:
             overtime_read_model=repositories.overtime_read_model,
         )
         self.list_pending_overtime_requests = ListPendingOvertimeRequestsQuery(
+            employee_read_model=repositories.employee_read_model,
             overtime_read_model=repositories.overtime_read_model,
         )
         self.get_my_overtime_summary = GetMyOvertimeSummaryQuery(
@@ -376,12 +381,14 @@ class HrmsApplicationServices:
             leave_repository=repositories.leave_repository,
         )
         self.list_leave_requests = ListLeaveRequestsQuery(
+            employee_read_model=repositories.employee_read_model,
             leave_repository=repositories.leave_repository,
         )
         self.list_my_leave_requests = ListMyLeaveRequestsQuery(
             leave_repository=repositories.leave_repository,
         )
         self.list_pending_leave_requests = ListPendingLeaveRequestsQuery(
+            employee_read_model=repositories.employee_read_model,
             leave_repository=repositories.leave_repository,
         )
         self.get_my_leave_summary = GetMyLeaveSummaryQuery(

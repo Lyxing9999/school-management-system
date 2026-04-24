@@ -4,6 +4,7 @@ from flask import Blueprint, request, g
 
 from app.contexts.core.security.auth_utils import (
     get_current_employee_id,
+    get_current_user,
     get_current_user_oid,
 )
 from app.contexts.shared.decorators.response_decorator import wrap_response
@@ -89,10 +90,12 @@ def review_wrong_location(attendance_id: str):
     methods=["POST"],
     strict_slashes=False,
 )
-@login_required(allowed_roles=["hr_admin"])
+@login_required(allowed_roles=["hr_admin", "manager"])
 @wrap_response
 def review_early_leave(attendance_id: str):
     admin_id = get_current_user_oid()
+    current_user = get_current_user()
+    actor_role = str(current_user.get("role") or "").strip().lower()
     payload = pydantic_converter.convert_to_model(
         request.json,
         AttendanceApproveEarlyLeaveSchema,
@@ -100,6 +103,7 @@ def review_early_leave(attendance_id: str):
     attendance = g.hrms.attendance.review_early_leave(
         attendance_id=attendance_id,
         admin_id=admin_id,
+        actor_role=actor_role,
         approved=payload.approved,
         comment=payload.comment,
     )

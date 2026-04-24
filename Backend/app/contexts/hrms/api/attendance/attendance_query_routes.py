@@ -5,6 +5,8 @@ from flask import Blueprint, request, g
 
 from app.contexts.core.security.auth_utils import (
     get_current_employee_id,
+    get_current_user,
+    get_current_user_oid,
     get_current_user_id,
 )
 from app.contexts.shared.decorators.response_decorator import wrap_response
@@ -128,6 +130,10 @@ def get_team_attendance():
 @login_required(allowed_roles=["hr_admin", "manager"])
 @wrap_response
 def get_wrong_location_report():
+    current_user = get_current_user()
+    current_role = str(current_user.get("role") or "").strip().lower()
+    manager_user_id = get_current_user_oid() if current_role == "manager" else None
+
     page = max(int(request.args.get("page") or 1), 1)
     page_size = min(max(int(request.args.get("limit") or 10), 1), 100)
     review_status = (
@@ -139,6 +145,7 @@ def get_wrong_location_report():
     end_date = request.args.get("end_date")
 
     items, total = g.hrms.attendance.get_wrong_location_report(
+        manager_user_id=manager_user_id,
         page=page,
         page_size=page_size,
         review_status=review_status,
@@ -165,6 +172,10 @@ def get_wrong_location_report():
 @login_required(allowed_roles=["hr_admin", "manager"])
 @wrap_response
 def get_early_leave_report():
+    current_user = get_current_user()
+    current_role = str(current_user.get("role") or "").strip().lower()
+    manager_user_id = get_current_user_oid() if current_role == "manager" else None
+
     page = max(int(request.args.get("page") or 1), 1)
     page_size = min(max(int(request.args.get("limit") or 10), 1), 100)
     review_status = (
@@ -176,6 +187,7 @@ def get_early_leave_report():
     end_date = request.args.get("end_date")
 
     items, total = g.hrms.attendance.get_early_leave_report(
+        manager_user_id=manager_user_id,
         page=page,
         page_size=page_size,
         review_status=review_status,

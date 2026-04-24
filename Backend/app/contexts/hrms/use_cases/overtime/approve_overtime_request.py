@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.contexts.hrms.domain.audit_log import AuditLog
+from app.contexts.hrms.errors.overtime_exceptions import OvertimeReviewNotAllowedException
 from app.contexts.shared.time_utils import utc_now
 
 
@@ -29,6 +30,23 @@ class ApproveOvertimeRequestUseCase:
         comment: str | None = None,
     ):
         ot = self.overtime_repository.find_by_id(overtime_id)
+        normalized_role = str(actor_role or "").strip().lower()
+        reviewer_user_id = actor_user_id or manager_id
+        is_manager = normalized_role == "manager"
+
+        if is_manager and self.employee_repository:
+            employee = self.employee_repository.find_by_id(ot.employee_id)
+            employee_manager_user_id = employee.get("manager_user_id") if employee else None
+            if (
+                not employee_manager_user_id
+                or str(employee_manager_user_id) != str(reviewer_user_id)
+            ):
+                raise OvertimeReviewNotAllowedException(
+                    manager_user_id=str(reviewer_user_id),
+                    employee_manager_user_id=(
+                        str(employee_manager_user_id) if employee_manager_user_id else None
+                    ),
+                )
 
         ot.approve(
             manager_id=manager_id,
@@ -39,11 +57,11 @@ class ApproveOvertimeRequestUseCase:
         saved = self.overtime_repository.save(ot)
         self._write_audit_log(
             action="ot_approved",
-            actor_id=actor_user_id or manager_id,
+            actor_id=reviewer_user_id,
             entity_id=saved.id,
             details={
                 "employee_id": str(saved.employee_id),
-                "approved_by_role": str(actor_role or "").strip().lower() or None,
+                "approved_by_role": normalized_role or None,
                 "approved_hours": float(saved.approved_hours),
                 "comment": comment,
             },
@@ -53,7 +71,7 @@ class ApproveOvertimeRequestUseCase:
                 overtime_id=saved.id,
                 employee_id=saved.employee_id,
                 approved=True,
-                reviewer_user_id=actor_user_id or manager_id,
+                reviewer_user_id=reviewer_user_id,
                 comment=comment,
             )
         return saved

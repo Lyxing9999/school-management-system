@@ -170,6 +170,7 @@ class AttendanceReadModel:
     def list_wrong_location_cases(
         self,
         *,
+        employee_ids: list | None = None,
         start_date=None,
         end_date=None,
         review_status: str | None = None,
@@ -188,6 +189,11 @@ class AttendanceReadModel:
                 {"wrong_location_reason": {"$ne": None}},
             ],
         }
+
+        if employee_ids:
+            query["employee_id"] = {
+                "$in": [self._oid(item) for item in employee_ids if self._oid(item)]
+            }
 
         if review_status:
             normalized = review_status.strip().lower()
@@ -227,6 +233,7 @@ class AttendanceReadModel:
     def list_early_leave_cases(
         self,
         *,
+        employee_ids: list | None = None,
         start_date=None,
         end_date=None,
         review_status: str | None = None,
@@ -252,6 +259,11 @@ class AttendanceReadModel:
                 },
             ],
         }
+
+        if employee_ids:
+            query["employee_id"] = {
+                "$in": [self._oid(item) for item in employee_ids if self._oid(item)]
+            }
 
         if review_status:
             normalized = review_status.strip().lower()

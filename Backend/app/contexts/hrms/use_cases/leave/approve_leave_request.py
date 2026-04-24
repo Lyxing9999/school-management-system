@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from app.contexts.hrms.errors.leave_exceptions import (
-    LeaveApprovalNotAllowedException,
     LeaveEmployeeNotFoundException,
+    LeaveReviewNotAllowedException,
 )
 from app.contexts.hrms.domain.audit_log import AuditLog
 from app.contexts.shared.time_utils import utc_now
@@ -41,12 +41,16 @@ class ApproveLeaveRequestUseCase:
         is_hr_admin = normalized_role == "hr_admin"
         if (
             not is_hr_admin
-            and employee_manager_user_id
-            and str(employee_manager_user_id) != str(manager_user_id)
+            and (
+                not employee_manager_user_id
+                or str(employee_manager_user_id) != str(manager_user_id)
+            )
         ):
-            raise LeaveApprovalNotAllowedException(
+            raise LeaveReviewNotAllowedException(
                 manager_user_id=str(manager_user_id),
-                employee_manager_user_id=str(employee_manager_user_id),
+                employee_manager_user_id=(
+                    str(employee_manager_user_id) if employee_manager_user_id else None
+                ),
             )
 
         leave.approve(manager_id=manager_user_id, comment=comment)

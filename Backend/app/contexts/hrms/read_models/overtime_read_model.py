@@ -29,6 +29,7 @@ class OvertimeReadModel:
         self,
         *,
         employee_id: str | ObjectId | None = None,
+        employee_ids: list[str | ObjectId] | None = None,
         status: str | None = None,
         include_deleted: bool = False,
         deleted_only: bool = False,
@@ -37,6 +38,9 @@ class OvertimeReadModel:
 
         if employee_id:
             query["employee_id"] = self._oid(employee_id)
+        elif employee_ids:
+            scoped_ids = [self._oid(item) for item in employee_ids if self._oid(item)]
+            query["employee_id"] = {"$in": scoped_ids}
 
         if status:
             query["status"] = str(status).strip().lower()
@@ -52,6 +56,7 @@ class OvertimeReadModel:
         self,
         *,
         employee_id: str | ObjectId | None = None,
+        employee_ids: list[str | ObjectId] | None = None,
         status: str | None = None,
         page: int = 1,
         limit: int = 10,
@@ -60,6 +65,7 @@ class OvertimeReadModel:
     ) -> tuple[list[dict], int]:
         query = self._build_base_query(
             employee_id=employee_id,
+            employee_ids=employee_ids,
             status=status,
             include_deleted=include_deleted,
             deleted_only=deleted_only,
@@ -86,11 +92,13 @@ class OvertimeReadModel:
         self,
         *,
         employee_id: str | ObjectId | None = None,
+        employee_ids: list[str | ObjectId] | None = None,
         page: int = 1,
         limit: int = 10,
     ) -> tuple[list[dict], int]:
         query = self._build_base_query(
             employee_id=employee_id,
+            employee_ids=employee_ids,
             status="pending",
         )
 

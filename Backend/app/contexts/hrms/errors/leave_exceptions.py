@@ -103,6 +103,24 @@ class LeaveApprovalNotAllowedException(AppBaseException):
         )
 
 
+class LeaveReviewNotAllowedException(AppBaseException):
+    def __init__(self, manager_user_id: str, employee_manager_user_id: str | None):
+        super().__init__(
+            message="You can only review leave requests from your own team",
+            error_code="LEAVE_REVIEW_NOT_ALLOWED",
+            status_code=403,
+            severity=ErrorSeverity.LOW,
+            category=ErrorCategory.AUTHORIZATION,
+            details={
+                "manager_user_id": manager_user_id,
+                "employee_manager_user_id": employee_manager_user_id,
+            },
+            user_message="You are not allowed to review this leave request.",
+            hint="Only the employee's assigned manager can approve or reject this leave request.",
+            recoverable=True,
+        )
+
+
 class LeaveReasonRequiredException(AppBaseException):
     def __init__(self):
         super().__init__(

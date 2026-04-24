@@ -66,12 +66,15 @@ def approve_leave_request(leave_id: str):
 @login_required(allowed_roles=["manager", "hr_admin"])
 @wrap_response
 def reject_leave_request(leave_id: str):
+    current_user = get_current_user()
+    actor_role = str(current_user.get("role") or "").strip().lower()
     manager_user_id = get_current_user_oid()
     payload = pydantic_converter.convert_to_model(request.json, LeaveRejectSchema)
 
     leave = g.hrms.leave.reject(
         leave_id=leave_id,
         manager_user_id=manager_user_id,
+        actor_role=actor_role,
         comment=payload.comment,
     )
     return mapper.to_dto(leave)

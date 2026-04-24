@@ -456,6 +456,11 @@ const menus: Record<AppRoleKey, MenuItem[]> = {
           icon: "Document",
           route: ROUTES.MANAGER.ATTENDANCE_REPORTS,
         },
+        {
+          title: "Early Leave",
+          icon: "Timer",
+          route: ROUTES.MANAGER.ATTENDANCE_EARLY_LEAVE,
+        },
       ],
     },
     {

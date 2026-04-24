@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from flask import Blueprint, request, g
 
-from app.contexts.core.security.auth_utils import get_current_employee_id
+from app.contexts.core.security.auth_utils import (
+    get_current_employee_id,
+    get_current_user,
+    get_current_user_oid,
+)
 from app.contexts.shared.decorators.response_decorator import wrap_response
 from app.contexts.iam.auth.jwt_utils import login_required
 from app.contexts.hrms.mapper.overtime_mapper import OvertimeMapper
@@ -16,12 +20,17 @@ mapper = OvertimeMapper()
 @login_required(allowed_roles=["hr_admin", "manager"])
 @wrap_response
 def list_overtime_requests():
+    current_user = get_current_user()
+    current_role = str(current_user.get("role") or "").strip().lower()
+    manager_user_id = get_current_user_oid() if current_role == "manager" else None
+
     employee_id = request.args.get("employee_id")
     status = request.args.get("status")
     page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 10))
 
     items, total = g.hrms.overtime.list(
+        manager_user_id=manager_user_id,
         employee_id=employee_id,
         status=status,
         page=page,
@@ -77,11 +86,16 @@ def get_overtime_request(overtime_id: str):
 @login_required(allowed_roles=["manager", "hr_admin"])
 @wrap_response
 def list_pending_approval_overtime_requests():
+    current_user = get_current_user()
+    current_role = str(current_user.get("role") or "").strip().lower()
+    manager_user_id = get_current_user_oid() if current_role == "manager" else None
+
     employee_id = request.args.get("employee_id")
     page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 10))
 
     items, total = g.hrms.overtime.list_pending_approval(
+        manager_user_id=manager_user_id,
         employee_id=employee_id,
         page=page,
         limit=limit,

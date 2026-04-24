@@ -4,6 +4,7 @@ from app.contexts.hrms.domain.attendance import ReviewStatus
 from app.contexts.hrms.domain.audit_log import AuditLog
 from app.contexts.hrms.errors.attendance_exceptions import (
     AttendanceEarlyLeaveReviewStateException,
+    AttendanceEarlyLeaveReviewNotAllowedException,
     AttendanceNotFoundException,
 )
 from app.contexts.shared.time_utils import utc_now
@@ -14,10 +15,12 @@ class ReviewEarlyLeaveUseCase:
         self,
         *,
         attendance_repository,
+        employee_repository=None,
         audit_log_repository=None,
         notification_service=None,
     ) -> None:
         self.attendance_repository = attendance_repository
+        self.employee_repository = employee_repository
         self.audit_log_repository = audit_log_repository
         self.notification_service = notification_service
 
@@ -26,12 +29,29 @@ class ReviewEarlyLeaveUseCase:
         *,
         attendance_id,
         admin_id,
+        actor_role: str | None = None,
         approved: bool,
         comment: str | None = None,
     ):
         attendance = self.attendance_repository.find_by_id(attendance_id)
         if not attendance:
             raise AttendanceNotFoundException(str(attendance_id))
+
+        normalized_role = str(actor_role or "").strip().lower()
+        is_manager = normalized_role == "manager"
+        if is_manager and self.employee_repository:
+            employee = self.employee_repository.find_by_id(attendance.employee_id)
+            employee_manager_user_id = employee.get("manager_user_id") if employee else None
+            if (
+                not employee_manager_user_id
+                or str(employee_manager_user_id) != str(admin_id)
+            ):
+                raise AttendanceEarlyLeaveReviewNotAllowedException(
+                    manager_user_id=str(admin_id),
+                    employee_manager_user_id=(
+                        str(employee_manager_user_id) if employee_manager_user_id else None
+                    ),
+                )
 
         current_review_status = (
             attendance.early_leave_review_status.value
@@ -93,6 +113,7 @@ class ReviewEarlyLeaveUseCase:
                     else None
                 ),
                 "employee_id": str(updated.employee_id),
+                "reviewed_by_role": normalized_role or None,
             },
         )
 

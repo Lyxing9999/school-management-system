@@ -26,6 +26,10 @@ mapper = LeaveMapper()
 @login_required(allowed_roles=["hr_admin", "manager"])
 @wrap_response
 def list_leave_requests():
+    current_user = get_current_user()
+    current_role = str(current_user.get("role") or "").strip().lower()
+    manager_user_id = get_current_user_oid() if current_role == "manager" else None
+
     employee_id = request.args.get("employee_id")
     status = (request.args.get("status") or "").strip() or None
     include_deleted = (request.args.get("include_deleted") or "false").lower() == "true"
@@ -34,6 +38,7 @@ def list_leave_requests():
     page_size = min(max(int(request.args.get("limit") or 10), 1), 100)
 
     items, total = g.hrms.leave.list(
+        manager_user_id=manager_user_id,
         employee_id=employee_id,
         status=status,
         include_deleted=include_deleted,
@@ -97,10 +102,15 @@ def get_leave_request(leave_id: str):
 @login_required(allowed_roles=["manager", "hr_admin"])
 @wrap_response
 def list_pending_leave_requests():
+    current_user = get_current_user()
+    current_role = str(current_user.get("role") or "").strip().lower()
+    manager_user_id = get_current_user_oid() if current_role == "manager" else None
+
     page = max(int(request.args.get("page") or 1), 1)
     page_size = min(max(int(request.args.get("limit") or 10), 1), 100)
 
     items, total = g.hrms.leave.list_pending(
+        manager_user_id=manager_user_id,
         page=page,
         page_size=page_size,
     )
