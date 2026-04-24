@@ -22,6 +22,7 @@ class GenerateMonthlyPayrollUseCase:
         audit_log_repository=None,
         payroll_calculator,
         payroll_calendar_service,
+        notification_service=None,
     ) -> None:
         self.employee_read_model = employee_read_model
         self.working_schedule_repository = working_schedule_repository
@@ -35,6 +36,7 @@ class GenerateMonthlyPayrollUseCase:
         self.audit_log_repository = audit_log_repository
         self.payroll_calculator = payroll_calculator
         self.payroll_calendar_service = payroll_calendar_service
+        self.notification_service = notification_service
 
     def execute(self, *, month: str, generated_by):
         existing = self.payroll_run_repository.find_by_month(month)
@@ -181,6 +183,14 @@ class GenerateMonthlyPayrollUseCase:
                 "skipped_count": len(skipped_employees),
             },
         )
+        if self.notification_service:
+            self.notification_service.notify_payroll_generated(
+                payroll_run_id=run.id,
+                month=month,
+                generated_by_user_id=generated_by,
+                generated_count=len(created_payslips),
+                employee_count=len(active_employees),
+            )
 
         return {
             "payroll_run": run,

@@ -35,11 +35,13 @@ class CheckOutEmployeeUseCase:
         working_schedule_repository,
         attendance_repository,
         audit_log_repository=None,
+        notification_service=None,
     ) -> None:
         self.employee_repository = employee_repository
         self.working_schedule_repository = working_schedule_repository
         self.attendance_repository = attendance_repository
         self.audit_log_repository = audit_log_repository
+        self.notification_service = notification_service
 
     def execute(
         self,
@@ -49,6 +51,7 @@ class CheckOutEmployeeUseCase:
         latitude: float | None = None,
         longitude: float | None = None,
         early_leave_reason: str | None = None,
+        actor_user_id=None,
     ):
         employee = self._get_employee(employee_id)
 
@@ -100,9 +103,10 @@ class CheckOutEmployeeUseCase:
 
         self._write_audit_log(
             action="attendance_check_out",
-            actor_id=employee["_id"],
+            actor_id=actor_user_id or employee.get("user_id") or employee["_id"],
             entity_id=attendance.id,
             details={
+                "employee_id": str(attendance.employee_id),
                 "status": attendance.status.value if hasattr(attendance.status, "value") else str(attendance.status),
                 "day_type": attendance.day_type.value if hasattr(attendance.day_type, "value") else str(attendance.day_type),
                 "is_ot_eligible": attendance.is_ot_eligible,

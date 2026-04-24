@@ -32,12 +32,14 @@ class CreateOvertimeRequestUseCase:
         public_holiday_repository,
         overtime_repository,
         audit_log_repository=None,
+        notification_service=None,
     ) -> None:
         self.employee_repository = employee_repository
         self.working_schedule_repository = working_schedule_repository
         self.public_holiday_repository = public_holiday_repository
         self.overtime_repository = overtime_repository
         self.audit_log_repository = audit_log_repository
+        self.notification_service = notification_service
 
     def execute(self, *, employee_id, payload):
         employee = self.employee_repository.find_by_id(employee_id)
@@ -136,6 +138,12 @@ class CreateOvertimeRequestUseCase:
                 ),
             },
         )
+        if self.notification_service:
+            self.notification_service.notify_overtime_submitted(
+                overtime_id=saved.id,
+                employee_id=saved.employee_id,
+                request_date=saved.request_date,
+            )
 
         return saved
 

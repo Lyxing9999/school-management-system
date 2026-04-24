@@ -22,10 +22,12 @@ class SubmitLeaveRequestUseCase:
         employee_repository,
         leave_repository,
         audit_log_repository=None,
+        notification_service=None,
     ) -> None:
         self.employee_repository = employee_repository
         self.leave_repository = leave_repository
         self.audit_log_repository = audit_log_repository
+        self.notification_service = notification_service
 
     def execute(self, *, employee_id, payload):
         employee = self.employee_repository.find_by_id(employee_id)
@@ -101,6 +103,18 @@ class SubmitLeaveRequestUseCase:
                 "total_days": int(saved.total_days()),
             },
         )
+        if self.notification_service:
+            self.notification_service.notify_leave_submitted(
+                leave_id=saved.id,
+                employee_id=saved.employee_id,
+                leave_type=(
+                    saved.leave_type.value
+                    if hasattr(saved.leave_type, "value")
+                    else str(saved.leave_type)
+                ),
+                start_date=saved.start_date,
+                end_date=saved.end_date,
+            )
         return saved
 
     def _write_audit_log(self, *, action: str, actor_id, entity_id, details: dict) -> None:

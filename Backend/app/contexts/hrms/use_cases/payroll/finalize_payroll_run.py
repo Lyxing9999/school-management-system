@@ -5,9 +5,16 @@ from app.contexts.shared.time_utils import utc_now
 
 
 class FinalizePayrollRunUseCase:
-    def __init__(self, *, payroll_run_repository, audit_log_repository=None) -> None:
+    def __init__(
+        self,
+        *,
+        payroll_run_repository,
+        audit_log_repository=None,
+        notification_service=None,
+    ) -> None:
         self.payroll_run_repository = payroll_run_repository
         self.audit_log_repository = audit_log_repository
+        self.notification_service = notification_service
 
     def execute(self, *, payroll_run_id, actor_id):
         run = self.payroll_run_repository.find_by_id(payroll_run_id)
@@ -22,6 +29,12 @@ class FinalizePayrollRunUseCase:
                 "status": str(saved.status),
             },
         )
+        if self.notification_service:
+            self.notification_service.notify_payroll_finalized(
+                payroll_run_id=saved.id,
+                month=saved.month,
+                actor_user_id=actor_id,
+            )
         return saved
 
     def _write_audit_log(self, *, action: str, actor_id, entity_id, details: dict) -> None:

@@ -53,8 +53,9 @@ class MarkMissingCheckOutUseCase:
 
                 self._write_audit_log(
                     entity_id=attendance.id,
-                    actor_id=attendance.employee_id,
+                    actor_id=employee.get("user_id") or attendance.employee_id,
                     details={
+                        "employee_id": str(attendance.employee_id),
                         "status": "missing_check_out",
                         "attendance_date": attendance.attendance_date.isoformat() if attendance.attendance_date else None,
                     },

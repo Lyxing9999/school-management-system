@@ -440,7 +440,7 @@ class HrmsResponseEnricher:
     def enrich_audit_records(self, rows: list[dict]) -> list[dict]:
         actor_ids = self._collect(rows, "actor_id")
 
-        employee_ids: set[str] = set()
+        employee_ids: set[str] = set(actor_ids)
         schedule_ids: set[str] = set()
         location_ids: set[str] = set()
         payroll_run_ids: set[str] = set()
@@ -456,6 +456,7 @@ class HrmsResponseEnricher:
             "location_reviewed_by",
             "reviewed_by",
             "approved_by",
+            "actor_user_id",
         )
 
         for row in rows:
@@ -505,11 +506,42 @@ class HrmsResponseEnricher:
         location_map = self._resolver.resolve_work_locations_by_ids(location_ids)
         payroll_map = self._resolver.resolve_payroll_runs_by_ids(payroll_run_ids)
 
+        actor_bridged_user_ids: set[str] = set()
+        for actor_id in actor_ids:
+            actor_employee = employee_map.get(actor_id)
+            bridged_user_id = (
+                self._id(actor_employee.get("user_id")) if actor_employee else None
+            )
+            if bridged_user_id:
+                actor_bridged_user_ids.add(bridged_user_id)
+        if actor_bridged_user_ids:
+            user_map.update(self._resolver.resolve_users_by_ids(actor_bridged_user_ids))
+
         for row in rows:
-            actor_id = self._id(row.get("actor_id"))
+            row_details = row.get("details")
+            row_details = row_details if isinstance(row_details, dict) else {}
+            actor_id = self._id(row.get("actor_id")) or self._id(
+                row_details.get("actor_user_id")
+            )
             actor = user_map.get(actor_id) if actor_id else None
-            row["actor_name"] = self._resolver.user_account_name(actor)
-            row["actor_email"] = self._resolver.user_account_email(actor)
+            actor_name = self._resolver.user_account_name(actor)
+            actor_email = self._resolver.user_account_email(actor)
+
+            if not actor_name and actor_id:
+                actor_employee = employee_map.get(actor_id)
+                bridged_user_id = (
+                    self._id(actor_employee.get("user_id")) if actor_employee else None
+                )
+                bridged_user = user_map.get(bridged_user_id) if bridged_user_id else None
+                actor_name = self._resolver.user_account_name(
+                    bridged_user
+                ) or self._resolver.employee_name(actor_employee)
+                actor_email = actor_email or self._resolver.user_account_email(bridged_user)
+                if bridged_user_id:
+                    row["actor_user_id"] = bridged_user_id
+
+            row["actor_name"] = actor_name
+            row["actor_email"] = actor_email
 
             entity_type = str(row.get("entity_type") or "").strip().lower()
             entity_id = self._id(row.get("entity_id"))

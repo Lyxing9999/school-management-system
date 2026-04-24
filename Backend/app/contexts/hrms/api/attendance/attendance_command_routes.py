@@ -28,6 +28,7 @@ mapper = AttendanceMapper()
 @wrap_response
 def check_in():
     employee_id = get_current_employee_id()
+    actor_user_id = get_current_user_oid()
     payload = pydantic_converter.convert_to_model(request.json, AttendanceCheckInSchema)
 
     attendance = g.hrms.attendance.check_in(
@@ -37,6 +38,7 @@ def check_in():
         longitude=payload.longitude,
         wrong_location_reason=payload.wrong_location_reason,
         late_reason=payload.late_reason,
+        actor_user_id=actor_user_id,
     )
 
     return mapper.to_dto(attendance)
@@ -47,6 +49,7 @@ def check_in():
 @wrap_response
 def check_out():
     employee_id = get_current_employee_id()
+    actor_user_id = get_current_user_oid()
     payload = pydantic_converter.convert_to_model(request.json, AttendanceCheckOutSchema)
 
     attendance = g.hrms.attendance.check_out(
@@ -55,6 +58,7 @@ def check_out():
         latitude=payload.latitude,
         longitude=payload.longitude,
         early_leave_reason=payload.early_leave_reason,
+        actor_user_id=actor_user_id,
     )
 
     return mapper.to_dto(attendance)

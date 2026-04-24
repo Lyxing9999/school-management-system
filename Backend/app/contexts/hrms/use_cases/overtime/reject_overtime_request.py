@@ -5,9 +5,18 @@ from app.contexts.shared.time_utils import utc_now
 
 
 class RejectOvertimeRequestUseCase:
-    def __init__(self, *, overtime_repository, audit_log_repository=None) -> None:
+    def __init__(
+        self,
+        *,
+        overtime_repository,
+        employee_repository=None,
+        audit_log_repository=None,
+        notification_service=None,
+    ) -> None:
         self.overtime_repository = overtime_repository
+        self.employee_repository = employee_repository
         self.audit_log_repository = audit_log_repository
+        self.notification_service = notification_service
 
     def execute(
         self,
@@ -36,6 +45,14 @@ class RejectOvertimeRequestUseCase:
                 "comment": comment,
             },
         )
+        if self.notification_service:
+            self.notification_service.notify_overtime_reviewed(
+                overtime_id=saved.id,
+                employee_id=saved.employee_id,
+                approved=False,
+                reviewer_user_id=actor_user_id or manager_id,
+                comment=comment,
+            )
         return saved
 
     def _write_audit_log(self, *, action: str, actor_id, entity_id, details: dict) -> None:

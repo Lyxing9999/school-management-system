@@ -12,10 +12,12 @@ class CancelLeaveRequestUseCase:
         leave_repository,
         employee_repository=None,
         audit_log_repository=None,
+        notification_service=None,
     ) -> None:
         self.leave_repository = leave_repository
         self.employee_repository = employee_repository
         self.audit_log_repository = audit_log_repository
+        self.notification_service = notification_service
 
     def execute(
         self,
@@ -50,6 +52,13 @@ class CancelLeaveRequestUseCase:
                 "cancelled_by_role": normalized_role or None,
             },
         )
+        if self.notification_service:
+            self.notification_service.notify_leave_cancelled(
+                leave_id=saved.id,
+                employee_id=saved.employee_id,
+                actor_user_id=actor_user_id,
+                actor_role=normalized_role,
+            )
         return saved
 
     def _can_cancel(

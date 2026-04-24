@@ -65,10 +65,28 @@ const entityTypeOptions = [
 
 const actionOptions = [
   { label: "All Actions", value: "" },
-  { label: "Check In", value: "check_in" },
-  { label: "Check Out", value: "check_out" },
-  { label: "Wrong Location Reviewed", value: "wrong_location_reviewed" },
-  { label: "Early Leave Reviewed", value: "early_leave_reviewed" },
+  { label: "Check In", value: "attendance_check_in" },
+  { label: "Check Out", value: "attendance_check_out" },
+  {
+    label: "Wrong Location Approved",
+    value: "attendance_wrong_location_approved",
+  },
+  {
+    label: "Wrong Location Rejected",
+    value: "attendance_wrong_location_rejected",
+  },
+  {
+    label: "Early Leave Approved",
+    value: "attendance_early_leave_approved",
+  },
+  {
+    label: "Early Leave Rejected",
+    value: "attendance_early_leave_rejected",
+  },
+  {
+    label: "Marked Missing Check Out",
+    value: "attendance_marked_missing_check_out",
+  },
   { label: "Overtime Submitted", value: "ot_submitted" },
   { label: "Overtime Approved", value: "ot_approved" },
   { label: "Overtime Rejected", value: "ot_rejected" },

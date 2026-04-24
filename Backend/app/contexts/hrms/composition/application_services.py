@@ -131,6 +131,7 @@ from app.contexts.hrms.queries.payroll.get_payslip import GetPayslipQuery
 from app.contexts.hrms.queries.audit.list_audit_logs import ListAuditLogsQuery
 from app.contexts.hrms.presenters.relation_resolver import HrmsRelationResolver
 from app.contexts.hrms.presenters.response_enricher import HrmsResponseEnricher
+from app.contexts.hrms.services.hrms_notification_service import HrmsNotificationService
 
 
 class HrmsApplicationServices:
@@ -138,6 +139,10 @@ class HrmsApplicationServices:
         self.repositories = repositories
         self.relation_resolver = HrmsRelationResolver(repositories=repositories)
         self.response_enricher = HrmsResponseEnricher(resolver=self.relation_resolver)
+        self.notification_service = HrmsNotificationService(
+            db=repositories.db,
+            employee_repository=repositories.employee_repository,
+        )
 
         # employee account / employee
         self.get_account = GetEmployeeAccountQuery(
@@ -222,20 +227,25 @@ class HrmsApplicationServices:
             public_holiday_repository=repositories.public_holiday_repository,
             attendance_repository=repositories.attendance_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
 
         self.review_early_leave = ReviewEarlyLeaveUseCase(
             attendance_repository=repositories.attendance_repository,
+            audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.check_out_employee = CheckOutEmployeeUseCase(
             employee_repository=repositories.employee_repository,
             working_schedule_repository=repositories.working_schedule_repository,
             attendance_repository=repositories.attendance_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.approve_wrong_location = ApproveWrongLocationUseCase(
             attendance_repository=repositories.attendance_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.get_my_attendance = GetMyAttendanceQuery(
             attendance_read_model=repositories.attendance_read_model,
@@ -291,19 +301,25 @@ class HrmsApplicationServices:
             public_holiday_repository=repositories.public_holiday_repository,
             overtime_repository=repositories.overtime_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.approve_overtime_request = ApproveOvertimeRequestUseCase(
             overtime_repository=repositories.overtime_repository,
+            employee_repository=repositories.employee_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.reject_overtime_request = RejectOvertimeRequestUseCase(
             overtime_repository=repositories.overtime_repository,
+            employee_repository=repositories.employee_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.cancel_overtime_request = CancelOvertimeRequestUseCase(
             overtime_repository=repositories.overtime_repository,
             employee_repository=repositories.employee_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.list_overtime_requests = ListOvertimeRequestsQuery(
             overtime_read_model=repositories.overtime_read_model,
@@ -331,20 +347,25 @@ class HrmsApplicationServices:
             employee_repository=repositories.employee_repository,
             leave_repository=repositories.leave_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.approve_leave_request = ApproveLeaveRequestUseCase(
             leave_repository=repositories.leave_repository,
             employee_repository=repositories.employee_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.reject_leave_request = RejectLeaveRequestUseCase(
             leave_repository=repositories.leave_repository,
+            employee_repository=repositories.employee_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
         self.cancel_leave_request = CancelLeaveRequestUseCase(
             leave_repository=repositories.leave_repository,
             employee_repository=repositories.employee_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
 
         self.get_leave_request = GetLeaveRequestQuery(
@@ -383,17 +404,20 @@ class HrmsApplicationServices:
             audit_log_repository=repositories.audit_log_repository,
             payroll_calculator=PayrollCalculator,
             payroll_calendar_service=PayrollCalendarService(),
+            notification_service=self.notification_service,
         )
 
         self.finalize_payroll_run = FinalizePayrollRunUseCase(
             payroll_run_repository=repositories.payroll_run_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
 
         self.mark_payroll_run_paid = MarkPayrollRunPaidUseCase(
             payroll_run_repository=repositories.payroll_run_repository,
             payslip_repository=repositories.payslip_repository,
             audit_log_repository=repositories.audit_log_repository,
+            notification_service=self.notification_service,
         )
 
         self.list_payroll_runs = ListPayrollRunsQuery(

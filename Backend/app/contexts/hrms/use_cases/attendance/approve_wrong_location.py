@@ -15,9 +15,11 @@ class ApproveWrongLocationUseCase:
         *,
         attendance_repository,
         audit_log_repository=None,
+        notification_service=None,
     ) -> None:
         self.attendance_repository = attendance_repository
         self.audit_log_repository = audit_log_repository
+        self.notification_service = notification_service
 
     def execute(
         self,
@@ -88,6 +90,12 @@ class ApproveWrongLocationUseCase:
                 ),
             },
         )
+        if self.notification_service:
+            self.notification_service.notify_wrong_location_reviewed(
+                attendance_id=updated.id,
+                employee_id=updated.employee_id,
+                approved=approved,
+            )
 
         return updated
 
