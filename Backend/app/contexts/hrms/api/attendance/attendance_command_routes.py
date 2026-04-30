@@ -66,10 +66,12 @@ def check_out():
 
 
 @attendance_command_bp.route("/attendance/<attendance_id>/wrong-location/review", methods=["POST"], strict_slashes=False)
-@login_required(allowed_roles=["hr_admin"])
+@login_required(allowed_roles=["hr_admin", "manager"])
 @wrap_response
 def review_wrong_location(attendance_id: str):
     admin_id = get_current_user_oid()
+    current_user = get_current_user()
+    actor_role = str(current_user.get("role") or "").strip().lower()
     payload = pydantic_converter.convert_to_model(
         request.json,
         AttendanceApproveWrongLocationSchema,
@@ -78,6 +80,7 @@ def review_wrong_location(attendance_id: str):
     attendance = g.hrms.attendance.approve_wrong_location(
         attendance_id=attendance_id,
         admin_id=admin_id,
+        actor_role=actor_role,
         approved=payload.approved,
         comment=payload.comment,
         location_id=payload.location_id,

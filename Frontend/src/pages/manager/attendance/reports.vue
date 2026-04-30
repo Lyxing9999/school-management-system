@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, onMounted, watch, reactive } from "vue";
+import type { FormInstance, FormRules } from "element-plus";
 import {
   ElPagination,
   ElSelect,
@@ -7,11 +8,21 @@ import {
   ElDatePicker,
   ElTabs,
   ElTabPane,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElMessage,
+  ElMessageBox,
+  ElButton,
+  ElTag,
+  ElSpace,
 } from "element-plus";
 import TableCard from "~/components/cards/TableCard.vue";
 import SmartTable from "~/components/table-edit/core/table/SmartTable.vue";
 import EmployeeAvatarCell from "~/components/table-edit/cells/EmployeeAvatarCell.vue";
 import InlineStatusCell from "~/components/table-edit/cells/InlineStatusCell.vue";
+import WorkLocationSelect from "~/components/selects/hr/WorkLocationSelect.vue";
 import { hrmsAdminService } from "~/api/hr_admin";
 import type {
   AttendanceDTO,
@@ -19,6 +30,9 @@ import type {
   WrongLocationReportParams,
 } from "~/api/hr_admin/attendance/dto";
 import { displayRelation } from "~/api/hr_admin/shared/displayRelation";
+import type { ColumnConfig } from "~/components/types/tableEdit";
+
+type ReviewAction = "approve" | "reject";
 
 const hrms = hrmsAdminService();
 
@@ -41,6 +55,44 @@ const wrongPage = ref(1);
 const wrongPageSize = ref(10);
 const wrongReviewStatus = ref<string | undefined>(undefined);
 const wrongDateRange = ref<[string, string] | null>(null);
+
+// Wrong Location Review Dialog State
+const reviewDialogVisible = ref(false);
+const reviewAction = ref<ReviewAction>("approve");
+const reviewLoading = ref(false);
+const activeWrongLocationRow = ref<AttendanceDTO | null>(null);
+const reviewFormRef = ref<FormInstance>();
+const reviewForm = reactive({
+  comment: "",
+  location_id: null as string | null,
+});
+
+const reviewRules: FormRules = {
+  comment: [
+    {
+      validator: (_rule, value: string, callback) => {
+        if (reviewAction.value === "reject" && !String(value || "").trim()) {
+          callback(new Error("Comment is required when rejecting"));
+          return;
+        }
+        callback();
+      },
+      trigger: "blur",
+    },
+  ],
+  location_id: [
+    {
+      validator: (_rule, value: string | null, callback) => {
+        if (reviewAction.value === "approve" && !String(value || "").trim()) {
+          callback(new Error("Location is required when approving"));
+          return;
+        }
+        callback();
+      },
+      trigger: "change",
+    },
+  ],
+};
 
 const statusOptions = [
   { label: "All", value: "" },
@@ -113,7 +165,7 @@ watch(
   fetchWrong,
 );
 
-const columns = computed(() => [
+const columns: ColumnConfig<AttendanceDTO>[] = [
   {
     label: "Employee",
     field: "employee_id",
@@ -153,9 +205,9 @@ const columns = computed(() => [
     field: "early_leave_minutes",
     minWidth: 120,
   },
-]);
+];
 
-const wrongColumns = computed(() => [
+const wrongColumns: ColumnConfig<AttendanceDTO>[] = [
   {
     label: "Employee",
     field: "employee_id",
@@ -179,6 +231,13 @@ const wrongColumns = computed(() => [
     minWidth: 180,
   },
   {
+    label: "Assigned Location",
+    field: "location_name",
+    minWidth: 180,
+    render: (row: AttendanceDTO) =>
+      displayRelation(row.location_name, row.location_id),
+  },
+  {
     label: "Review Status",
     field: "location_review_status",
     minWidth: 140,
@@ -186,11 +245,25 @@ const wrongColumns = computed(() => [
     slotName: "review_status",
   },
   {
+    label: "Reviewed By",
+    field: "location_reviewed_by_name",
+    minWidth: 160,
+    render: (row: AttendanceDTO) =>
+      displayRelation(row.location_reviewed_by_name, row.location_reviewed_by),
+  },
+  {
     label: "Admin Comment",
     field: "admin_comment",
     minWidth: 160,
   },
-]);
+  {
+    label: "Actions",
+    field: "id",
+    minWidth: 210,
+    useSlot: true,
+    slotName: "operation",
+  },
+];
 
 function resolvedStatus(row: AttendanceDTO): string {
   const wrongLocationStatus = String(row.wrong_location_status || "")
@@ -214,6 +287,145 @@ function reviewStatusLabel(row: AttendanceDTO): string {
   if (status === "wrong_location_approved") return "Approved";
   if (status === "wrong_location_rejected") return "Rejected";
   return "-";
+}
+
+function reviewStatusType(
+  row: AttendanceDTO,
+): "warning" | "success" | "danger" | "info" {
+  const status = resolvedStatus(row);
+  if (status === "wrong_location_pending") return "warning";
+  if (status === "wrong_location_approved") return "success";
+  if (status === "wrong_location_rejected") return "danger";
+  return "info";
+}
+
+function isPendingWrongLocation(row: AttendanceDTO): boolean {
+  return resolvedStatus(row) === "wrong_location_pending";
+}
+
+function formatDate(value?: string | null): string {
+  if (!value) return "-";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-");
+    return new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+    ).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    });
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
+
+function formatDateTime(value?: string | null): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function mapError(error: unknown, fallback: string): string {
+  if (error && typeof error === "object" && "response" in error) {
+    const e = error as {
+      response?: { data?: { user_message?: string; message?: string } };
+    };
+    return e.response?.data?.user_message || e.response?.data?.message || fallback;
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
+function openWrongLocationReviewDialog(row: AttendanceDTO, action: ReviewAction) {
+  if (!isPendingWrongLocation(row)) {
+    ElMessageBox.alert(
+      "Only pending wrong-location cases can be reviewed",
+      "Cannot Review",
+      { type: "warning" },
+    );
+    return;
+  }
+
+  activeWrongLocationRow.value = row;
+  reviewAction.value = action;
+  reviewForm.comment = "";
+  reviewForm.location_id = action === "approve" ? row.location_id || null : null;
+  reviewDialogVisible.value = true;
+}
+
+async function submitWrongLocationReview() {
+  if (!activeWrongLocationRow.value) return;
+
+  await reviewFormRef.value?.validate();
+
+  reviewLoading.value = true;
+  try {
+    await hrms.attendance.reviewWrongLocation(
+      activeWrongLocationRow.value.id,
+      {
+        approved: reviewAction.value === "approve",
+        comment: reviewForm.comment.trim() || null,
+        location_id:
+          reviewAction.value === "approve"
+            ? reviewForm.location_id || null
+            : null,
+      },
+      { showSuccess: false, showError: false },
+    );
+
+    ElMessage.success(
+      reviewAction.value === "approve"
+        ? "Wrong-location case approved"
+        : "Wrong-location case rejected",
+    );
+
+    reviewDialogVisible.value = false;
+    activeWrongLocationRow.value = null;
+    await fetchWrong();
+  } catch (error) {
+    ElMessage.error(mapError(error, "Failed to submit review action"));
+  } finally {
+    reviewLoading.value = false;
+  }
+}
+
+async function showWrongLocationDetails(row: AttendanceDTO) {
+  await ElMessageBox.alert(
+    `Employee: ${displayRelation(
+      row.employee_name,
+      row.employee_id,
+    )}\nAttendance Date: ${formatDate(
+      row.attendance_date,
+    )}\nCheck In: ${formatDateTime(row.check_in_time)}\nReview Status: ${reviewStatusLabel(
+      row,
+    )}\nAssigned location: ${
+      displayRelation(row.location_name, row.location_id) || "-"
+    }\nReviewed by: ${
+      displayRelation(row.location_reviewed_by_name, row.location_reviewed_by) ||
+      "-"
+    }\nWrong-location reason: ${row.wrong_location_reason || "-"}\nReviewer comment: ${
+      row.admin_comment || "-"
+    }`,
+    "Wrong-location details",
+    { type: "info" },
+  );
 }
 </script>
 
@@ -294,7 +506,9 @@ function reviewStatusLabel(row: AttendanceDTO): string {
                 }
               "
               :format-label="
-                (v) => statusOptions.find((o) => o.value === v)?.label || v
+                (v) =>
+                  statusOptions.find((o) => o.value === String(v))?.label ||
+                  String(v ?? '')
               "
               disabled
             />
@@ -357,7 +571,51 @@ function reviewStatusLabel(row: AttendanceDTO): string {
             }}</span>
           </template>
           <template #review_status="{ row }">
-            {{ reviewStatusLabel(row as AttendanceDTO) }}
+            <ElTag
+              :type="reviewStatusType(row as AttendanceDTO)"
+              effect="plain"
+              round
+              size="small"
+            >
+              {{ reviewStatusLabel(row as AttendanceDTO) }}
+            </ElTag>
+          </template>
+          <template #operation="{ row }">
+            <ElSpace class="review-actions" :size="6">
+              <template v-if="isPendingWrongLocation(row as AttendanceDTO)">
+                <ElButton
+                  type="success"
+                  size="small"
+                  plain
+                  class="review-btn review-btn--approve"
+                  @click.stop="
+                    openWrongLocationReviewDialog(row as AttendanceDTO, 'approve')
+                  "
+                >
+                  Approve
+                </ElButton>
+                <ElButton
+                  type="danger"
+                  size="small"
+                  plain
+                  class="review-btn review-btn--reject"
+                  @click.stop="
+                    openWrongLocationReviewDialog(row as AttendanceDTO, 'reject')
+                  "
+                >
+                  Reject
+                </ElButton>
+              </template>
+              <ElButton
+                type="info"
+                size="small"
+                plain
+                class="review-btn review-btn--view"
+                @click.stop="showWrongLocationDetails(row as AttendanceDTO)"
+              >
+                View
+              </ElButton>
+            </ElSpace>
           </template>
         </SmartTable>
         <div style="margin-top: 16px; text-align: right">
@@ -374,4 +632,100 @@ function reviewStatusLabel(row: AttendanceDTO): string {
       </TableCard>
     </ElTabPane>
   </ElTabs>
+
+  <ElDialog
+    v-model="reviewDialogVisible"
+    :title="
+      reviewAction === 'approve'
+        ? 'Approve Wrong-Location Case'
+        : 'Reject Wrong-Location Case'
+    "
+    width="520px"
+  >
+    <ElForm
+      ref="reviewFormRef"
+      :model="reviewForm"
+      :rules="reviewRules"
+      label-width="94px"
+    >
+      <ElFormItem label="Employee">
+        <ElInput
+          :model-value="
+            displayRelation(
+              activeWrongLocationRow?.employee_name,
+              activeWrongLocationRow?.employee_id,
+            )
+          "
+          readonly
+        />
+      </ElFormItem>
+      <ElFormItem label="Date">
+        <ElInput
+          :model-value="formatDate(activeWrongLocationRow?.attendance_date)"
+          readonly
+        />
+      </ElFormItem>
+      <ElFormItem label="Reason">
+        <ElInput
+          :model-value="activeWrongLocationRow?.wrong_location_reason || '-'"
+          type="textarea"
+          readonly
+          :rows="3"
+        />
+      </ElFormItem>
+      <ElFormItem label="Location" prop="location_id">
+        <WorkLocationSelect
+          v-model="reviewForm.location_id"
+          :clearable="reviewAction !== 'approve'"
+        />
+      </ElFormItem>
+      <ElFormItem label="Comment" prop="comment">
+        <ElInput
+          v-model="reviewForm.comment"
+          type="textarea"
+          :rows="3"
+          :placeholder="
+            reviewAction === 'approve'
+              ? 'Optional approval comment'
+              : 'Required rejection comment'
+          "
+        />
+      </ElFormItem>
+    </ElForm>
+
+    <template #footer>
+      <ElButton @click="reviewDialogVisible = false">Cancel</ElButton>
+      <ElButton
+        :type="reviewAction === 'approve' ? 'success' : 'danger'"
+        :loading="reviewLoading"
+        @click="submitWrongLocationReview"
+      >
+        {{ reviewAction === "approve" ? "Approve" : "Reject" }}
+      </ElButton>
+    </template>
+  </ElDialog>
 </template>
+
+<style scoped>
+.review-actions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.review-btn {
+  min-width: 72px;
+  font-weight: 600;
+}
+
+.review-btn--approve {
+  border-color: #67c23a;
+}
+
+.review-btn--reject {
+  border-color: #f56c6c;
+}
+
+.review-btn--view {
+  border-color: #909399;
+}
+</style>

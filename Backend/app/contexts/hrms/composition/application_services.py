@@ -246,6 +246,7 @@ class HrmsApplicationServices:
         )
         self.approve_wrong_location = ApproveWrongLocationUseCase(
             attendance_repository=repositories.attendance_repository,
+            employee_repository=repositories.employee_repository,
             audit_log_repository=repositories.audit_log_repository,
             notification_service=self.notification_service,
         )
